@@ -136,6 +136,7 @@ int main( void )
 #define DFL_BADMAC_LIMIT        -1
 #define DFL_EXTENDED_MS         -1
 #define DFL_ETM                 -1
+#define DFL_CID                 MBEDTLS_CID_DISABLE
 
 #define LONG_RESPONSE "<p>01-blah-blah-blah-blah-blah-blah-blah-blah-blah\r\n" \
     "02-blah-blah-blah-blah-blah-blah-blah-blah-blah-blah-blah-blah-blah\r\n"  \
@@ -304,6 +305,15 @@ int main( void )
 #define USAGE_ECJPAKE ""
 #endif
 
+#if defined(MBEDTLS_CID)
+#define USAGE_CID                                       \
+    "    cid=%%s         disabled, static, dynamic, both\n"       \
+    "                    default: disabled\n"
+#else
+#define USAGE_CID ""
+#endif /* MBEDTLS_CID */
+
+
 #define USAGE \
     "\n usage: ssl_server2 param=<>...\n"                   \
     "\n acceptable parameters:\n"                           \
@@ -336,6 +346,7 @@ int main( void )
     USAGE_MAX_FRAG_LEN                                      \
     USAGE_TRUNC_HMAC                                        \
     USAGE_ALPN                                              \
+    USAGE_CID                                              \
     USAGE_EMS                                               \
     USAGE_ETM                                               \
     "\n"                                                    \
@@ -400,6 +411,7 @@ struct options
     uint32_t hs_to_min;         /* Initial value of DTLS handshake timer    */
     uint32_t hs_to_max;         /* Max value of DTLS handshake timer        */
     int badmac_limit;           /* Limit of records with bad MAC            */
+	int cid;                    /* connection id      */
 } opt;
 
 static void my_debug( void *ctx, int level,
@@ -943,6 +955,7 @@ int main( int argc, char *argv[] )
     opt.badmac_limit        = DFL_BADMAC_LIMIT;
     opt.extended_ms         = DFL_EXTENDED_MS;
     opt.etm                 = DFL_ETM;
+	opt.cid = DFL_CID; 
 
     for( i = 1; i < argc; i++ )
     {
@@ -1051,6 +1064,19 @@ int main( int argc, char *argv[] )
             if( opt.exchanges < 0 )
                 goto usage;
         }
+		else if (strcmp(p, "cid") == 0)
+		{
+			if (strcmp(q, "disabled") == 0)
+				opt.cid = MBEDTLS_CID_DISABLE;
+			else if (strcmp(q, "static") == 0)
+				opt.cid = MBEDTLS_CID_STATIC;
+			else if (strcmp(q, "dynamic") == 0)
+				opt.cid = MBEDTLS_CID_DYNAMIC;
+			else if (strcmp(q, "both") == 0)
+				opt.cid = MBEDTLS_CID_DYNAMIC;
+			else
+				goto usage;
+		}
         else if( strcmp( p, "min_version" ) == 0 )
         {
             if( strcmp( q, "ssl3" ) == 0 )
@@ -1638,6 +1664,11 @@ int main( int argc, char *argv[] )
     if( opt.etm != DFL_ETM )
         mbedtls_ssl_conf_encrypt_then_mac( &conf, opt.etm );
 #endif
+
+#if defined(MBEDTLS_CID)
+	if (opt.cid != MBEDTLS_CID_DISABLE)
+		mbedtls_ssl_conf_cid(&conf, opt.cid);
+#endif 
 
 #if defined(MBEDTLS_SSL_ALPN)
     if( opt.alpn_string != NULL )

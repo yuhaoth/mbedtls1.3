@@ -103,6 +103,7 @@ int main( void )
 #define DFL_FALLBACK            -1
 #define DFL_EXTENDED_MS         -1
 #define DFL_ETM                 -1
+#define DFL_CID                 MBEDTLS_CID_DISABLE
 
 #define GET_REQUEST "GET %s HTTP/1.0\r\nExtra-header: "
 #define GET_REQUEST_END "\r\n\r\n"
@@ -317,6 +318,7 @@ struct options
     int fallback;               /* is this a fallback connection?           */
     int extended_ms;            /* negotiate extended master secret?        */
     int etm;                    /* negotiate encrypt then mac?              */
+	int cid;                    /* connection id      */
 } opt;
 
 static void my_debug( void *ctx, int level,
@@ -507,6 +509,7 @@ int main( int argc, char *argv[] )
     opt.fallback            = DFL_FALLBACK;
     opt.extended_ms         = DFL_EXTENDED_MS;
     opt.etm                 = DFL_ETM;
+	opt.cid = DFL_CID;
 
     for( i = 1; i < argc; i++ )
     {
@@ -666,6 +669,17 @@ int main( int argc, char *argv[] )
                 default: goto usage;
             }
         }
+		else if (strcmp(p, "cid") == 0)
+		{
+			if (strcmp(q, "disabled") == 0)
+				opt.cid = MBEDTLS_CID_DISABLE;
+			else if (strcmp(q, "static") == 0)
+				opt.cid = MBEDTLS_CID_STATIC;
+			else if (strcmp(q, "dynamic") == 0)
+				opt.cid = MBEDTLS_CID_DYNAMIC;
+			else
+				goto usage;
+		}
         else if( strcmp( p, "min_version" ) == 0 )
         {
             if( strcmp( q, "ssl3" ) == 0 )
@@ -1123,6 +1137,11 @@ int main( int argc, char *argv[] )
     if( opt.etm != DFL_ETM )
         mbedtls_ssl_conf_encrypt_then_mac( &conf, opt.etm );
 #endif
+
+#if defined(MBEDTLS_CID)
+	if (opt.cid != MBEDTLS_CID_DISABLE)
+		mbedtls_ssl_conf_cid(&conf, opt.cid);
+#endif 
 
 #if defined(MBEDTLS_SSL_CBC_RECORD_SPLITTING)
     if( opt.recsplit != DFL_RECSPLIT )

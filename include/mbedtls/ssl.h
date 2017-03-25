@@ -136,6 +136,13 @@
 #define MBEDTLS_SSL_IS_CLIENT                   0
 #define MBEDTLS_SSL_IS_SERVER                   1
 
+// Connection ID Parameters 
+#define MBEDTLS_CID_DISABLE 0
+#define MBEDTLS_CID_STATIC 1
+#define MBEDTLS_CID_DYNAMIC 2 
+#define MBEDTLS_CID_BOTH 3 
+
+
 #define MBEDTLS_SSL_IS_NOT_FALLBACK             0
 #define MBEDTLS_SSL_IS_FALLBACK                 1
 
@@ -189,7 +196,7 @@
  * Default range for DTLS retransmission timer value, in milliseconds.
  * RFC 6347 4.2.4.1 says from 1 second to 60 seconds.
  */
-#define MBEDTLS_SSL_DTLS_TIMEOUT_DFL_MIN    1000
+#define MBEDTLS_SSL_DTLS_TIMEOUT_DFL_MIN    10000
 #define MBEDTLS_SSL_DTLS_TIMEOUT_DFL_MAX   60000
 
 /**
@@ -335,9 +342,12 @@
 
 #define MBEDTLS_TLS_EXT_SESSION_TICKET              35
 
+#define MBEDTLS_TLS_EXT_CID 254 
+
 #define MBEDTLS_TLS_EXT_ECJPAKE_KKPP               256 /* experimental */
 
 #define MBEDTLS_TLS_EXT_RENEGOTIATION_INFO      0xFF01
+
 
 /*
  * Size defines
@@ -574,6 +584,9 @@ struct mbedtls_ssl_session
 #if defined(MBEDTLS_SSL_ENCRYPT_THEN_MAC)
     int encrypt_then_mac;       /*!< flag for EtM activation                */
 #endif
+#if defined(MBEDTLS_CID)
+	unsigned int cid; /*!< indication of what CID mode we configure for the session */
+#endif 
 };
 
 /**
@@ -749,6 +762,10 @@ struct mbedtls_ssl_config
 #if defined(MBEDTLS_SSL_FALLBACK_SCSV) && defined(MBEDTLS_SSL_CLI_C)
     unsigned int fallback : 1;      /*!< is this a fallback?                */
 #endif
+
+#if defined(MBEDTLS_CID)
+	unsigned int cid : 2; 
+#endif 
 };
 
 
@@ -821,6 +838,10 @@ struct mbedtls_ssl_context
     unsigned char *in_msg;      /*!< message contents (in_iv+ivlen)   */
     unsigned char *in_offt;     /*!< read offset in application data  */
 
+#if defined(MBEDTLS_CID)
+	unsigned char in_cid[4]; /* cid value of incoming data */
+#endif 
+
     int in_msgtype;             /*!< record header: message type      */
     size_t in_msglen;           /*!< record header: message length    */
     size_t in_left;             /*!< amount of data read so far       */
@@ -848,6 +869,10 @@ struct mbedtls_ssl_context
     unsigned char *out_len;     /*!< two-bytes message length field   */
     unsigned char *out_iv;      /*!< ivlen-byte IV                    */
     unsigned char *out_msg;     /*!< message contents (out_iv+ivlen)  */
+
+#if defined(MBEDTLS_CID)
+	unsigned char out_cid[4]; /* cid value of outgoing data */
+#endif 
 
     int out_msgtype;            /*!< record header: message type      */
     size_t out_msglen;          /*!< record header: message length    */
@@ -1997,6 +2022,17 @@ void mbedtls_ssl_conf_fallback( mbedtls_ssl_config *conf, char fallback );
 void mbedtls_ssl_conf_encrypt_then_mac( mbedtls_ssl_config *conf, char etm );
 #endif /* MBEDTLS_SSL_ENCRYPT_THEN_MAC */
 
+#if defined(MBEDTLS_CID)
+/**
+* \brief           Enable or disable Connection ID
+*                  (Default: MBEDTLS_CID_DISABLE)
+**
+* \param conf      SSL configuration
+* \param cid       MBEDTLS_CID_STATIC or MBEDTLS_CID_DYNAMIC
+*/
+void mbedtls_ssl_conf_cid(mbedtls_ssl_config *conf, unsigned int cid);
+#endif 
+
 #if defined(MBEDTLS_SSL_EXTENDED_MASTER_SECRET)
 /**
  * \brief           Enable or disable Extended Master Secret negotiation.
@@ -2513,6 +2549,7 @@ void mbedtls_ssl_config_init( mbedtls_ssl_config *conf );
  * \param transport MBEDTLS_SSL_TRANSPORT_STREAM for TLS, or
  *                  MBEDTLS_SSL_TRANSPORT_DATAGRAM for DTLS
  * \param preset   a MBEDTLS_SSL_PRESET_XXX value
+ *                 (currently unused).
  *
  * \note           See \c mbedtls_ssl_conf_transport() for notes on DTLS.
  *

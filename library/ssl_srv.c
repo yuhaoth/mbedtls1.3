@@ -86,6 +86,94 @@ void mbedtls_ssl_conf_dtls_cookies( mbedtls_ssl_config *conf,
 }
 #endif /* MBEDTLS_SSL_DTLS_HELLO_VERIFY */
 
+#if defined(MBEDTLS_CID)
+static int ssl_parse_cid_ext(mbedtls_ssl_context *ssl,
+	const unsigned char *buf,
+	size_t len)
+{
+	const unsigned char *p=buf;
+
+//	MBEDTLS_SSL_DEBUG_MSG(3, ("parse CID extension"));
+
+	// default value for CID is diabled
+	ssl->session_negotiate->cid = MBEDTLS_CID_DISABLE;
+
+	if (ssl->conf->cid == MBEDTLS_CID_DISABLE) { 
+		MBEDTLS_SSL_DEBUG_MSG(3, ("skip CID extension parsing"));
+		return(0);
+	}
+
+	if (len != 5) { 
+		MBEDTLS_SSL_DEBUG_MSG(1, ("bad client hello message"));
+		return(MBEDTLS_ERR_SSL_BAD_HS_CLIENT_HELLO);
+	}
+
+	// read CID value and compare it with our configuration settings
+	if (*p != (char)ssl->conf->cid) {
+		// if we get here then we do not use the CID extension for this session. 
+		return(0); 
+	}
+	else {
+		ssl->session_negotiate->cid = ssl->conf->cid;
+	}
+	p++; 
+
+	// retrieve the CID used by the client for outbound data
+	memcpy(ssl->out_cid, p, 4);
+
+	return(0);
+}
+#endif /* MBEDTLS_CID */
+
+#if defined(MBEDTLS_CID)
+static void ssl_write_cid_ext(mbedtls_ssl_context *ssl,
+	unsigned char *buf,
+	size_t *olen)
+{
+	unsigned char *p = buf;
+	const unsigned char *end = ssl->out_msg + MBEDTLS_SSL_MAX_CONTENT_LEN;
+
+	*olen = 0;
+
+	if (ssl->conf->cid == MBEDTLS_CID_DISABLE) {
+		MBEDTLS_SSL_DEBUG_MSG(3, ("Skip CID extension - not configured"));
+		return;;
+	}
+
+	// did we receive a CID extension from the client?   
+	if (ssl->session_negotiate->cid == MBEDTLS_CID_DISABLE) {
+		MBEDTLS_SSL_DEBUG_MSG(3, ("Skip CID extension - nothing provided by the client"));
+		return; 
+	}
+
+	MBEDTLS_SSL_DEBUG_MSG(3, ("server hello, adding cid extension"));
+
+	if (end < p || (size_t)(end - p) < 9)
+	{
+		MBEDTLS_SSL_DEBUG_MSG(1, ("buffer too small"));
+		return;
+	}
+
+	*p++ = (unsigned char)((MBEDTLS_TLS_EXT_CID >> 8) & 0xFF);
+	*p++ = (unsigned char)((MBEDTLS_TLS_EXT_CID) & 0xFF);
+
+	*p++ = (unsigned char)((5 >> 8) & 0xFF);
+	*p++ = (unsigned char)(5 & 0xFF);
+
+	// place negotiated value in there
+	*p++ = (char)ssl->session_negotiate->cid;
+
+	// allocate CID value 
+	// assume 7 here. 
+	ssl->out_cid[0] = 7;
+
+	memcpy(p, ssl->out_cid, 4);
+
+	*olen = 9;
+}
+#endif /* MBEDTLS_CID */ 
+
+
 #if defined(MBEDTLS_SSL_SERVER_NAME_INDICATION)
 static int ssl_parse_servername_ext( mbedtls_ssl_context *ssl,
                                      const unsigned char *buf,
@@ -1563,6 +1651,17 @@ read_record_header:
                 break;
 #endif /* MBEDTLS_SSL_SERVER_NAME_INDICATION */
 
+#if defined(MBEDTLS_CID)
+			case MBEDTLS_TLS_EXT_CID:
+				MBEDTLS_SSL_DEBUG_MSG(3, ("found CID extension"));
+				if (ssl->conf->cid == MBEDTLS_CID_DISABLE)
+					break;
+
+				ret = ssl_parse_cid_ext(ssl, ext + 4, ext_size);
+				if (ret != 0)
+					return(ret);
+				break;
+#endif /* MBEDTLS_CID */
             case MBEDTLS_TLS_EXT_RENEGOTIATION_INFO:
                 MBEDTLS_SSL_DEBUG_MSG( 3, ( "found renegotiation extension" ) );
 #if defined(MBEDTLS_SSL_RENEGOTIATION)
@@ -2399,6 +2498,11 @@ static int ssl_write_server_hello( mbedtls_ssl_context *ssl )
     ext_len += olen;
 #endif
 
+#if defined(MBEDTLS_CID)
+	ssl_write_cid_ext(ssl, p + 2 + ext_len, &olen);
+	ext_len += olen;
+#endif
+
 #if defined(MBEDTLS_SSL_SESSION_TICKETS)
     ssl_write_session_ticket_ext( ssl, p + 2 + ext_len, &olen );
     ext_len += olen;
@@ -2475,14 +2579,11 @@ static int ssl_write_certificate_request( mbedtls_ssl_context *ssl )
 {
     int ret = MBEDTLS_ERR_SSL_FEATURE_UNAVAILABLE;
     const mbedtls_ssl_ciphersuite_t *ciphersuite_info = ssl->transform_negotiate->ciphersuite_info;
-    size_t total_dn_size; /* excluding length bytes */
+    size_t dn_size, total_dn_size; /* excluding length bytes */
     size_t ct_len, sa_len; /* including length bytes */
     unsigned char *buf, *p;
-#if !defined(MBEDTLS_OMIT_CA_LIST)
     const unsigned char * const end = ssl->out_msg + MBEDTLS_SSL_MAX_CONTENT_LEN;
     const mbedtls_x509_crt *crt;
-    size_t dn_size; 
-#endif
     int authmode;
 
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> write certificate request" ) );
@@ -2591,18 +2692,14 @@ static int ssl_write_certificate_request( mbedtls_ssl_context *ssl )
      * opaque DistinguishedName<1..2^16-1>;
      */
     p += 2;
-
-#if !defined(MBEDTLS_OMIT_CA_LIST)
 #if defined(MBEDTLS_SSL_SERVER_NAME_INDICATION)
     if( ssl->handshake->sni_ca_chain != NULL )
         crt = ssl->handshake->sni_ca_chain;
     else
 #endif
         crt = ssl->conf->ca_chain;
-#endif
 
     total_dn_size = 0;
-#if !defined(MBEDTLS_OMIT_CA_LIST)
     while( crt != NULL && crt->version != 0 )
     {
         dn_size = crt->subject_raw.len;
@@ -2625,9 +2722,7 @@ static int ssl_write_certificate_request( mbedtls_ssl_context *ssl )
         total_dn_size += 2 + dn_size;
         crt = crt->next;
     }
-#else 
-        MBEDTLS_SSL_DEBUG_MSG( 3, ("skipping DN list"));
-#endif 
+
     ssl->out_msglen  = p - buf;
     ssl->out_msgtype = MBEDTLS_SSL_MSG_HANDSHAKE;
     ssl->out_msg[0]  = MBEDTLS_SSL_HS_CERTIFICATE_REQUEST;
