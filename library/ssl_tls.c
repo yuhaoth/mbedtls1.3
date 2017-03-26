@@ -100,6 +100,151 @@ static int ssl_check_timer( mbedtls_ssl_context *ssl )
     return( 0 );
 }
 
+#if defined(MBEDTLS_CID)
+int ssl_parse_cid_ext(mbedtls_ssl_context *ssl,
+	const unsigned char *buf,
+	size_t len)
+{
+	const unsigned char *p = buf;
+	char negotiated;
+
+	// default value for CID is diabled
+	ssl->session_negotiate->cid = MBEDTLS_CID_DISABLE;
+
+#if defined(MBEDTLS_SSL_SRV_C)
+	if ((ssl->conf->endpoint == MBEDTLS_SSL_IS_CLIENT) &&
+		(ssl->conf->cid == MBEDTLS_CID_DISABLE)) {
+		MBEDTLS_SSL_DEBUG_MSG(3, ("skip CID extension parsing"));
+		return(0);
+	}
+#endif 	/* MBEDTLS_SSL_SRV_C */
+
+	if (len != 5) {
+		MBEDTLS_SSL_DEBUG_MSG(1, ("Incorrect message length"));
+
+#if defined(MBEDTLS_SSL_CLI_C)
+		if (ssl->conf->endpoint == MBEDTLS_SSL_IS_CLIENT)
+			return(MBEDTLS_ERR_SSL_BAD_HS_SERVER_HELLO);
+#endif /* MBEDTLS_SSL_CLI_C */
+
+#if defined(MBEDTLS_SSL_SRV_C)
+		if (ssl->conf->endpoint == MBEDTLS_SSL_IS_CLIENT)
+			return(MBEDTLS_ERR_SSL_BAD_HS_CLIENT_HELLO);
+#endif 	/* MBEDTLS_SSL_SRV_C */
+	}
+
+	MBEDTLS_SSL_DEBUG_BUF(5, "CID Type", p, 1);
+
+	// read CID value and compare it with our configuration settings
+	if ((*p == MBEDTLS_CID_BOTH) && (ssl->conf->cid != MBEDTLS_CID_BOTH)) {
+		// client supports both modes but server doesn't 
+		ssl->session_negotiate->cid = (char)ssl->conf->cid;
+	}
+	else if ((*p != MBEDTLS_CID_BOTH) && (ssl->conf->cid == MBEDTLS_CID_BOTH)) {
+		// server supports both modes but client doesn't 
+		ssl->session_negotiate->cid = *p;
+	}
+	else if ((*p == MBEDTLS_CID_BOTH) && (ssl->conf->cid == MBEDTLS_CID_BOTH)) {
+		// client and server support both modes
+		ssl->session_negotiate->cid = MBEDTLS_CID_DYNAMIC;
+	}
+	else if ((*p == (char)ssl->conf->cid)) {
+		// client and server are both configured to support the same mode 
+		// (but not with MBEDTLS_CID_BOTH)
+		ssl->session_negotiate->cid = *p;
+	} 
+	// For all other cases there is a problem but we have already set the 
+	// cid value to the default MBEDTLS_CID_DISABLE 
+	if (ssl->session_negotiate->cid == MBEDTLS_CID_DISABLE) {
+		// Client and server do not have a common implementation of the SID modes 
+		MBEDTLS_SSL_DEBUG_MSG(1, ("Incompabile SID mode between client and server"));
+
+#if defined(MBEDTLS_SSL_CLI_C)
+		if (ssl->conf->endpoint == MBEDTLS_SSL_IS_CLIENT)
+			return(MBEDTLS_ERR_SSL_BAD_HS_SERVER_HELLO);
+#endif /* MBEDTLS_SSL_CLI_C */
+
+#if defined(MBEDTLS_SSL_SRV_C)
+		// In this case we just ignore the extension and continue. 
+		if (ssl->conf->endpoint == MBEDTLS_SSL_IS_SERVER)
+			return(0);
+#endif 	/* MBEDTLS_SSL_SRV_C */
+	}
+	p++;
+
+	MBEDTLS_SSL_DEBUG_BUF(5, "Out_CID", p, 4);
+
+	// The other end provided us with the CID value it 
+	// would like us to use for packet sent to it. 
+	memcpy(ssl->out_cid, p, 4);
+
+	return(0);
+}
+
+void ssl_write_cid_ext(mbedtls_ssl_context *ssl,
+	unsigned char *buf,
+	size_t *olen)
+{
+	unsigned char *p = buf;
+	const unsigned char *end = ssl->out_msg + MBEDTLS_SSL_MAX_CONTENT_LEN;
+
+	*olen = 0;
+
+	if (ssl->conf->cid == MBEDTLS_CID_DISABLE) {
+		MBEDTLS_SSL_DEBUG_MSG(3, ("Skip CID extension - not configured"));
+		return;
+	}
+
+#if defined(MBEDTLS_SSL_SRV_C)
+	// did we receive a CID extension from the client?  
+	if ((ssl->conf->endpoint == MBEDTLS_SSL_IS_SERVER) && (ssl->session_negotiate->cid == MBEDTLS_CID_DISABLE)) {
+		MBEDTLS_SSL_DEBUG_MSG(3, ("Skip CID extension - nothing provided by the client"));
+		return;
+	}
+#endif 
+
+	MBEDTLS_SSL_DEBUG_MSG(3, ("adding cid extension"));
+
+	if (end < p || (size_t)(end - p) < 9)
+	{
+		MBEDTLS_SSL_DEBUG_MSG(1, ("buffer too small"));
+		return;
+	}
+
+	*p++ = (unsigned char)((MBEDTLS_TLS_EXT_CID >> 8) & 0xFF);
+	*p++ = (unsigned char)((MBEDTLS_TLS_EXT_CID) & 0xFF);
+
+	*p++ = (unsigned char)((5 >> 8) & 0xFF);
+	*p++ = (unsigned char)(5 & 0xFF);
+
+	// cid method 
+#if defined(MBEDTLS_SSL_CLI_C)
+	if (ssl->conf->endpoint == MBEDTLS_SSL_IS_CLIENT) {
+		*p = (char)ssl->conf->cid;
+	}
+#endif 
+
+#if defined(MBEDTLS_SSL_SRV_C)
+	if (ssl->conf->endpoint == MBEDTLS_SSL_IS_SERVER) {
+		*p = (char)ssl->session_negotiate->cid;
+	}
+#endif 
+
+	MBEDTLS_SSL_DEBUG_BUF(5, "CID Type", p, 1);
+	p++; 
+
+	// allocate CID value 
+	// TBD: Replace statically allocated value with dynamic values 
+	ssl->in_cid[0] = 3;
+	memcpy(p, ssl->in_cid, 4);
+
+	MBEDTLS_SSL_DEBUG_BUF(5, "In_CID", p, 4);
+
+	*olen = 9;
+}
+#endif /* MBEDTLS_CID */ 
+
+
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
 /*
  * Double the retransmit timeout value, within the allowed range,

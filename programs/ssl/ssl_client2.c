@@ -677,6 +677,8 @@ int main( int argc, char *argv[] )
 				opt.cid = MBEDTLS_CID_STATIC;
 			else if (strcmp(q, "dynamic") == 0)
 				opt.cid = MBEDTLS_CID_DYNAMIC;
+			else if (strcmp(q, "both") == 0)
+				opt.cid = MBEDTLS_CID_BOTH;
 			else
 				goto usage;
 		}
