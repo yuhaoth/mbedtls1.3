@@ -409,7 +409,7 @@ static int my_verify( void *data, mbedtls_x509_crt *crt, int depth, uint32_t *fl
 
 int main( int argc, char *argv[] )
 {
-    int ret = 0, len, tail_len, i, written, frags, retry_left;
+    int ret = 0, len, tail_len, i, written, read, frags, retry_left;
     mbedtls_net_context server_fd;
     unsigned char buf[MBEDTLS_SSL_MAX_CONTENT_LEN + 1];
 #if defined(MBEDTLS_KEY_EXCHANGE__SOME__PSK_ENABLED)
@@ -1455,9 +1455,8 @@ send_request:
     /*
      * 7. Read the HTTP response
      */
-    mbedtls_printf( "  < Read from server:" );
-    fflush( stdout );
 
+	read = 0; 
     do
     {
         len = sizeof( buf ) - 1;
@@ -1495,9 +1494,10 @@ send_request:
         }
 
         len = ret;
+		read += len; 
         buf[len] = '\0';
 		mbedtls_printf("%s", (char *)buf);
-
+		
         /* End of message should be detected according to the syntax of the
          * application protocol (eg HTTP), just use a dummy test here. */
         if( ret > 0 && buf[len-1] == '\n' )
@@ -1508,6 +1508,8 @@ send_request:
     }
     while( 1 );
 
+	mbedtls_printf("  < Read from server:  %d bytes read",read);
+	fflush(stdout);
     /*
      * 7b. Simulate hard reset and reconnect from same port?
      */
