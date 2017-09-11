@@ -89,6 +89,7 @@ int main( void )
 #define DFL_ARC4                -1
 #define DFL_AUTH_MODE           -1
 #define DFL_MFL_CODE            MBEDTLS_SSL_MAX_FRAG_LEN_NONE
+#define DFL_RSL                 0 
 #define DFL_TRUNC_HMAC          -1
 #define DFL_RECSPLIT            -1
 #define DFL_DHMLEN              -1
@@ -154,6 +155,13 @@ int main( void )
 #else
 #define USAGE_MAX_FRAG_LEN ""
 #endif /* MBEDTLS_SSL_MAX_FRAGMENT_LENGTH */
+
+#if defined(MBEDTLS_SSL_RECORD_SIZE_LIMIT )
+#define USAGE_RECORD_SIZE_LIMIT                                      \
+    "    record_size_limit=%%d     default: 16384 (tls default)\n"  
+#else
+#define USAGE_RECORD_SIZE_LIMIT ""
+#endif /* MBEDTLS_SSL_RECORD_SIZE_LIMIT */
 
 #if defined(MBEDTLS_SSL_CBC_RECORD_SPLITTING)
 #define USAGE_RECSPLIT \
@@ -254,6 +262,7 @@ int main( void )
     "    reconnect_hard=%%d   default: 0 (disabled)\n"      \
     USAGE_TICKETS                                           \
     USAGE_MAX_FRAG_LEN                                      \
+    USAGE_RECORD_SIZE_LIMIT                                 \
     USAGE_TRUNC_HMAC                                        \
     USAGE_ALPN                                              \
     USAGE_FALLBACK                                          \
@@ -303,6 +312,7 @@ struct options
     int arc4;                   /* flag for arc4 suites support             */
     int auth_mode;              /* verify mode for connection               */
     unsigned char mfl_code;     /* code for maximum fragment length         */
+	uint16_t rsl;               /* record size limit                        */
     int trunc_hmac;             /* negotiate truncated hmac or not          */
     int recsplit;               /* enable record splitting?                 */
     int dhmlen;                 /* minimum DHM params len in bits           */
@@ -508,251 +518,255 @@ int main( int argc, char *argv[] )
     opt.extended_ms         = DFL_EXTENDED_MS;
     opt.etm                 = DFL_ETM;
 
-    for( i = 1; i < argc; i++ )
-    {
-        p = argv[i];
-        if( ( q = strchr( p, '=' ) ) == NULL )
-            goto usage;
-        *q++ = '\0';
+	for (i = 1; i < argc; i++)
+	{
+		p = argv[i];
+		if ((q = strchr(p, '=')) == NULL)
+			goto usage;
+		*q++ = '\0';
 
-        if( strcmp( p, "server_name" ) == 0 )
-            opt.server_name = q;
-        else if( strcmp( p, "server_addr" ) == 0 )
-            opt.server_addr = q;
-        else if( strcmp( p, "server_port" ) == 0 )
-            opt.server_port = q;
-        else if( strcmp( p, "dtls" ) == 0 )
-        {
-            int t = atoi( q );
-            if( t == 0 )
-                opt.transport = MBEDTLS_SSL_TRANSPORT_STREAM;
-            else if( t == 1 )
-                opt.transport = MBEDTLS_SSL_TRANSPORT_DATAGRAM;
-            else
-                goto usage;
-        }
-        else if( strcmp( p, "debug_level" ) == 0 )
-        {
-            opt.debug_level = atoi( q );
-            if( opt.debug_level < 0 || opt.debug_level > 65535 )
-                goto usage;
-        }
-        else if( strcmp( p, "nbio" ) == 0 )
-        {
-            opt.nbio = atoi( q );
-            if( opt.nbio < 0 || opt.nbio > 2 )
-                goto usage;
-        }
-        else if( strcmp( p, "read_timeout" ) == 0 )
-            opt.read_timeout = atoi( q );
-        else if( strcmp( p, "max_resend" ) == 0 )
-        {
-            opt.max_resend = atoi( q );
-            if( opt.max_resend < 0 )
-                goto usage;
-        }
-        else if( strcmp( p, "request_page" ) == 0 )
-            opt.request_page = q;
-        else if( strcmp( p, "request_size" ) == 0 )
-        {
-            opt.request_size = atoi( q );
-            if( opt.request_size < 0 || opt.request_size > MBEDTLS_SSL_MAX_CONTENT_LEN )
-                goto usage;
-        }
-        else if( strcmp( p, "ca_file" ) == 0 )
-            opt.ca_file = q;
-        else if( strcmp( p, "ca_path" ) == 0 )
-            opt.ca_path = q;
-        else if( strcmp( p, "crt_file" ) == 0 )
-            opt.crt_file = q;
-        else if( strcmp( p, "key_file" ) == 0 )
-            opt.key_file = q;
-        else if( strcmp( p, "psk" ) == 0 )
-            opt.psk = q;
-        else if( strcmp( p, "psk_identity" ) == 0 )
-            opt.psk_identity = q;
-        else if( strcmp( p, "ecjpake_pw" ) == 0 )
-            opt.ecjpake_pw = q;
-        else if( strcmp( p, "force_ciphersuite" ) == 0 )
-        {
-            opt.force_ciphersuite[0] = mbedtls_ssl_get_ciphersuite_id( q );
+		if (strcmp(p, "server_name") == 0)
+			opt.server_name = q;
+		else if (strcmp(p, "server_addr") == 0)
+			opt.server_addr = q;
+		else if (strcmp(p, "server_port") == 0)
+			opt.server_port = q;
+		else if (strcmp(p, "dtls") == 0)
+		{
+			int t = atoi(q);
+			if (t == 0)
+				opt.transport = MBEDTLS_SSL_TRANSPORT_STREAM;
+			else if (t == 1)
+				opt.transport = MBEDTLS_SSL_TRANSPORT_DATAGRAM;
+			else
+				goto usage;
+		}
+		else if (strcmp(p, "debug_level") == 0)
+		{
+			opt.debug_level = atoi(q);
+			if (opt.debug_level < 0 || opt.debug_level > 65535)
+				goto usage;
+		}
+		else if (strcmp(p, "nbio") == 0)
+		{
+			opt.nbio = atoi(q);
+			if (opt.nbio < 0 || opt.nbio > 2)
+				goto usage;
+		}
+		else if (strcmp(p, "read_timeout") == 0)
+			opt.read_timeout = atoi(q);
+		else if (strcmp(p, "max_resend") == 0)
+		{
+			opt.max_resend = atoi(q);
+			if (opt.max_resend < 0)
+				goto usage;
+		}
+		else if (strcmp(p, "request_page") == 0)
+			opt.request_page = q;
+		else if (strcmp(p, "request_size") == 0)
+		{
+			opt.request_size = atoi(q);
+			if (opt.request_size < 0 || opt.request_size > MBEDTLS_SSL_MAX_CONTENT_LEN)
+				goto usage;
+		}
+		else if (strcmp(p, "ca_file") == 0)
+			opt.ca_file = q;
+		else if (strcmp(p, "ca_path") == 0)
+			opt.ca_path = q;
+		else if (strcmp(p, "crt_file") == 0)
+			opt.crt_file = q;
+		else if (strcmp(p, "key_file") == 0)
+			opt.key_file = q;
+		else if (strcmp(p, "psk") == 0)
+			opt.psk = q;
+		else if (strcmp(p, "psk_identity") == 0)
+			opt.psk_identity = q;
+		else if (strcmp(p, "ecjpake_pw") == 0)
+			opt.ecjpake_pw = q;
+		else if (strcmp(p, "force_ciphersuite") == 0)
+		{
+			opt.force_ciphersuite[0] = mbedtls_ssl_get_ciphersuite_id(q);
 
-            if( opt.force_ciphersuite[0] == 0 )
-            {
-                ret = 2;
-                goto usage;
-            }
-            opt.force_ciphersuite[1] = 0;
-        }
-        else if( strcmp( p, "renegotiation" ) == 0 )
-        {
-            opt.renegotiation = (atoi( q )) ? MBEDTLS_SSL_RENEGOTIATION_ENABLED :
-                                              MBEDTLS_SSL_RENEGOTIATION_DISABLED;
-        }
-        else if( strcmp( p, "allow_legacy" ) == 0 )
-        {
-            switch( atoi( q ) )
-            {
-                case -1: opt.allow_legacy = MBEDTLS_SSL_LEGACY_BREAK_HANDSHAKE; break;
-                case 0:  opt.allow_legacy = MBEDTLS_SSL_LEGACY_NO_RENEGOTIATION; break;
-                case 1:  opt.allow_legacy = MBEDTLS_SSL_LEGACY_ALLOW_RENEGOTIATION; break;
-                default: goto usage;
-            }
-        }
-        else if( strcmp( p, "renegotiate" ) == 0 )
-        {
-            opt.renegotiate = atoi( q );
-            if( opt.renegotiate < 0 || opt.renegotiate > 1 )
-                goto usage;
-        }
-        else if( strcmp( p, "exchanges" ) == 0 )
-        {
-            opt.exchanges = atoi( q );
-            if( opt.exchanges < 1 )
-                goto usage;
-        }
-        else if( strcmp( p, "reconnect" ) == 0 )
-        {
-            opt.reconnect = atoi( q );
-            if( opt.reconnect < 0 || opt.reconnect > 2 )
-                goto usage;
-        }
-        else if( strcmp( p, "reco_delay" ) == 0 )
-        {
-            opt.reco_delay = atoi( q );
-            if( opt.reco_delay < 0 )
-                goto usage;
-        }
-        else if( strcmp( p, "reconnect_hard" ) == 0 )
-        {
-            opt.reconnect_hard = atoi( q );
-            if( opt.reconnect_hard < 0 || opt.reconnect_hard > 1 )
-                goto usage;
-        }
-        else if( strcmp( p, "tickets" ) == 0 )
-        {
-            opt.tickets = atoi( q );
-            if( opt.tickets < 0 || opt.tickets > 2 )
-                goto usage;
-        }
-        else if( strcmp( p, "alpn" ) == 0 )
-        {
-            opt.alpn_string = q;
-        }
-        else if( strcmp( p, "fallback" ) == 0 )
-        {
-            switch( atoi( q ) )
-            {
-                case 0: opt.fallback = MBEDTLS_SSL_IS_NOT_FALLBACK; break;
-                case 1: opt.fallback = MBEDTLS_SSL_IS_FALLBACK; break;
-                default: goto usage;
-            }
-        }
-        else if( strcmp( p, "extended_ms" ) == 0 )
-        {
-            switch( atoi( q ) )
-            {
-                case 0: opt.extended_ms = MBEDTLS_SSL_EXTENDED_MS_DISABLED; break;
-                case 1: opt.extended_ms = MBEDTLS_SSL_EXTENDED_MS_ENABLED; break;
-                default: goto usage;
-            }
-        }
-        else if( strcmp( p, "etm" ) == 0 )
-        {
-            switch( atoi( q ) )
-            {
-                case 0: opt.etm = MBEDTLS_SSL_ETM_DISABLED; break;
-                case 1: opt.etm = MBEDTLS_SSL_ETM_ENABLED; break;
-                default: goto usage;
-            }
-        }
-        else if( strcmp( p, "min_version" ) == 0 )
-        {
-            if( strcmp( q, "ssl3" ) == 0 )
-                opt.min_version = MBEDTLS_SSL_MINOR_VERSION_0;
-            else if( strcmp( q, "tls1" ) == 0 )
-                opt.min_version = MBEDTLS_SSL_MINOR_VERSION_1;
-            else if( strcmp( q, "tls1_1" ) == 0 ||
-                     strcmp( q, "dtls1" ) == 0 )
-                opt.min_version = MBEDTLS_SSL_MINOR_VERSION_2;
-            else if( strcmp( q, "tls1_2" ) == 0 ||
-                     strcmp( q, "dtls1_2" ) == 0 )
-                opt.min_version = MBEDTLS_SSL_MINOR_VERSION_3;
-            else
-                goto usage;
-        }
-        else if( strcmp( p, "max_version" ) == 0 )
-        {
-            if( strcmp( q, "ssl3" ) == 0 )
-                opt.max_version = MBEDTLS_SSL_MINOR_VERSION_0;
-            else if( strcmp( q, "tls1" ) == 0 )
-                opt.max_version = MBEDTLS_SSL_MINOR_VERSION_1;
-            else if( strcmp( q, "tls1_1" ) == 0 ||
-                     strcmp( q, "dtls1" ) == 0 )
-                opt.max_version = MBEDTLS_SSL_MINOR_VERSION_2;
-            else if( strcmp( q, "tls1_2" ) == 0 ||
-                     strcmp( q, "dtls1_2" ) == 0 )
-                opt.max_version = MBEDTLS_SSL_MINOR_VERSION_3;
-            else
-                goto usage;
-        }
-        else if( strcmp( p, "arc4" ) == 0 )
-        {
-            switch( atoi( q ) )
-            {
-                case 0:     opt.arc4 = MBEDTLS_SSL_ARC4_DISABLED;   break;
-                case 1:     opt.arc4 = MBEDTLS_SSL_ARC4_ENABLED;    break;
-                default:    goto usage;
-            }
-        }
-        else if( strcmp( p, "force_version" ) == 0 )
-        {
-            if( strcmp( q, "ssl3" ) == 0 )
-            {
-                opt.min_version = MBEDTLS_SSL_MINOR_VERSION_0;
-                opt.max_version = MBEDTLS_SSL_MINOR_VERSION_0;
-            }
-            else if( strcmp( q, "tls1" ) == 0 )
-            {
-                opt.min_version = MBEDTLS_SSL_MINOR_VERSION_1;
-                opt.max_version = MBEDTLS_SSL_MINOR_VERSION_1;
-            }
-            else if( strcmp( q, "tls1_1" ) == 0 )
-            {
-                opt.min_version = MBEDTLS_SSL_MINOR_VERSION_2;
-                opt.max_version = MBEDTLS_SSL_MINOR_VERSION_2;
-            }
-            else if( strcmp( q, "tls1_2" ) == 0 )
-            {
-                opt.min_version = MBEDTLS_SSL_MINOR_VERSION_3;
-                opt.max_version = MBEDTLS_SSL_MINOR_VERSION_3;
-            }
-            else if( strcmp( q, "dtls1" ) == 0 )
-            {
-                opt.min_version = MBEDTLS_SSL_MINOR_VERSION_2;
-                opt.max_version = MBEDTLS_SSL_MINOR_VERSION_2;
-                opt.transport = MBEDTLS_SSL_TRANSPORT_DATAGRAM;
-            }
-            else if( strcmp( q, "dtls1_2" ) == 0 )
-            {
-                opt.min_version = MBEDTLS_SSL_MINOR_VERSION_3;
-                opt.max_version = MBEDTLS_SSL_MINOR_VERSION_3;
-                opt.transport = MBEDTLS_SSL_TRANSPORT_DATAGRAM;
-            }
-            else
-                goto usage;
-        }
-        else if( strcmp( p, "auth_mode" ) == 0 )
-        {
-            if( strcmp( q, "none" ) == 0 )
-                opt.auth_mode = MBEDTLS_SSL_VERIFY_NONE;
-            else if( strcmp( q, "optional" ) == 0 )
-                opt.auth_mode = MBEDTLS_SSL_VERIFY_OPTIONAL;
-            else if( strcmp( q, "required" ) == 0 )
-                opt.auth_mode = MBEDTLS_SSL_VERIFY_REQUIRED;
-            else
-                goto usage;
-        }
+			if (opt.force_ciphersuite[0] == 0)
+			{
+				ret = 2;
+				goto usage;
+			}
+			opt.force_ciphersuite[1] = 0;
+		}
+		else if (strcmp(p, "renegotiation") == 0)
+		{
+			opt.renegotiation = (atoi(q)) ? MBEDTLS_SSL_RENEGOTIATION_ENABLED :
+				MBEDTLS_SSL_RENEGOTIATION_DISABLED;
+		}
+		else if (strcmp(p, "allow_legacy") == 0)
+		{
+			switch (atoi(q))
+			{
+			case -1: opt.allow_legacy = MBEDTLS_SSL_LEGACY_BREAK_HANDSHAKE; break;
+			case 0:  opt.allow_legacy = MBEDTLS_SSL_LEGACY_NO_RENEGOTIATION; break;
+			case 1:  opt.allow_legacy = MBEDTLS_SSL_LEGACY_ALLOW_RENEGOTIATION; break;
+			default: goto usage;
+			}
+		}
+		else if (strcmp(p, "renegotiate") == 0)
+		{
+			opt.renegotiate = atoi(q);
+			if (opt.renegotiate < 0 || opt.renegotiate > 1)
+				goto usage;
+		}
+		else if (strcmp(p, "exchanges") == 0)
+		{
+			opt.exchanges = atoi(q);
+			if (opt.exchanges < 1)
+				goto usage;
+		}
+		else if (strcmp(p, "reconnect") == 0)
+		{
+			opt.reconnect = atoi(q);
+			if (opt.reconnect < 0 || opt.reconnect > 2)
+				goto usage;
+		}
+		else if (strcmp(p, "reco_delay") == 0)
+		{
+			opt.reco_delay = atoi(q);
+			if (opt.reco_delay < 0)
+				goto usage;
+		}
+		else if (strcmp(p, "reconnect_hard") == 0)
+		{
+			opt.reconnect_hard = atoi(q);
+			if (opt.reconnect_hard < 0 || opt.reconnect_hard > 1)
+				goto usage;
+		}
+		else if (strcmp(p, "tickets") == 0)
+		{
+			opt.tickets = atoi(q);
+			if (opt.tickets < 0 || opt.tickets > 2)
+				goto usage;
+		}
+		else if (strcmp(p, "alpn") == 0)
+		{
+			opt.alpn_string = q;
+		}
+		else if (strcmp(p, "fallback") == 0)
+		{
+			switch (atoi(q))
+			{
+			case 0: opt.fallback = MBEDTLS_SSL_IS_NOT_FALLBACK; break;
+			case 1: opt.fallback = MBEDTLS_SSL_IS_FALLBACK; break;
+			default: goto usage;
+			}
+		}
+		else if (strcmp(p, "extended_ms") == 0)
+		{
+			switch (atoi(q))
+			{
+			case 0: opt.extended_ms = MBEDTLS_SSL_EXTENDED_MS_DISABLED; break;
+			case 1: opt.extended_ms = MBEDTLS_SSL_EXTENDED_MS_ENABLED; break;
+			default: goto usage;
+			}
+		}
+		else if (strcmp(p, "etm") == 0)
+		{
+			switch (atoi(q))
+			{
+			case 0: opt.etm = MBEDTLS_SSL_ETM_DISABLED; break;
+			case 1: opt.etm = MBEDTLS_SSL_ETM_ENABLED; break;
+			default: goto usage;
+			}
+		}
+		else if (strcmp(p, "min_version") == 0)
+		{
+			if (strcmp(q, "ssl3") == 0)
+				opt.min_version = MBEDTLS_SSL_MINOR_VERSION_0;
+			else if (strcmp(q, "tls1") == 0)
+				opt.min_version = MBEDTLS_SSL_MINOR_VERSION_1;
+			else if (strcmp(q, "tls1_1") == 0 ||
+				strcmp(q, "dtls1") == 0)
+				opt.min_version = MBEDTLS_SSL_MINOR_VERSION_2;
+			else if (strcmp(q, "tls1_2") == 0 ||
+				strcmp(q, "dtls1_2") == 0)
+				opt.min_version = MBEDTLS_SSL_MINOR_VERSION_3;
+			else
+				goto usage;
+		}
+		else if (strcmp(p, "max_version") == 0)
+		{
+			if (strcmp(q, "ssl3") == 0)
+				opt.max_version = MBEDTLS_SSL_MINOR_VERSION_0;
+			else if (strcmp(q, "tls1") == 0)
+				opt.max_version = MBEDTLS_SSL_MINOR_VERSION_1;
+			else if (strcmp(q, "tls1_1") == 0 ||
+				strcmp(q, "dtls1") == 0)
+				opt.max_version = MBEDTLS_SSL_MINOR_VERSION_2;
+			else if (strcmp(q, "tls1_2") == 0 ||
+				strcmp(q, "dtls1_2") == 0)
+				opt.max_version = MBEDTLS_SSL_MINOR_VERSION_3;
+			else
+				goto usage;
+		}
+		else if (strcmp(p, "arc4") == 0)
+		{
+			switch (atoi(q))
+			{
+			case 0:     opt.arc4 = MBEDTLS_SSL_ARC4_DISABLED;   break;
+			case 1:     opt.arc4 = MBEDTLS_SSL_ARC4_ENABLED;    break;
+			default:    goto usage;
+			}
+		}
+		else if (strcmp(p, "force_version") == 0)
+		{
+			if (strcmp(q, "ssl3") == 0)
+			{
+				opt.min_version = MBEDTLS_SSL_MINOR_VERSION_0;
+				opt.max_version = MBEDTLS_SSL_MINOR_VERSION_0;
+			}
+			else if (strcmp(q, "tls1") == 0)
+			{
+				opt.min_version = MBEDTLS_SSL_MINOR_VERSION_1;
+				opt.max_version = MBEDTLS_SSL_MINOR_VERSION_1;
+			}
+			else if (strcmp(q, "tls1_1") == 0)
+			{
+				opt.min_version = MBEDTLS_SSL_MINOR_VERSION_2;
+				opt.max_version = MBEDTLS_SSL_MINOR_VERSION_2;
+			}
+			else if (strcmp(q, "tls1_2") == 0)
+			{
+				opt.min_version = MBEDTLS_SSL_MINOR_VERSION_3;
+				opt.max_version = MBEDTLS_SSL_MINOR_VERSION_3;
+			}
+			else if (strcmp(q, "dtls1") == 0)
+			{
+				opt.min_version = MBEDTLS_SSL_MINOR_VERSION_2;
+				opt.max_version = MBEDTLS_SSL_MINOR_VERSION_2;
+				opt.transport = MBEDTLS_SSL_TRANSPORT_DATAGRAM;
+			}
+			else if (strcmp(q, "dtls1_2") == 0)
+			{
+				opt.min_version = MBEDTLS_SSL_MINOR_VERSION_3;
+				opt.max_version = MBEDTLS_SSL_MINOR_VERSION_3;
+				opt.transport = MBEDTLS_SSL_TRANSPORT_DATAGRAM;
+			}
+			else
+				goto usage;
+		}
+		else if (strcmp(p, "auth_mode") == 0)
+		{
+			if (strcmp(q, "none") == 0)
+				opt.auth_mode = MBEDTLS_SSL_VERIFY_NONE;
+			else if (strcmp(q, "optional") == 0)
+				opt.auth_mode = MBEDTLS_SSL_VERIFY_OPTIONAL;
+			else if (strcmp(q, "required") == 0)
+				opt.auth_mode = MBEDTLS_SSL_VERIFY_REQUIRED;
+			else
+				goto usage;
+		}
+		else if (strcmp(p, "record_size_limit") == 0)
+		{
+			opt.rsl = atoi(q); 
+		} 
         else if( strcmp( p, "max_frag_len" ) == 0 )
         {
             if( strcmp( q, "512" ) == 0 )
@@ -1109,6 +1123,14 @@ int main( int argc, char *argv[] )
     }
 #endif
 
+#if defined(MBEDTLS_SSL_RECORD_SIZE_LIMIT )
+	if ((ret = mbedtls_ssl_conf_record_size_limit(&conf, opt.rsl)) != 0)
+	{
+		mbedtls_printf(" failed\n  ! mbedtls_ssl_conf_record_size_limit returned %d\n\n", ret);
+		goto exit;
+	}
+#endif
+
 #if defined(MBEDTLS_SSL_TRUNCATED_HMAC)
     if( opt.trunc_hmac != DFL_TRUNC_HMAC )
         mbedtls_ssl_conf_truncated_hmac( &conf, opt.trunc_hmac );
@@ -1279,8 +1301,13 @@ int main( int argc, char *argv[] )
         mbedtls_printf( "    [ Record expansion is unknown (compression) ]\n" );
 
 #if defined(MBEDTLS_SSL_MAX_FRAGMENT_LENGTH)
-    mbedtls_printf( "    [ Maximum fragment length is %u ]\n",
+    mbedtls_printf( "    [ Maximum fragment length is %u bytes ]\n",
                     (unsigned int) mbedtls_ssl_get_max_frag_len( &ssl ) );
+#endif
+
+#if defined(MBEDTLS_SSL_RECORD_SIZE_LIMIT )
+	mbedtls_printf("    [ Record Size Limit is %u bytes ]\n",
+		(unsigned int)mbedtls_ssl_get_record_size_limit(&ssl));
 #endif
 
 #if defined(MBEDTLS_SSL_ALPN)
@@ -1431,81 +1458,37 @@ send_request:
     mbedtls_printf( "  < Read from server:" );
     fflush( stdout );
 
-    /*
-     * TLS and DTLS need different reading styles (stream vs datagram)
-     */
-    if( opt.transport == MBEDTLS_SSL_TRANSPORT_STREAM )
-    {
-        do
-        {
-            len = sizeof( buf ) - 1;
-            memset( buf, 0, sizeof( buf ) );
-            ret = mbedtls_ssl_read( &ssl, buf, len );
-
-            if( ret == MBEDTLS_ERR_SSL_WANT_READ ||
-                ret == MBEDTLS_ERR_SSL_WANT_WRITE )
-                continue;
-
-            if( ret <= 0 )
-            {
-                switch( ret )
-                {
-                    case MBEDTLS_ERR_SSL_PEER_CLOSE_NOTIFY:
-                        mbedtls_printf( " connection was closed gracefully\n" );
-                        ret = 0;
-                        goto close_notify;
-
-                    case 0:
-                    case MBEDTLS_ERR_NET_CONN_RESET:
-                        mbedtls_printf( " connection was reset by peer\n" );
-                        ret = 0;
-                        goto reconnect;
-
-                    default:
-                        mbedtls_printf( " mbedtls_ssl_read returned -0x%x\n", -ret );
-                        goto exit;
-                }
-            }
-
-            len = ret;
-            buf[len] = '\0';
-            mbedtls_printf( " %d bytes read\n\n%s", len, (char *) buf );
-
-            /* End of message should be detected according to the syntax of the
-             * application protocol (eg HTTP), just use a dummy test here. */
-            if( ret > 0 && buf[len-1] == '\n' )
-            {
-                ret = 0;
-                break;
-            }
-        }
-        while( 1 );
-    }
-    else /* Not stream, so datagram */
+    do
     {
         len = sizeof( buf ) - 1;
         memset( buf, 0, sizeof( buf ) );
+        ret = mbedtls_ssl_read( &ssl, buf, len );
 
-        do ret = mbedtls_ssl_read( &ssl, buf, len );
-        while( ret == MBEDTLS_ERR_SSL_WANT_READ ||
-               ret == MBEDTLS_ERR_SSL_WANT_WRITE );
+        if( ret == MBEDTLS_ERR_SSL_WANT_READ ||
+            ret == MBEDTLS_ERR_SSL_WANT_WRITE )
+            continue;
 
         if( ret <= 0 )
         {
             switch( ret )
             {
-                case MBEDTLS_ERR_SSL_TIMEOUT:
-                    mbedtls_printf( " timeout\n" );
-                    if( retry_left-- > 0 )
-                        goto send_request;
-                    goto exit;
-
                 case MBEDTLS_ERR_SSL_PEER_CLOSE_NOTIFY:
                     mbedtls_printf( " connection was closed gracefully\n" );
                     ret = 0;
                     goto close_notify;
 
-                default:
+				case MBEDTLS_ERR_NET_CONN_RESET:
+                    mbedtls_printf( " connection was reset by peer\n" );
+                    ret = 0;
+                    goto reconnect;
+
+				case MBEDTLS_ERR_SSL_TIMEOUT:
+					mbedtls_printf(" timeout\n");
+					if (retry_left-- > 0)
+						goto send_request;
+					goto exit;
+
+				default:
                     mbedtls_printf( " mbedtls_ssl_read returned -0x%x\n", -ret );
                     goto exit;
             }
@@ -1513,9 +1496,17 @@ send_request:
 
         len = ret;
         buf[len] = '\0';
-        mbedtls_printf( " %d bytes read\n\n%s", len, (char *) buf );
-        ret = 0;
+		mbedtls_printf("%s", (char *)buf);
+
+        /* End of message should be detected according to the syntax of the
+         * application protocol (eg HTTP), just use a dummy test here. */
+        if( ret > 0 && buf[len-1] == '\n' )
+        {
+            ret = 0;
+            break;
+        }
     }
+    while( 1 );
 
     /*
      * 7b. Simulate hard reset and reconnect from same port?
