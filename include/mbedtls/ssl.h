@@ -138,10 +138,8 @@
 
 // Connection ID Parameters 
 #define MBEDTLS_CID_DISABLE 0
-#define MBEDTLS_CID_STATIC 1
-#define MBEDTLS_CID_DYNAMIC 2 
-#define MBEDTLS_CID_BOTH 3 
-
+#define MBEDTLS_CID_DONT_USE 1
+#define MBEDTLS_CID_USE 2
 
 #define MBEDTLS_SSL_IS_NOT_FALLBACK             0
 #define MBEDTLS_SSL_IS_FALLBACK                 1
@@ -196,7 +194,7 @@
  * Default range for DTLS retransmission timer value, in milliseconds.
  * RFC 6347 4.2.4.1 says from 1 second to 60 seconds.
  */
-#define MBEDTLS_SSL_DTLS_TIMEOUT_DFL_MIN    10000
+#define MBEDTLS_SSL_DTLS_TIMEOUT_DFL_MIN    1000
 #define MBEDTLS_SSL_DTLS_TIMEOUT_DFL_MAX   60000
 
 /**
@@ -582,11 +580,12 @@ struct mbedtls_ssl_session
 #endif /* MBEDTLS_SSL_TRUNCATED_HMAC */
 
 #if defined(MBEDTLS_SSL_ENCRYPT_THEN_MAC)
-    int encrypt_then_mac;       /*!< flag for EtM activation                */
-#endif
+    int encrypt_then_mac;       /*!< flag for EtM activation              */
+#endif /* MBEDTLS_SSL_ENCRYPT_THEN_MAC */
+
 #if defined(MBEDTLS_CID)
-	unsigned int cid; /*!< indication of what CID mode we configure for the session */
-#endif 
+	unsigned int cid;           /*!< flag about CID usage           */
+#endif /* MBEDTLS_CID */
 };
 
 /**
@@ -839,7 +838,8 @@ struct mbedtls_ssl_context
     unsigned char *in_offt;     /*!< read offset in application data  */
 
 #if defined(MBEDTLS_CID)
-	unsigned char in_cid[4]; /* cid value of incoming data */
+	unsigned char in_cid[MBEDTLS_CID_MAX_SIZE]; /* cid value of incoming data */
+	uint8_t in_cid_len; /* length of the incoming cid value */
 #endif 
 
     int in_msgtype;             /*!< record header: message type      */
@@ -871,7 +871,8 @@ struct mbedtls_ssl_context
     unsigned char *out_msg;     /*!< message contents (out_iv+ivlen)  */
 
 #if defined(MBEDTLS_CID)
-	unsigned char out_cid[4]; /* cid value of outgoing data */
+	unsigned char out_cid[MBEDTLS_CID_MAX_SIZE]; /* cid value of outgoing data */
+	uint8_t out_cid_len; /* length of the outgoing cid value */
 #endif 
 
     int out_msgtype;            /*!< record header: message type      */
@@ -2028,7 +2029,13 @@ void mbedtls_ssl_conf_encrypt_then_mac( mbedtls_ssl_config *conf, char etm );
 *                  (Default: MBEDTLS_CID_DISABLE)
 **
 * \param conf      SSL configuration
-* \param cid       MBEDTLS_CID_STATIC or MBEDTLS_CID_DYNAMIC
+* \param cid       MBEDTLS_CID_DISABLE or MBEDTLS_CID_DONT_USE or MBEDTLS_CID_USE
+** 
+* \note            MBEDTLS_CID_DISABLE indicates that the CID functionality is not 
+*                  to be used for this session (even though the CID code is compiled in).
+*                  MBEDTLS_CID_DONT_USE indicates that we do not want to use a CID value 
+*                  for outgoing records. 
+*                  MBEDTLS_CID_USE implies that a CID value will be put in outgoing records.
 */
 void mbedtls_ssl_conf_cid(mbedtls_ssl_config *conf, unsigned int cid);
 #endif 

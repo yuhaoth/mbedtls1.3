@@ -307,7 +307,7 @@ int main( void )
 
 #if defined(MBEDTLS_CID)
 #define USAGE_CID                                       \
-    "    cid=%%s         disabled, static, dynamic, both\n"       \
+    "    cid=%%s         disabled, use, dont_use\n"       \
     "                    default: disabled\n"
 #else
 #define USAGE_CID ""
@@ -1068,12 +1068,10 @@ int main( int argc, char *argv[] )
 		{
 			if (strcmp(q, "disabled") == 0)
 				opt.cid = MBEDTLS_CID_DISABLE;
-			else if (strcmp(q, "static") == 0)
-				opt.cid = MBEDTLS_CID_STATIC;
-			else if (strcmp(q, "dynamic") == 0)
-				opt.cid = MBEDTLS_CID_DYNAMIC;
-			else if (strcmp(q, "both") == 0)
-				opt.cid = MBEDTLS_CID_BOTH;
+			else if (strcmp(q, "dont_use") == 0)
+				opt.cid = MBEDTLS_CID_DONT_USE;
+			else if (strcmp(q, "use") == 0)
+				opt.cid = MBEDTLS_CID_USE;
 			else
 				goto usage;
 		}
@@ -1664,6 +1662,7 @@ int main( int argc, char *argv[] )
     if( opt.etm != DFL_ETM )
         mbedtls_ssl_conf_encrypt_then_mac( &conf, opt.etm );
 #endif
+
 
 #if defined(MBEDTLS_CID)
 	if (opt.cid != MBEDTLS_CID_DISABLE)

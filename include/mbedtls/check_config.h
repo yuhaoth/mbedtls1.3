@@ -478,8 +478,16 @@
 #if defined(MBEDTLS_SSL_PROTO_DTLS)     && \
     !defined(MBEDTLS_SSL_PROTO_TLS1_1)  && \
     !defined(MBEDTLS_SSL_PROTO_TLS1_2)
-#error "MBEDTLS_SSL_PROTO_DTLS defined, but not all prerequisites"
+#error "MBEDTLS_SSL_PROTO_DTLS and defined, but not all prerequisites"
 #endif
+
+// DTLS cannot be used with stream ciphers
+#if defined(MBEDTLS_SSL_PROTO_DTLS)     && \
+    defined(MBEDTLS_ARC4_C) 
+#error "MBEDTLS_SSL_PROTO_DTLS and MBEDTLS_ARC4_C cannot be defined simultaneously"
+#endif
+
+
 
 #if defined(MBEDTLS_SSL_CLI_C) && !defined(MBEDTLS_SSL_TLS_C)
 #error "MBEDTLS_SSL_CLI_C defined, but not all prerequisites"
@@ -533,6 +541,11 @@
 #if defined(MBEDTLS_SSL_DTLS_BADMAC_LIMIT) &&                              \
     ( !defined(MBEDTLS_SSL_TLS_C) || !defined(MBEDTLS_SSL_PROTO_DTLS) )
 #error "MBEDTLS_SSL_DTLS_BADMAC_LIMIT  defined, but not all prerequisites"
+#endif
+
+#if defined(MBEDTLS_CID) && \
+    !defined(MBEDTLS_SSL_PROTO_DTLS)
+#error "MBEDTLS_CID  defined, but not all prerequisites"
 #endif
 
 #if defined(MBEDTLS_SSL_ENCRYPT_THEN_MAC) &&   \

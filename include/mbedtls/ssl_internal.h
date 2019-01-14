@@ -400,11 +400,6 @@ int mbedtls_ssl_check_sig_hash( const mbedtls_ssl_context *ssl,
                                 mbedtls_md_type_t md );
 #endif
 
-#if defined(MBEDTLS_CID)
-int ssl_parse_cid_ext(mbedtls_ssl_context *ssl, const unsigned char *buf, size_t len); 
-void ssl_write_cid_ext(mbedtls_ssl_context *ssl, unsigned char *buf, size_t *olen); 
-#endif 
-
 #if defined(MBEDTLS_X509_CRT_PARSE_C)
 static inline mbedtls_pk_context *mbedtls_ssl_own_key( mbedtls_ssl_context *ssl )
 {
@@ -450,22 +445,24 @@ void mbedtls_ssl_write_version( int major, int minor, int transport,
 void mbedtls_ssl_read_version( int *major, int *minor, int transport,
                        const unsigned char ver[2] );
 
-static inline size_t mbedtls_ssl_hdr_len( const mbedtls_ssl_context *ssl )
+static inline size_t mbedtls_ssl_hdr_len(const mbedtls_ssl_context *ssl)
 {
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
 	if (ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_DATAGRAM) {
 #if defined(MBEDTLS_CID)
-		if (ssl->handshake == NULL && ssl->out_msgtype == MBEDTLS_SSL_MSG_APPLICATION_DATA)	return(17);
-		else return (13); 
+		// The use of the CID in the record header increases its size
+		if (ssl->handshake == NULL && ssl->out_msgtype == MBEDTLS_SSL_MSG_APPLICATION_DATA)	return(13 + ssl->out_cid_len);
+		else return (13);
 #else 
 		return(13);
 #endif /* MBEDTLS_CID */
 	}
 #else
-    ((void) ssl);
+	((void)ssl);
 #endif
-    return( 5 );
+	return(5);
 }
+
 
 static inline size_t mbedtls_ssl_hs_hdr_len( const mbedtls_ssl_context *ssl )
 {
@@ -478,11 +475,17 @@ static inline size_t mbedtls_ssl_hs_hdr_len( const mbedtls_ssl_context *ssl )
     return( 4 );
 }
 
+
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
 void mbedtls_ssl_send_flight_completed( mbedtls_ssl_context *ssl );
 void mbedtls_ssl_recv_flight_completed( mbedtls_ssl_context *ssl );
 int mbedtls_ssl_resend( mbedtls_ssl_context *ssl );
 #endif
+
+#if defined(MBEDTLS_CID)
+int ssl_parse_cid_ext(mbedtls_ssl_context *ssl, const unsigned char *buf, size_t len);
+void ssl_write_cid_ext(mbedtls_ssl_context *ssl, unsigned char *buf, size_t *olen);
+#endif /* MBEDTLS_CID */
 
 /* Visible for testing purposes only */
 #if defined(MBEDTLS_SSL_DTLS_ANTI_REPLAY)

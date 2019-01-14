@@ -673,16 +673,14 @@ int main( int argc, char *argv[] )
 		{
 			if (strcmp(q, "disabled") == 0)
 				opt.cid = MBEDTLS_CID_DISABLE;
-			else if (strcmp(q, "static") == 0)
-				opt.cid = MBEDTLS_CID_STATIC;
-			else if (strcmp(q, "dynamic") == 0)
-				opt.cid = MBEDTLS_CID_DYNAMIC;
-			else if (strcmp(q, "both") == 0)
-				opt.cid = MBEDTLS_CID_BOTH;
+			else if (strcmp(q, "dont_use") == 0)
+				opt.cid = MBEDTLS_CID_DONT_USE;
+			else if (strcmp(q, "use") == 0)
+				opt.cid = MBEDTLS_CID_USE;
 			else
 				goto usage;
 		}
-        else if( strcmp( p, "min_version" ) == 0 )
+		else if( strcmp( p, "min_version" ) == 0 )
         {
             if( strcmp( q, "ssl3" ) == 0 )
                 opt.min_version = MBEDTLS_SSL_MINOR_VERSION_0;

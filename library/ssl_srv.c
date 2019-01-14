@@ -86,7 +86,6 @@ void mbedtls_ssl_conf_dtls_cookies( mbedtls_ssl_config *conf,
 }
 #endif /* MBEDTLS_SSL_DTLS_HELLO_VERIFY */
 
-
 #if defined(MBEDTLS_SSL_SERVER_NAME_INDICATION)
 static int ssl_parse_servername_ext( mbedtls_ssl_context *ssl,
                                      const unsigned char *buf,
@@ -1575,6 +1574,7 @@ read_record_header:
 					return(ret);
 				break;
 #endif /* MBEDTLS_CID */
+
             case MBEDTLS_TLS_EXT_RENEGOTIATION_INFO:
                 MBEDTLS_SSL_DEBUG_MSG( 3, ( "found renegotiation extension" ) );
 #if defined(MBEDTLS_SSL_RENEGOTIATION)
@@ -2411,14 +2411,14 @@ static int ssl_write_server_hello( mbedtls_ssl_context *ssl )
     ext_len += olen;
 #endif
 
-#if defined(MBEDTLS_CID)
-	ssl_write_cid_ext(ssl, p + 2 + ext_len, &olen);
-	ext_len += olen;
-#endif
-
 #if defined(MBEDTLS_SSL_SESSION_TICKETS)
     ssl_write_session_ticket_ext( ssl, p + 2 + ext_len, &olen );
     ext_len += olen;
+#endif
+
+#if defined(MBEDTLS_CID)
+	ssl_write_cid_ext(ssl, p + 2 + ext_len, &olen);
+	ext_len += olen;
 #endif
 
 #if defined(MBEDTLS_ECDH_C) || defined(MBEDTLS_ECDSA_C) || \
@@ -3927,6 +3927,32 @@ int mbedtls_ssl_handshake_server_step( mbedtls_ssl_context *ssl )
         case MBEDTLS_SSL_FLUSH_BUFFERS:
             MBEDTLS_SSL_DEBUG_MSG( 2, ( "handshake: done" ) );
             ssl->state = MBEDTLS_SSL_HANDSHAKE_WRAPUP;
+
+/* In case we negotiated the use of CIDs then we need to
+ * adjust the pointers to various header fields. If we
+ * did not negotiate the use of a CID or our peer requested
+ * us not to add a CID value to the record header then the
+ * out_cid_len will be zero.
+ */
+#if defined(MBEDTLS_CID)
+			if (ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_DATAGRAM)
+			{
+				ssl->out_hdr = ssl->out_buf;
+				ssl->out_ctr = ssl->out_buf + 3;
+				ssl->out_len = ssl->out_buf + 11 + ssl->out_cid_len;
+				ssl->out_iv = ssl->out_buf + 13 + ssl->out_cid_len;
+				ssl->out_msg = ssl->out_buf + 13 + ssl->out_cid_len + ssl->transform_negotiate->ivlen -
+					ssl->transform_negotiate->fixed_ivlen;
+
+				ssl->in_hdr = ssl->in_buf;
+				ssl->in_ctr = ssl->in_buf + 3;
+				ssl->in_len = ssl->in_buf + 11 + ssl->in_cid_len;
+				ssl->in_iv = ssl->in_buf + 13 + ssl->in_cid_len;
+				ssl->in_msg = ssl->in_buf + 13 + ssl->in_cid_len + ssl->transform_negotiate->ivlen -
+					ssl->transform_negotiate->fixed_ivlen;
+			}
+#endif /* MBEDTLS_CID */
+
             break;
 
         case MBEDTLS_SSL_HANDSHAKE_WRAPUP:
