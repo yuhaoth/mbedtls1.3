@@ -1480,34 +1480,54 @@ static int ssl_encrypt_buf( mbedtls_ssl_context *ssl )
         mode == MBEDTLS_MODE_CCM )
     {
         int ret;
-        size_t enc_msglen, olen;
+        size_t enc_msglen, olen, add_data_len = 13;
         unsigned char *enc_msg;
-        unsigned char add_data[13];
+#if defined(MBEDTLS_CID)
+		unsigned char add_data[13 + MBEDTLS_CID_MAX_SIZE];
+#else 
+		unsigned char add_data[13];
+#endif /* MBEDTLS_CID */
         unsigned char taglen = ssl->transform_out->ciphersuite_info->flags &
                                MBEDTLS_CIPHERSUITE_SHORT_TAG ? 8 : 16;
 
+		// Adding the 8 byte sequence number to the additional_data structure
         memcpy( add_data, ssl->out_ctr, 8 );
+		// Adding the 1 byte content type to the additional_data structure
         add_data[8]  = ssl->out_msgtype;
+		// Adding the 2 byte version to the additional_data structure
         mbedtls_ssl_write_version( ssl->major_ver, ssl->minor_ver,
                            ssl->conf->transport, add_data + 9 );
 
-/*/
 #if defined(MBEDTLS_CID)
 		if ((ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_DATAGRAM) &&
 			(ssl->out_msgtype == MBEDTLS_SSL_MSG_APPLICATION_DATA))
 		{
-			add_data[11] = ((ssl->out_msglen + ssl->out_cid_len) >> 8) & 0xFF;
-			add_data[12] = (ssl->out_msglen + ssl->out_cid_len) & 0xFF;
+			// Adding the out_cid_len bytes cid to the additional_data structure
+			memcpy(&add_data[11], ssl->out_cid, ssl->out_cid_len);
+
+			// Adding the 2 byte length to the additional_data structure
+			add_data[11+ ssl->out_cid_len] = (ssl->out_msglen >> 8) & 0xFF;
+			add_data[12+ ssl->out_cid_len] = ssl->out_msglen & 0xFF;
+
+			// correct additional data length
+			add_data_len = 13 + ssl->out_cid_len;
+
+			MBEDTLS_SSL_DEBUG_BUF(4, "(cid-enhanced) additional data used for AEAD",
+				add_data, 13+ ssl->out_cid_len);
 		}
 		else
-#endif // MBEDTLS_CID 
-*/		{
+#endif /* MBEDTLS_CID */
+		{
+			// Adding the 2 byte length to the additional_data structure
 			add_data[11] = (ssl->out_msglen >> 8) & 0xFF;
 			add_data[12] = ssl->out_msglen & 0xFF;
+
 			MBEDTLS_SSL_DEBUG_BUF(4, "additional data used for AEAD",
 				add_data, 13);
 		}
-        /*
+
+
+		/*
          * Generate IV
          */
         if( ssl->transform_out->ivlen - ssl->transform_out->fixed_ivlen != 8 )
@@ -1539,9 +1559,7 @@ static int ssl_encrypt_buf( mbedtls_ssl_context *ssl )
 		if ((ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_DATAGRAM) && 
 			(ssl->out_msgtype == MBEDTLS_SSL_MSG_APPLICATION_DATA)) 
 		{
-
 			memcpy(ssl->out_ctr+8, ssl->out_cid, ssl->out_cid_len);
-			//ssl->out_msglen += ssl->out_cid_len;
 
 			MBEDTLS_SSL_DEBUG_BUF(4, "CID used", ssl->out_cid, ssl->out_cid_len);
 		}
@@ -1557,7 +1575,7 @@ static int ssl_encrypt_buf( mbedtls_ssl_context *ssl )
         if( ( ret = mbedtls_cipher_auth_encrypt( &ssl->transform_out->cipher_ctx_enc,
                                          ssl->transform_out->iv_enc,
                                          ssl->transform_out->ivlen,
-                                         add_data, 13,
+										 add_data, add_data_len,
                                          enc_msg, enc_msglen,
                                          enc_msg, &olen,
                                          enc_msg + enc_msglen, taglen ) ) != 0 )
@@ -1773,10 +1791,14 @@ static int ssl_decrypt_buf( mbedtls_ssl_context *ssl )
         mode == MBEDTLS_MODE_CCM )
     {
         int ret;
-        size_t dec_msglen, olen;
+        size_t dec_msglen, olen, add_data_len=13;
         unsigned char *dec_msg;
         unsigned char *dec_msg_result;
-        unsigned char add_data[13];
+#if defined(MBEDTLS_CID)
+		unsigned char add_data[13 + MBEDTLS_CID_MAX_SIZE];
+#else 
+		unsigned char add_data[13];
+#endif /* MBEDTLS_CID */
         unsigned char taglen = ssl->transform_in->ciphersuite_info->flags &
                                MBEDTLS_CIPHERSUITE_SHORT_TAG ? 8 : 16;
         size_t explicit_iv_len = ssl->transform_in->ivlen -
@@ -1795,15 +1817,41 @@ static int ssl_decrypt_buf( mbedtls_ssl_context *ssl )
         dec_msg_result = ssl->in_msg;
         ssl->in_msglen = dec_msglen;
 
+		// Adding the 8 byte sequence number to the additional_data structure
         memcpy( add_data, ssl->in_ctr, 8 );
+		// Adding the 1 byte content type to the additional_data structure
         add_data[8]  = ssl->in_msgtype;
+		// Adding the 2 byte version to the additional_data structure
         mbedtls_ssl_write_version( ssl->major_ver, ssl->minor_ver,
                            ssl->conf->transport, add_data + 9 );
+
+#if defined(MBEDTLS_CID)
+		if ((ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_DATAGRAM) &&
+			(ssl->out_msgtype == MBEDTLS_SSL_MSG_APPLICATION_DATA))
+		{
+			// Adding the in_cid_len bytes cid to the additional_data structure
+			memcpy(&add_data[11], ssl->in_ctr + 8, ssl->in_cid_len);
+
+			// Adding the 2 byte length to the additional_data structure
+			add_data[11 + ssl->in_cid_len] = (ssl->in_msglen >> 8) & 0xFF;
+			add_data[12 + ssl->in_cid_len] = ssl->in_msglen & 0xFF;
+
+			// correct additional data length
+			add_data_len = 13 + ssl->in_cid_len; 
+
+			MBEDTLS_SSL_DEBUG_BUF(4, "(cid-enhanced) additional data used for AEAD",
+				add_data, 13 + ssl->in_cid_len);
+		}
+		else
+#endif /* MBEDTLS_CID */
+		{
+		// Adding the 2 byte length to the additional_data structure
         add_data[11] = ( ssl->in_msglen >> 8 ) & 0xFF;
         add_data[12] = ssl->in_msglen & 0xFF;
-
-        MBEDTLS_SSL_DEBUG_BUF( 4, "additional data used for AEAD",
-                       add_data, 13 );
+		
+		MBEDTLS_SSL_DEBUG_BUF(4, "additional data used for AEAD",
+			add_data, 13);
+		}
 
         memcpy( ssl->transform_in->iv_dec + ssl->transform_in->fixed_ivlen,
                 ssl->in_iv,
@@ -1819,7 +1867,7 @@ static int ssl_decrypt_buf( mbedtls_ssl_context *ssl )
         if( ( ret = mbedtls_cipher_auth_decrypt( &ssl->transform_in->cipher_ctx_dec,
                                          ssl->transform_in->iv_dec,
                                          ssl->transform_in->ivlen,
-                                         add_data, 13,
+                                         add_data, add_data_len,
                                          dec_msg, dec_msglen,
                                          dec_msg_result, &olen,
                                          dec_msg + dec_msglen, taglen ) ) != 0 )
@@ -3799,8 +3847,14 @@ static int ssl_parse_record_header( mbedtls_ssl_context *ssl )
 			(ssl->in_msgtype == MBEDTLS_SSL_MSG_APPLICATION_DATA) && 
 			(ssl->in_cid_len>0))
 		{
-			// TBD: Read the CID of the incoming datagram
-			MBEDTLS_SSL_DEBUG_BUF(4, "CID used", ssl->in_cid, ssl->in_cid_len);
+			// Read the CID of the incoming datagram			
+			if (memcmp(ssl->in_ctr + 8, ssl->in_cid, ssl->in_cid_len) != 0) 
+			{
+				MBEDTLS_SSL_DEBUG_MSG(1, ("unexpected CID value"));
+				return(MBEDTLS_ERR_SSL_UNEXPECTED_RECORD);
+			}
+			MBEDTLS_SSL_DEBUG_BUF(4, "CID used", ssl->in_ctr + 8, ssl->in_cid_len);
+
 		}
 #endif /* MBEDTLS_CID */
 
@@ -5753,7 +5807,7 @@ void mbedtls_ssl_conf_cid(mbedtls_ssl_config *conf, unsigned int cid)
 		cid == MBEDTLS_CID_DISABLE)
    	   conf->cid = cid;
 }
-#endif 
+#endif
 
 #if defined(MBEDTLS_SSL_DTLS_BADMAC_LIMIT)
 void mbedtls_ssl_conf_dtls_badmac_limit( mbedtls_ssl_config *conf, unsigned limit )
