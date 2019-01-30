@@ -449,13 +449,7 @@ static inline size_t mbedtls_ssl_hdr_len(const mbedtls_ssl_context *ssl)
 {
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
 	if (ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_DATAGRAM) {
-#if defined(MBEDTLS_CID)
-		// The use of the CID in the record header increases its size
-		if (ssl->handshake == NULL && ssl->out_msgtype == MBEDTLS_SSL_MSG_APPLICATION_DATA)	return(13 + ssl->out_cid_len);
-		else return (13);
-#else 
 		return(13);
-#endif /* MBEDTLS_CID */
 	}
 #else
 	((void)ssl);

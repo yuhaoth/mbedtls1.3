@@ -1492,16 +1492,18 @@ static int ssl_encrypt_buf( mbedtls_ssl_context *ssl )
 
 		// Adding the 8 byte sequence number to the additional_data structure
         memcpy( add_data, ssl->out_ctr, 8 );
-		// Adding the 1 byte content type to the additional_data structure
-        add_data[8]  = ssl->out_msgtype;
-		// Adding the 2 byte version to the additional_data structure
-        mbedtls_ssl_write_version( ssl->major_ver, ssl->minor_ver,
-                           ssl->conf->transport, add_data + 9 );
 
 #if defined(MBEDTLS_CID)
 		if ((ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_DATAGRAM) &&
 			(ssl->out_msgtype == MBEDTLS_SSL_MSG_APPLICATION_DATA))
 		{
+			// Adding the 1 byte content type to the additional_data structure
+			add_data[8] = MBEDTLS_SSL_MSG_TLS_CID;
+
+			// Adding the 2 byte version to the additional_data structure
+			mbedtls_ssl_write_version(ssl->major_ver, ssl->minor_ver,
+				ssl->conf->transport, add_data + 9);
+
 			// Adding the out_cid_len bytes cid to the additional_data structure
 			memcpy(&add_data[11], ssl->out_cid, ssl->out_cid_len);
 
@@ -1518,6 +1520,12 @@ static int ssl_encrypt_buf( mbedtls_ssl_context *ssl )
 		else
 #endif /* MBEDTLS_CID */
 		{
+			// Adding the 1 byte content type to the additional_data structure
+			add_data[8] = ssl->out_msgtype;
+			// Adding the 2 byte version to the additional_data structure
+			mbedtls_ssl_write_version(ssl->major_ver, ssl->minor_ver,
+				ssl->conf->transport, add_data + 9);
+
 			// Adding the 2 byte length to the additional_data structure
 			add_data[11] = (ssl->out_msglen >> 8) & 0xFF;
 			add_data[12] = ssl->out_msglen & 0xFF;
@@ -1819,15 +1827,17 @@ static int ssl_decrypt_buf( mbedtls_ssl_context *ssl )
 
 		// Adding the 8 byte sequence number to the additional_data structure
         memcpy( add_data, ssl->in_ctr, 8 );
+
 		// Adding the 1 byte content type to the additional_data structure
         add_data[8]  = ssl->in_msgtype;
+		
 		// Adding the 2 byte version to the additional_data structure
         mbedtls_ssl_write_version( ssl->major_ver, ssl->minor_ver,
                            ssl->conf->transport, add_data + 9 );
 
 #if defined(MBEDTLS_CID)
 		if ((ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_DATAGRAM) &&
-			(ssl->out_msgtype == MBEDTLS_SSL_MSG_APPLICATION_DATA))
+			(ssl->in_msgtype == MBEDTLS_SSL_MSG_TLS_CID))
 		{
 			// Adding the in_cid_len bytes cid to the additional_data structure
 			memcpy(&add_data[11], ssl->in_ctr + 8, ssl->in_cid_len);
@@ -1845,12 +1855,12 @@ static int ssl_decrypt_buf( mbedtls_ssl_context *ssl )
 		else
 #endif /* MBEDTLS_CID */
 		{
-		// Adding the 2 byte length to the additional_data structure
-        add_data[11] = ( ssl->in_msglen >> 8 ) & 0xFF;
-        add_data[12] = ssl->in_msglen & 0xFF;
-		
-		MBEDTLS_SSL_DEBUG_BUF(4, "additional data used for AEAD",
-			add_data, 13);
+			// Adding the 2 byte length to the additional_data structure
+			add_data[11] = (ssl->in_msglen >> 8) & 0xFF;
+			add_data[12] = ssl->in_msglen & 0xFF;
+
+			MBEDTLS_SSL_DEBUG_BUF(4, "additional data used for AEAD",
+				add_data, 13);
 		}
 
         memcpy( ssl->transform_in->iv_dec + ssl->transform_in->fixed_ivlen,
@@ -2629,13 +2639,27 @@ int mbedtls_ssl_flush_output( mbedtls_ssl_context *ssl )
         return( 0 );
     }
 
-    while( ssl->out_left > 0 )
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 2, ( "message length: %d, out_left: %d",
-                       mbedtls_ssl_hdr_len( ssl ) + ssl->out_msglen, ssl->out_left ) );
+	while (ssl->out_left > 0)
+	{
 
-        buf = ssl->out_hdr + mbedtls_ssl_hdr_len( ssl ) +
-              ssl->out_msglen - ssl->out_left;
+#if defined(MBEDTLS_CID)
+		if (ssl->out_msgtype == MBEDTLS_SSL_MSG_APPLICATION_DATA || ssl->out_msgtype == MBEDTLS_SSL_MSG_TLS_CID) {
+			MBEDTLS_SSL_DEBUG_MSG(2, ("message length: %d, out_left: %d",
+				mbedtls_ssl_hdr_len(ssl) + ssl->out_msglen + ssl->out_cid_len, ssl->out_left));
+
+			buf = ssl->out_hdr + mbedtls_ssl_hdr_len(ssl) + ssl->out_cid_len +
+				ssl->out_msglen - ssl->out_left;
+		}
+		else
+#endif /* MBEDTLS_CID */
+		{
+			MBEDTLS_SSL_DEBUG_MSG(2, ("message length: %d, out_left: %d",
+				mbedtls_ssl_hdr_len(ssl) + ssl->out_msglen, ssl->out_left));
+
+			buf = ssl->out_hdr + mbedtls_ssl_hdr_len(ssl) +
+				ssl->out_msglen - ssl->out_left;
+	    }
+
         ret = ssl->f_send( ssl->p_bio, buf, ssl->out_left );
 
         MBEDTLS_SSL_DEBUG_RET( 2, "ssl->f_send", ret );
@@ -3008,9 +3032,29 @@ int mbedtls_ssl_write_record( mbedtls_ssl_context *ssl )
             done = 1;
     }
 #endif /* MBEDTLS_SSL_HW_RECORD_ACCEL */
-    if( !done )
-    {
-        ssl->out_hdr[0] = (unsigned char) ssl->out_msgtype;
+	if (!done)
+	{
+#if defined(MBEDTLS_CID)
+		if ((ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_DATAGRAM) &&
+			(ssl->out_msgtype == MBEDTLS_SSL_MSG_APPLICATION_DATA) && 
+			(ssl->transform_out != NULL) && 
+			(ssl->out_cid_len > 0))
+		{
+			// We use a different content type for use with CID-modified record layer payloads
+			ssl->out_hdr[0] = (unsigned char)MBEDTLS_SSL_MSG_TLS_CID;
+
+			/* Adding content type at the end of the data. We don't use padding. */
+			ssl->out_msg[len] = ssl->out_msgtype;
+			ssl->out_msglen = len + 1;
+			len++;
+
+		}
+		else
+#endif /* MBEDTLS_CID */
+		{
+			ssl->out_hdr[0] = (unsigned char)ssl->out_msgtype;
+		}
+
         mbedtls_ssl_write_version( ssl->major_ver, ssl->minor_ver,
                            ssl->conf->transport, ssl->out_hdr + 1 );
 
@@ -3030,15 +3074,27 @@ int mbedtls_ssl_write_record( mbedtls_ssl_context *ssl )
             ssl->out_len[1] = (unsigned char)( len      );
         }
 
-        ssl->out_left = mbedtls_ssl_hdr_len( ssl ) + ssl->out_msglen;
+		MBEDTLS_SSL_DEBUG_MSG(3, ("output record: msgtype = %d, "
+			"version = [%d:%d], msglen = %d",
+			ssl->out_hdr[0], ssl->out_hdr[1], ssl->out_hdr[2],
+			(ssl->out_len[0] << 8) | ssl->out_len[1]));
 
-        MBEDTLS_SSL_DEBUG_MSG( 3, ( "output record: msgtype = %d, "
-                            "version = [%d:%d], msglen = %d",
-                       ssl->out_hdr[0], ssl->out_hdr[1], ssl->out_hdr[2],
-                     ( ssl->out_len[0] << 8 ) | ssl->out_len[1] ) );
+#if defined(MBEDTLS_CID)
+		if (ssl->out_hdr[0] == MBEDTLS_SSL_MSG_TLS_CID)
+		{
+			ssl->out_left = mbedtls_ssl_hdr_len(ssl) + ssl->out_msglen + ssl->out_cid_len;
 
-        MBEDTLS_SSL_DEBUG_BUF( 4, "output record sent to network",
+			MBEDTLS_SSL_DEBUG_BUF(4, "output record sent to network",
+				ssl->out_hdr, mbedtls_ssl_hdr_len(ssl) + ssl->out_msglen + ssl->out_cid_len);
+		}
+		else
+#endif /* MBEDTLS_CID */
+		{
+			ssl->out_left = mbedtls_ssl_hdr_len(ssl) + ssl->out_msglen;
+		
+			MBEDTLS_SSL_DEBUG_BUF( 4, "output record sent to network",
                        ssl->out_hdr, mbedtls_ssl_hdr_len( ssl ) + ssl->out_msglen );
+		}
     }
 
     if( ( ret = mbedtls_ssl_flush_output( ssl ) ) != 0 )
@@ -3677,9 +3733,18 @@ static int ssl_parse_record_header( mbedtls_ssl_context *ssl )
     int ret;
     int major_ver, minor_ver;
 
-    MBEDTLS_SSL_DEBUG_BUF( 4, "input record header", ssl->in_hdr, mbedtls_ssl_hdr_len( ssl ) );
+	ssl->in_msgtype = ssl->in_hdr[0];
 
-    ssl->in_msgtype =  ssl->in_hdr[0];
+#if defined(MBEDTLS_CID)
+	if (ssl->in_msgtype == MBEDTLS_SSL_MSG_TLS_CID)
+	{
+		MBEDTLS_SSL_DEBUG_BUF(4, "input record header", ssl->in_hdr, mbedtls_ssl_hdr_len(ssl)+ ssl->in_cid_len);
+	} else 
+#endif /* MBEDTLS_CID */
+	{
+		MBEDTLS_SSL_DEBUG_BUF(4, "input record header", ssl->in_hdr, mbedtls_ssl_hdr_len(ssl));
+	}
+    
     ssl->in_msglen = ( ssl->in_len[0] << 8 ) | ssl->in_len[1];
     mbedtls_ssl_read_version( &major_ver, &minor_ver, ssl->conf->transport, ssl->in_hdr + 1 );
 
@@ -3692,7 +3757,11 @@ static int ssl_parse_record_header( mbedtls_ssl_context *ssl )
     if( ssl->in_msgtype != MBEDTLS_SSL_MSG_HANDSHAKE &&
         ssl->in_msgtype != MBEDTLS_SSL_MSG_ALERT &&
         ssl->in_msgtype != MBEDTLS_SSL_MSG_CHANGE_CIPHER_SPEC &&
-        ssl->in_msgtype != MBEDTLS_SSL_MSG_APPLICATION_DATA )
+        ssl->in_msgtype != MBEDTLS_SSL_MSG_APPLICATION_DATA 
+#if defined(MBEDTLS_CID)		
+		&& ssl->in_msgtype != MBEDTLS_SSL_MSG_TLS_CID
+#endif /* MBEDTLS_CID */
+		)
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "unknown record type" ) );
 
@@ -3844,8 +3913,7 @@ static int ssl_parse_record_header( mbedtls_ssl_context *ssl )
 
 #if defined(MBEDTLS_CID)
 		if ((ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_DATAGRAM) &&
-			(ssl->in_msgtype == MBEDTLS_SSL_MSG_APPLICATION_DATA) && 
-			(ssl->in_cid_len>0))
+			(ssl->in_msgtype == MBEDTLS_SSL_MSG_TLS_CID))
 		{
 			// Read the CID of the incoming datagram			
 			if (memcmp(ssl->in_ctr + 8, ssl->in_cid, ssl->in_cid_len) != 0) 
@@ -3871,8 +3939,18 @@ static int ssl_prepare_record_content( mbedtls_ssl_context *ssl )
 {
     int ret, done = 0;
 
-    MBEDTLS_SSL_DEBUG_BUF( 4, "input record from network",
-                   ssl->in_hdr, mbedtls_ssl_hdr_len( ssl ) + ssl->in_msglen );
+#if defined(MBEDTLS_CID)
+	if (ssl->in_msgtype == MBEDTLS_SSL_MSG_TLS_CID)
+	{
+		MBEDTLS_SSL_DEBUG_BUF(4, "input record from network",
+			ssl->in_hdr, mbedtls_ssl_hdr_len(ssl) + +ssl->in_cid_len + ssl->in_msglen);
+	}
+	else
+#endif /* MBEDTLS_CID */
+	{
+		MBEDTLS_SSL_DEBUG_BUF(4, "input record from network",
+			ssl->in_hdr, mbedtls_ssl_hdr_len(ssl) + ssl->in_msglen);
+	}
 
 #if defined(MBEDTLS_SSL_HW_RECORD_ACCEL)
     if( mbedtls_ssl_hw_record_read != NULL )
@@ -3907,6 +3985,8 @@ static int ssl_prepare_record_content( mbedtls_ssl_context *ssl )
             return( MBEDTLS_ERR_SSL_INVALID_RECORD );
         }
     }
+
+
 
 #if defined(MBEDTLS_ZLIB_SUPPORT)
     if( ssl->transform_in != NULL &&
@@ -4002,11 +4082,32 @@ int mbedtls_ssl_read_record_layer( mbedtls_ssl_context *ssl )
 read_record_header:
 #endif
 
-    if( ( ret = mbedtls_ssl_fetch_input( ssl, mbedtls_ssl_hdr_len( ssl ) ) ) != 0 )
-    {
-        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_fetch_input", ret );
-        return( ret );
-    }
+#if defined(MBEDTLS_CID)
+	if ((ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_DATAGRAM) &&
+	    (ssl->state == MBEDTLS_SSL_HANDSHAKE_OVER) &&
+		(ssl->in_cid_len > 0))
+	{
+
+			if ((ret = mbedtls_ssl_fetch_input(ssl, mbedtls_ssl_hdr_len(ssl)+ ssl->in_cid_len)) != 0)
+			{
+				MBEDTLS_SSL_DEBUG_RET(1, "mbedtls_ssl_fetch_input", ret);
+				return(ret);
+			}
+
+			if (ssl->in_hdr[0] != MBEDTLS_SSL_MSG_TLS_CID)
+			{
+				MBEDTLS_SSL_DEBUG_MSG(1, ("should never happen"));
+				return(MBEDTLS_ERR_SSL_INTERNAL_ERROR);
+			}
+	} else
+#endif /* MBEDTLS_CID */
+	{
+		if ((ret = mbedtls_ssl_fetch_input(ssl, mbedtls_ssl_hdr_len(ssl))) != 0)
+		{
+			MBEDTLS_SSL_DEBUG_RET(1, "mbedtls_ssl_fetch_input", ret);
+			return(ret);
+		}
+	}
 
     if( ( ret = ssl_parse_record_header( ssl ) ) != 0 )
     {
@@ -4016,9 +4117,20 @@ read_record_header:
         {
             if( ret == MBEDTLS_ERR_SSL_UNEXPECTED_RECORD )
             {
-                /* Skip unexpected record (but not whole datagram) */
-                ssl->next_record_offset = ssl->in_msglen
-                                        + mbedtls_ssl_hdr_len( ssl );
+
+#if defined(MBEDTLS_CID)
+				// Read outer message header
+				if (ssl->in_hdr[0] == MBEDTLS_SSL_MSG_TLS_CID)
+				{
+					/* Skip unexpected record (but not whole datagram) */
+					ssl->next_record_offset = ssl->in_msglen + mbedtls_ssl_hdr_len(ssl) + ssl->in_cid_len;
+				}
+				else
+#endif /* MBEDTLS_CID */
+				{
+					/* Skip unexpected record (but not whole datagram) */
+					ssl->next_record_offset = ssl->in_msglen + mbedtls_ssl_hdr_len( ssl );
+				}
 
                 MBEDTLS_SSL_DEBUG_MSG( 1, ( "discarding unexpected record "
                                             "(header)" ) );
@@ -4043,17 +4155,43 @@ read_record_header:
     /*
      * Read and optionally decrypt the message contents
      */
-    if( ( ret = mbedtls_ssl_fetch_input( ssl,
-                                 mbedtls_ssl_hdr_len( ssl ) + ssl->in_msglen ) ) != 0 )
-    {
-        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_fetch_input", ret );
-        return( ret );
-    }
+
+#if defined(MBEDTLS_CID)
+	if (ssl->in_msgtype == MBEDTLS_SSL_MSG_TLS_CID)
+	{
+		if ((ret = mbedtls_ssl_fetch_input(ssl,
+			mbedtls_ssl_hdr_len(ssl) + ssl->in_msglen+ ssl->in_cid_len)) != 0)
+		{
+			MBEDTLS_SSL_DEBUG_RET(1, "mbedtls_ssl_fetch_input", ret);
+			return(ret);
+		}
+	}
+	else
+#endif /* MBEDTLS_CID */
+	{
+		if ((ret = mbedtls_ssl_fetch_input(ssl,
+			mbedtls_ssl_hdr_len(ssl) + ssl->in_msglen)) != 0)
+		{
+			MBEDTLS_SSL_DEBUG_RET(1, "mbedtls_ssl_fetch_input", ret);
+			return(ret);
+		}
+	}
 
     /* Done reading this record, get ready for the next one */
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
-    if( ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_DATAGRAM )
-        ssl->next_record_offset = ssl->in_msglen + mbedtls_ssl_hdr_len( ssl );
+	if (ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_DATAGRAM) {
+
+#if defined(MBEDTLS_CID)
+		if (ssl->in_msgtype == MBEDTLS_SSL_MSG_TLS_CID)
+		{
+			ssl->next_record_offset = ssl->in_msglen + mbedtls_ssl_hdr_len(ssl)+ ssl->in_cid_len;
+		}
+		else
+#endif /* MBEDTLS_CID */
+		{
+			ssl->next_record_offset = ssl->in_msglen + mbedtls_ssl_hdr_len(ssl);
+		}
+	}
     else
 #endif
         ssl->in_left = 0;
@@ -4161,6 +4299,56 @@ read_record_header:
 int mbedtls_ssl_handle_message_type( mbedtls_ssl_context *ssl )
 {
     int ret;
+
+#if defined(MBEDTLS_CID)
+	/* The real content id is encapsulated inside the payload. */
+	if (ssl->in_msgtype == MBEDTLS_SSL_MSG_TLS_CID)
+	{
+
+		// Set handshake message to an invalid type 
+		ssl->in_msgtype = 0;
+
+		for (int i = ssl->in_msglen; i > 0; i--)
+		{
+			switch (ssl->in_msg[i - 1])
+			{
+			case 0:
+				// This is padding. 
+				break;
+
+			case MBEDTLS_SSL_MSG_HANDSHAKE:
+				// We received an encrypted handshake message
+				ssl->in_msgtype = MBEDTLS_SSL_MSG_HANDSHAKE;
+				// skip the ContentType and padding
+				ssl->in_msglen = i - 1;
+
+				break;
+			case MBEDTLS_SSL_MSG_APPLICATION_DATA:
+				// We received application data
+				ssl->in_msgtype = MBEDTLS_SSL_MSG_APPLICATION_DATA;
+				// skip the ContentType and padding
+				ssl->in_msglen = i - 1;
+				break;
+			case MBEDTLS_SSL_MSG_ALERT:
+				// We received an alert
+				ssl->in_msgtype = MBEDTLS_SSL_MSG_ALERT;
+				// skip the ContentType and padding
+				ssl->in_msglen = i - 1;
+				break;
+			default:
+				MBEDTLS_SSL_DEBUG_MSG(1, ("unknown message"));
+
+				return(MBEDTLS_ERR_SSL_NON_FATAL);
+			}
+
+			if (ssl->in_msgtype != 0) {
+				// we found an appropriate type
+				break;
+			}
+		}
+	}
+#endif /* MBEDTLS_CID */
+
 
     /*
      * Handle particular types of records
@@ -6476,7 +6664,17 @@ int mbedtls_ssl_get_record_expansion( const mbedtls_ssl_context *ssl )
             return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
     }
 
-    return( (int)( mbedtls_ssl_hdr_len( ssl ) + transform_expansion ) );
+
+#if defined(MBEDTLS_CID)
+	if (ssl->in_msgtype == MBEDTLS_SSL_MSG_APPLICATION_DATA || ssl->in_msgtype == MBEDTLS_SSL_MSG_TLS_CID)
+	{
+		return((int)(mbedtls_ssl_hdr_len(ssl) + ssl->in_cid_len + transform_expansion));
+	}
+	else
+#endif /* MBEDTLS_CID */
+	{
+		return((int)(mbedtls_ssl_hdr_len(ssl) + transform_expansion));
+	}
 }
 
 #if defined(MBEDTLS_SSL_MAX_FRAGMENT_LENGTH)

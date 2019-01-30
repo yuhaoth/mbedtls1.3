@@ -3327,6 +3327,25 @@ int mbedtls_ssl_handshake_client_step( mbedtls_ssl_context *ssl )
         *  ==>   ClientHello
         */
        case MBEDTLS_SSL_CLIENT_HELLO:
+
+		   // Reset pointers to buffers
+#if defined(MBEDTLS_SSL_PROTO_DTLS) && defined(MBEDTLS_CID)
+		   if (ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_DATAGRAM)
+		   {
+			   ssl->out_hdr = ssl->out_buf;
+			   ssl->out_ctr = ssl->out_buf + 3;
+			   ssl->out_len = ssl->out_buf + 11;
+			   ssl->out_iv = ssl->out_buf + 13;
+			   ssl->out_msg = ssl->out_buf + 13;
+
+			   ssl->in_hdr = ssl->in_buf;
+			   ssl->in_ctr = ssl->in_buf + 3;
+			   ssl->in_len = ssl->in_buf + 11;
+			   ssl->in_iv = ssl->in_buf + 13;
+			   ssl->in_msg = ssl->in_buf + 13;
+		   }
+#endif /* MBEDTLS_CID && MBEDTLS_SSL_PROTO_DTLS */
+
            ret = ssl_write_client_hello( ssl );
            break;
 
