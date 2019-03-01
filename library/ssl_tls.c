@@ -1483,50 +1483,68 @@ static int ssl_encrypt_buf( mbedtls_ssl_context *ssl )
         size_t enc_msglen, olen, add_data_len = 13;
         unsigned char *enc_msg;
 #if defined(MBEDTLS_CID)
-		unsigned char add_data[13 + MBEDTLS_CID_MAX_SIZE];
+		unsigned char add_data[14 + MBEDTLS_CID_MAX_SIZE];
 #else 
 		unsigned char add_data[13];
 #endif /* MBEDTLS_CID */
         unsigned char taglen = ssl->transform_out->ciphersuite_info->flags &
                                MBEDTLS_CIPHERSUITE_SHORT_TAG ? 8 : 16;
 
-		// Adding the 8 byte sequence number to the additional_data structure
-        memcpy( add_data, ssl->out_ctr, 8 );
+        /* Creating the additional_data structure */
+
+		// Adding the 8 byte sequence number
+		memcpy(add_data, ssl->out_ctr, 8);
 
 #if defined(MBEDTLS_CID)
+		/* CID-enhanced additional data calculation
+		 *
+		 * additional_data = seq_num + type + version +
+		 *                       cid + cid_length + length;
+		 */
 		if ((ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_DATAGRAM) &&
 			(ssl->out_msgtype == MBEDTLS_SSL_MSG_APPLICATION_DATA))
 		{
-			// Adding the 1 byte content type to the additional_data structure
+
+			// Adding the 1 byte content type field
 			add_data[8] = MBEDTLS_SSL_MSG_TLS_CID;
 
-			// Adding the 2 byte version to the additional_data structure
+			// Adding the 2 byte version field
 			mbedtls_ssl_write_version(ssl->major_ver, ssl->minor_ver,
 				ssl->conf->transport, add_data + 9);
 
-			// Adding the out_cid_len bytes cid to the additional_data structure
+			// Adding the cid (which has out_cid_len bytes)
 			memcpy(&add_data[11], ssl->out_cid, ssl->out_cid_len);
 
-			// Adding the 2 byte length to the additional_data structure
-			add_data[11+ ssl->out_cid_len] = (ssl->out_msglen >> 8) & 0xFF;
-			add_data[12+ ssl->out_cid_len] = ssl->out_msglen & 0xFF;
+			// Adding the 1 byte cid_length field
+			add_data[11+ ssl->out_cid_len] = ssl->out_cid_len;
 
-			// correct additional data length
-			add_data_len = 13 + ssl->out_cid_len;
+			// Adding the 2 byte length field
+			add_data[12+ ssl->out_cid_len] = (ssl->out_msglen >> 8) & 0xFF;
+			add_data[13+ ssl->out_cid_len] = ssl->out_msglen & 0xFF;
+
+			// correcting additional data length
+			add_data_len = 14 + ssl->out_cid_len;
 
 			MBEDTLS_SSL_DEBUG_BUF(4, "(cid-enhanced) additional data used for AEAD",
-				add_data, 13+ ssl->out_cid_len);
+				add_data, add_data_len);
 		}
 		else
 #endif /* MBEDTLS_CID */
 		{
-			// Adding the 1 byte content type to the additional_data structure
+            /* RFC 5246 additional data calculation
+             *
+             * additional_data = seq_num + type +
+             *                   version + length;
+             */
+
+			// Adding the 1 byte content type field
 			add_data[8] = ssl->out_msgtype;
-			// Adding the 2 byte version to the additional_data structure
+
+			// Adding the 2 byte version field
 			mbedtls_ssl_write_version(ssl->major_ver, ssl->minor_ver,
 				ssl->conf->transport, add_data + 9);
 
-			// Adding the 2 byte length to the additional_data structure
+			// Adding the 2 byte length field
 			add_data[11] = (ssl->out_msglen >> 8) & 0xFF;
 			add_data[12] = ssl->out_msglen & 0xFF;
 
@@ -1803,7 +1821,7 @@ static int ssl_decrypt_buf( mbedtls_ssl_context *ssl )
         unsigned char *dec_msg;
         unsigned char *dec_msg_result;
 #if defined(MBEDTLS_CID)
-		unsigned char add_data[13 + MBEDTLS_CID_MAX_SIZE];
+		unsigned char add_data[14 + MBEDTLS_CID_MAX_SIZE];
 #else 
 		unsigned char add_data[13];
 #endif /* MBEDTLS_CID */
@@ -1825,10 +1843,12 @@ static int ssl_decrypt_buf( mbedtls_ssl_context *ssl )
         dec_msg_result = ssl->in_msg;
         ssl->in_msglen = dec_msglen;
 
-		// Adding the 8 byte sequence number to the additional_data structure
+		/* additional_data structure */
+
+		// Adding the 8 byte sequence number
         memcpy( add_data, ssl->in_ctr, 8 );
 
-		// Adding the 1 byte content type to the additional_data structure
+		// Adding the 1 byte content type
         add_data[8]  = ssl->in_msgtype;
 		
 		// Adding the 2 byte version to the additional_data structure
@@ -1839,23 +1859,39 @@ static int ssl_decrypt_buf( mbedtls_ssl_context *ssl )
 		if ((ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_DATAGRAM) &&
 			(ssl->in_msgtype == MBEDTLS_SSL_MSG_TLS_CID))
 		{
-			// Adding the in_cid_len bytes cid to the additional_data structure
+
+			/* CID-enhanced additional data calculation
+			 *
+			 * additional_data = seq_num + type + version +
+			 *                   cid + cid_length + length;
+			 */
+
+			// Adding the cid 
 			memcpy(&add_data[11], ssl->in_ctr + 8, ssl->in_cid_len);
 
-			// Adding the 2 byte length to the additional_data structure
-			add_data[11 + ssl->in_cid_len] = (ssl->in_msglen >> 8) & 0xFF;
-			add_data[12 + ssl->in_cid_len] = ssl->in_msglen & 0xFF;
+			// Adding the 1 byte cid_len field
+			add_data[11 + ssl->in_cid_len] = ssl->in_cid_len;
+
+			// Adding the 2 byte length field
+			add_data[12 + ssl->in_cid_len] = (ssl->in_msglen >> 8) & 0xFF;
+			add_data[13 + ssl->in_cid_len] = ssl->in_msglen & 0xFF;
 
 			// correct additional data length
-			add_data_len = 13 + ssl->in_cid_len; 
+			add_data_len = 14 + ssl->in_cid_len; 
 
 			MBEDTLS_SSL_DEBUG_BUF(4, "(cid-enhanced) additional data used for AEAD",
-				add_data, 13 + ssl->in_cid_len);
+				add_data, add_data_len);
 		}
 		else
 #endif /* MBEDTLS_CID */
 		{
-			// Adding the 2 byte length to the additional_data structure
+			/* RFC 5246 additional data calculation
+			 *
+			 * additional_data = seq_num + type +
+			 *                   version + length;
+			 */
+
+			// Adding the 2 byte length field
 			add_data[11] = (ssl->in_msglen >> 8) & 0xFF;
 			add_data[12] = ssl->in_msglen & 0xFF;
 
