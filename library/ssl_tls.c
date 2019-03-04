@@ -147,7 +147,7 @@ int ssl_parse_cid_ext(mbedtls_ssl_context *ssl,
 	size_t len)
 {
 	const unsigned char *p = buf;
-	uint8_t len_inner;
+	uint8_t len_inner=0;
 
 	if (ssl->conf->cid == MBEDTLS_CID_DISABLE) {
 		ssl->session_negotiate->cid = MBEDTLS_CID_DISABLE;
@@ -167,7 +167,7 @@ int ssl_parse_cid_ext(mbedtls_ssl_context *ssl,
     }
 
 	// Check for correct length and whether have enough space for the CID value
-	if ((len_inner != (len+1)) && (len_inner > MBEDTLS_CID_MAX_SIZE)) {
+	if ((len_inner != (len-1)) && (len_inner < MBEDTLS_CID_MAX_SIZE)) {
 		MBEDTLS_SSL_DEBUG_MSG(1, ("Incorrect CID extension length"));
 
 #if defined(MBEDTLS_SSL_CLI_C)

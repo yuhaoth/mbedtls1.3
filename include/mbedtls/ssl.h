@@ -341,7 +341,7 @@
 
 #define MBEDTLS_TLS_EXT_SESSION_TICKET              35
 
-#define MBEDTLS_TLS_EXT_CID 254 
+#define MBEDTLS_TLS_EXT_CID 52 
 
 #define MBEDTLS_TLS_EXT_ECJPAKE_KKPP               256 /* experimental */
 
