@@ -136,10 +136,15 @@
 #define MBEDTLS_SSL_IS_CLIENT                   0
 #define MBEDTLS_SSL_IS_SERVER                   1
 
-// Connection ID Parameters 
-#define MBEDTLS_CID_DISABLE 0
-#define MBEDTLS_CID_DONT_USE 1
-#define MBEDTLS_CID_USE 2
+// CID flags for session
+#define MBEDTLS_CID_DISABLED 0
+#define MBEDTLS_CID_ENABLED 1
+
+// CID settings for configuration
+#define MBEDTLS_CID_CONF_DISABLED 0
+#define MBEDTLS_CID_CONF_ENABLED 1
+#define MBEDTLS_CID_CONF_ZERO_LENGTH 2
+
 
 #define MBEDTLS_SSL_IS_NOT_FALLBACK             0
 #define MBEDTLS_SSL_IS_FALLBACK                 1
@@ -194,8 +199,8 @@
  * Default range for DTLS retransmission timer value, in milliseconds.
  * RFC 6347 4.2.4.1 says from 1 second to 60 seconds.
  */
-#define MBEDTLS_SSL_DTLS_TIMEOUT_DFL_MIN    1000
-#define MBEDTLS_SSL_DTLS_TIMEOUT_DFL_MAX   60000
+#define MBEDTLS_SSL_DTLS_TIMEOUT_DFL_MIN    10000
+#define MBEDTLS_SSL_DTLS_TIMEOUT_DFL_MAX   600000
 
 /**
  * \name SECTION: Module settings

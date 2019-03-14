@@ -136,7 +136,7 @@ int main( void )
 #define DFL_BADMAC_LIMIT        -1
 #define DFL_EXTENDED_MS         -1
 #define DFL_ETM                 -1
-#define DFL_CID                 MBEDTLS_CID_DISABLE
+#define DFL_CID                 MBEDTLS_CID_CONF_DISABLED 
 
 #define LONG_RESPONSE "<p>01-blah-blah-blah-blah-blah-blah-blah-blah-blah\r\n" \
     "02-blah-blah-blah-blah-blah-blah-blah-blah-blah-blah-blah-blah-blah\r\n"  \
@@ -307,7 +307,7 @@ int main( void )
 
 #if defined(MBEDTLS_CID)
 #define USAGE_CID                                       \
-    "    cid=%%s         disabled, use, dont_use\n"       \
+    "    cid=%%s         disabled, enabled, zero\n"       \
     "                    default: disabled\n"
 #else
 #define USAGE_CID ""
@@ -1067,11 +1067,11 @@ int main( int argc, char *argv[] )
 		else if (strcmp(p, "cid") == 0)
 		{
 			if (strcmp(q, "disabled") == 0)
-				opt.cid = MBEDTLS_CID_DISABLE;
-			else if (strcmp(q, "dont_use") == 0)
-				opt.cid = MBEDTLS_CID_DONT_USE;
-			else if (strcmp(q, "use") == 0)
-				opt.cid = MBEDTLS_CID_USE;
+				opt.cid = MBEDTLS_CID_CONF_DISABLED;
+			else if (strcmp(q, "enabled") == 0)
+				opt.cid = MBEDTLS_CID_CONF_ENABLED;
+			else if (strcmp(q, "zero") == 0)
+				opt.cid = MBEDTLS_CID_CONF_ZERO_LENGTH;
 			else
 				goto usage;
 		}
@@ -1665,7 +1665,7 @@ int main( int argc, char *argv[] )
 
 
 #if defined(MBEDTLS_CID)
-	if (opt.cid != MBEDTLS_CID_DISABLE)
+	if (opt.cid != MBEDTLS_CID_CONF_DISABLED)
 		mbedtls_ssl_conf_cid(&conf, opt.cid);
 #endif 
 
@@ -2061,7 +2061,7 @@ handshake:
     exchanges_left = opt.exchanges;
 data_exchange:
     /*
-     * 6. Read the HTTP Request
+     * 6. Read the Request
      */
     mbedtls_printf( "  < Read from client:" );
     fflush( stdout );
@@ -2108,8 +2108,7 @@ data_exchange:
                 buf[len] = '\0';
                 mbedtls_printf( " %d bytes read\n\n%s\n", len, (char *) buf );
 
-                /* End of message should be detected according to the syntax of the
-                 * application protocol (eg HTTP), just use a dummy test here. */
+                /* End of message should be detected. */
                 if( buf[len - 1] == '\n' )
                     terminated = 1;
             }
@@ -2218,15 +2217,24 @@ data_exchange:
 #endif /* MBEDTLS_SSL_RENEGOTIATION */
 
     /*
-     * 7. Write the 200 Response
+     * 7. Write the response
      */
     mbedtls_printf( "  > Write to client:" );
     fflush( stdout );
 
-    len = sprintf( (char *) buf, HTTP_RESPONSE,
-                   mbedtls_ssl_get_ciphersuite( &ssl ) );
+	/* For the CID test we just echo the received data back. */
+#if defined(MBEDTLS_CID)
+	if (opt.cid == MBEDTLS_CID_CONF_DISABLED)
+	{
+		len = sprintf((char *)buf, HTTP_RESPONSE,
+			mbedtls_ssl_get_ciphersuite(&ssl));
+	} 
+#else 
+	len = sprintf((char *)buf, HTTP_RESPONSE,
+		mbedtls_ssl_get_ciphersuite(&ssl));
+#endif /* MBEDTLS_CID */
 
-    if( opt.transport == MBEDTLS_SSL_TRANSPORT_STREAM )
+	if( opt.transport == MBEDTLS_SSL_TRANSPORT_STREAM )
     {
         for( written = 0, frags = 0; written < len; written += ret, frags++ )
         {

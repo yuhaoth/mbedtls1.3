@@ -103,7 +103,7 @@ int main( void )
 #define DFL_FALLBACK            -1
 #define DFL_EXTENDED_MS         -1
 #define DFL_ETM                 -1
-#define DFL_CID                 MBEDTLS_CID_DISABLE
+#define DFL_CID                 MBEDTLS_CID_CONF_DISABLED
 
 #define GET_REQUEST "GET %s HTTP/1.0\r\nExtra-header: "
 #define GET_REQUEST_END "\r\n\r\n"
@@ -374,6 +374,19 @@ static int my_send( void *ctx, const unsigned char *buf, size_t len )
     return( ret );
 }
 
+void delay(int number_of_seconds)
+{
+	// Converting time into milli_seconds 
+	int milli_seconds = 1000 * number_of_seconds;
+
+	// Stroing start time 
+	clock_t start_time = clock();
+
+	// looping till required time is not acheived 
+	while (clock() < start_time + milli_seconds)
+		;
+}
+
 #if defined(MBEDTLS_X509_CRT_PARSE_C)
 /*
  * Enabled if debug_level > 1 in code below
@@ -401,7 +414,7 @@ static int my_verify( void *data, mbedtls_x509_crt *crt, int depth, uint32_t *fl
 
 int main( int argc, char *argv[] )
 {
-    int ret = 0, len, tail_len, i, written, frags, retry_left;
+    int ret = 0, len, i, written, frags, retry_left;
     mbedtls_net_context server_fd;
     unsigned char buf[MBEDTLS_SSL_MAX_CONTENT_LEN + 1];
 #if defined(MBEDTLS_KEY_EXCHANGE__SOME__PSK_ENABLED)
@@ -672,11 +685,11 @@ int main( int argc, char *argv[] )
 		else if (strcmp(p, "cid") == 0)
 		{
 			if (strcmp(q, "disabled") == 0)
-				opt.cid = MBEDTLS_CID_DISABLE;
-			else if (strcmp(q, "dont_use") == 0)
-				opt.cid = MBEDTLS_CID_DONT_USE;
-			else if (strcmp(q, "use") == 0)
-				opt.cid = MBEDTLS_CID_USE;
+				opt.cid = MBEDTLS_CID_CONF_DISABLED;
+			else if (strcmp(q, "enabled") == 0)
+				opt.cid = MBEDTLS_CID_CONF_ENABLED;
+			else if (strcmp(q, "zero") == 0)
+				opt.cid = MBEDTLS_CID_CONF_ZERO_LENGTH;
 			else
 				goto usage;
 		}
@@ -1139,7 +1152,7 @@ int main( int argc, char *argv[] )
 #endif
 
 #if defined(MBEDTLS_CID)
-	if (opt.cid != MBEDTLS_CID_DISABLE)
+	if (opt.cid != MBEDTLS_CID_CONF_DISABLED)
 		mbedtls_ssl_conf_cid(&conf, opt.cid);
 #endif 
 
@@ -1375,203 +1388,186 @@ int main( int argc, char *argv[] )
     }
 #endif /* MBEDTLS_SSL_RENEGOTIATION */
 
+
     /*
-     * 6. Write the GET request
+     * 6. Write request
      */
     retry_left = opt.max_resend;
+
 send_request:
-    mbedtls_printf( "  > Write to server:" );
-    fflush( stdout );
 
-    len = mbedtls_snprintf( (char *) buf, sizeof(buf) - 1, GET_REQUEST,
-                    opt.request_page );
-    tail_len = (int) strlen( GET_REQUEST_END );
+	while (1) {
 
-    /* Add padding to GET request to reach opt.request_size in length */
-    if( opt.request_size != DFL_REQUEST_SIZE &&
-        len + tail_len < opt.request_size )
-    {
-        memset( buf + len, 'A', opt.request_size - len - tail_len );
-        len += opt.request_size - len - tail_len;
-    }
+		mbedtls_printf("Please enter a value ('exit' to quit):");
+		fflush(stdout);
 
-    strncpy( (char *) buf + len, GET_REQUEST_END, sizeof(buf) - len - 1 );
-    len += tail_len;
+		scanf("%s", &buf[0]);
+		len = strlen(buf);
 
-    /* Truncate if request size is smaller than the "natural" size */
-    if( opt.request_size != DFL_REQUEST_SIZE &&
-        len > opt.request_size )
-    {
-        len = opt.request_size;
+		if (strcmp(&buf[0], "exit") == 0) {
+			ret = 0;
+			goto close_notify;
+		}
 
-        /* Still end with \r\n unless that's really not possible */
-        if( len >= 2 ) buf[len - 2] = '\r';
-        if( len >= 1 ) buf[len - 1] = '\n';
-    }
+		//len = mbedtls_snprintf((char *)buf, sizeof(buf) - 1, "%d\n", opt.exchanges);
 
-    if( opt.transport == MBEDTLS_SSL_TRANSPORT_STREAM )
-    {
-        for( written = 0, frags = 0; written < len; written += ret, frags++ )
-        {
-            while( ( ret = mbedtls_ssl_write( &ssl, buf + written, len - written ) )
-                           <= 0 )
-            {
-                if( ret != MBEDTLS_ERR_SSL_WANT_READ &&
-                    ret != MBEDTLS_ERR_SSL_WANT_WRITE )
-                {
-                    mbedtls_printf( " failed\n  ! mbedtls_ssl_write returned -0x%x\n\n", -ret );
-                    goto exit;
-                }
-            }
-        }
-    }
-    else /* Not stream, so datagram */
-    {
-        do ret = mbedtls_ssl_write( &ssl, buf, len );
-        while( ret == MBEDTLS_ERR_SSL_WANT_READ ||
-               ret == MBEDTLS_ERR_SSL_WANT_WRITE );
+		if (opt.transport == MBEDTLS_SSL_TRANSPORT_STREAM)
+		{
+			for (written = 0, frags = 0; written < len; written += ret, frags++)
+			{
+				while ((ret = mbedtls_ssl_write(&ssl, buf + written, len - written))
+					<= 0)
+				{
+					if (ret != MBEDTLS_ERR_SSL_WANT_READ &&
+						ret != MBEDTLS_ERR_SSL_WANT_WRITE)
+					{
+						mbedtls_printf(" failed\n  ! mbedtls_ssl_write returned -0x%x\n\n", -ret);
+						goto exit;
+					}
+				}
+			}
+		}
+		else /* Not stream, so datagram */
+		{
+			do ret = mbedtls_ssl_write(&ssl, buf, len);
+			while (ret == MBEDTLS_ERR_SSL_WANT_READ ||
+				ret == MBEDTLS_ERR_SSL_WANT_WRITE);
 
-        if( ret < 0 )
-        {
-            mbedtls_printf( " failed\n  ! mbedtls_ssl_write returned %d\n\n", ret );
-            goto exit;
-        }
+			if (ret < 0)
+			{
+				mbedtls_printf(" failed\n  ! mbedtls_ssl_write returned %d\n\n", ret);
+				goto exit;
+			}
 
-        frags = 1;
-        written = ret;
-    }
+			frags = 1;
+			written = ret;
+		}
 
-    buf[written] = '\0';
-    mbedtls_printf( " %d bytes written in %d fragments\n\n%s\n", written, frags, (char *) buf );
+		buf[written] = '\0';
+		mbedtls_printf(" %d bytes written in %d fragments\n\n%s\n", written, frags, (char *)buf);
 
-    /*
-     * 7. Read the HTTP response
-     */
-    mbedtls_printf( "  < Read from server:" );
-    fflush( stdout );
+		/*
+		// 7. Read response
+		mbedtls_printf( "  < Read from server:" );
+		fflush( stdout );
 
-    /*
-     * TLS and DTLS need different reading styles (stream vs datagram)
-     */
-    if( opt.transport == MBEDTLS_SSL_TRANSPORT_STREAM )
-    {
-        do
-        {
-            len = sizeof( buf ) - 1;
-            memset( buf, 0, sizeof( buf ) );
-            ret = mbedtls_ssl_read( &ssl, buf, len );
+		// TLS and DTLS need different reading styles (stream vs datagram)
 
-            if( ret == MBEDTLS_ERR_SSL_WANT_READ ||
-                ret == MBEDTLS_ERR_SSL_WANT_WRITE )
-                continue;
+		if( opt.transport == MBEDTLS_SSL_TRANSPORT_STREAM )
+		{
+			do
+			{
+				len = sizeof( buf ) - 1;
+				memset( buf, 0, sizeof( buf ) );
+				ret = mbedtls_ssl_read( &ssl, buf, len );
 
-            if( ret <= 0 )
-            {
-                switch( ret )
-                {
-                    case MBEDTLS_ERR_SSL_PEER_CLOSE_NOTIFY:
-                        mbedtls_printf( " connection was closed gracefully\n" );
-                        ret = 0;
-                        goto close_notify;
+				if( ret == MBEDTLS_ERR_SSL_WANT_READ ||
+					ret == MBEDTLS_ERR_SSL_WANT_WRITE )
+					continue;
 
-                    case 0:
-                    case MBEDTLS_ERR_NET_CONN_RESET:
-                        mbedtls_printf( " connection was reset by peer\n" );
-                        ret = 0;
-                        goto reconnect;
+				if( ret <= 0 )
+				{
+					switch( ret )
+					{
+						case MBEDTLS_ERR_SSL_PEER_CLOSE_NOTIFY:
+							mbedtls_printf( " connection was closed gracefully\n" );
+							ret = 0;
+							goto close_notify;
 
-                    default:
-                        mbedtls_printf( " mbedtls_ssl_read returned -0x%x\n", -ret );
-                        goto exit;
-                }
-            }
+						case 0:
+						case MBEDTLS_ERR_NET_CONN_RESET:
+							mbedtls_printf( " connection was reset by peer\n" );
+							ret = 0;
+							goto reconnect;
 
-            len = ret;
-            buf[len] = '\0';
-            mbedtls_printf( " %d bytes read\n\n%s", len, (char *) buf );
+						default:
+							mbedtls_printf( " mbedtls_ssl_read returned -0x%x\n", -ret );
+							goto exit;
+					}
+				}
 
-            /* End of message should be detected according to the syntax of the
-             * application protocol (eg HTTP), just use a dummy test here. */
-            if( ret > 0 && buf[len-1] == '\n' )
-            {
-                ret = 0;
-                break;
-            }
-        }
-        while( 1 );
-    }
-    else /* Not stream, so datagram */
-    {
-        len = sizeof( buf ) - 1;
-        memset( buf, 0, sizeof( buf ) );
+				len = ret;
+				buf[len] = '\0';
+				mbedtls_printf( " %d bytes read\n\n%s", len, (char *) buf );
 
-        do ret = mbedtls_ssl_read( &ssl, buf, len );
-        while( ret == MBEDTLS_ERR_SSL_WANT_READ ||
-               ret == MBEDTLS_ERR_SSL_WANT_WRITE );
+				// End of message should be detected according to the syntax of the
+				// application protocol (eg HTTP), just use a dummy test here.
+				if( ret > 0 && buf[len-1] == '\n' )
+				{
+					ret = 0;
+					break;
+				}
+			}
+			while( 1 );
+		}
+		else // Not stream, so datagram
+		{
+			len = sizeof( buf ) - 1;
+			memset( buf, 0, sizeof( buf ) );
 
-        if( ret <= 0 )
-        {
-            switch( ret )
-            {
-                case MBEDTLS_ERR_SSL_TIMEOUT:
-                    mbedtls_printf( " timeout\n" );
-                    if( retry_left-- > 0 )
-                        goto send_request;
-                    goto exit;
+			do ret = mbedtls_ssl_read( &ssl, buf, len );
+			while( ret == MBEDTLS_ERR_SSL_WANT_READ ||
+				   ret == MBEDTLS_ERR_SSL_WANT_WRITE );
 
-                case MBEDTLS_ERR_SSL_PEER_CLOSE_NOTIFY:
-                    mbedtls_printf( " connection was closed gracefully\n" );
-                    ret = 0;
-                    goto close_notify;
+			if( ret <= 0 )
+			{
+				switch( ret )
+				{
+					case MBEDTLS_ERR_SSL_TIMEOUT:
+						mbedtls_printf( " timeout\n" );
+						if( retry_left-- > 0 )
+							goto send_request;
+						goto exit;
 
-                default:
-                    mbedtls_printf( " mbedtls_ssl_read returned -0x%x\n", -ret );
-                    goto exit;
-            }
-        }
+					case MBEDTLS_ERR_SSL_PEER_CLOSE_NOTIFY:
+						mbedtls_printf( " connection was closed gracefully\n" );
+						ret = 0;
+						goto close_notify;
 
-        len = ret;
-        buf[len] = '\0';
-        mbedtls_printf( " %d bytes read\n\n%s", len, (char *) buf );
-        ret = 0;
-    }
+					default:
+						mbedtls_printf( " mbedtls_ssl_read returned -0x%x\n", -ret );
+						goto exit;
+				}
+			}
 
-    /*
-     * 7b. Simulate hard reset and reconnect from same port?
-     */
-    if( opt.reconnect_hard != 0 )
-    {
-        opt.reconnect_hard = 0;
+			len = ret;
+			buf[len] = '\0';
+			mbedtls_printf( " %d bytes read\n\n%s", len, (char *) buf );
+			ret = 0;
+		}
 
-        mbedtls_printf( "  . Restarting connection from same port..." );
-        fflush( stdout );
+		// 7b. Simulate hard reset and reconnect from same port?
 
-        if( ( ret = mbedtls_ssl_session_reset( &ssl ) ) != 0 )
-        {
-            mbedtls_printf( " failed\n  ! mbedtls_ssl_session_reset returned -0x%x\n\n", -ret );
-            goto exit;
-        }
+		if( opt.reconnect_hard != 0 )
+		{
+			opt.reconnect_hard = 0;
 
-        while( ( ret = mbedtls_ssl_handshake( &ssl ) ) != 0 )
-        {
-            if( ret != MBEDTLS_ERR_SSL_WANT_READ &&
-                ret != MBEDTLS_ERR_SSL_WANT_WRITE )
-            {
-                mbedtls_printf( " failed\n  ! mbedtls_ssl_handshake returned -0x%x\n\n", -ret );
-                goto exit;
-            }
-        }
+			mbedtls_printf( "  . Restarting connection from same port..." );
+			fflush( stdout );
 
-        mbedtls_printf( " ok\n" );
+			if( ( ret = mbedtls_ssl_session_reset( &ssl ) ) != 0 )
+			{
+				mbedtls_printf( " failed\n  ! mbedtls_ssl_session_reset returned -0x%x\n\n", -ret );
+				goto exit;
+			}
 
-        goto send_request;
-    }
+			while( ( ret = mbedtls_ssl_handshake( &ssl ) ) != 0 )
+			{
+				if( ret != MBEDTLS_ERR_SSL_WANT_READ &&
+					ret != MBEDTLS_ERR_SSL_WANT_WRITE )
+				{
+					mbedtls_printf( " failed\n  ! mbedtls_ssl_handshake returned -0x%x\n\n", -ret );
+					goto exit;
+				}
+			}
 
-    /*
-     * 7c. Continue doing data exchanges?
-     */
-    if( --opt.exchanges > 0 )
-        goto send_request;
+			mbedtls_printf( " ok\n" );
+
+			goto send_request;
+		}
+		*/
+
+	}
 
     /*
      * 8. Done, cleanly close the connection

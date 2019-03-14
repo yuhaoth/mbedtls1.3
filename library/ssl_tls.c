@@ -81,8 +81,8 @@ void ssl_write_cid_ext(mbedtls_ssl_context *ssl,
 
 	*olen = 0;
 
-	if (ssl->conf->cid == MBEDTLS_CID_DISABLE) {
-		ssl->session_negotiate->cid = MBEDTLS_CID_DISABLE;
+	if (ssl->conf->cid == MBEDTLS_CID_CONF_DISABLED) {
+		ssl->session_negotiate->cid = MBEDTLS_CID_DISABLED;
 		MBEDTLS_SSL_DEBUG_MSG(3, ("CID disabled."));
 		return;
 	} 
@@ -104,7 +104,7 @@ void ssl_write_cid_ext(mbedtls_ssl_context *ssl,
 	*p++ = (unsigned char)((MBEDTLS_TLS_EXT_CID >> 8) & 0xFF);
 	*p++ = (unsigned char)((MBEDTLS_TLS_EXT_CID) & 0xFF);
 
-	if (ssl->conf->cid == MBEDTLS_CID_DONT_USE) {
+	if (ssl->conf->cid == MBEDTLS_CID_CONF_ZERO_LENGTH) {
 
 		*p++ = (unsigned char)((1 >> 8) & 0xFF);
 		*p++ = (unsigned char)(1 & 0xFF);
@@ -112,13 +112,14 @@ void ssl_write_cid_ext(mbedtls_ssl_context *ssl,
 		// 1 byte length field set to zero
 		*p++ = 0;
 		*olen = 5;
-		ssl->session_negotiate->cid = MBEDTLS_CID_DONT_USE;
 		ssl->out_cid_len = 0;
 		MBEDTLS_SSL_DEBUG_MSG(3, ("We don't want the peer to send CID in a packet."));
 		return;
 	}
 
-	ssl->session_negotiate->cid = MBEDTLS_CID_USE;
+	if (ssl->conf->endpoint == MBEDTLS_SSL_IS_SERVER) {
+		ssl->session_negotiate->cid = MBEDTLS_CID_ENABLED;
+	}
 	ssl->in_cid_len = MBEDTLS_CID_MAX_SIZE;
 
 	*p++ = (unsigned char)(((ssl->in_cid_len + 1) >> 8) & 0xFF);
@@ -149,8 +150,8 @@ int ssl_parse_cid_ext(mbedtls_ssl_context *ssl,
 	const unsigned char *p = buf;
 	uint8_t len_inner=0;
 
-	if (ssl->conf->cid == MBEDTLS_CID_DISABLE) {
-		ssl->session_negotiate->cid = MBEDTLS_CID_DISABLE;
+	if (ssl->conf->cid == MBEDTLS_CID_CONF_DISABLED) {
+		ssl->session_negotiate->cid = MBEDTLS_CID_DISABLED;
 		MBEDTLS_SSL_DEBUG_MSG(3, ("CID disabled."));
 		return(0);
 	}
@@ -160,7 +161,6 @@ int ssl_parse_cid_ext(mbedtls_ssl_context *ssl,
 	
 	if (len_inner == 0) {
 		MBEDTLS_SSL_DEBUG_MSG(5, ("No CID value will be placed in outgoing records."));
-		ssl->session_negotiate->cid = MBEDTLS_CID_DONT_USE; 
 		ssl->out_cid_len = 0;
 		memset(ssl->out_cid, '\0', MBEDTLS_CID_MAX_SIZE);
 		return (0);
@@ -186,7 +186,10 @@ int ssl_parse_cid_ext(mbedtls_ssl_context *ssl,
 
 	// The other end provided us with the CID value it 
     // would like us to use for packet sent to it. 
-	ssl->session_negotiate->cid = MBEDTLS_CID_USE;
+
+	if (ssl->conf->endpoint == MBEDTLS_SSL_IS_CLIENT) {
+		ssl->session_negotiate->cid = MBEDTLS_CID_CONF_ENABLED;
+	}
 	ssl->out_cid_len = len_inner; 
 	memcpy(ssl->out_cid, p, len_inner); 
 
@@ -1402,7 +1405,7 @@ static int ssl_encrypt_buf( mbedtls_ssl_context *ssl )
         ( mode == MBEDTLS_MODE_CBC
 #if defined(MBEDTLS_SSL_ENCRYPT_THEN_MAC)
           && ssl->session_out->encrypt_then_mac == MBEDTLS_SSL_ETM_DISABLED
-#endif
+#endif /* MBEDTLS_SSL_PROTO_SSL3 */
         ) )
     {
 #if defined(MBEDTLS_SSL_PROTO_SSL3)
@@ -1414,22 +1417,82 @@ static int ssl_encrypt_buf( mbedtls_ssl_context *ssl )
                       ssl->out_ctr, ssl->out_msgtype );
         }
         else
-#endif
+#endif /* MBEDTLS_SSL_PROTO_SSL3 */
+
 #if defined(MBEDTLS_SSL_PROTO_TLS1) || defined(MBEDTLS_SSL_PROTO_TLS1_1) || \
         defined(MBEDTLS_SSL_PROTO_TLS1_2)
         if( ssl->minor_ver >= MBEDTLS_SSL_MINOR_VERSION_1 )
         {
+			/* CID-enhanced MAC calculation for Block Ciphers
+			 *
+			 * MAC(MAC_write_key, seq_num +
+			 *     tls12_cid +                     // New input
+			 *     DTLSPlaintext.version +
+			 *     cid +                           // New input
+			 *     cid_length +                    // New input
+			 *     length_of_DTLSInnerPlaintext +  // New input
+			 *     DTLSInnerPlaintext.content +    // New input
+			 *     DTLSInnerPlaintext.real_type +  // New input
+			 *     DTLSInnerPlaintext.zeros        // New input
+			 * )
+			 *
+			 * vs.
+			 *
+			 * RFC 5246-defined MAC calculation
+			 *
+			 *       MAC(MAC_write_key, seq_num +
+			 *               TLSCompressed.type +
+			 *               TLSCompressed.version +
+			 *               TLSCompressed.length +
+			 *               TLSCompressed.fragment);
+			 *
+			 */
+
+			// Adding the sequence number
+			MBEDTLS_SSL_DEBUG_BUF(5, "MAC (sequence number)", ssl->out_ctr, 8);
             mbedtls_md_hmac_update( &ssl->transform_out->md_ctx_enc, ssl->out_ctr, 8 );
-            mbedtls_md_hmac_update( &ssl->transform_out->md_ctx_enc, ssl->out_hdr, 3 );
+
+#if defined(MBEDTLS_CID)
+
+			 // Adding the outer header content type
+			MBEDTLS_SSL_DEBUG_BUF(5, "MAC (content type)", (const unsigned char*)ssl->out_hdr, 1);
+			mbedtls_md_hmac_update(&ssl->transform_out->md_ctx_enc, (const unsigned char*) ssl->out_hdr, 1);
+
+#endif /* MBEDTLS_CID */
+
+			// Adding the version field
+			MBEDTLS_SSL_DEBUG_BUF(5, "MAC (version)", ssl->out_hdr + 1, 2);
+            mbedtls_md_hmac_update( &ssl->transform_out->md_ctx_enc, ssl->out_hdr+1, 2 );
+
+#if defined(MBEDTLS_CID)
+
+			// Adding the cid (which has in_cid_len bytes)
+			MBEDTLS_SSL_DEBUG_BUF(5, "MAC (cid)", ssl->out_cid, ssl->out_cid_len);
+			mbedtls_md_hmac_update(&ssl->transform_out->md_ctx_enc, ssl->out_cid, ssl->out_cid_len);
+
+			// Adding the 1 byte cid_length field
+			MBEDTLS_SSL_DEBUG_BUF(5, "MAC (cid_len)", (const unsigned char *)&ssl->out_cid_len, 1);
+			mbedtls_md_hmac_update(&ssl->transform_out->md_ctx_enc, (const unsigned char*) &ssl->out_cid_len, 1);
+
+#endif /* MBEDTLS_CID */
+
+			// Adding the message length field
+			MBEDTLS_SSL_DEBUG_BUF(5, "MAC (message length)", ssl->out_len, 2);
             mbedtls_md_hmac_update( &ssl->transform_out->md_ctx_enc, ssl->out_len, 2 );
-            mbedtls_md_hmac_update( &ssl->transform_out->md_ctx_enc,
-                             ssl->out_msg, ssl->out_msglen );
+
+			/* Adding message content
+			 * For the CID-enhanced MAC calculation, the message content contains the
+			 * encapsulated content type plus any optional padding.
+			 */
+			MBEDTLS_SSL_DEBUG_BUF(5, "MAC (message)", ssl->out_msg, ssl->out_msglen);
+            mbedtls_md_hmac_update( &ssl->transform_out->md_ctx_enc, ssl->out_msg, ssl->out_msglen );
+
             mbedtls_md_hmac_finish( &ssl->transform_out->md_ctx_enc,
                              ssl->out_msg + ssl->out_msglen );
             mbedtls_md_hmac_reset( &ssl->transform_out->md_ctx_enc );
         }
         else
-#endif
+#endif /* MBEDTLS_SSL_PROTO_TLS1 || MBEDTLS_SSL_PROTO_TLS1_1 || MBEDTLS_SSL_PROTO_TLS1_2 */
         {
             MBEDTLS_SSL_DEBUG_MSG( 1, ( "should never happen" ) );
             return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
@@ -1442,7 +1505,7 @@ static int ssl_encrypt_buf( mbedtls_ssl_context *ssl )
         ssl->out_msglen += ssl->transform_out->maclen;
         auth_done++;
     }
-#endif /* AEAD not the only option */
+#endif /* SSL_SOME_MODES_USE_MAC */
 
     /*
      * Encrypt
@@ -1475,6 +1538,7 @@ static int ssl_encrypt_buf( mbedtls_ssl_context *ssl )
     }
     else
 #endif /* MBEDTLS_ARC4_C || MBEDTLS_CIPHER_NULL_CIPHER */
+
 #if defined(MBEDTLS_GCM_C) || defined(MBEDTLS_CCM_C)
     if( mode == MBEDTLS_MODE_GCM ||
         mode == MBEDTLS_MODE_CCM )
@@ -1502,7 +1566,7 @@ static int ssl_encrypt_buf( mbedtls_ssl_context *ssl )
 		 *                       cid + cid_length + length;
 		 */
 		if ((ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_DATAGRAM) &&
-			(ssl->out_msgtype == MBEDTLS_SSL_MSG_APPLICATION_DATA))
+			(ssl->out_cid_len>0))
 		{
 
 			// Adding the 1 byte content type field
@@ -1623,6 +1687,7 @@ static int ssl_encrypt_buf( mbedtls_ssl_context *ssl )
     }
     else
 #endif /* MBEDTLS_GCM_C || MBEDTLS_CCM_C */
+
 #if defined(MBEDTLS_CIPHER_MODE_CBC) &&                                    \
     ( defined(MBEDTLS_AES_C) || defined(MBEDTLS_CAMELLIA_C) )
     if( mode == MBEDTLS_MODE_CBC )
@@ -1702,7 +1767,7 @@ static int ssl_encrypt_buf( mbedtls_ssl_context *ssl )
                     ssl->transform_out->cipher_ctx_enc.iv,
                     ssl->transform_out->ivlen );
         }
-#endif
+#endif /* MBEDTLS_SSL_PROTO_SSL3 || MBEDTLS_SSL_PROTO_TLS1 */
 
 #if defined(MBEDTLS_SSL_ENCRYPT_THEN_MAC)
         if( auth_done == 0 )
@@ -1715,18 +1780,43 @@ static int ssl_encrypt_buf( mbedtls_ssl_context *ssl )
              *     IV + // except for TLS 1.0
              *     ENC(content + padding + padding_length));
              */
+#if defined(MBEDTLS_CID)
+			unsigned char pseudo_hdr[14 + MBEDTLS_CID_MAX_SIZE];
+#else 
             unsigned char pseudo_hdr[13];
+#endif /* MBEDTLS_CID */
+			int i=0; 
 
             MBEDTLS_SSL_DEBUG_MSG( 3, ( "using encrypt then mac" ) );
 
-            memcpy( pseudo_hdr +  0, ssl->out_ctr, 8 );
-            memcpy( pseudo_hdr +  8, ssl->out_hdr, 3 );
-            pseudo_hdr[11] = (unsigned char)( ( ssl->out_msglen >> 8 ) & 0xFF );
-            pseudo_hdr[12] = (unsigned char)( ( ssl->out_msglen      ) & 0xFF );
+            memcpy( pseudo_hdr +  i, ssl->out_ctr, 8 );
+			i += 8;
+            memcpy( pseudo_hdr +  i, ssl->out_hdr, 3 );
+			i += 3; 
 
-            MBEDTLS_SSL_DEBUG_BUF( 4, "MAC'd meta-data", pseudo_hdr, 13 );
+#if defined(MBEDTLS_CID)
+			if ((ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_DATAGRAM) &&
+				(ssl->out_cid_len > 0))
+			{
+				// Adding the cid (which has out_cid_len bytes)
+				memcpy(pseudo_hdr + i, ssl->out_cid, ssl->out_cid_len);
+				i += ssl->out_cid_len;
 
-            mbedtls_md_hmac_update( &ssl->transform_out->md_ctx_enc, pseudo_hdr, 13 );
+				// Adding the 1 byte cid_length field
+				pseudo_hdr[i] = ssl->out_cid_len;
+				i++;
+			}
+#endif /* MBEDTLS_CID */
+
+			pseudo_hdr[i] = (unsigned char)((ssl->out_msglen >> 8) & 0xFF);
+			i++;
+
+			pseudo_hdr[i] = (unsigned char)((ssl->out_msglen) & 0xFF);
+			i++;
+
+			MBEDTLS_SSL_DEBUG_BUF(4, "MAC'd meta-data", pseudo_hdr, i);
+
+            mbedtls_md_hmac_update( &ssl->transform_out->md_ctx_enc, pseudo_hdr, i );
             mbedtls_md_hmac_update( &ssl->transform_out->md_ctx_enc,
                              ssl->out_iv, ssl->out_msglen );
             mbedtls_md_hmac_finish( &ssl->transform_out->md_ctx_enc,
@@ -1767,7 +1857,7 @@ static int ssl_decrypt_buf( mbedtls_ssl_context *ssl )
     int auth_done = 0;
 #if defined(SSL_SOME_MODES_USE_MAC)
     size_t padlen = 0, correct = 1;
-#endif
+#endif /* SSL_SOME_MODES_USE_MAC */
 
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> decrypt buf" ) );
 
@@ -1812,6 +1902,7 @@ static int ssl_decrypt_buf( mbedtls_ssl_context *ssl )
     }
     else
 #endif /* MBEDTLS_ARC4_C || MBEDTLS_CIPHER_NULL_CIPHER */
+
 #if defined(MBEDTLS_GCM_C) || defined(MBEDTLS_CCM_C)
     if( mode == MBEDTLS_MODE_GCM ||
         mode == MBEDTLS_MODE_CCM )
@@ -1843,7 +1934,18 @@ static int ssl_decrypt_buf( mbedtls_ssl_context *ssl )
         dec_msg_result = ssl->in_msg;
         ssl->in_msglen = dec_msglen;
 
-		/* additional_data structure */
+		/* CID-enhanced additional data calculation
+		 *
+		 * additional_data = seq_num + type + version +
+		 *                   cid + cid_length + length;
+		 *
+		 * vs.
+		 *
+		 * RFC 5246 additional data calculation
+		 *
+		 * additional_data = seq_num + type +
+		 *                   version + length;
+		 */
 
 		// Adding the 8 byte sequence number
         memcpy( add_data, ssl->in_ctr, 8 );
@@ -1857,14 +1959,9 @@ static int ssl_decrypt_buf( mbedtls_ssl_context *ssl )
 
 #if defined(MBEDTLS_CID)
 		if ((ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_DATAGRAM) &&
-			(ssl->in_msgtype == MBEDTLS_SSL_MSG_TLS_CID))
+			(ssl->in_msgtype == MBEDTLS_SSL_MSG_TLS_CID) && 
+			(ssl->in_cid_len >0))
 		{
-
-			/* CID-enhanced additional data calculation
-			 *
-			 * additional_data = seq_num + type + version +
-			 *                   cid + cid_length + length;
-			 */
 
 			// Adding the cid 
 			memcpy(&add_data[11], ssl->in_ctr + 8, ssl->in_cid_len);
@@ -1885,11 +1982,6 @@ static int ssl_decrypt_buf( mbedtls_ssl_context *ssl )
 		else
 #endif /* MBEDTLS_CID */
 		{
-			/* RFC 5246 additional data calculation
-			 *
-			 * additional_data = seq_num + type +
-			 *                   version + length;
-			 */
 
 			// Adding the 2 byte length field
 			add_data[11] = (ssl->in_msglen >> 8) & 0xFF;
@@ -1935,6 +2027,7 @@ static int ssl_decrypt_buf( mbedtls_ssl_context *ssl )
     }
     else
 #endif /* MBEDTLS_GCM_C || MBEDTLS_CCM_C */
+
 #if defined(MBEDTLS_CIPHER_MODE_CBC) &&                                    \
     ( defined(MBEDTLS_AES_C) || defined(MBEDTLS_CAMELLIA_C) )
     if( mode == MBEDTLS_MODE_CBC )
@@ -1955,7 +2048,7 @@ static int ssl_decrypt_buf( mbedtls_ssl_context *ssl )
 #if defined(MBEDTLS_SSL_PROTO_TLS1_1) || defined(MBEDTLS_SSL_PROTO_TLS1_2)
         if( ssl->minor_ver >= MBEDTLS_SSL_MINOR_VERSION_2 )
             minlen += ssl->transform_in->ivlen;
-#endif
+#endif /* MBEDTLS_SSL_PROTO_TLS1_1 || MBEDTLS_SSL_PROTO_TLS1_2 */
 
         if( ssl->in_msglen < minlen + ssl->transform_in->ivlen ||
             ssl->in_msglen < minlen + ssl->transform_in->maclen + 1 )
@@ -1978,21 +2071,62 @@ static int ssl_decrypt_buf( mbedtls_ssl_context *ssl )
         if( ssl->session_in->encrypt_then_mac == MBEDTLS_SSL_ETM_ENABLED )
         {
             unsigned char computed_mac[SSL_MAX_MAC_SIZE];
-            unsigned char pseudo_hdr[13];
+#if defined(MBEDTLS_CID)
+			unsigned char pseudo_hdr[14 + MBEDTLS_CID_MAX_SIZE];
+#else 
+			unsigned char pseudo_hdr[13];
+#endif /* MBEDTLS_CID */
+			int i=0; 
 
             MBEDTLS_SSL_DEBUG_MSG( 3, ( "using encrypt then mac" ) );
 
             dec_msglen -= ssl->transform_in->maclen;
             ssl->in_msglen -= ssl->transform_in->maclen;
 
-            memcpy( pseudo_hdr +  0, ssl->in_ctr, 8 );
-            memcpy( pseudo_hdr +  8, ssl->in_hdr, 3 );
-            pseudo_hdr[11] = (unsigned char)( ( ssl->in_msglen >> 8 ) & 0xFF );
-            pseudo_hdr[12] = (unsigned char)( ( ssl->in_msglen      ) & 0xFF );
+            memcpy( pseudo_hdr +  i, ssl->in_ctr, 8 );
+			i += 8; 
+            memcpy( pseudo_hdr +  i, ssl->in_hdr, 3 );
+			i += 3; 
 
-            MBEDTLS_SSL_DEBUG_BUF( 4, "MAC'd meta-data", pseudo_hdr, 13 );
+#if defined(MBEDTLS_CID)
 
-            mbedtls_md_hmac_update( &ssl->transform_in->md_ctx_dec, pseudo_hdr, 13 );
+			/* CID-enhanced MAC calculation for Block Ciphers with Encrypt-then-MAC processing
+             * 
+			 * MAC(MAC_write_key, seq_num +
+			 *	 DTLSCipherText.type +
+			 * 	 DTLSCipherText.version +
+			 * 	 DTLSPlaintext.version +
+			 * 	 cid +                   // New input
+			 * 	 cid_length +            // New input
+			 * 	 length of(IV + DTLSCiphertext.enc_content) +
+			 * 	 IV +
+			 * 	 DTLSCiphertext.enc_content
+			 * )
+			 */
+
+			if ((ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_DATAGRAM) &&
+				(ssl->in_msgtype == MBEDTLS_SSL_MSG_TLS_CID) &&
+				(ssl->in_cid_len > 0))
+			{
+				// Adding the cid (which has in_cid_len bytes)
+				memcpy(pseudo_hdr + i, ssl->in_ctr + 8, ssl->in_cid_len);
+				i += ssl->in_cid_len;
+
+				// Adding the 1 byte cid_length field
+				pseudo_hdr[i] = ssl->in_cid_len;
+				i++;
+			}
+#endif /* MBEDTLS_CID */
+
+            pseudo_hdr[i] = (unsigned char)( ( ssl->in_msglen >> 8 ) & 0xFF );
+			i++; 
+
+            pseudo_hdr[i] = (unsigned char)( ( ssl->in_msglen      ) & 0xFF );
+			i++;
+
+            MBEDTLS_SSL_DEBUG_BUF( 4, "MAC'd meta-data", pseudo_hdr, i );
+
+            mbedtls_md_hmac_update( &ssl->transform_in->md_ctx_dec, pseudo_hdr, i );
             mbedtls_md_hmac_update( &ssl->transform_in->md_ctx_dec,
                              ssl->in_iv, ssl->in_msglen );
             mbedtls_md_hmac_finish( &ssl->transform_in->md_ctx_dec, computed_mac );
@@ -2064,7 +2198,7 @@ static int ssl_decrypt_buf( mbedtls_ssl_context *ssl )
                     ssl->transform_in->cipher_ctx_dec.iv,
                     ssl->transform_in->ivlen );
         }
-#endif
+#endif /* MBEDTLS_SSL_PROTO_SSL3 || MBEDTLS_SSL_PROTO_TLS1 */
 
         padlen = 1 + ssl->in_msg[ssl->in_msglen - 1];
 
@@ -2074,7 +2208,7 @@ static int ssl_decrypt_buf( mbedtls_ssl_context *ssl )
 #if defined(MBEDTLS_SSL_DEBUG_ALL)
             MBEDTLS_SSL_DEBUG_MSG( 1, ( "msglen (%d) < maclen (%d) + padlen (%d)",
                         ssl->in_msglen, ssl->transform_in->maclen, padlen ) );
-#endif
+#endif /* MBEDTLS_SSL_DEBUG_ALL */
             padlen = 0;
             correct = 0;
         }
@@ -2088,12 +2222,13 @@ static int ssl_decrypt_buf( mbedtls_ssl_context *ssl )
                 MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad padding length: is %d, "
                                     "should be no more than %d",
                                padlen, ssl->transform_in->ivlen ) );
-#endif
+#endif /* MBEDTLS_SSL_DEBUG_ALL */
                 correct = 0;
             }
         }
         else
 #endif /* MBEDTLS_SSL_PROTO_SSL3 */
+
 #if defined(MBEDTLS_SSL_PROTO_TLS1) || defined(MBEDTLS_SSL_PROTO_TLS1_1) || \
     defined(MBEDTLS_SSL_PROTO_TLS1_2)
         if( ssl->minor_ver > MBEDTLS_SSL_MINOR_VERSION_0 )
@@ -2133,7 +2268,7 @@ static int ssl_decrypt_buf( mbedtls_ssl_context *ssl )
 #if defined(MBEDTLS_SSL_DEBUG_ALL)
             if( padlen > 0 && correct == 0 )
                 MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad padding byte detected" ) );
-#endif
+#endif /* MBEDTLS_SSL_DEBUG_ALL */
             padlen &= correct * 0x1FF;
         }
         else
@@ -2154,14 +2289,21 @@ static int ssl_decrypt_buf( mbedtls_ssl_context *ssl )
         return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
     }
 
-    MBEDTLS_SSL_DEBUG_BUF( 4, "raw buffer after decryption",
-                   ssl->in_msg, ssl->in_msglen );
+#if defined(SSL_SOME_MODES_USE_MAC)
+	if (auth_done == 0)
+	{
+		MBEDTLS_SSL_DEBUG_BUF(4, "raw buffer after decryption (including MAC)",
+			ssl->in_msg, ssl->in_msglen);
+	}
+	else {
+		MBEDTLS_SSL_DEBUG_BUF(4, "raw buffer after decryption",
+			ssl->in_msg, ssl->in_msglen);
+	}
 
-    /*
+	/*
      * Authenticate if not done yet.
      * Compute the MAC regardless of the padding result (RFC4346, CBCTIME).
      */
-#if defined(SSL_SOME_MODES_USE_MAC)
     if( auth_done == 0 )
     {
         unsigned char tmp[SSL_MAX_MAC_SIZE];
@@ -2173,6 +2315,9 @@ static int ssl_decrypt_buf( mbedtls_ssl_context *ssl )
 
         memcpy( tmp, ssl->in_msg + ssl->in_msglen, ssl->transform_in->maclen );
 
+		MBEDTLS_SSL_DEBUG_BUF(4, "raw buffer after decryption (excluding MAC)",
+			ssl->in_msg, ssl->in_msglen);
+
 #if defined(MBEDTLS_SSL_PROTO_SSL3)
         if( ssl->minor_ver == MBEDTLS_SSL_MINOR_VERSION_0 )
         {
@@ -2183,6 +2328,7 @@ static int ssl_decrypt_buf( mbedtls_ssl_context *ssl )
         }
         else
 #endif /* MBEDTLS_SSL_PROTO_SSL3 */
+
 #if defined(MBEDTLS_SSL_PROTO_TLS1) || defined(MBEDTLS_SSL_PROTO_TLS1_1) || \
         defined(MBEDTLS_SSL_PROTO_TLS1_2)
         if( ssl->minor_ver > MBEDTLS_SSL_MINOR_VERSION_0 )
@@ -2206,11 +2352,69 @@ static int ssl_decrypt_buf( mbedtls_ssl_context *ssl )
 
             extra_run &= correct * 0xFF;
 
+			// Adding the sequence number
+			MBEDTLS_SSL_DEBUG_BUF(5, "MAC (sequence number)", ssl->in_ctr, 8);
             mbedtls_md_hmac_update( &ssl->transform_in->md_ctx_dec, ssl->in_ctr, 8 );
-            mbedtls_md_hmac_update( &ssl->transform_in->md_ctx_dec, ssl->in_hdr, 3 );
+
+#if defined(MBEDTLS_CID)
+			/* CID-enhanced MAC calculation for Block Ciphers
+			 *
+			 * MAC(MAC_write_key, seq_num +
+			 *     tls12_cid +                     // New input
+			 *     DTLSPlaintext.version +
+			 *     cid +                           // New input
+			 *     cid_length +                    // New input
+			 *     length_of_DTLSInnerPlaintext +  // New input
+			 *     DTLSInnerPlaintext.content +    // New input
+			 *     DTLSInnerPlaintext.real_type +  // New input
+			 *     DTLSInnerPlaintext.zeros        // New input
+			 * )
+			 * 
+			 * vs. 
+			 * 
+			 * RFC 5246-defined MAC calculation
+			 * 
+			 *       MAC(MAC_write_key, seq_num +
+             *               TLSCompressed.type +
+             *               TLSCompressed.version +
+             *               TLSCompressed.length +
+             *               TLSCompressed.fragment);
+             *
+			 */
+
+			 // Adding the CID content type 
+			MBEDTLS_SSL_DEBUG_BUF(5, "MAC (content type)", ssl->in_hdr, 1);
+			mbedtls_md_hmac_update(&ssl->transform_in->md_ctx_dec, ssl->in_hdr, 1);
+
+#endif /* MBEDTLS_CID */
+
+			// Adding the version field
+			MBEDTLS_SSL_DEBUG_BUF(5, "MAC (version)", ssl->in_hdr+1, 2);
+            mbedtls_md_hmac_update( &ssl->transform_in->md_ctx_dec, ssl->in_hdr+1, 2 );
+
+#if defined(MBEDTLS_CID)
+
+			 // Adding the cid (which has in_cid_len bytes)
+			MBEDTLS_SSL_DEBUG_BUF(5, "MAC (cid)", ssl->in_ctr + 8, ssl->in_cid_len);
+			mbedtls_md_hmac_update(&ssl->transform_in->md_ctx_dec, ssl->in_ctr + 8, ssl->in_cid_len);
+
+			// Adding the 1 byte cid_length field
+			MBEDTLS_SSL_DEBUG_BUF(5, "MAC (cid_len)", (const unsigned char *)&ssl->in_cid_len, 1);
+			mbedtls_md_hmac_update(&ssl->transform_in->md_ctx_dec, (const unsigned char *)&ssl->in_cid_len, 1); 
+
+#endif /* MBEDTLS_CID */
+
+			// Adding the message length field
+			MBEDTLS_SSL_DEBUG_BUF(5, "MAC (message length)", ssl->in_len, 2);
             mbedtls_md_hmac_update( &ssl->transform_in->md_ctx_dec, ssl->in_len, 2 );
-            mbedtls_md_hmac_update( &ssl->transform_in->md_ctx_dec, ssl->in_msg,
-                             ssl->in_msglen );
+
+			/* Adding message content
+			 * For the CID-enhanced MAC calculation, the message content contains the 
+			 * encapsulated content type plus any optional padding. 
+			 */
+			MBEDTLS_SSL_DEBUG_BUF(5, "MAC (message)", ssl->in_msg, ssl->in_msglen);
+            mbedtls_md_hmac_update( &ssl->transform_in->md_ctx_dec, ssl->in_msg, ssl->in_msglen );
+			
             mbedtls_md_hmac_finish( &ssl->transform_in->md_ctx_dec,
                              ssl->in_msg + ssl->in_msglen );
             /* Call mbedtls_md_process at least once due to cache attacks */
@@ -2236,7 +2440,7 @@ static int ssl_decrypt_buf( mbedtls_ssl_context *ssl )
         {
 #if defined(MBEDTLS_SSL_DEBUG_ALL)
             MBEDTLS_SSL_DEBUG_MSG( 1, ( "message mac does not match" ) );
-#endif
+#endif /* MBEDTLS_SSL_DEBUG_ALL */
             correct = 0;
         }
         auth_done++;
@@ -2280,7 +2484,7 @@ static int ssl_decrypt_buf( mbedtls_ssl_context *ssl )
         ; /* in_ctr read from peer, not maintained internally */
     }
     else
-#endif
+#endif /* MBEDTLS_SSL_PROTO_DTLS */
     {
         for( i = 8; i > ssl_ep_len( ssl ); i-- )
             if( ++ssl->in_ctr[i - 1] != 0 )
@@ -2679,7 +2883,7 @@ int mbedtls_ssl_flush_output( mbedtls_ssl_context *ssl )
 	{
 
 #if defined(MBEDTLS_CID)
-		if (ssl->out_msgtype == MBEDTLS_SSL_MSG_APPLICATION_DATA || ssl->out_msgtype == MBEDTLS_SSL_MSG_TLS_CID) {
+		if (ssl->out_hdr[0] == MBEDTLS_SSL_MSG_TLS_CID) {
 			MBEDTLS_SSL_DEBUG_MSG(2, ("message length: %d, out_left: %d",
 				mbedtls_ssl_hdr_len(ssl) + ssl->out_msglen + ssl->out_cid_len, ssl->out_left));
 
@@ -3072,18 +3276,20 @@ int mbedtls_ssl_write_record( mbedtls_ssl_context *ssl )
 	{
 #if defined(MBEDTLS_CID)
 		if ((ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_DATAGRAM) &&
-			(ssl->out_msgtype == MBEDTLS_SSL_MSG_APPLICATION_DATA) && 
+//			(ssl->out_msgtype == MBEDTLS_SSL_MSG_APPLICATION_DATA) && 
 			(ssl->transform_out != NULL) && 
 			(ssl->out_cid_len > 0))
 		{
 			// We use a different content type for use with CID-modified record layer payloads
 			ssl->out_hdr[0] = (unsigned char)MBEDTLS_SSL_MSG_TLS_CID;
 
+			// Write the CID of the outgoing datagram			
+			memcpy(ssl->out_ctr + 8, ssl->out_cid, ssl->out_cid_len);
+
 			/* Adding content type at the end of the data. We don't use padding. */
 			ssl->out_msg[len] = ssl->out_msgtype;
 			ssl->out_msglen = len + 1;
 			len++;
-
 		}
 		else
 #endif /* MBEDTLS_CID */
@@ -3774,7 +3980,7 @@ static int ssl_parse_record_header( mbedtls_ssl_context *ssl )
 #if defined(MBEDTLS_CID)
 	if (ssl->in_msgtype == MBEDTLS_SSL_MSG_TLS_CID)
 	{
-		MBEDTLS_SSL_DEBUG_BUF(4, "input record header", ssl->in_hdr, mbedtls_ssl_hdr_len(ssl)+ ssl->in_cid_len);
+		MBEDTLS_SSL_DEBUG_BUF(4, "input record header (cid-enhanced)", ssl->in_hdr, mbedtls_ssl_hdr_len(ssl)+ ssl->in_cid_len);
 	} else 
 #endif /* MBEDTLS_CID */
 	{
@@ -3954,7 +4160,7 @@ static int ssl_parse_record_header( mbedtls_ssl_context *ssl )
 			// Read the CID of the incoming datagram			
 			if (memcmp(ssl->in_ctr + 8, ssl->in_cid, ssl->in_cid_len) != 0) 
 			{
-				MBEDTLS_SSL_DEBUG_MSG(1, ("unexpected CID value"));
+				MBEDTLS_SSL_DEBUG_BUF(1, "unexpected CID value", ssl->in_ctr + 8, ssl->in_cid_len);
 				return(MBEDTLS_ERR_SSL_UNEXPECTED_RECORD);
 			}
 			MBEDTLS_SSL_DEBUG_BUF(4, "CID used", ssl->in_ctr + 8, ssl->in_cid_len);
@@ -3978,8 +4184,8 @@ static int ssl_prepare_record_content( mbedtls_ssl_context *ssl )
 #if defined(MBEDTLS_CID)
 	if (ssl->in_msgtype == MBEDTLS_SSL_MSG_TLS_CID)
 	{
-		MBEDTLS_SSL_DEBUG_BUF(4, "input record from network",
-			ssl->in_hdr, mbedtls_ssl_hdr_len(ssl) + +ssl->in_cid_len + ssl->in_msglen);
+		MBEDTLS_SSL_DEBUG_BUF(4, "input record from network (cid-enabled)",
+			ssl->in_hdr, mbedtls_ssl_hdr_len(ssl) + ssl->in_cid_len + ssl->in_msglen);
 	}
 	else
 #endif /* MBEDTLS_CID */
@@ -6027,8 +6233,8 @@ void mbedtls_ssl_conf_dtls_anti_replay( mbedtls_ssl_config *conf, char mode )
 #if defined(MBEDTLS_CID)
 void mbedtls_ssl_conf_cid(mbedtls_ssl_config *conf, unsigned int cid)
 {
-	if (cid == MBEDTLS_CID_DONT_USE || cid == MBEDTLS_CID_USE ||
-		cid == MBEDTLS_CID_DISABLE)
+	if (cid == MBEDTLS_CID_CONF_DISABLED || cid == MBEDTLS_CID_CONF_ENABLED ||
+		cid == MBEDTLS_CID_CONF_ZERO_LENGTH)
    	   conf->cid = cid;
 }
 #endif

@@ -1705,7 +1705,7 @@ static int ssl_parse_server_hello( mbedtls_ssl_context *ssl )
 #if defined(MBEDTLS_CID)
 		case MBEDTLS_TLS_EXT_CID:
 			MBEDTLS_SSL_DEBUG_MSG(3, ("found CID extension"));
-			if (ssl->conf->cid == MBEDTLS_CID_DISABLE)
+			if (ssl->conf->cid == MBEDTLS_CID_CONF_DISABLED)
 				break;
 
 			ret = ssl_parse_cid_ext(ssl, ext + 4, ext_size);
@@ -1864,6 +1864,15 @@ static int ssl_parse_server_hello( mbedtls_ssl_context *ssl )
         handshake_failure = 1;
     }
 #endif /* MBEDTLS_SSL_RENEGOTIATION */
+
+#if defined(MBEDTLS_CID)
+	// Server does not want to use CID -> recover resources
+	if (ssl->session_negotiate->cid == MBEDTLS_CID_DISABLED && 
+		ssl->in_cid_len >0 ) {
+		free(ssl->in_cid);
+		ssl->in_cid_len = 0;
+	}
+#endif /* MBEDTLS_CID */
 
     if( handshake_failure == 1 )
     {
@@ -3400,6 +3409,24 @@ int mbedtls_ssl_handshake_client_step( mbedtls_ssl_context *ssl )
            break;
 
        case MBEDTLS_SSL_CLIENT_FINISHED:
+		   /* In case we negotiated the use of CIDs then we need to
+			* adjust the pointers to various header fields. If we
+			* did not negotiate the use of a CID or our peer requested
+			* us not to add a CID value to the record header then the
+			* out_cid_len will be zero.
+			*/
+#if defined(MBEDTLS_CID)
+		   if ((ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_DATAGRAM) && 
+			   (ssl->out_cid_len > 0))
+		   {
+			   ssl->out_hdr = ssl->out_buf;
+			   ssl->out_ctr = ssl->out_buf + 3;
+			   ssl->out_len = ssl->out_buf + 11 + ssl->out_cid_len;
+			   ssl->out_iv = ssl->out_buf + 13 + ssl->out_cid_len;
+			   ssl->out_msg = ssl->out_buf + 13 + ssl->out_cid_len + ssl->transform_negotiate->ivlen -
+				   ssl->transform_negotiate->fixed_ivlen;
+		   }
+#endif /* MBEDTLS_CID */
            ret = mbedtls_ssl_write_finished( ssl );
            break;
 
@@ -3419,28 +3446,16 @@ int mbedtls_ssl_handshake_client_step( mbedtls_ssl_context *ssl )
            break;
 
        case MBEDTLS_SSL_SERVER_FINISHED:
-           ret = mbedtls_ssl_parse_finished( ssl );
-           break;
-
-       case MBEDTLS_SSL_FLUSH_BUFFERS:
-           MBEDTLS_SSL_DEBUG_MSG( 2, ( "handshake: done" ) );
-
-		   /* In case we negotiated the use of CIDs then we need to 
-		    * adjust the pointers to various header fields. If we 
+		   /* In case we negotiated the use of CIDs then we need to
+			* adjust the pointers to various header fields. If we
 			* did not negotiate the use of a CID or our peer requested
-			* us not to add a CID value to the record header then the 
-			* out_cid_len will be zero.
+			* us not to add a CID value to the record header then the
+			* in_cid_len will be zero.
 			*/
 #if defined(MBEDTLS_CID)
-		   if (ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_DATAGRAM)
+		   if ((ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_DATAGRAM) &&
+			   (ssl->in_cid_len > 0))
 		   {
-			   ssl->out_hdr = ssl->out_buf;
-			   ssl->out_ctr = ssl->out_buf + 3;
-			   ssl->out_len = ssl->out_buf + 11 + ssl->out_cid_len;
-			   ssl->out_iv = ssl->out_buf + 13 + ssl->out_cid_len;
-			   ssl->out_msg = ssl->out_buf + 13 + ssl->out_cid_len + ssl->transform_negotiate->ivlen -
-				   ssl->transform_negotiate->fixed_ivlen;
-
 			   ssl->in_hdr = ssl->in_buf;
 			   ssl->in_ctr = ssl->in_buf + 3;
 			   ssl->in_len = ssl->in_buf + 11 + ssl->in_cid_len;
@@ -3449,6 +3464,12 @@ int mbedtls_ssl_handshake_client_step( mbedtls_ssl_context *ssl )
 				   ssl->transform_negotiate->fixed_ivlen;
 		   }
 #endif /* MBEDTLS_CID */
+           ret = mbedtls_ssl_parse_finished( ssl );
+           break;
+
+       case MBEDTLS_SSL_FLUSH_BUFFERS:
+           MBEDTLS_SSL_DEBUG_MSG( 2, ( "handshake: done" ) );
+
            ssl->state = MBEDTLS_SSL_HANDSHAKE_WRAPUP;
            break;
 
