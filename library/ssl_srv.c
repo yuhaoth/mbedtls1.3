@@ -25,6 +25,8 @@
 #include MBEDTLS_CONFIG_FILE
 #endif
 
+#if defined(MBEDTLS_SSL_PROTO_TLS1_2)
+
 #if defined(MBEDTLS_SSL_SRV_C)
 
 #if defined(MBEDTLS_PLATFORM_C)
@@ -4575,3 +4577,5 @@ int mbedtls_ssl_handshake_server_step( mbedtls_ssl_context *ssl )
     return( ret );
 }
 #endif /* MBEDTLS_SSL_SRV_C */
+
+#endif /* MBEDTLS_SSL_PROTO_TLS1_2 */

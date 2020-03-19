@@ -1,6 +1,8 @@
 ﻿
-Microsoft Visual Studio Solution File, Format Version 11.00
-# Visual C++ Express 2010
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.29806.167
+MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "mbedTLS", "mbedTLS.vcxproj", "{46CF2D25-6A36-4189-B59C-E4815388E554}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "aescrypt2", "aescrypt2.vcxproj", "{7A851DBD-7D57-E8F4-85E5-CCA72AEA7DF8}"
@@ -242,6 +244,10 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "req_app", "req_app.vcxproj"
 	ProjectSection(ProjectDependencies) = postProject
 		{46CF2D25-6A36-4189-B59C-E4815388E554} = {46CF2D25-6A36-4189-B59C-E4815388E554}
 	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "tls13_client", "tls13_client.vcxproj", "{DF361E6A-2774-40C6-BAD4-3FF5FC5F3B42}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "tls13_server", "tls13_server.vcxproj", "{79F30745-B23C-40B6-9F5F-FEFFD2CF5C4A}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -643,8 +649,26 @@ Global
 		{486B1375-5CFA-C2D2-DD89-C9F497BADCB3}.Release|Win32.Build.0 = Release|Win32
 		{486B1375-5CFA-C2D2-DD89-C9F497BADCB3}.Release|x64.ActiveCfg = Release|x64
 		{486B1375-5CFA-C2D2-DD89-C9F497BADCB3}.Release|x64.Build.0 = Release|x64
+		{DF361E6A-2774-40C6-BAD4-3FF5FC5F3B42}.Debug|Win32.ActiveCfg = Debug|Win32
+		{DF361E6A-2774-40C6-BAD4-3FF5FC5F3B42}.Debug|Win32.Build.0 = Debug|Win32
+		{DF361E6A-2774-40C6-BAD4-3FF5FC5F3B42}.Debug|x64.ActiveCfg = Debug|x64
+		{DF361E6A-2774-40C6-BAD4-3FF5FC5F3B42}.Debug|x64.Build.0 = Debug|x64
+		{DF361E6A-2774-40C6-BAD4-3FF5FC5F3B42}.Release|Win32.ActiveCfg = Release|Win32
+		{DF361E6A-2774-40C6-BAD4-3FF5FC5F3B42}.Release|Win32.Build.0 = Release|Win32
+		{DF361E6A-2774-40C6-BAD4-3FF5FC5F3B42}.Release|x64.ActiveCfg = Release|x64
+		{DF361E6A-2774-40C6-BAD4-3FF5FC5F3B42}.Release|x64.Build.0 = Release|x64
+		{79F30745-B23C-40B6-9F5F-FEFFD2CF5C4A}.Debug|Win32.ActiveCfg = Debug|Win32
+		{79F30745-B23C-40B6-9F5F-FEFFD2CF5C4A}.Debug|Win32.Build.0 = Debug|Win32
+		{79F30745-B23C-40B6-9F5F-FEFFD2CF5C4A}.Debug|x64.ActiveCfg = Debug|x64
+		{79F30745-B23C-40B6-9F5F-FEFFD2CF5C4A}.Debug|x64.Build.0 = Debug|x64
+		{79F30745-B23C-40B6-9F5F-FEFFD2CF5C4A}.Release|Win32.ActiveCfg = Release|Win32
+		{79F30745-B23C-40B6-9F5F-FEFFD2CF5C4A}.Release|Win32.Build.0 = Release|Win32
+		{79F30745-B23C-40B6-9F5F-FEFFD2CF5C4A}.Release|x64.ActiveCfg = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {57E9027B-90B3-4F05-AE37-187886EC0D53}
 	EndGlobalSection
 EndGlobal

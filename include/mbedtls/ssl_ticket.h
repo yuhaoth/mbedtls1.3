@@ -50,7 +50,7 @@ extern "C" {
 /**
  * \brief   Information for session ticket protection
  */
-typedef struct mbedtls_ssl_ticket_key
+typedef struct 
 {
     unsigned char name[4];          /*!< random key identifier              */
     uint32_t generation_time;       /*!< key generation timestamp (seconds) */
@@ -61,13 +61,15 @@ mbedtls_ssl_ticket_key;
 /**
  * \brief   Context for session ticket handling functions
  */
-typedef struct mbedtls_ssl_ticket_context
+typedef struct 
 {
     mbedtls_ssl_ticket_key keys[2]; /*!< ticket protection keys             */
     unsigned char active;           /*!< index of the currently active key  */
 
     uint32_t ticket_lifetime;       /*!< lifetime of tickets in seconds     */
-
+#if defined(MBEDTLS_SSL_NEW_SESSION_TICKET) && defined(MBEDTLS_SSL_PROTO_TLS1_3)
+    TicketFlags flags;              /*!< ticket flags                       */
+#endif /* MBEDTLS_SSL_NEW_SESSION_TICKET && MBEDTLS_SSL_PROTO_TLS1_3  */
     /** Callback for getting (pseudo-)random numbers                        */
     int  (*f_rng)(void *, unsigned char *, size_t);
     void *p_rng;                    /*!< context for the RNG function       */
@@ -86,6 +88,15 @@ mbedtls_ssl_ticket_context;
  * \param ctx       Context to be initialized
  */
 void mbedtls_ssl_ticket_init( mbedtls_ssl_ticket_context *ctx );
+
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3) && defined(MBEDTLS_SSL_NEW_SESSION_TICKET)
+void mbedtls_ssl_del_client_ticket(mbedtls_ssl_ticket* ticket);
+void mbedtls_ssl_init_client_ticket(mbedtls_ssl_ticket* ticket);
+void mbedtls_ssl_conf_client_ticket_disable(mbedtls_ssl_context* ssl);
+void mbedtls_ssl_conf_client_ticket_enable(mbedtls_ssl_context* ssl);
+int mbedtls_ssl_get_client_ticket(const mbedtls_ssl_context* ssl, mbedtls_ssl_ticket* ticket);
+int mbedtls_ssl_conf_client_ticket(const mbedtls_ssl_context* ssl, mbedtls_ssl_ticket* ticket);
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3 && MBEDTLS_SSL_NEW_SESSION_TICKET */
 
 /**
  * \brief           Prepare context to be actually used
@@ -109,10 +120,17 @@ void mbedtls_ssl_ticket_init( mbedtls_ssl_ticket_context *ctx );
  * \return          0 if successful,
  *                  or a specific MBEDTLS_ERR_XXX error code
  */
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3)
 int mbedtls_ssl_ticket_setup( mbedtls_ssl_ticket_context *ctx,
     int (*f_rng)(void *, unsigned char *, size_t), void *p_rng,
     mbedtls_cipher_type_t cipher,
-    uint32_t lifetime );
+    uint32_t lifetime, TicketFlags flags);
+#else 
+int mbedtls_ssl_ticket_setup(mbedtls_ssl_ticket_context* ctx,
+    int (*f_rng)(void*, unsigned char*, size_t), void* p_rng,
+    mbedtls_cipher_type_t cipher,
+    uint32_t lifetime);
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
 
 /**
  * \brief           Implementation of the ticket write callback

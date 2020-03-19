@@ -443,6 +443,24 @@ void mbedtls_strerror( int ret, char *buf, size_t buflen )
             mbedtls_snprintf( buf, buflen, "SSL - No CA Chain is set, but required to operate" );
         if( use_ret == -(MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE) )
             mbedtls_snprintf( buf, buflen, "SSL - An unexpected message was received from our peer" );
+        if (use_ret == -(MBEDTLS_ERR_SSL_BAD_HS_ENCRYPTED_EXTENSIONS))
+            mbedtls_snprintf(buf, buflen, "SSL -  Processing of the Encrypted Extensions handshake message failed");
+        if (use_ret == -(MBEDTLS_ERR_SSL_BAD_HS_TOO_MANY_HRR))
+            mbedtls_snprintf(buf, buflen, "SSL -  Too many Hello Retry Request messages received");
+        if (use_ret == -(MBEDTLS_ERR_SSL_BAD_HS_SUPPORTED_VERSIONS_EXT))
+            mbedtls_snprintf(buf, buflen, "SSL -  Problem encountered with the supported versions extension");
+        if (use_ret == -(MBEDTLS_ERR_SSL_BAD_HS_PSK_KEY_EXCHANGE_MODES_EXT))
+            mbedtls_snprintf(buf, buflen, "SSL -  Problem encountered with the psk key exchange modes extension");
+        if (use_ret == -(MBEDTLS_ERR_SSL_BAD_HS_CID_EXT))
+            mbedtls_snprintf(buf, buflen, "SSL -  The CID extension could not be parsed correctly");
+        if (use_ret == -(MBEDTLS_ERR_SSL_BAD_HS_MISSING_EXTENSION_EXT))
+            mbedtls_snprintf(buf, buflen, "SSL -  Handshake is missing a required extension");
+        if (use_ret == -(MBEDTLS_ERR_SSL_BAD_EARLY_DATA))
+            mbedtls_snprintf(buf, buflen, "TLS - Processing of the Early Data payload failed.");
+        if (use_ret == -(MBEDTLS_ERR_SSL_BAD_ACK))
+            mbedtls_snprintf(buf, buflen, "TLS - Processing of the Ack message failed.");
+        if (use_ret == -(MBEDTLS_ERR_SSL_BAD_HS_PRE_SHARED_KEY_EXT))
+            mbedtls_snprintf(buf, buflen, "TLS - Received invalid pre_shared_key extension");
         if( use_ret == -(MBEDTLS_ERR_SSL_FATAL_ALERT_MESSAGE) )
         {
             mbedtls_snprintf( buf, buflen, "SSL - A fatal alert message was received from our peer" );

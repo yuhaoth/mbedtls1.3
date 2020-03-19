@@ -39,7 +39,7 @@ extern "C" {
 #endif
 
 /*
- * Supported ciphersuites (Official IANA names)
+ * Supported ciphersuites (Official IANA names) 
  */
 #define MBEDTLS_TLS_RSA_WITH_NULL_MD5                    0x01   /**< Weak! */
 #define MBEDTLS_TLS_RSA_WITH_NULL_SHA                    0x02   /**< Weak! */
@@ -286,6 +286,24 @@ extern "C" {
 #define MBEDTLS_TLS_DHE_PSK_WITH_CHACHA20_POLY1305_SHA256     0xCCAD /**< TLS 1.2 */
 #define MBEDTLS_TLS_RSA_PSK_WITH_CHACHA20_POLY1305_SHA256     0xCCAE /**< TLS 1.2 */
 
+/*
+ * Supported ciphersuites (Official IANA names) for TLS / DTLS 1.3 
+ */
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3)
+#define TLS_AES_128_GCM_SHA256                                0x1301 
+#define TLS_AES_256_GCM_SHA384                                0x1302 
+#define TLS_CHACHA20_POLY1305_SHA256                          0x1303
+#define TLS_AES_128_CCM_SHA256                                0x1304
+#define TLS_AES_128_CCM_8_SHA256                              0x1305
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
+
+/* Key Exchange Types in TLS 1.3
+ *
+ * Note: When adding a new key exchange algorithm a
+ *       new value needs to be added to the enum list
+ *       below and also the mbedtls_ssl_premaster_secret
+ *       needs to be updated.
+ */
 /* Reminder: update mbedtls_ssl_premaster_secret when adding a new key exchange.
  * Reminder: update MBEDTLS_KEY_EXCHANGE__xxx below
  */
@@ -295,12 +313,12 @@ typedef enum {
     MBEDTLS_KEY_EXCHANGE_DHE_RSA,
     MBEDTLS_KEY_EXCHANGE_ECDHE_RSA,
     MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA,
-    MBEDTLS_KEY_EXCHANGE_PSK,
+    MBEDTLS_KEY_EXCHANGE_PSK,        // available in TLS/DTLS 1.3
     MBEDTLS_KEY_EXCHANGE_DHE_PSK,
     MBEDTLS_KEY_EXCHANGE_RSA_PSK,
-    MBEDTLS_KEY_EXCHANGE_ECDHE_PSK,
+    MBEDTLS_KEY_EXCHANGE_ECDHE_PSK,  // available in TLS/DTLS 1.3
     MBEDTLS_KEY_EXCHANGE_ECDH_RSA,
-    MBEDTLS_KEY_EXCHANGE_ECDH_ECDSA,
+    MBEDTLS_KEY_EXCHANGE_ECDH_ECDSA, // available in TLS/DTLS 1.3
     MBEDTLS_KEY_EXCHANGE_ECJPAKE,
 } mbedtls_key_exchange_type_t;
 
@@ -386,6 +404,7 @@ typedef struct mbedtls_ssl_ciphersuite_t mbedtls_ssl_ciphersuite_t;
 
 /**
  * \brief   This structure is used for storing ciphersuite information
+ *          For alignment, all versions of TLS/DTLS use the same structure.
  */
 struct mbedtls_ssl_ciphersuite_t
 {
@@ -393,7 +412,11 @@ struct mbedtls_ssl_ciphersuite_t
     const char * name;
 
     mbedtls_cipher_type_t cipher;
-    mbedtls_md_type_t mac;
+    /* For TLS 1.3 we use this field to populate it with the hash function 
+     * (instead of a MAC).
+     */
+    mbedtls_md_type_t mac; 
+    /* In TLS 1.3 we do not make use of this key_exchange field. */
     mbedtls_key_exchange_type_t key_exchange;
 
     int min_major_ver;
@@ -401,6 +424,7 @@ struct mbedtls_ssl_ciphersuite_t
     int max_major_ver;
     int max_minor_ver;
 
+    /* In TLS 1.3 we do not make use of this flags field. */
     unsigned char flags;
 };
 
@@ -408,6 +432,17 @@ const int *mbedtls_ssl_list_ciphersuites( void );
 
 const mbedtls_ssl_ciphersuite_t *mbedtls_ssl_ciphersuite_from_string( const char *ciphersuite_name );
 const mbedtls_ssl_ciphersuite_t *mbedtls_ssl_ciphersuite_from_id( int ciphersuite_id );
+
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3)
+/**
+* \brief           Returns the size of the hash function output given the ciphersuite
+*
+* \param ciphersuite   mbedtls_ssl_ciphersuite_t
+*
+* \return          Size of output in bytes, -1 in case of error
+*/
+int mbedtls_hash_size_for_ciphersuite(const mbedtls_ssl_ciphersuite_t* ciphersuite);
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
 
 #if defined(MBEDTLS_PK_C)
 mbedtls_pk_type_t mbedtls_ssl_get_ciphersuite_sig_pk_alg( const mbedtls_ssl_ciphersuite_t *info );
