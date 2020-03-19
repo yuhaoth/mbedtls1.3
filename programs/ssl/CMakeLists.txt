@@ -47,6 +47,14 @@ target_link_libraries(ssl_server2 ${libs})
 add_executable(ssl_context_info ssl_context_info.c)
 target_link_libraries(ssl_context_info ${libs})
 
+add_executable(tls13_server tls13_server.c)
+target_sources(tls13_server PUBLIC ../test/query_config.c)
+target_link_libraries(tls13_server ${libs})
+
+add_executable(tls13_client tls13_client.c)
+target_sources(tls13_client PUBLIC ../test/query_config.c)
+target_link_libraries(tls13_client ${libs})
+
 add_executable(ssl_fork_server ssl_fork_server.c)
 target_link_libraries(ssl_fork_server ${libs})
 
