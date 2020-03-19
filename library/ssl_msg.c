@@ -30,6 +30,8 @@
 
 #include "common.h"
 
+#if defined(MBEDTLS_SSL_PROTO_TLS1_2)
+
 #if defined(MBEDTLS_SSL_TLS_C)
 
 #if defined(MBEDTLS_PLATFORM_C)
@@ -5892,3 +5894,5 @@ void mbedtls_ssl_read_version( int *major, int *minor, int transport,
 }
 
 #endif /* MBEDTLS_SSL_TLS_C */
+
+#endif /* MBEDTLS_SSL_PROTO_TLS1_2 */

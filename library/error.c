@@ -436,6 +436,24 @@ const char * mbedtls_high_level_strerr( int error_code )
             return( "SSL - No CA Chain is set, but required to operate" );
         case -(MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE):
             return( "SSL - An unexpected message was received from our peer" );
+        case -(MBEDTLS_ERR_SSL_BAD_HS_ENCRYPTED_EXTENSIONS):
+            return( "SSL -  Processing of the Encrypted Extensions handshake message failed" );
+        case -(MBEDTLS_ERR_SSL_BAD_HS_TOO_MANY_HRR):
+            return( "SSL -  Too many Hello Retry Request messages received" );
+        case -(MBEDTLS_ERR_SSL_BAD_HS_SUPPORTED_VERSIONS_EXT):
+            return( "SSL -  Problem encountered with the supported versions extension" );
+        case -(MBEDTLS_ERR_SSL_BAD_HS_PSK_KEY_EXCHANGE_MODES_EXT):
+            return( "SSL -  Problem encountered with the psk key exchange modes extension" );
+        case -(MBEDTLS_ERR_SSL_BAD_HS_CID_EXT):
+            return( "SSL -  The CID extension could not be parsed correctly" );
+        case -(MBEDTLS_ERR_SSL_BAD_HS_MISSING_EXTENSION_EXT):
+            return( "SSL -  Handshake is missing a required extension" );
+        case -(MBEDTLS_ERR_SSL_BAD_EARLY_DATA):
+            return( "TLS - Processing of the Early Data payload failed." );
+        case -(MBEDTLS_ERR_SSL_BAD_ACK):
+            return( "TLS - Processing of the Ack message failed." );
+        case -(MBEDTLS_ERR_SSL_BAD_HS_PRE_SHARED_KEY_EXT):
+            return( "TLS - Received invalid pre_shared_key extension" );
         case -(MBEDTLS_ERR_SSL_FATAL_ALERT_MESSAGE):
             return( "SSL - A fatal alert message was received from our peer" );
         case -(MBEDTLS_ERR_SSL_PEER_VERIFY_FAILED):

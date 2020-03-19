@@ -95,12 +95,16 @@
 #define MBEDTLS_ERR_SSL_BAD_HS_CERTIFICATE_REQUEST        -0x7A80  /**< Processing of the CertificateRequest handshake message failed. */
 #define MBEDTLS_ERR_SSL_BAD_HS_SERVER_KEY_EXCHANGE        -0x7B00  /**< Processing of the ServerKeyExchange handshake message failed. */
 #define MBEDTLS_ERR_SSL_BAD_HS_SERVER_HELLO_DONE          -0x7B80  /**< Processing of the ServerHelloDone handshake message failed. */
+#define MBEDTLS_ERR_SSL_BAD_HS_HELLO_RETRY_REQUEST        -0x7B81  /**< Processing of the HelloRetryRequest handshake message failed. */
 #define MBEDTLS_ERR_SSL_BAD_HS_CLIENT_KEY_EXCHANGE        -0x7C00  /**< Processing of the ClientKeyExchange handshake message failed. */
 #define MBEDTLS_ERR_SSL_BAD_HS_CLIENT_KEY_EXCHANGE_RP     -0x7C80  /**< Processing of the ClientKeyExchange handshake message failed in DHM / ECDH Read Public. */
 #define MBEDTLS_ERR_SSL_BAD_HS_CLIENT_KEY_EXCHANGE_CS     -0x7D00  /**< Processing of the ClientKeyExchange handshake message failed in DHM / ECDH Calculate Secret. */
 #define MBEDTLS_ERR_SSL_BAD_HS_CERTIFICATE_VERIFY         -0x7D80  /**< Processing of the CertificateVerify handshake message failed. */
 #define MBEDTLS_ERR_SSL_BAD_HS_CHANGE_CIPHER_SPEC         -0x7E00  /**< Processing of the ChangeCipherSpec handshake message failed. */
+#define MBEDTLS_ERR_SSL_BAD_HS_ENCRYPTED_EXTENSIONS       -0x7E01  /**< Processing of the Encrypted Extensions handshake message failed. */
 #define MBEDTLS_ERR_SSL_BAD_HS_FINISHED                   -0x7E80  /**< Processing of the Finished handshake message failed. */
+#define MBEDTLS_ERR_SSL_BAD_EARLY_DATA                    -0x7E81  /**< Processing of the Early Data payload failed. */
+#define MBEDTLS_ERR_SSL_BAD_ACK                           -0x7E82  /**< Processing of the Ack message failed. */
 #define MBEDTLS_ERR_SSL_ALLOC_FAILED                      -0x7F00  /**< Memory allocation failed */
 #define MBEDTLS_ERR_SSL_HW_ACCEL_FAILED                   -0x7F80  /**< Hardware acceleration function returned with error */
 #define MBEDTLS_ERR_SSL_HW_ACCEL_FALLTHROUGH              -0x6F80  /**< Hardware acceleration function skipped / left alone data */
@@ -130,6 +134,52 @@
 #define MBEDTLS_ERR_SSL_VERSION_MISMATCH                  -0x5F00  /**< An operation failed due to an unexpected version or configuration. */
 #define MBEDTLS_ERR_SSL_CRYPTO_IN_PROGRESS                -0x7000  /**< A cryptographic operation is in progress. Try again later. */
 #define MBEDTLS_ERR_SSL_BAD_CONFIG                        -0x5E80  /**< Invalid value in SSL config */
+#define MBEDTLS_ERR_SSL_BAD_HS_CLIENT_KEY_SHARE           -0x6781  /**< Problem encountered with the key share provided by the client. */
+#define MBEDTLS_ERR_SSL_BAD_HS_SUPPORTED_GROUPS           -0x6782  /**< Problem encountered with the supported group extension provided by the client. */
+#define MBEDTLS_ERR_SSL_BAD_HS_SERVER_KEY_SHARE           -0x6783  /**< Problem encountered with the key share provided by the server. */
+#define MBEDTLS_ERR_SSL_BAD_HS_WRONG_KEY_SHARE            -0x6784  /**< The key share provided by the client does not match a group supported by the server. A Hello Retry Request will be needed. */
+#define MBEDTLS_ERR_SSL_BAD_HS_MAX_FRAGMENT_LENGTH_EXT    -0x6785  /**< Problem encountered with the max fragment length extension provided by the client. */
+#define MBEDTLS_ERR_SSL_BAD_HS_ALPN_EXT                   -0x6786  /**< Problem encountered with the ALPN extension provided by the client. */
+#define MBEDTLS_ERR_SSL_BAD_HS_SERVERNAME_EXT             -0x6787  /**< Problem encountered with the ServerName extension provided by the client. */
+#define MBEDTLS_ERR_SSL_BAD_HS_PRE_SHARED_KEY_EXT         -0x6788  /**< Problem encountered with the Pre-Shared-Key extension provided by the client. */
+#define MBEDTLS_ERR_SSL_BAD_HS_COOKIE_EXT                 -0x6789  /**< Problem encountered with the cookie extension provided by the client. */
+#define MBEDTLS_ERR_SSL_BAD_HS_MISSING_COOKIE_EXT         -0x6790  /**< Missing cookie extension. */
+#define MBEDTLS_ERR_SSL_BAD_HS_UNKNOWN_MSG                -0x6791  /**< Case where an unknown handshake message was received */
+#define MBEDTLS_ERR_SSL_BAD_HS_TOO_MANY_HRR               -0x6792  /**< Too many Hello Retry Request messages received */
+#define MBEDTLS_ERR_SSL_BAD_HS_SUPPORTED_VERSIONS_EXT     -0x6793  /**< Problem encountered with the supported versions extension */
+#define MBEDTLS_ERR_SSL_BAD_HS_PSK_KEY_EXCHANGE_MODES_EXT -0x6794  /**< Problem encountered with the psk key exchange modes extension */
+#define MBEDTLS_ERR_SSL_BAD_HS_MISSING_EXTENSION_EXT      -0x6795  /**< Missing extension. */
+#define MBEDTLS_ERR_SSL_RECEIVED_NEW_SESSION_TICKET       -0x6796  /**< Received NewSessionTicket Post Handshake Message */
+#define MBEDTLS_ERR_SSL_BAD_HS_CID_EXT                    -0x6797  /**< Received invalid CID extension */
+
+#define MBEDTLS_ERR_LAST 0x7F80 /**< This definition points to the last error code to have a correct parsing in error.c */
+
+ /* List of extensions used in ssl_internal.h / extensions_present in mbedtls_ssl_handshake_params */
+#define NO_EXTENSION 0
+#define PRE_SHARED_KEY_EXTENSION 1
+#define KEY_SHARE_EXTENSION 2
+#define SIGNATURE_ALGORITHM_EXTENSION 4
+#define SUPPORTED_GROUPS_EXTENSION 8
+#define MAX_FRAGMENT_LENGTH_EXTENSION 16
+#define ALPN_EXTENSION 32
+#define SUPPORTED_VERSION_EXTENSION 64
+#define PSK_KEY_EXCHANGE_MODES_EXTENSION 128
+#define EARLY_DATA_EXTENSION 256
+#define SERVERNAME_EXTENSION 512
+#define COOKIE_EXTENSION 1024
+#define CID_EXTENSION 2048
+
+
+/* Key Exchange Modes
+ * KEY_EXCHANGE_MODE_PSK_ALL refers to
+ * the two PSK modes.
+ */
+#define KEY_EXCHANGE_MODE_PSK_KE 0
+#define KEY_EXCHANGE_MODE_PSK_DHE_KE 1
+#define KEY_EXCHANGE_MODE_NONE 252
+#define KEY_EXCHANGE_MODE_ECDHE_ECDSA 253
+#define KEY_EXCHANGE_MODE_ALL 254
+#define KEY_EXCHANGE_MODE_PSK_ALL 255
 
 /*
  * Various constants
@@ -169,6 +219,18 @@
 
 #define MBEDTLS_SSL_CID_DISABLED                0
 #define MBEDTLS_SSL_CID_ENABLED                 1
+
+ /* This is for the old CID functionality */
+ // CID flags for session
+#define MBEDTLS_CID_DISABLED 0
+#define MBEDTLS_CID_ENABLED 1
+
+// CID settings for configuration
+#define MBEDTLS_CID_CONF_DISABLED 0
+#define MBEDTLS_CID_CONF_ENABLED 1
+#define MBEDTLS_CID_CONF_ZERO_LENGTH 2
+
+
 
 #define MBEDTLS_SSL_ETM_DISABLED                0
 #define MBEDTLS_SSL_ETM_ENABLED                 1
@@ -215,6 +277,30 @@
 
 #define MBEDTLS_SSL_CERT_REQ_CA_LIST_ENABLED       1
 #define MBEDTLS_SSL_CERT_REQ_CA_LIST_DISABLED      0
+
+#define MBEDTLS_SSL_EARLY_DATA_DISABLED        0
+#define MBEDTLS_SSL_EARLY_DATA_ENABLED         1
+
+#define MBEDTLS_SSL_EARLY_DATA_OFF        0
+#define MBEDTLS_SSL_EARLY_DATA_ON         1
+
+#define MBEDTLS_SSL_FORCE_RR_CHECK_OFF      0
+#define MBEDTLS_SSL_FORCE_RR_CHECK_ON       1
+
+// Flags for DTLS 1.3 unified header format
+#define MBEDTLS_SSL_UNIFIED_HDR_PREAMBLE_1   1
+#define MBEDTLS_SSL_UNIFIED_HDR_PREAMBLE_2   2
+#define MBEDTLS_SSL_UNIFIED_HDR_PREAMBLE_3   4
+#define MBEDTLS_SSL_UNIFIED_HDR_CID          8
+#define MBEDTLS_SSL_UNIFIED_HDR_SNR         16
+#define MBEDTLS_SSL_UNIFIED_HDR_LEN         32
+#define MBEDTLS_SSL_UNIFIED_HDR_EPOCH_1     64
+#define MBEDTLS_SSL_UNIFIED_HDR_EPOCH_2    128
+
+/* These two constants are used with the mbedtls_ssl_hdr_len() function. */
+
+#define  MBEDTLS_SSL_DIRECTION_IN 0
+#define  MBEDTLS_SSL_DIRECTION_OUT 1
 
 /*
  * Default range for DTLS retransmission timer value, in milliseconds.
@@ -318,6 +404,23 @@
 #define MBEDTLS_SSL_SIG_RSA                  1
 #define MBEDTLS_SSL_SIG_ECDSA                3
 
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+ /*
+ * Signature Schemes
+ * TLS 1.3, Section 4.2.2
+ *
+ * Currently only ECDSA algorithms are implemented
+ */
+
+ /* ECDSA algorithms */
+
+#define SIGNATURE_ECDSA_SECP256r1_SHA256 0x0403 // 1027
+#define	SIGNATURE_ECDSA_SECP384r1_SHA384 0x0503 // 1283
+#define SIGNATURE_ECDSA_SECP521r1_SHA512 0x0603 // 1539
+#define SIGNATURE_NONE 0x0
+
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+
 /*
  * Client Certificate Types
  * RFC 5246 section 7.4.4 plus RFC 4492 section 5.5
@@ -333,6 +436,8 @@
 #define MBEDTLS_SSL_MSG_HANDSHAKE              22
 #define MBEDTLS_SSL_MSG_APPLICATION_DATA       23
 #define MBEDTLS_SSL_MSG_CID                    25
+#define MBEDTLS_SSL_MSG_ACK                    26
+#define MBEDTLS_SSL_MSG_TLS_CID                25 // OLD CID Implementation
 
 #define MBEDTLS_SSL_ALERT_LEVEL_WARNING         1
 #define MBEDTLS_SSL_ALERT_LEVEL_FATAL           2
@@ -362,9 +467,14 @@
 #define MBEDTLS_SSL_ALERT_MSG_INAPROPRIATE_FALLBACK 86  /* 0x56 */
 #define MBEDTLS_SSL_ALERT_MSG_USER_CANCELED         90  /* 0x5A */
 #define MBEDTLS_SSL_ALERT_MSG_NO_RENEGOTIATION     100  /* 0x64 */
+#define MBEDTLS_SSL_ALERT_MSG_MISSING_EXTENSION     109  /* 0x6d -- new in TLS 1.3 */
 #define MBEDTLS_SSL_ALERT_MSG_UNSUPPORTED_EXT      110  /* 0x6E */
+#define MBEDTLS_SSL_ALERT_MSG_CERT_UNOBTAINABLE      111  /* 0x6f -- new in TLS 1.3 */
 #define MBEDTLS_SSL_ALERT_MSG_UNRECOGNIZED_NAME    112  /* 0x70 */
+#define MBEDTLS_SSL_ALERT_MSG_BAD_CERT_STATUS_RESPONSE      113  /* 0x71 -- new in TLS 1.3 */
+#define MBEDTLS_SSL_ALERT_MSG_BAD_CERT_HASH_VALUE      114  /* 0x72 -- new in TLS 1.3 */
 #define MBEDTLS_SSL_ALERT_MSG_UNKNOWN_PSK_IDENTITY 115  /* 0x73 */
+#define MBEDTLS_SSL_ALERT_MSG_CERT_REQUIRED 116 /* 0x74 -- new in TLS 1.3*/
 #define MBEDTLS_SSL_ALERT_MSG_NO_APPLICATION_PROTOCOL 120 /* 0x78 */
 
 #define MBEDTLS_SSL_HS_HELLO_REQUEST            0
@@ -372,6 +482,9 @@
 #define MBEDTLS_SSL_HS_SERVER_HELLO             2
 #define MBEDTLS_SSL_HS_HELLO_VERIFY_REQUEST     3
 #define MBEDTLS_SSL_HS_NEW_SESSION_TICKET       4
+#define MBEDTLS_SSL_HS_END_OF_EARLY_DATA        5 // NEW IN TLS 1.3
+#define MBEDTLS_SSL_HS_HELLO_RETRY_REQUEST      6 // NEW IN TLS 1.3 (RESERVED)
+#define MBEDTLS_SSL_HS_ENCRYPTED_EXTENSION      8 // NEW IN TLS 1.3
 #define MBEDTLS_SSL_HS_CERTIFICATE             11
 #define MBEDTLS_SSL_HS_SERVER_KEY_EXCHANGE     12
 #define MBEDTLS_SSL_HS_CERTIFICATE_REQUEST     13
@@ -379,6 +492,9 @@
 #define MBEDTLS_SSL_HS_CERTIFICATE_VERIFY      15
 #define MBEDTLS_SSL_HS_CLIENT_KEY_EXCHANGE     16
 #define MBEDTLS_SSL_HS_FINISHED                20
+#define MBEDTLS_SSL_HS_KEY_UPDATE              24 // NEW in TLS // NOT USED IN DTLS 1.3
+#define MBEDTLS_SSL_HS_ACK                    253 // NEW IN DTLS 1.3
+#define MBEDTLS_SSL_HS_MESSAGE_HASH           254 // NEW IN TLS 1.3
 
 /*
  * TLS extensions
@@ -391,6 +507,8 @@
 #define MBEDTLS_TLS_EXT_TRUNCATED_HMAC               4
 
 #define MBEDTLS_TLS_EXT_SUPPORTED_ELLIPTIC_CURVES   10
+#define MBEDTLS_TLS_EXT_SUPPORTED_GROUPS   10 // Renamed in TLS 1.3
+
 #define MBEDTLS_TLS_EXT_SUPPORTED_POINT_FORMATS     11
 
 #define MBEDTLS_TLS_EXT_SIG_ALG                     13
@@ -401,6 +519,14 @@
 #define MBEDTLS_TLS_EXT_EXTENDED_MASTER_SECRET  0x0017 /* 23 */
 
 #define MBEDTLS_TLS_EXT_SESSION_TICKET              35
+
+ /* TLS 1.3 */
+#define MBEDTLS_TLS_EXT_KEY_SHARES                 51
+#define MBEDTLS_TLS_EXT_PRE_SHARED_KEY             41
+#define MBEDTLS_TLS_EXT_EARLY_DATA                 42
+#define MBEDTLS_TLS_EXT_SUPPORTED_VERSIONS         43
+#define MBEDTLS_TLS_EXT_COOKIE                     44
+#define MBEDTLS_TLS_EXT_PSK_KEY_EXCHANGE_MODES     45
 
 /* The value of the CID extension is still TBD as of
  * draft-ietf-tls-dtls-connection-id-05
@@ -458,6 +584,41 @@ union mbedtls_ssl_premaster_secret
 extern "C" {
 #endif
 
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+    typedef enum
+    {
+        MBEDTLS_SSL_HELLO_REQUEST,
+        MBEDTLS_SSL_CLIENT_HELLO,
+        MBEDTLS_SSL_SERVER_HELLO,
+        MBEDTLS_SSL_HELLO_RETRY_REQUEST,
+        MBEDTLS_SSL_SECOND_CLIENT_HELLO,
+        MBEDTLS_SSL_SECOND_SERVER_HELLO,
+        MBEDTLS_SSL_CERTIFICATE_REQUEST,
+        MBEDTLS_SSL_SERVER_CERTIFICATE,
+        MBEDTLS_SSL_CERTIFICATE_VERIFY,
+        MBEDTLS_SSL_SERVER_FINISHED,
+        MBEDTLS_SSL_EARLY_DATA,
+        MBEDTLS_SSL_CLIENT_CERTIFICATE,
+        MBEDTLS_SSL_CLIENT_CERTIFICATE_VERIFY,
+        MBEDTLS_SSL_CLIENT_FINISHED,
+        MBEDTLS_SSL_ENCRYPTED_EXTENSIONS,
+        MBEDTLS_SSL_FLUSH_BUFFERS,
+        MBEDTLS_SSL_HANDSHAKE_WRAPUP,
+        MBEDTLS_SSL_HANDSHAKE_FINISH_ACK,
+        MBEDTLS_SSL_HANDSHAKE_OVER,
+        MBEDTLS_SSL_SERVER_NEW_SESSION_TICKET,
+#if defined(MBEDTLS_COMPATIBILITY_MODE)
+        MBEDTLS_SSL_CLIENT_CCS_BEFORE_2ND_CLIENT_HELLO,
+        MBEDTLS_SSL_CLIENT_CCS_BEFORE_CERTIFICATE_REQUEST,
+        MBEDTLS_SSL_CLIENT_CCS_BEFORE_FINISHED,
+        MBEDTLS_SSL_CLIENT_CCS_AFTER_CLIENT_HELLO,
+        MBEDTLS_SSL_SERVER_CCS_AFTER_SERVER_HELLO,
+        MBEDTLS_SSL_SERVER_CCS_AFTER_HRR,
+#endif /* MBEDTLS_COMPATIBILITY_MODE */
+        MBEDTLS_SSL_EARLY_APP_DATA
+    }
+    mbedtls_ssl_states;
+#else
 /*
  * SSL state machine
  */
@@ -484,6 +645,7 @@ typedef enum
     MBEDTLS_SSL_SERVER_HELLO_VERIFY_REQUEST_SENT,
 }
 mbedtls_ssl_states;
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 
 /*
  * The tls_prf function types.
@@ -610,6 +772,9 @@ typedef int mbedtls_ssl_get_timer_t( void * ctx );
 typedef struct mbedtls_ssl_session mbedtls_ssl_session;
 typedef struct mbedtls_ssl_context mbedtls_ssl_context;
 typedef struct mbedtls_ssl_config  mbedtls_ssl_config;
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+typedef struct mbedtls_ssl_ticket  mbedtls_ssl_ticket;
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 
 /* Defined in ssl_internal.h */
 typedef struct mbedtls_ssl_transform mbedtls_ssl_transform;
@@ -621,6 +786,42 @@ typedef struct mbedtls_ssl_key_cert mbedtls_ssl_key_cert;
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
 typedef struct mbedtls_ssl_flight_item mbedtls_ssl_flight_item;
 #endif
+
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && defined(MBEDTLS_SSL_NEW_SESSION_TICKET) && defined(MBEDTLS_SSL_CLI_C)
+
+typedef enum
+{
+    allow_early_data = 1,
+    allow_dhe_resumption = 2,
+    allow_psk_resumption = 4,
+} TicketFlags;
+
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL && MBEDTLS_SSL_NEW_SESSION_TICKET && MBEDTLS_SSL_CLI_C */
+
+
+/**
+* \brief  Ticket Structure
+*/
+struct mbedtls_ssl_ticket {
+    unsigned char* ticket; // The ticket itself is the psk_identity
+    size_t ticket_len; // PSK identity length
+    int ciphersuite;
+    uint32_t ticket_lifetime;
+    uint32_t ticket_age_add;
+    size_t key_len;
+#if defined(MBEDTLS_SHA256_C) && !defined(MBEDTLS_SHA512_C)
+    unsigned char key[32];
+#else
+    unsigned char key[48];
+#endif
+#if defined(MBEDTLS_HAVE_TIME)
+    time_t start;
+#endif
+#if defined(MBEDTLS_X509_CRT_PARSE_C)
+    mbedtls_x509_crt* peer_cert;         /*!< entry peer_cert    */
+#endif
+    TicketFlags flags;          /*!< ticket flags */
+};
 
 #if defined(MBEDTLS_SSL_ASYNC_PRIVATE)
 #if defined(MBEDTLS_X509_CRT_PARSE_C)
@@ -853,6 +1054,35 @@ typedef void mbedtls_ssl_async_cancel_t( mbedtls_ssl_context *ssl );
 #endif /* MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED &&
           !MBEDTLS_SSL_KEEP_PEER_CERTIFICATE */
 
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+/**
+* \brief          KeySet data structure holding client/server write keys
+*                 as well as the respective IVs.
+*/
+typedef struct KeySet {
+	unsigned char *clientWriteKey;
+	unsigned char *serverWriteKey;
+	unsigned char *clientWriteIV;
+	unsigned char *serverWriteIV;
+	int keyLen;
+	int ivLen;
+#if defined(MBEDTLS_SSL_PROTO_DTLS)
+	int epoch;
+#endif /* MBEDTLS_SSL_PROTO_DTLS */
+	unsigned char iv[12];
+
+	/* The [sender]_sn_key is indirectly used to
+	 * encrypt the sequence number in the record layer.
+	 *
+	 * The client_sn_key is used to encrypt the
+	 * sequence number for outgoing transmission.
+	 * server_sn_key is used for incoming payloads.
+	 */
+	unsigned char *server_sn_key;
+	unsigned char *client_sn_key;
+} KeySet;
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+
 /*
  * This structure is used for storing current session data.
  *
@@ -870,10 +1100,20 @@ struct mbedtls_ssl_session
     mbedtls_time_t start;       /*!< starting time      */
 #endif
     int ciphersuite;            /*!< chosen ciphersuite */
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+    const mbedtls_ssl_ciphersuite_t* ciphersuite_info;
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
     int compression;            /*!< chosen compression */
     size_t id_len;              /*!< session id length  */
     unsigned char id[32];       /*!< session identifier */
     unsigned char master[48];   /*!< the master secret  */
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+#if defined(MBEDTLS_SHA256_C) && !defined(MBEDTLS_SHA512_C)
+    unsigned char resumption_master_secret[32];
+#else /* MBEDTLS_SHA512_C */
+    unsigned char resumption_master_secret[48];
+#endif /* MBEDTLS_SHA256_C && !MBEDTLS_SHA512_C */
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 
 #if defined(MBEDTLS_X509_CRT_PARSE_C)
 #if defined(MBEDTLS_SSL_KEEP_PEER_CERTIFICATE)
@@ -888,12 +1128,39 @@ struct mbedtls_ssl_session
 #endif /* MBEDTLS_X509_CRT_PARSE_C */
     uint32_t verify_result;          /*!<  verification result     */
 
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+    unsigned int key_exchange; /* Indication of the key exchange algorithm being negotiated*/
+    unsigned char key_exchange_modes; /*!< psk key exchange modes */
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 #if defined(MBEDTLS_SSL_SESSION_TICKETS) && defined(MBEDTLS_SSL_CLI_C)
     unsigned char *ticket;      /*!< RFC 5077 session ticket */
     size_t ticket_len;          /*!< session ticket length   */
     uint32_t ticket_lifetime;   /*!< ticket lifetime hint    */
 #endif /* MBEDTLS_SSL_SESSION_TICKETS && MBEDTLS_SSL_CLI_C */
 
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+#if defined(MBEDTLS_SSL_NEW_SESSION_TICKET) && defined(MBEDTLS_SSL_CLI_C)
+// TBD: Replace fields by ticket structure
+// We currently only store a single ticket on the client size
+    unsigned char* ticket;      /*!< TLS 1.3 session ticket acting as psk identity */
+    size_t ticket_len;          /*!< ticket length   */
+    uint32_t ticket_lifetime;   /*!< ticket lifetime hint    */
+    TicketFlags flags;          /*!< ticket flags */
+    uint32_t ticket_age_add;    /* A randomly generated 32-bit value that is used to obscure the age of the ticket */
+    unsigned char* ticket_nonce;/*!< ticket nonce value */
+    uint8_t ticket_nonce_len;   /*!< ticket nonce length */
+    size_t key_len;             /*!< psk key length */
+#if defined(MBEDTLS_SHA256_C) && !defined(MBEDTLS_SHA512_C)
+    unsigned char key[32];
+#else /* MBEDTLS_SHA512_C */
+    unsigned char key[48];
+#endif /* MBEDTLS_SHA256_C && !MBEDTLS_SHA512_C */
+#if defined(MBEDTLS_HAVE_TIME)
+    time_t ticket_received;
+#endif /* MBEDTLS_HAVE_TIME */
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+
+#endif /* MBEDTLS_SSL_SESSION_TICKETS && MBEDTLS_SSL_CLI_C */
 #if defined(MBEDTLS_SSL_MAX_FRAGMENT_LENGTH)
     unsigned char mfl_code;     /*!< MaxFragmentLength negotiated by peer */
 #endif /* MBEDTLS_SSL_MAX_FRAGMENT_LENGTH */
@@ -905,6 +1172,21 @@ struct mbedtls_ssl_session
 #if defined(MBEDTLS_SSL_ENCRYPT_THEN_MAC)
     int encrypt_then_mac;       /*!< flag for EtM activation                */
 #endif
+
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+#if defined(MBEDTLS_ZERO_RTT) && defined(MBEDTLS_SSL_SRV_C)
+/*!< Early data indication:
+ *    0  -- MBEDTLS_SSL_EARLY_DATA_DISABLED (for no early data), and
+ *    1  -- MBEDTLS_SSL_EARLY_DATA_ENABLED (for use early data)
+ */
+    int process_early_data; /*!< Indication about using early data or not on the server side */
+#endif
+
+#if defined(MBEDTLS_CID)
+    unsigned int cid;           /*!< flag about CID usage           */
+#endif /* MBEDTLS_CID */
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+
 };
 
 /**
@@ -918,7 +1200,11 @@ struct mbedtls_ssl_config
      * Pointers
      */
 
-    const int *ciphersuite_list[4]; /*!< allowed ciphersuites per version   */
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+    const int* ciphersuite_list[5]; /*!< allowed ciphersuites per version   */
+#else
+    const int* ciphersuite_list[4]; /*!< allowed ciphersuites per version   */
+#endif
 
     /** Callback for printing debug output                                  */
     void (*f_dbg)(void *, int, const char *, int, const char *);
@@ -933,6 +1219,16 @@ struct mbedtls_ssl_config
     /** Callback to store a session into the cache                          */
     int (*f_set_cache)(void *, const mbedtls_ssl_session *);
     void *p_cache;                  /*!< context for cache callbacks        */
+
+    /* Ephemeral ECC key pair(s) for use with the key share extension
+     * Provided by the client during the ClientHello, and when used for
+     * the session copied to the ssl->handshake->ecdh_ctx.
+     * This structure is only used by the client since he may offer
+     * multiple key shares to the server.
+    */
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && defined(MBEDTLS_ECDH_C) && defined(MBEDTLS_SSL_CLI_C)
+    mbedtls_ecdh_context keyshare_ctx;
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL && MBEDTLS_ECDH_C && MBEDTLS_SSL_CLI_C */
 
 #if defined(MBEDTLS_SSL_SERVER_NAME_INDICATION)
     /** Callback for setting cert according to SNI extension                */
@@ -952,7 +1248,7 @@ struct mbedtls_ssl_config
     void *p_psk;                    /*!< context for PSK callback           */
 #endif
 
-#if defined(MBEDTLS_SSL_DTLS_HELLO_VERIFY) && defined(MBEDTLS_SSL_SRV_C)
+#if (defined(MBEDTLS_SSL_DTLS_HELLO_VERIFY) || (defined(MBEDTLS_SSL_COOKIE_C) && defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL))) && defined(MBEDTLS_SSL_SRV_C)
     /** Callback to create & write a cookie for ClientHello veirifcation    */
     int (*f_cookie_write)( void *, unsigned char **, unsigned char *,
                            const unsigned char *, size_t );
@@ -960,16 +1256,29 @@ struct mbedtls_ssl_config
     int (*f_cookie_check)( void *, const unsigned char *, size_t,
                            const unsigned char *, size_t );
     void *p_cookie;                 /*!< context for the cookie callbacks   */
+
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+    unsigned int rr_config;
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+
 #endif
 
-#if defined(MBEDTLS_SSL_SESSION_TICKETS) && defined(MBEDTLS_SSL_SRV_C)
+#if ((defined(MBEDTLS_SSL_SESSION_TICKETS) || (defined(MBEDTLS_SSL_NEW_SESSION_TICKET) && defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)) ) && defined(MBEDTLS_SSL_SRV_C))
     /** Callback to create & write a session ticket                         */
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+    int(*f_ticket_write)(void*, const mbedtls_ssl_ticket*,
+        unsigned char*, const unsigned char*, size_t*, uint32_t*, TicketFlags*);
+    /** Callback to parse a session ticket into a session structure         */
+    int(*f_ticket_parse)(void*, mbedtls_ssl_ticket*, unsigned char*, size_t);
+    void* p_ticket;                 /*!< context for the ticket callbacks   */
+#else
     int (*f_ticket_write)( void *, const mbedtls_ssl_session *,
             unsigned char *, const unsigned char *, size_t *, uint32_t * );
     /** Callback to parse a session ticket into a session structure         */
     int (*f_ticket_parse)( void *, mbedtls_ssl_session *, unsigned char *, size_t);
     void *p_ticket;                 /*!< context for the ticket callbacks   */
-#endif /* MBEDTLS_SSL_SESSION_TICKETS && MBEDTLS_SSL_SRV_C */
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+#endif /* (MBEDTLS_SSL_SESSION_TICKETS || (MBEDTLS_SSL_NEW_SESSION_TICKET && MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) ) && MBEDTLS_SSL_SRV_C */
 
 #if defined(MBEDTLS_SSL_EXPORT_KEYS)
     /** Callback to export key block and master secret                      */
@@ -1009,18 +1318,39 @@ struct mbedtls_ssl_config
     void *p_async_config_data; /*!< Configuration data set by mbedtls_ssl_conf_async_private_cb(). */
 #endif /* MBEDTLS_SSL_ASYNC_PRIVATE */
 
-#if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
-    const int *sig_hashes;          /*!< allowed signature hashes           */
+#if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)  && !defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+    const int* sig_hashes;          /*!< allowed signature hashes in TLS 1.2 */
 #endif
 
+#if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED) && defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+    const int* signature_schemes;  /*!< supported signature schemes in TLS 1.3 */
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL && MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED */
+
 #if defined(MBEDTLS_ECP_C)
-    const mbedtls_ecp_group_id *curve_list; /*!< allowed curves             */
+    /* In TLS 1.3 we are re-purposing this curve_list to mean NamedGroup */
+    const mbedtls_ecp_group_id *curve_list; /*!< allowed curves */
+
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && defined(MBEDTLS_SSL_CLI_C)
+    const mbedtls_ecp_group_id* key_shares_curve_list; /*!< curves to send as key shares, as configured by app*/
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL && MBEDTLS_SSL_CLI_C */
+
 #endif
 
 #if defined(MBEDTLS_DHM_C)
     mbedtls_mpi dhm_P;              /*!< prime modulus for DHM              */
     mbedtls_mpi dhm_G;              /*!< generator for DHM                  */
 #endif
+
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+    int key_exchange_modes; /*!< key exchange mode */
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && defined(MBEDTLS_SSL_NEW_SESSION_TICKET)
+    uint32_t ticket_age_add; /*!< used to obscure the age of the ticket */
+#if defined(MBEDTLS_HAVE_TIME)
+    time_t ticket_received;               /*!< time when ticket was received  */
+#endif /* MBEDTLS_HAVE_TIME*/
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL && MBEDTLS_SSL_NEW_SESSION_TICKET */
 
 #if defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
 
@@ -1053,7 +1383,31 @@ struct mbedtls_ssl_config
                                      *   Its value is non-zero if and only if
                                      *   \c psk is not \c NULL or \c psk_opaque
                                      *   is not \c 0. */
+
+#if defined(MBEDTLS_ZERO_RTT)
+     /*!< Early data indication:
+      *   0  -- MBEDTLS_SSL_EARLY_DATA_DISABLED (for no early data), and
+      *   1  -- MBEDTLS_SSL_EARLY_DATA_ENABLED (for use early data)
+      */
+    int early_data;
+    // Pointer to early data buffer
+    char* early_data_buf;
+    // Length of early data
+    unsigned int early_data_len;
+#if defined(MBEDTLS_SSL_SRV_C)
+    // callback function for early data processing by the server-side
+    int(*early_data_callback)(mbedtls_ssl_context*, unsigned char*, size_t);
+#endif /* MBEDTLS_SSL_SRV_C */
+#endif /* MBEDTLS_ZERO_RTT */
+
 #endif /* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED */
+
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && defined(MBEDTLS_SSL_NEW_SESSION_TICKET)
+    /*!< Variable to toggle the use of resumption vs. a full exchange.
+    Default value is 0 (for full exchange) and 1 is resumption with ticket.  */
+    int resumption_mode;
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL && MBEDTLS_SSL_NEW_SESSION_TICKET */
+
 
 #if defined(MBEDTLS_SSL_ALPN)
     const char **alpn_list;         /*!< ordered list of protocols          */
@@ -1124,7 +1478,7 @@ struct mbedtls_ssl_config
 #if defined(MBEDTLS_SSL_TRUNCATED_HMAC)
     unsigned int trunc_hmac : 1;    /*!< negotiate truncated hmac?          */
 #endif
-#if defined(MBEDTLS_SSL_SESSION_TICKETS)
+#if defined(MBEDTLS_SSL_SESSION_TICKETS) || defined(MBEDTLS_SSL_NEW_SESSION_TICKET)
     unsigned int session_tickets : 1;   /*!< use session tickets?           */
 #endif
 #if defined(MBEDTLS_SSL_FALLBACK_SCSV) && defined(MBEDTLS_SSL_CLI_C)
@@ -1139,6 +1493,11 @@ struct mbedtls_ssl_config
                                              *   record with unexpected CID
                                              *   should lead to failure.    */
 #endif /* MBEDTLS_SSL_DTLS_CONNECTION_ID */
+
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && defined(MBEDTLS_CID)
+    unsigned int cid : 2;
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL && MBEDTLS_CID */
+
 };
 
 
@@ -1216,6 +1575,12 @@ struct mbedtls_ssl_context
     unsigned char *in_cid;      /*!< The start of the CID;
                                  *   (the end is marked by in_len).   */
 #endif /* MBEDTLS_SSL_DTLS_CONNECTION_ID */
+
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && defined(MBEDTLS_CID)
+    unsigned char in_cid[MBEDTLS_CID_MAX_SIZE]; /* cid value of incoming data */
+    uint8_t in_cid_len; /* length of the incoming cid value */
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL && MBEDTLS_CID */
+
     unsigned char *in_len;      /*!< two-bytes message length field   */
     unsigned char *in_iv;       /*!< ivlen-byte IV                    */
     unsigned char *in_msg;      /*!< message contents (in_iv+ivlen)   */
@@ -1224,11 +1589,14 @@ struct mbedtls_ssl_context
     int in_msgtype;             /*!< record header: message type      */
     size_t in_msglen;           /*!< record header: message length    */
     size_t in_left;             /*!< amount of data read so far       */
-#if defined(MBEDTLS_SSL_VARIABLE_BUFFER_LENGTH)
-    size_t in_buf_len;          /*!< length of input buffer           */
-#endif
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
     uint16_t in_epoch;          /*!< DTLS epoch for incoming records  */
+
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+    uint16_t rec_epoch;         /*!< DTLS epoch received */
+    uint16_t out_epoch;          /*!< DTLS epoch for outgoing records  */
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+
     size_t next_record_offset;  /*!< offset of the next record in datagram
                                      (equal to in_left if none)       */
 #endif /* MBEDTLS_SSL_PROTO_DTLS */
@@ -1241,6 +1609,20 @@ struct mbedtls_ssl_context
                                      including the handshake header   */
     int nb_zero;                /*!< # of 0-length encrypted messages */
 
+
+	/* The following two variables indicate if and, if yes,
+	 * what kind of alert or warning is pending to be sent.
+	 * They should not be set manually but through the macros
+	 * SSL_PEND_FATAL_ALERT( TYPE ) and SSL_PEND_WARNING( TYPE )
+	 * defined below. */
+	unsigned char send_alert;   /*!< Determines if either a fatal error
+									 or a warning should be sent. Values:
+									 - \c 0 if no alert is to be sent.
+									 - #MBEDTLS_SSL_ALERT_LEVEL_FATAL
+									   if a fatal alert is to be sent
+									 - #MBEDTLS_SSL_ALERT_LEVEL_WARNING
+									   if a non-fatal alert is to be sent. */
+	unsigned char alert_type;   /*!< Type of alert if send_alert != 0 */
     int keep_current_message;   /*!< drop or reuse current message
                                      on next call to record layer? */
 
@@ -1259,6 +1641,12 @@ struct mbedtls_ssl_context
     unsigned char *out_cid;     /*!< The start of the CID;
                                  *   (the end is marked by in_len).   */
 #endif /* MBEDTLS_SSL_DTLS_CONNECTION_ID */
+
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && defined(MBEDTLS_CID)
+    unsigned char out_cid[MBEDTLS_CID_MAX_SIZE]; /* cid value of outgoing data */
+    uint8_t out_cid_len; /* length of the outgoing cid value */
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL && MBEDTLS_CID */
+
     unsigned char *out_len;     /*!< two-bytes message length field   */
     unsigned char *out_iv;      /*!< ivlen-byte IV                    */
     unsigned char *out_msg;     /*!< message contents (out_iv+ivlen)  */
@@ -1266,9 +1654,6 @@ struct mbedtls_ssl_context
     int out_msgtype;            /*!< record header: message type      */
     size_t out_msglen;          /*!< record header: message length    */
     size_t out_left;            /*!< amount of data not yet written   */
-#if defined(MBEDTLS_SSL_VARIABLE_BUFFER_LENGTH)
-    size_t out_buf_len;         /*!< length of output buffer          */
-#endif
 
     unsigned char cur_out_ctr[8]; /*!<  Outgoing record sequence  number. */
 
@@ -1300,10 +1685,15 @@ struct mbedtls_ssl_context
     const char *alpn_chosen;    /*!<  negotiated protocol                   */
 #endif /* MBEDTLS_SSL_ALPN */
 
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && defined(MBEDTLS_SSL_PROTO_DTLS)
+    uint8_t record_numbers_sent[8];     /*<! Record number list for sent acks */
+    uint8_t record_numbers_received[8];     /*<! Record number list for received acks */
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL && MBEDTLS_SSL_PROTO_DTLS */
+
     /*
      * Information for DTLS hello verify
      */
-#if defined(MBEDTLS_SSL_DTLS_HELLO_VERIFY) && defined(MBEDTLS_SSL_SRV_C)
+#if (defined(MBEDTLS_SSL_DTLS_HELLO_VERIFY) || ( defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && defined(MBEDTLS_SSL_COOKIE_C)) ) && defined(MBEDTLS_SSL_SRV_C)
     unsigned char  *cli_id;         /*!<  transport-level ID of the client  */
     size_t          cli_id_len;     /*!<  length of cli_id                  */
 #endif /* MBEDTLS_SSL_DTLS_HELLO_VERIFY && MBEDTLS_SSL_SRV_C */
@@ -1335,6 +1725,23 @@ struct mbedtls_ssl_context
                             *   and #MBEDTLS_SSL_CID_DISABLED. */
 #endif /* MBEDTLS_SSL_DTLS_CONNECTION_ID */
 };
+
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+#define SSL_PEND_FATAL_ALERT( type )                                    \
+    do                                                                  \
+    {                                                                   \
+        ssl->send_alert = MBEDTLS_SSL_ALERT_LEVEL_FATAL;                \
+        ssl->alert_type = type;                                         \
+    } while( 0 )
+
+#define SSL_PEND_WARNING( type )                                        \
+    do                                                                  \
+    {                                                                   \
+        ssl->send_alert = MBEDTLS_SSL_ALERT_LEVEL_WARNING;              \
+        ssl->alert_type = type;                                         \
+    } while( 0 )
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+
 
 #if defined(MBEDTLS_SSL_HW_RECORD_ACCEL)
 
@@ -1489,6 +1896,32 @@ void mbedtls_ssl_conf_transport( mbedtls_ssl_config *conf, int transport );
  * against the "triple handshake" attack even before it was found.
  */
 void mbedtls_ssl_conf_authmode( mbedtls_ssl_config *conf, int authmode );
+
+/**
+* \brief          Set the early_data mode
+*                 Default: disabled on server and client
+*
+* \param conf     SSL configuration
+* \param early_data can be:
+*
+*  MBEDTLS_SSL_EARLY_DATA_DISABLED:  early data functionality will not be used
+*                        (default on server)
+*                        (default on client)
+*
+*  MBEDTLS_SSL_EARLY_DATA_ENABLED:  early data functionality is enabled and
+*                        may be negotiated in the handshake. Application using
+*                        early data functionality needs to be aware of the
+*                        lack of replay protection of the early data application
+*                        payloads.
+*
+* \param buffer  Early data to be transmitted
+*
+* \param len     Length of early data
+*/
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && defined(MBEDTLS_ZERO_RTT)
+void mbedtls_ssl_conf_early_data(mbedtls_ssl_config* conf, int early_data, char* buffer, unsigned int len, int(*early_data_callback)(mbedtls_ssl_context*,
+    unsigned char*, size_t));
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL && MBEDTLS_ZERO_RTT */
 
 #if defined(MBEDTLS_X509_CRT_PARSE_C)
 /**
@@ -1875,6 +2308,36 @@ void mbedtls_ssl_set_timer_cb( mbedtls_ssl_context *ssl,
                                mbedtls_ssl_set_timer_t *f_set_timer,
                                mbedtls_ssl_get_timer_t *f_get_timer );
 
+
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+/**
+ * \brief           Callback type: generate and write session ticket
+ *
+ * \note            This describes what a callback implementation should do.
+ *                  This callback should generate and encrypted and
+ *                  authenticated ticket for the session and write it to the
+ *                  output buffer. Here, ticket means the opaque ticket part
+ *                  of the NewSessionTicket structure of RFC 5077.
+ *
+ * \param p_ticket  Context for the callback
+ * \param session   SSL session to bo written in the ticket
+ * \param start     Start of the outpur buffer
+ * \param end       End of the output buffer
+ * \param tlen      On exit, holds the length written
+ * \param lifetime  On exit, holds the lifetime of the ticket in seconds
+ *
+ * \return          0 if successful, or
+ *                  a specific MBEDTLS_ERR_XXX code.
+ */
+typedef int mbedtls_ssl_ticket_write_t(void* p_ticket,
+    const mbedtls_ssl_ticket* session,
+    unsigned char* start,
+    const unsigned char* end,
+    size_t* tlen,
+    uint32_t* lifetime, TicketFlags* flags);
+
+#else
+
 /**
  * \brief           Callback type: generate and write session ticket
  *
@@ -1900,6 +2363,7 @@ typedef int mbedtls_ssl_ticket_write_t( void *p_ticket,
                                         const unsigned char *end,
                                         size_t *tlen,
                                         uint32_t *lifetime );
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 
 #if defined(MBEDTLS_SSL_EXPORT_KEYS)
 /**
@@ -1965,6 +2429,35 @@ typedef int mbedtls_ssl_export_keys_ext_t( void *p_expkey,
                                            mbedtls_tls_prf_types tls_prf_type );
 #endif /* MBEDTLS_SSL_EXPORT_KEYS */
 
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+/**
+ * \brief           Callback type: parse and load session ticket
+ *
+ * \note            This describes what a callback implementation should do.
+ *                  This callback should parse a session ticket as generated
+ *                  by the corresponding mbedtls_ssl_ticket_write_t function,
+ *                  and, if the ticket is authentic and valid, load the
+ *                  session.
+ *
+ * \note            The implementation is allowed to modify the first len
+ *                  bytes of the input buffer, eg to use it as a temporary
+ *                  area for the decrypted ticket contents.
+ *
+ * \param p_ticket  Context for the callback
+ * \param session   SSL session to be loaded
+ * \param buf       Start of the buffer containing the ticket
+ * \param len       Length of the ticket.
+ *
+ * \return          0 if successful, or
+ *                  MBEDTLS_ERR_SSL_INVALID_MAC if not authentic, or
+ *                  MBEDTLS_ERR_SSL_SESSION_TICKET_EXPIRED if expired, or
+ *                  any other non-zero code for other failures.
+ */
+typedef int mbedtls_ssl_ticket_parse_t(void* p_ticket,
+    mbedtls_ssl_ticket* session,
+    unsigned char* buf,
+    size_t len);
+#else
 /**
  * \brief           Callback type: parse and load session ticket
  *
@@ -1992,8 +2485,34 @@ typedef int mbedtls_ssl_ticket_parse_t( void *p_ticket,
                                         mbedtls_ssl_session *session,
                                         unsigned char *buf,
                                         size_t len );
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 
-#if defined(MBEDTLS_SSL_SESSION_TICKETS) && defined(MBEDTLS_SSL_SRV_C)
+
+#if (defined(MBEDTLS_SSL_SESSION_TICKETS) || defined(MBEDTLS_SSL_NEW_SESSION_TICKET)) && defined(MBEDTLS_SSL_SRV_C) && defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+/**
+ * \brief           Configure SSL session ticket callbacks (server only).
+ *                  (Default: none.)
+ *
+ * \note            On server, session tickets are enabled by providing
+ *                  non-NULL callbacks.
+ *
+ * \note            On client, use \c mbedtls_ssl_conf_session_tickets().
+ *
+ * \param conf      SSL configuration context
+ * \param f_ticket_write    Callback for writing a ticket
+ * \param f_ticket_parse    Callback for parsing a ticket
+ * \param p_ticket          Context shared by the two callbacks
+ * \param use_tickets       Enable or disable (MBEDTLS_SSL_SESSION_TICKETS_ENABLED or
+ *                                         MBEDTLS_SSL_SESSION_TICKETS_DISABLED)
+ */
+void mbedtls_ssl_conf_session_tickets_cb(mbedtls_ssl_config* conf,
+    mbedtls_ssl_ticket_write_t* f_ticket_write,
+    mbedtls_ssl_ticket_parse_t* f_ticket_parse,
+    void* p_ticket, int use_tickets);
+#endif /* ( MBEDTLS_SSL_SESSION_TICKETS || MBEDTLS_SSL_NEW_SESSION_TICKET ) && MBEDTLS_SSL_SRV_C && MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+
+
+#if (defined(MBEDTLS_SSL_SESSION_TICKETS) && defined(MBEDTLS_SSL_SRV_C) && !defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL))
 /**
  * \brief           Configure SSL session ticket callbacks (server only).
  *                  (Default: none.)
@@ -2158,7 +2677,34 @@ typedef int mbedtls_ssl_cookie_check_t( void *ctx,
                                 const unsigned char *cookie, size_t clen,
                                 const unsigned char *info, size_t ilen );
 
-#if defined(MBEDTLS_SSL_DTLS_HELLO_VERIFY) && defined(MBEDTLS_SSL_SRV_C)
+#if (defined(MBEDTLS_SSL_DTLS_HELLO_VERIFY) || (defined(MBEDTLS_SSL_COOKIE_C) && defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL))) && defined(MBEDTLS_SSL_SRV_C)
+
+
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+/**
+ * \brief           Configures cookie handling
+ *                  (Server only.)
+ *
+ *                  Default: dummy callbacks that fail, in order to force you to
+ *                  register working callbacks (and initialize their context).
+ *
+ * \warning         Disabling return-routability check using cookies allows a
+ *                  server to be used for amplification attacks against other hosts.
+ *                  Only disable if you known this can't happen in your
+ *                  particular environment.
+ *
+ * \param conf              SSL configuration
+ * \param f_cookie_write    Cookie write callback
+ * \param f_cookie_check    Cookie check callback
+ * \param p_cookie          Context for both callbacks
+ * \param rr_config         Determines whether a return-routability check is enforced
+ */
+void mbedtls_ssl_conf_cookies(mbedtls_ssl_config* conf,
+    mbedtls_ssl_cookie_write_t* f_cookie_write,
+    mbedtls_ssl_cookie_check_t* f_cookie_check,
+    void* p_cookie,
+    unsigned int rr_conf);
+#else
 /**
  * \brief           Register callbacks for DTLS cookies
  *                  (Server only. DTLS only.)
@@ -2191,6 +2737,7 @@ void mbedtls_ssl_conf_dtls_cookies( mbedtls_ssl_config *conf,
                            mbedtls_ssl_cookie_write_t *f_cookie_write,
                            mbedtls_ssl_cookie_check_t *f_cookie_check,
                            void *p_cookie );
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 
 /**
  * \brief          Set client's transport-level identification info.
@@ -2215,7 +2762,7 @@ int mbedtls_ssl_set_client_transport_id( mbedtls_ssl_context *ssl,
                                  const unsigned char *info,
                                  size_t ilen );
 
-#endif /* MBEDTLS_SSL_DTLS_HELLO_VERIFY && MBEDTLS_SSL_SRV_C */
+#endif /* ( MBEDTLS_SSL_DTLS_HELLO_VERIFY || (MBEDTLS_SSL_COOKIE_C && MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) ) && MBEDTLS_SSL_SRV_C */
 
 #if defined(MBEDTLS_SSL_DTLS_ANTI_REPLAY)
 /**
@@ -2683,6 +3230,44 @@ int mbedtls_ssl_conf_own_cert( mbedtls_ssl_config *conf,
                               mbedtls_pk_context *pk_key );
 #endif /* MBEDTLS_X509_CRT_PARSE_C */
 
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+/**
+ * \brief Set the key exchange mode.
+ *
+ * \note With the new ciphersuite concept in TLS / DTLS 1.3 it is
+ *       important to have a way to set the preferred key exchange
+ *       mode
+ *
+ * \param conf     SSL configuration
+ * \param key_exchange_mode  Value for key exchange mechanism.
+ *
+ */
+
+int mbedtls_ssl_conf_ke(mbedtls_ssl_config* conf,
+    const int key_exchange_mode);
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+
+/**
+* \brief Set meta-data for server-provided tickets
+*
+* \note This function is used in context of tickets since the
+*       ticket_age_add value is provided by the server-side.
+*       Furthermore, we also need to record the time the ticket
+*       was obtained.
+*
+* \param conf     SSL configuration
+* \param ticket_age_add    ticket age add value
+* \param start    time when the ticket was received
+*
+*/
+
+int mbedtls_ssl_conf_ticket_meta(mbedtls_ssl_config* conf,
+    const uint32_t ticket_age_add,
+    const time_t ticket_received);
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+
 #if defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
 /**
  * \brief          Configure a pre-shared key (PSK) and identity
@@ -2953,6 +3538,23 @@ void mbedtls_ssl_conf_curves( mbedtls_ssl_config *conf,
                               const mbedtls_ecp_group_id *curves );
 #endif /* MBEDTLS_ECP_C */
 
+/**
+* \brief          Set the named groups/curves in order of preference for use
+*                 in the key share extension.
+*
+* \note           This list should be ordered by decreasing preference
+*                 (preferred curve first).
+*
+* \param conf     SSL configuration
+* \param curves   Ordered list of allowed curves,
+*                 terminated by MBEDTLS_ECP_DP_NONE.
+*/
+
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && defined(MBEDTLS_SSL_CLI_C) && defined(MBEDTLS_ECP_C)
+void mbedtls_ssl_conf_key_share_curves(mbedtls_ssl_config* conf,
+    const mbedtls_ecp_group_id* curve_list);
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL && MBEDTLS_SSL_CLI_C && MBEDTLS_ECP_C */
+
 #if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
 /**
  * \brief          Set the allowed hashes for signatures during the handshake.
@@ -3198,6 +3800,23 @@ void mbedtls_ssl_conf_fallback( mbedtls_ssl_config *conf, char fallback );
 void mbedtls_ssl_conf_encrypt_then_mac( mbedtls_ssl_config *conf, char etm );
 #endif /* MBEDTLS_SSL_ENCRYPT_THEN_MAC */
 
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && defined(MBEDTLS_CID)
+/**
+* \brief           Enable or disable Connection ID
+*                  (Default: MBEDTLS_CID_DISABLE)
+**
+* \param conf      SSL configuration
+* \param cid       MBEDTLS_CID_DISABLE or MBEDTLS_CID_DONT_USE or MBEDTLS_CID_USE
+**
+* \note            MBEDTLS_CID_DISABLE indicates that the CID functionality is not
+*                  to be used for this session (even though the CID code is compiled in).
+*                  MBEDTLS_CID_DONT_USE indicates that we do not want to use a CID value
+*                  for outgoing records.
+*                  MBEDTLS_CID_USE implies that a CID value will be put in outgoing records.
+*/
+void mbedtls_ssl_conf_cid(mbedtls_ssl_config* conf, unsigned int cid);
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL && MBEDTLS_CID */
+
 #if defined(MBEDTLS_SSL_EXTENDED_MASTER_SECRET)
 /**
  * \brief           Enable or disable Extended Master Secret negotiation.
@@ -3311,7 +3930,7 @@ void mbedtls_ssl_conf_truncated_hmac( mbedtls_ssl_config *conf, int truncate );
 void mbedtls_ssl_conf_cbc_record_splitting( mbedtls_ssl_config *conf, char split );
 #endif /* MBEDTLS_SSL_CBC_RECORD_SPLITTING */
 
-#if defined(MBEDTLS_SSL_SESSION_TICKETS) && defined(MBEDTLS_SSL_CLI_C)
+#if ((defined(MBEDTLS_SSL_SESSION_TICKETS) || (defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && defined (MBEDTLS_SSL_NEW_SESSION_TICKET) )) && defined(MBEDTLS_SSL_CLI_C))
 /**
  * \brief          Enable / Disable session tickets (client only).
  *                 (Default: MBEDTLS_SSL_SESSION_TICKETS_ENABLED.)
@@ -3323,7 +3942,7 @@ void mbedtls_ssl_conf_cbc_record_splitting( mbedtls_ssl_config *conf, char split
  *                                         MBEDTLS_SSL_SESSION_TICKETS_DISABLED)
  */
 void mbedtls_ssl_conf_session_tickets( mbedtls_ssl_config *conf, int use_tickets );
-#endif /* MBEDTLS_SSL_SESSION_TICKETS && MBEDTLS_SSL_CLI_C */
+#endif /* (MBEDTLS_SSL_SESSION_TICKETS || (MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL && MBEDTLS_SSL_NEW_SESSION_TICKET)) && MBEDTLS_SSL_CLI_C */
 
 #if defined(MBEDTLS_SSL_RENEGOTIATION)
 /**
@@ -3524,6 +4143,29 @@ uint32_t mbedtls_ssl_get_verify_result( const mbedtls_ssl_context *ssl );
  */
 const char *mbedtls_ssl_get_ciphersuite( const mbedtls_ssl_context *ssl );
 
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+
+/**
+* \brief          Return the negotiated key exchange mode id
+*
+* \param ssl      SSL context
+*
+* \return         mbedtls_key_exchange_type_t
+*/
+mbedtls_key_exchange_type_t mbedtls_ssl_get_key_exchange(const mbedtls_ssl_context* ssl);
+
+/**
+* \brief          Return the string identifying the negotiated key exchange mode
+*
+* \param ssl      SSL context
+*
+* \return         string identifying the key exchange mode
+*/
+
+const char* mbedtls_ssl_get_key_exchange_name(const mbedtls_ssl_context* ssl);
+
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+
 /**
  * \brief          Return the current SSL version (SSLv3/TLSv1/etc)
  *
@@ -3533,6 +4175,29 @@ const char *mbedtls_ssl_get_ciphersuite( const mbedtls_ssl_context *ssl );
  */
 const char *mbedtls_ssl_get_version( const mbedtls_ssl_context *ssl );
 
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+/**
+ * \brief          Return the (maximum) number of bytes added by the record
+ *                 layer: header + encryption/MAC overhead (inc. padding).
+ *                 Note: For DTLS 1.3 the header is of variable length and
+ *                 changes over time. Be cautious when relying on the
+ *                 information returned by this function.
+ *
+ * \param ssl      SSL context
+ *
+ * \param direction      int
+ *
+ *                 Specifies whether the size shall be determined
+ *                 for outgoing or incoming packets.
+ *
+ *                 Use MBEDTLS_SSL_DIRECTION_IN or MBEDTLS_SSL_DIRECTION_OUT
+ *
+ * \return         Current maximum record expansion in bytes, or
+ *                 MBEDTLS_ERR_SSL_FEATURE_UNAVAILABLE if compression is
+ *                 enabled, which makes expansion much less predictable
+ */
+int mbedtls_ssl_get_record_expansion(const mbedtls_ssl_context* ssl, int direction);
+#else
 /**
  * \brief          Return the (maximum) number of bytes added by the record
  *                 layer: header + encryption/MAC overhead (inc. padding)
@@ -3547,6 +4212,7 @@ const char *mbedtls_ssl_get_version( const mbedtls_ssl_context *ssl );
  *                 enabled, which makes expansion much less predictable
  */
 int mbedtls_ssl_get_record_expansion( const mbedtls_ssl_context *ssl );
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 
 #if defined(MBEDTLS_SSL_MAX_FRAGMENT_LENGTH)
 /**

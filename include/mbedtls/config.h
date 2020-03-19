@@ -1747,7 +1747,89 @@
  * Uncomment this macro to enable experimental and partial
  * functionality specific to TLS 1.3.
  */
-//#define MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+#define MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+
+/**
+*  \def MBEDTLS_SSL_EARLY_DATA_MAX_DELAY
+*
+* Tolerance window for ticket age value.
+* Outside this tolerance window, 0-RTT mode will be disabled.
+*
+*/
+
+#define MBEDTLS_SSL_EARLY_DATA_MAX_DELAY 10000
+
+/**
+*  \def MBEDTLS_SSL_MAX_KEY_SHARES
+*
+* Defines the maximum number of key share entires in a
+* key share extension advertised as part of the ClientHello.
+*
+* The impact of increasing the number of key shares is that
+* a client needs to store more ECDHE key pairs and the
+* transmission size of the ClientHello is increased as well.
+* On the positive side this allows more rapid session
+* establishment in case there is no prior knowledge between
+* the client and the server about the supported algorithms
+* and curves.
+*
+*/
+
+#define MBEDTLS_SSL_MAX_KEY_SHARES 1
+
+/**
+* \def MBEDTLS_ZERO_RTT
+*
+* Allows to add functionality for TLS/DTLS 1.3 Zero-RTT.
+*
+*/
+#define MBEDTLS_ZERO_RTT
+
+/*
+* \def HKDF_DEBUG
+*
+* Enables debug functions for the HKDF functions
+*
+* Requires:
+*
+* Uncomment this macro to include HKDF debug information
+*/
+//#define HKDF_DEBUG
+
+/**
+* \def MBEDTLS_SSL_DEBUG_HANDSHAKE_HASHES
+*
+* Enables debug output for handshake hashes
+*
+* Requires:
+*
+* Uncomment this macro to print handshake hash information
+*/
+
+/*
+* \def MBEDTLS_SSL_TICKET_NONCE_LENGTH
+*
+* Allows adjusting the length of the nonce field in the ticket.
+*
+* The default value is 32 bytes.
+*/
+#define MBEDTLS_SSL_TICKET_NONCE_LENGTH 32
+
+/*
+* \def MBEDTLS_SSL_NEW_SESSION_TICKET
+*
+* Enable support for TLS 1.3 session tickets.
+* Client-side, provides full support for session tickets (maintainance of a
+* session store remains the responsibility of the application, though).
+* Server-side, you also need to provide callbacks for writing and parsing
+* tickets, including authenticated encryption and key management. Example
+* callbacks are provided by MBEDTLS_SSL_TICKET_C.
+*
+* Comment this macro to
+*  - be able to issue tickets by TLS 1.3 servers, and
+*  - use them in TLS 1.3 clients.
+*/
+#define MBEDTLS_SSL_NEW_SESSION_TICKET
 
 /**
  * \def MBEDTLS_SSL_PROTO_DTLS
@@ -3658,8 +3740,13 @@
 //#define MBEDTLS_SSL_DTLS_MAX_BUFFERING             32768
 
 //#define MBEDTLS_SSL_DEFAULT_TICKET_LIFETIME     86400 /**< Lifetime of session tickets (if enabled) */
-//#define MBEDTLS_PSK_MAX_LEN               32 /**< Max size of TLS pre-shared keys, in bytes (default 256 bits) */
-//#define MBEDTLS_SSL_COOKIE_TIMEOUT        60 /**< Default expiration delay of DTLS cookies, in seconds if HAVE_TIME, or in number of cookies issued */
+/* TODO: Define those macros in ssl_internal.h when they're not defined here! */
+/* TODO: This is somehow hardcoded to 48 Bytes - is that intentional? It certainly doesn't match the comment. */
+#define MBEDTLS_PSK_MAX_LEN               48 /**< Max size of TLS pre-shared keys, in bytes (default 256 bits) */
+#define MBEDTLS_SSL_COOKIE_TIMEOUT        60 /**< Default expiration delay of DTLS cookies, in seconds if HAVE_TIME, or in number of cookies issued */
+/* TODO: Document appropriately */
+#define MBEDTLS_PSK_IDENTITY_MAX_LEN     250 /**< Max size of psk identity, in bytes */
+#define MBEDTLS_SSL_TICKET_AGE_TOLERANCE 6000 /**< Tolerance window for ticket lifetime */
 
 /**
  * Complete list of ciphersuites to use, in order of preference.
