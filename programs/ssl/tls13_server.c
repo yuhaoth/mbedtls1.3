@@ -35,6 +35,14 @@
 #define mbedtls_printf     printf
 #endif
 
+#if !defined(MBEDTLS_SSL_PROTO_TLS1_3) 
+int main(void)
+{
+    mbedtls_printf("This example code has been written for TLS 1.3.\n");
+    return(0);
+}
+#else 
+
 #if !defined(MBEDTLS_ENTROPY_C) || \
     !defined(MBEDTLS_SSL_TLS_C) || !defined(MBEDTLS_SSL_SRV_C) || \
     !defined(MBEDTLS_NET_C) || !defined(MBEDTLS_CTR_DRBG_C)
@@ -2623,3 +2631,5 @@ exit:
 #endif /* MBEDTLS_BIGNUM_C && MBEDTLS_ENTROPY_C && MBEDTLS_SSL_TLS_C &&
           MBEDTLS_SSL_SRV_C && MBEDTLS_NET_C && MBEDTLS_RSA_C &&
           MBEDTLS_CTR_DRBG_C */
+
+#endif /* !MBEDTLS_SSL_PROTO_TLS1_3 */

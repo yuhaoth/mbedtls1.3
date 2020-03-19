@@ -91,6 +91,11 @@ set(src_tls
     ssl_srv.c
     ssl_ticket.c
     ssl_tls.c
+    ssl_tls13_client.c
+    ssl_tls13_generic.c
+    ssl_tls13_messaging.c
+    ssl_tls13_server.c
+    hkdf-tls.c
 )
 
 if(CMAKE_COMPILER_IS_GNUCC)
