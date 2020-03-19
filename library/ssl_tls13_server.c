@@ -777,6 +777,8 @@ int ssl_parse_client_psk_identity_ext( mbedtls_ssl_context *ssl,
     unsigned char server_computed_binder[MBEDTLS_MD_MAX_SIZE];
     uint32_t obfuscated_ticket_age;
     mbedtls_ssl_ticket ticket;
+    const unsigned char *psk = NULL;
+    size_t psk_len = 0;
 #if defined(MBEDTLS_HAVE_TIME)
     time_t now;
     int64_t diff;
@@ -1042,8 +1044,13 @@ psk_parsing_successful:
                                   truncated_clienthello_start, truncated_clienthello_end - truncated_clienthello_start, server_computed_binder );
         }
         else {
-            /* Case 2: We are using an externally configured PSK */
-            ret = ssl_calc_binder( ssl, ssl->conf->psk, ssl->conf->psk_len,
+            /* Case 2: We are using an externally configured PSK, or a dynamically configured PSK if one is defined */
+            if( mbedtls_ssl_get_psk( ssl, &psk, &psk_len ) == MBEDTLS_ERR_SSL_PRIVATE_KEY_REQUIRED )
+            {
+                MBEDTLS_SSL_DEBUG_MSG( 1, ( "should never happen" ) );
+                return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
+            }
+            ret = ssl_calc_binder( ssl, psk, psk_len,
                                   mbedtls_md_info_from_type( ssl->transform_negotiate->ciphersuite_info->mac ), ssl->transform_negotiate->ciphersuite_info,
                                   truncated_clienthello_start, truncated_clienthello_end - truncated_clienthello_start, server_computed_binder );
         }
