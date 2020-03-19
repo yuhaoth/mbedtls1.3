@@ -945,8 +945,8 @@ int ssl_write_pre_shared_key_ext( mbedtls_ssl_context *ssl,
     {
         MBEDTLS_SSL_DEBUG_MSG( 3, ( "No externally configured PSK available." ) );
 
-        return( 0 );
-    }
+        return(MBEDTLS_ERR_SSL_BAD_HS_CLIENT_HELLO);
+	}
 
     MBEDTLS_SSL_DEBUG_MSG( 3, ( "client hello, adding pre_shared_key extension" ) );
 
