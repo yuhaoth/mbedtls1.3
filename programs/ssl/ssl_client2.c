@@ -25,6 +25,8 @@
 #include MBEDTLS_CONFIG_FILE
 #endif
 
+
+
 #if defined(MBEDTLS_PLATFORM_C)
 #include "mbedtls/platform.h"
 #else
@@ -41,6 +43,14 @@
 #define MBEDTLS_EXIT_SUCCESS    EXIT_SUCCESS
 #define MBEDTLS_EXIT_FAILURE    EXIT_FAILURE
 #endif
+
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) 
+int main(void)
+{
+    mbedtls_printf("This example code has been written for TLS 1.2.\n");
+    return(0);
+}
+#else 
 
 #if !defined(MBEDTLS_ENTROPY_C) || \
     !defined(MBEDTLS_SSL_TLS_C) || !defined(MBEDTLS_SSL_CLI_C) || \
@@ -3375,3 +3385,5 @@ exit:
 #endif /* MBEDTLS_BIGNUM_C && MBEDTLS_ENTROPY_C && MBEDTLS_SSL_TLS_C &&
           MBEDTLS_SSL_CLI_C && MBEDTLS_NET_C && MBEDTLS_RSA_C &&
           MBEDTLS_CTR_DRBG_C MBEDTLS_TIMING_C */
+
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
