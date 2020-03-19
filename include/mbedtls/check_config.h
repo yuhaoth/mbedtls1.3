@@ -662,7 +662,7 @@
 
 #if defined(MBEDTLS_SSL_TLS_C) && (!defined(MBEDTLS_SSL_PROTO_SSL3) && \
     !defined(MBEDTLS_SSL_PROTO_TLS1) && !defined(MBEDTLS_SSL_PROTO_TLS1_1) && \
-    !defined(MBEDTLS_SSL_PROTO_TLS1_2))
+    !defined(MBEDTLS_SSL_PROTO_TLS1_2) && !defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL))
 #error "MBEDTLS_SSL_TLS_C defined, but no protocols are active"
 #endif
 
@@ -841,6 +841,134 @@
 #warning "MBEDTLS_SSL_HW_RECORD_ACCEL is deprecated and will be removed in a future version of Mbed TLS"
 #endif /* MBEDTLS_DEPRECATED_REMOVED */
 #endif /* MBEDTLS_SSL_HW_RECORD_ACCEL */
+
+
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && defined(MBEDTLS_ZERO_RTT) && ( !defined(MBEDTLS_KEY_EXCHANGE_PSK_ENABLED) || !defined(MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED))
+#error "ZeroRTT requires MBEDTLS_ZERO_RTT and MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED to be defined."
+#endif
+
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && defined(MBEDTLS_COMPATIBILITY_MODE) && defined(MBEDTLS_CTLS)
+#error "cTLS cannot be used in combination with the TLS 1.3 compatibility mode."
+#endif
+
+/*
+ * The following extensions are no longer applicable to TLS 1.3,
+ * although TLS 1.3 clients MAY send them if they are willing to negotiate
+ * them with prior versions of TLS.TLS 1.3 servers MUST ignore these extensions
+ * if they are negotiating TLS 1.3:
+ *
+ *  - truncated_hmac[RFC6066],
+ *  - srp[RFC5054]
+ *  - encrypt_then_mac[RFC7366]
+ *  - extended_master_secret[RFC7627]
+ *  - SessionTicket[RFC5077], and
+ *  - renegotiation_info[RFC5746].
+ */
+
+ /* Truncated Mac extension is not applicable to TLS 1.3 */
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && defined(MBEDTLS_SSL_TRUNCATED_HMAC)
+#error "Truncated Mac extension is not applicable to TLS 1.3"
+#endif
+
+
+ /* Encrypt-then-Mac extension is not applicable to TLS 1.3 */
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && defined(MBEDTLS_SSL_ENCRYPT_THEN_MAC)
+#error "Encrypt-then-Mac extension is not applicable to TLS 1.3"
+#endif
+
+/* Key derivation works differently in TLS 1.3 */
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && defined(MBEDTLS_SSL_EXTENDED_MASTER_SECRET)
+#error "Extended master secret extension is not applicable to TLS 1.3"
+#endif
+
+ /* Secure renegotiation support in TLS 1.3 */
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && defined(MBEDTLS_SSL_RENEGOTIATION)
+#error "Renegotiation is not supported in TLS 1.3"
+#endif
+
+ /* No Compression support in TLS 1.3 */
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && defined(MBEDTLS_ZLIB_SUPPORT)
+#error "No compression is supported in TLS 1.3"
+#endif
+
+ /* Session tickets in TLS 1.3 does not use RFC 5077 anymore
+ * Hence, when TLS 1.3 is used then MBEDTLS_SSL_SESSION_TICKETS cannot be enabled.
+ *
+ */
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && defined(MBEDTLS_SSL_SESSION_TICKETS)
+#error "RFC 5077 is not supported with TLS 1.3"
+#endif
+
+ /* JPAKE extension does not work with TLS 1.3
+ */
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && defined(MBEDTLS_ECJPAKE_C)
+#error " JPAKE extension does not work with TLS 1.3"
+#endif
+
+
+ /* The following C processor directives are not applicable to TLS 1.3
+ */
+
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && defined(MBEDTLS_KEY_EXCHANGE_ECDH_ECDSA_ENABLED)
+#error "No ECDH-ECDSA ciphersuite available in TLS 1.3"
+#endif
+
+
+ /* The following functionality is not yet supported with this TLS 1.3 implementation.
+ */
+
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && ( defined(MBEDTLS_KEY_EXCHANGE_ECDHE_RSA_ENABLED) || defined(MBEDTLS_KEY_EXCHANGE_DHE_RSA_ENABLED) || defined(MBEDTLS_KEY_EXCHANGE_RSA_ENABLED))
+#error "RSA-based ciphersuites not supported with this TLS 1.3 implementation"
+#endif
+
+
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && defined(MBEDTLS_KEY_EXCHANGE_DHE_PSK)
+#error "DHE-PSK-based ciphersuites not supported with this TLS 1.3 implementation"
+#endif
+
+ /* Caching in TLS 1.3 works differently than in TLS 1.2
+  * Hence, SSL Cache MUST NOT be enabled.
+ */
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && defined(MBEDTLS_SSL_CACHE_C)
+#error "SSL Caching not supported with TLS 1.3"
+#endif
+
+
+#if  defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && defined(MBEDTLS_SSL_NEW_SESSION_TICKET) && defined(MBEDTLS_SSL_SESSION_TICKETS)
+#error "The new session ticket concept is only available with TLS 1.3 and is not compatible with RFC 5077-style session tickets."
+#endif
+
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && defined(MBEDTLS_SSL_PROTO_DTLS) && !defined(MBEDTLS_SSL_COOKIE_C)
+#error "Cookie functionality needs to be enabled for DTLS 1.3"
+#endif
+
+#if defined(MBEDTLS_CTLS) && !defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+#error "cTLS can only be used in context with TLS and/or DTLS 1.3"
+#endif
+
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && defined(MBEDTLS_CTLS) && !defined(MBEDTLS_CTLS_RANDOM_MAX_LENGTH)
+#define MBEDTLS_CTLS_RANDOM_MAX_LENGTH 32
+#endif
+
+ /* Either SHA-256 or SHA-512 must be enabled.
+  *
+  */
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && ( !defined(MBEDTLS_SHA256_C) && !defined(MBEDTLS_SHA512_C) )
+#error "With TLS 1.3 SHA-256 and/or SHA-384 must be enabled"
+#endif
+
+#if defined(MBEDTLS_SHA512_C) && defined(MBEDTLS_SSL_NEW_SESSION_TICKET) && (MBEDTLS_PSK_MAX_LEN==32)
+#error "MBEDTLS_PSK_MAX_LEN needs to be set to 48 bytes"
+#endif
+
+#if !defined(MBEDTLS_SSL_MAX_KEY_SHARES) && defined(MBEDTLS_ECDH_C) && defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+#define MBEDTLS_SSL_MAX_KEY_SHARES 1
+#endif
+
+
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && !defined(MBEDTLS_HKDF_C)
+#error "MBEDTLS_HKDF_C is required for TLS 1_3 to work. "
+#endif
 
 /*
  * Avoid warning from -pedantic. This is a convenient place for this

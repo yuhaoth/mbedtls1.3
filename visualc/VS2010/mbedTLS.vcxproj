@@ -28,17 +28,20 @@
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <CharacterSet>Unicode</CharacterSet>
+    <PlatformToolset>v142</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <CharacterSet>Unicode</CharacterSet>
+    <PlatformToolset>v142</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
+    <PlatformToolset>v142</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
@@ -344,6 +347,11 @@
     <ClCompile Include="..\..\3rdparty\everest\library\kremlib\FStar_UInt128_extracted.c" />
     <ClCompile Include="..\..\3rdparty\everest\library\kremlib\FStar_UInt64_FStar_UInt32_FStar_UInt16_FStar_UInt8.c" />
     <ClCompile Include="..\..\3rdparty\everest\library\legacy\Hacl_Curve25519.c" />
+    <ClCompile Include="..\..\library\ssl_tls13_client.c" />
+    <ClCompile Include="..\..\library\ssl_tls13_generic.c" />
+    <ClCompile Include="..\..\library\ssl_tls13_messaging.c" />
+    <ClCompile Include="..\..\library\ssl_tls13_server.c" />
+    <ClCompile Include="..\..\library\hkdf-tls.c" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
