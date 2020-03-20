@@ -1815,9 +1815,6 @@ cleanup:
 
 static int ssl_read_certificate_verify_coordinate(mbedtls_ssl_context* ssl)
 {
-    const mbedtls_ssl_ciphersuite_t* info =
-        ssl->transform_negotiate->ciphersuite_info;
-
     if (ssl->session_negotiate->key_exchange != MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA) {
         return(SSL_CERTIFICATE_VERIFY_SKIP);
     }
@@ -2356,8 +2353,6 @@ cleanup:
 
 static int ssl_read_certificate_coordinate(mbedtls_ssl_context* ssl)
 {
-	const mbedtls_ssl_ciphersuite_t* ciphersuite_info =
-		ssl->transform_negotiate->ciphersuite_info;
 	int authmode = ssl->conf->authmode;
 
 	if (ssl->session_negotiate->key_exchange == MBEDTLS_KEY_EXCHANGE_PSK ||
@@ -2545,8 +2540,6 @@ static int ssl_read_certificate_validate(mbedtls_ssl_context* ssl)
 {
 	int ret = 0;
 	int authmode = ssl->conf->authmode;
-	const mbedtls_ssl_ciphersuite_t* ciphersuite_info =
-		ssl->transform_negotiate->ciphersuite_info;
 	mbedtls_x509_crt* ca_chain;
 	mbedtls_x509_crl* ca_crl;
 
@@ -3746,72 +3739,6 @@ static int ssl_finished_out_write(mbedtls_ssl_context* ssl,
 	*olen = tls_hs_hdr_len + ssl->handshake->state_local.finished_out.digest_len;
 
 	return(0);
-}
-
-int mbedtls_ssl_write_finished( mbedtls_ssl_context *ssl )
-{
-    int ret, hash_len;
-	const mbedtls_ssl_ciphersuite_t *suite_info;
-
-    MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> write finished" ) );
-
-    /*
-     * Set the out_msg pointer to the correct location based on IV length
-     */
-#if !defined(MBEDTLS_SSL_PROTO_DTLS)
-   if (ssl->minor_ver == MBEDTLS_SSL_MINOR_VERSION_4) {
-		ssl->out_msg = ssl->out_iv;
-	}
-#endif /* !MBEDTLS_SSL_PROTO_DTLS */
-
-	ret = ssl->handshake->calc_finished(ssl, ssl->out_msg + 4, ssl->conf->endpoint);
-	if (ret != 0)
-	{
-		MBEDTLS_SSL_DEBUG_RET(1, "calc_finished %d",ret);
-		return(MBEDTLS_ERR_SSL_BAD_HS_FINISHED);
-	}
-
-	suite_info = mbedtls_ssl_ciphersuite_from_id(ssl->session_negotiate->ciphersuite);
-
-	if (suite_info == NULL)
-	{
-		MBEDTLS_SSL_DEBUG_MSG(1, ("mbedtls_ssl_ciphersuite_from_id in mbedtls_ssl_write_finished failed"));
-		return(MBEDTLS_ERR_SSL_BAD_HS_FINISHED);
-	}
-
-	hash_len = mbedtls_hash_size_for_ciphersuite(suite_info);
-
-	ssl->out_msglen = 4 /* 4 for the TLSCiphertext header */ + hash_len;
-	/* We add the additional byte for the ContentType later */;
-    ssl->out_msgtype = MBEDTLS_SSL_MSG_HANDSHAKE;
-    ssl->out_msg[0]  = MBEDTLS_SSL_HS_FINISHED;
-
-
-#if defined(MBEDTLS_SSL_HW_RECORD_ACCEL)
-    if( mbedtls_ssl_hw_record_activate != NULL )
-    {
-        if( ( ret = mbedtls_ssl_hw_record_activate( ssl, MBEDTLS_SSL_CHANNEL_OUTBOUND ) ) != 0 )
-        {
-            MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_hw_record_activate", ret );
-            return( MBEDTLS_ERR_SSL_HW_ACCEL_FAILED );
-        }
-    }
-#endif /* MBEDTLS_SSL_HW_RECORD_ACCEL */
-
-#if defined(MBEDTLS_SSL_PROTO_DTLS)
-    if( ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_DATAGRAM )
-        mbedtls_ssl_send_flight_completed( ssl );
-#endif /* MBEDTLS_SSL_PROTO_DTLS */
-
-    if( ( ret = mbedtls_ssl_write_record( ssl ) ) != 0 )
-    {
-        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_write_record", ret );
-        return( ret );
-    }
-
-    MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= write finished" ) );
-
-	return( 0 );
 }
 
 /*

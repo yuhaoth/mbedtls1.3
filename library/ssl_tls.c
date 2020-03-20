@@ -705,6 +705,16 @@ static void ssl_calc_finished_tls_sha384( mbedtls_ssl_context *, unsigned char *
 #endif
 #endif /* MBEDTLS_SSL_PROTO_TLS1_2 */
 
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+#if defined(MBEDTLS_SHA256_C)
+static void ssl_update_checksum_sha256( mbedtls_ssl_context *, const unsigned char *, size_t );
+#endif
+
+#if defined(MBEDTLS_SHA512_C)
+static void ssl_update_checksum_sha384( mbedtls_ssl_context *, const unsigned char *, size_t );
+#endif
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+
 #if defined(MBEDTLS_KEY_EXCHANGE_PSK_ENABLED) && \
     defined(MBEDTLS_USE_PSA_CRYPTO)
 static int ssl_use_opaque_psk( mbedtls_ssl_context const *ssl )
@@ -7676,6 +7686,8 @@ int mbedtls_ssl_check_signature_scheme( const mbedtls_ssl_context* ssl,
 void mbedtls_ssl_write_version( int major, int minor, int transport,
     unsigned char ver[2] )
 {
+    ((void) transport);
+
     ver[0] = (unsigned char) major;
     ver[1] = (unsigned char) minor;
 
@@ -7684,6 +7696,8 @@ void mbedtls_ssl_write_version( int major, int minor, int transport,
 void mbedtls_ssl_read_version( int* major, int* minor, int transport,
     const unsigned char ver[2] )
 {
+    ((void) transport);
+
     *major = ver[0];
     *minor = ver[1];
 }
