@@ -1111,9 +1111,10 @@ static int ssl_write_server_pre_shared_key_ext( mbedtls_ssl_context *ssl,
 
     *olen = 0;
 
-    /* Are we using an external PSK? */
-    if( ssl->conf->psk == NULL || ssl->conf->psk_identity == NULL ||
-        ssl->conf->psk_identity_len == 0 || ssl->conf->psk_len == 0 )
+    /* Are we using any PSK at all? */
+    if( ( ssl->conf->psk == NULL || ssl->conf->psk_identity == NULL ||
+          ssl->conf->psk_identity_len == 0 || ssl->conf->psk_len == 0 ) &&
+        ( ssl->handshake->psk == NULL || ssl->handshake->psk_len == 0 ) )
         ret = MBEDTLS_ERR_SSL_PRIVATE_KEY_REQUIRED;
 
     /* Are we using resumption? */
