@@ -4198,9 +4198,14 @@ int ssl_parse_new_session_ticket( mbedtls_ssl_context *ssl )
  * received will be set.
  */
 
-int mbedtls_ssl_conf_ticket_meta( mbedtls_ssl_config *conf,
-                                 const uint32_t ticket_age_add,
-                                 const time_t ticket_received )
+#if defined(MBEDTLS_HAVE_TIME)
+int mbedtls_ssl_conf_ticket_meta(mbedtls_ssl_config *conf,
+	const uint32_t ticket_age_add,
+	const time_t ticket_received)
+#else
+int mbedtls_ssl_conf_ticket_meta(mbedtls_ssl_config *conf,
+	const uint32_t ticket_age_add)
+#endif /* MBEDTLS_HAVE_TIME */
 {
     conf->ticket_age_add = ticket_age_add;
 #if defined(MBEDTLS_HAVE_TIME)
@@ -4280,7 +4285,11 @@ int mbedtls_ssl_conf_client_ticket( const mbedtls_ssl_context *ssl, mbedtls_ssl_
     if( ret != 0 ) return -1;
 
     /* We set the ticket_age_add and the time we received the ticket */
+#if defined(MBEDTLS_HAVE_TIME)
     ret = mbedtls_ssl_conf_ticket_meta( conf, ticket->ticket_age_add, ticket->start );
+#else
+    ret = mbedtls_ssl_conf_ticket_meta( conf, ticket->ticket_age_add );
+#endif /* MBEDTLS_HAVE_TIME */
 
     if( ret != 0 ) return -1;
 
@@ -4333,8 +4342,10 @@ int mbedtls_ssl_get_client_ticket( const mbedtls_ssl_context *ssl, mbedtls_ssl_t
         /* store ticket_age_add */
         ticket->ticket_age_add = ssl->session->ticket_age_add;
 
+#if defined(MBEDTLS_HAVE_TIME)
         /* store time we received the ticket */
         ticket->start = ssl->session->ticket_received;
+#endif /* MBEDTLS_HAVE_TIME */
 
         return 0;
     }
