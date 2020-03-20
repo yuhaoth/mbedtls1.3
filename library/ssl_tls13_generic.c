@@ -1844,6 +1844,9 @@ static int ssl_read_certificate_verify_parse(mbedtls_ssl_context* ssl,
     mbedtls_pk_type_t pk_alg;
     mbedtls_md_type_t md_alg;
 
+    /* TODO: Why don't we use `hashlen` here? Look at this. */
+    ((void) hashlen);
+
     if (buflen < mbedtls_ssl_hs_hdr_len(ssl))
     {
         MBEDTLS_SSL_DEBUG_MSG(1, ("bad certificate verify message"));
