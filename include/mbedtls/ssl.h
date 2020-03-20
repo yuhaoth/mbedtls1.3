@@ -156,14 +156,14 @@
  /* List of extensions used in ssl_internal.h / extensions_present in mbedtls_ssl_handshake_params */
 #define NO_EXTENSION 0
 #define PRE_SHARED_KEY_EXTENSION 1
-#define KEY_SHARE_EXTENSION 2 
+#define KEY_SHARE_EXTENSION 2
 #define SIGNATURE_ALGORITHM_EXTENSION 4
 #define SUPPORTED_GROUPS_EXTENSION 8
-#define MAX_FRAGMENT_LENGTH_EXTENSION 16 
+#define MAX_FRAGMENT_LENGTH_EXTENSION 16
 #define ALPN_EXTENSION 32
-#define SUPPORTED_VERSION_EXTENSION 64 
+#define SUPPORTED_VERSION_EXTENSION 64
 #define PSK_KEY_EXCHANGE_MODES_EXTENSION 128
-#define EARLY_DATA_EXTENSION 256 
+#define EARLY_DATA_EXTENSION 256
 #define SERVERNAME_EXTENSION 512
 #define COOKIE_EXTENSION 1024
 #define CID_EXTENSION 2048
@@ -428,7 +428,7 @@
 #define MBEDTLS_SSL_MSG_APPLICATION_DATA       23
 #define MBEDTLS_SSL_MSG_CID                    25
 #define MBEDTLS_SSL_MSG_ACK                    26
-#define MBEDTLS_SSL_MSG_TLS_CID                25 // OLD CID Implementation 
+#define MBEDTLS_SSL_MSG_TLS_CID                25 // OLD CID Implementation
 
 #define MBEDTLS_SSL_ALERT_LEVEL_WARNING         1
 #define MBEDTLS_SSL_ALERT_LEVEL_FATAL           2
@@ -498,7 +498,7 @@
 #define MBEDTLS_TLS_EXT_TRUNCATED_HMAC               4
 
 #define MBEDTLS_TLS_EXT_SUPPORTED_ELLIPTIC_CURVES   10
-#define MBEDTLS_TLS_EXT_SUPPORTED_GROUPS   10 // Renamed in TLS 1.3 
+#define MBEDTLS_TLS_EXT_SUPPORTED_GROUPS   10 // Renamed in TLS 1.3
 
 #define MBEDTLS_TLS_EXT_SUPPORTED_POINT_FORMATS     11
 
@@ -512,7 +512,7 @@
 #define MBEDTLS_TLS_EXT_SESSION_TICKET              35
 
  /* TLS 1.3 */
-#define MBEDTLS_TLS_EXT_KEY_SHARES                 51 
+#define MBEDTLS_TLS_EXT_KEY_SHARES                 51
 #define MBEDTLS_TLS_EXT_PRE_SHARED_KEY             41
 #define MBEDTLS_TLS_EXT_EARLY_DATA                 42
 #define MBEDTLS_TLS_EXT_SUPPORTED_VERSIONS         43
@@ -609,7 +609,7 @@ extern "C" {
         MBEDTLS_SSL_EARLY_APP_DATA
     }
     mbedtls_ssl_states;
-#else 
+#else
 /*
  * SSL state machine
  */
@@ -763,7 +763,7 @@ typedef int mbedtls_ssl_get_timer_t( void * ctx );
 typedef struct mbedtls_ssl_session mbedtls_ssl_session;
 typedef struct mbedtls_ssl_context mbedtls_ssl_context;
 typedef struct mbedtls_ssl_config  mbedtls_ssl_config;
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3) 
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3)
 typedef struct mbedtls_ssl_ticket  mbedtls_ssl_ticket;
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
 
@@ -1062,12 +1062,12 @@ typedef struct KeySet {
 #endif /* MBEDTLS_SSL_PROTO_DTLS */
 	unsigned char iv[12];
 
-	/* The [sender]_sn_key is indirectly used to 
-	 * encrypt the sequence number in the record layer. 
+	/* The [sender]_sn_key is indirectly used to
+	 * encrypt the sequence number in the record layer.
 	 *
-	 * The client_sn_key is used to encrypt the 
-	 * sequence number for outgoing transmission. 
-	 * server_sn_key is used for incoming payloads. 
+	 * The client_sn_key is used to encrypt the
+	 * sequence number for outgoing transmission.
+	 * server_sn_key is used for incoming payloads.
 	 */
 	unsigned char *server_sn_key;
 	unsigned char *client_sn_key;
@@ -1131,7 +1131,7 @@ struct mbedtls_ssl_session
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3)
 #if defined(MBEDTLS_SSL_NEW_SESSION_TICKET) && defined(MBEDTLS_SSL_CLI_C)
-// TBD: Replace fields by ticket structure 
+// TBD: Replace fields by ticket structure
 // We currently only store a single ticket on the client size
     unsigned char* ticket;      /*!< TLS 1.3 session ticket acting as psk identity */
     size_t ticket_len;          /*!< ticket length   */
@@ -1171,7 +1171,7 @@ struct mbedtls_ssl_session
  *    1  -- MBEDTLS_SSL_EARLY_DATA_ENABLED (for use early data)
  */
     int process_early_data; /*!< Indication about using early data or not on the server side */
-#endif 
+#endif
 
 #if defined(MBEDTLS_CID)
     unsigned int cid;           /*!< flag about CID usage           */
@@ -1249,12 +1249,12 @@ struct mbedtls_ssl_config
     void *p_cookie;                 /*!< context for the cookie callbacks   */
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3)
-    unsigned int rr_config; 
+    unsigned int rr_config;
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
 
 #endif
 
-#if ((defined(MBEDTLS_SSL_SESSION_TICKETS) || (defined(MBEDTLS_SSL_NEW_SESSION_TICKET) && defined(MBEDTLS_SSL_PROTO_TLS1_3)) ) && defined(MBEDTLS_SSL_SRV_C)) 
+#if ((defined(MBEDTLS_SSL_SESSION_TICKETS) || (defined(MBEDTLS_SSL_NEW_SESSION_TICKET) && defined(MBEDTLS_SSL_PROTO_TLS1_3)) ) && defined(MBEDTLS_SSL_SRV_C))
     /** Callback to create & write a session ticket                         */
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3)
     int(*f_ticket_write)(void*, const mbedtls_ssl_ticket*,
@@ -1262,7 +1262,7 @@ struct mbedtls_ssl_config
     /** Callback to parse a session ticket into a session structure         */
     int(*f_ticket_parse)(void*, mbedtls_ssl_ticket*, unsigned char*, size_t);
     void* p_ticket;                 /*!< context for the ticket callbacks   */
-#else 
+#else
     int (*f_ticket_write)( void *, const mbedtls_ssl_session *,
             unsigned char *, const unsigned char *, size_t *, uint32_t * );
     /** Callback to parse a session ticket into a session structure         */
@@ -1381,7 +1381,7 @@ struct mbedtls_ssl_config
       *   1  -- MBEDTLS_SSL_EARLY_DATA_ENABLED (for use early data)
       */
     int early_data;
-    // Pointer to early data buffer 
+    // Pointer to early data buffer
     char* early_data_buf;
     // Length of early data
     unsigned int early_data_len;
@@ -2327,7 +2327,7 @@ typedef int mbedtls_ssl_ticket_write_t(void* p_ticket,
     size_t* tlen,
     uint32_t* lifetime, TicketFlags* flags);
 
-#else 
+#else
 
 /**
  * \brief           Callback type: generate and write session ticket
@@ -2448,7 +2448,7 @@ typedef int mbedtls_ssl_ticket_parse_t(void* p_ticket,
     mbedtls_ssl_ticket* session,
     unsigned char* buf,
     size_t len);
-#else 
+#else
 /**
  * \brief           Callback type: parse and load session ticket
  *
@@ -2695,7 +2695,7 @@ void mbedtls_ssl_conf_cookies(mbedtls_ssl_config* conf,
     mbedtls_ssl_cookie_check_t* f_cookie_check,
     void* p_cookie,
     unsigned int rr_conf);
-#else 
+#else
 /**
  * \brief           Register callbacks for DTLS cookies
  *                  (Server only. DTLS only.)
@@ -4170,7 +4170,7 @@ const char *mbedtls_ssl_get_version( const mbedtls_ssl_context *ssl );
  *                 enabled, which makes expansion much less predictable
  */
 int mbedtls_ssl_get_record_expansion(const mbedtls_ssl_context* ssl, int direction);
-#else 
+#else
 /**
  * \brief          Return the (maximum) number of bytes added by the record
  *                 layer: header + encryption/MAC overhead (inc. padding)
