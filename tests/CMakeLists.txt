@@ -61,7 +61,13 @@ if(MSVC)
 endif(MSVC)
 
 add_test_suite(debug)
-add_test_suite(ssl)
+
+if(MBEDTLS_SSL_PROTO_TLS1_3)
+    message("The ssl test suite will not be executed.")
+else()
+   add_test_suite(ssl)
+endif(MBEDTLS_SSL_PROTO_TLS1_3)
+
 add_test_suite(version)
 add_test_suite(x509parse)
 add_test_suite(x509write)
