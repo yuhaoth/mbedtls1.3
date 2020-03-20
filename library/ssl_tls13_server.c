@@ -4199,6 +4199,7 @@ int mbedtls_ssl_handshake_server_step(mbedtls_ssl_context *ssl)
 #else
 		mbedtls_ssl_handshake_set_state(ssl, MBEDTLS_SSL_CLIENT_HELLO);
 #endif /* MBEDTLS_COMPATIBILITY_MODE */
+                break;
 
 		/* ----- WRITE CHANGE CIPHER SPEC ----*/
 
