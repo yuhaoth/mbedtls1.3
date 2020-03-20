@@ -7,19 +7,29 @@
 # or procedures (session resumption from cache or ticket, renego, etc).
 #
 # Assumes a build with default options.
-
 set -u
 
+# Limit the size of each log to 10 GiB, in case of failures with this script
+# where it may output seemingly unlimited length error logs.
+ulimit -f 20971520
+
 # default values, can be overriden by the environment
+if [ -n "${OS:-}" ]; then
 if [ "$OS" = "Windows_NT" ]; then
 : ${P_SRV:=../visualc/VS2010/Debug/tls13_server.exe}
 : ${P_CLI:=../visualc/VS2010/Debug/tls13_client.exe}
 : ${P_PXY:=../visualc/VS2010/Debug/udp_proxy.exe}
-else
+else # OS other than Windows
 : ${P_SRV:=../programs/ssl/tls13_server}
 : ${P_CLI:=../programs/ssl/tls13_client}
 : ${P_PXY:=../programs/test/udp_proxy}
 fi
+else # No OS set
+: ${P_SRV:=../programs/ssl/tls13_server}
+: ${P_CLI:=../programs/ssl/tls13_client}
+: ${P_PXY:=../programs/test/udp_proxy}
+fi
+
 : ${OPENSSL_CMD:=openssl} # OPENSSL would conflict with the build system
 : ${GNUTLS_CLI:=gnutls-cli}
 : ${GNUTLS_SERV:=gnutls-serv}
