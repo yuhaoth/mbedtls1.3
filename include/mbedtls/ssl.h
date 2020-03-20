@@ -2697,7 +2697,7 @@ typedef int mbedtls_ssl_cookie_check_t( void *ctx,
  * \param f_cookie_write    Cookie write callback
  * \param f_cookie_check    Cookie check callback
  * \param p_cookie          Context for both callbacks
- * \param rr_config         Determines whether a return-routability check is enforced
+ * \param rr_conf           Determines whether a return-routability check is enforced
  */
 void mbedtls_ssl_conf_cookies(mbedtls_ssl_config* conf,
     mbedtls_ssl_cookie_write_t* f_cookie_write,
@@ -3250,16 +3250,16 @@ int mbedtls_ssl_conf_ke(mbedtls_ssl_config* conf,
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
 
 /**
-* \brief Set meta-data for server-provided tickets
+* \brief Set meta-data for server-provided tickets.
 *
 * \note This function is used in context of tickets since the
-*       ticket_age_add value is provided by the server-side.
+*       \p ticket_age_add value is provided by the server-side.
 *       Furthermore, we also need to record the time the ticket
 *       was obtained.
 *
-* \param conf     SSL configuration
-* \param ticket_age_add    ticket age add value
-* \param start    time when the ticket was received
+* \param conf             The SSL configuration to use.
+* \param ticket_age_add   The ticket age add value.
+* \param ticket_received  The time when the ticket was received.
 *
 */
 
