@@ -4009,7 +4009,7 @@ static int ssl_handshake_init( mbedtls_ssl_context *ssl )
     return( 0 );
 }
 
-#if( defined(MBEDTLS_SSL_DTLS_HELLO_VERIFY) || defined(MBEDTLS_SSL_COOKIE_C) ) && defined(MBEDTLS_SSL_SRV_C)
+#if defined(MBEDTLS_SSL_DTLS_HELLO_VERIFY) && defined(MBEDTLS_SSL_SRV_C)
 /* Dummy cookie callbacks for defaults */
 static int ssl_cookie_write_dummy( void *ctx,
                       unsigned char **p, unsigned char *end,
