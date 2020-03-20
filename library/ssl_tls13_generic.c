@@ -37,6 +37,7 @@
 #include "mbedtls/aes.h"
 #endif /* MBEDTLS_SSL_PROTO_DTLS */
 
+#include "mbedtls/ssl_ticket.h"
 #include "mbedtls/debug.h"
 #include "mbedtls/ssl.h"
 #include "mbedtls/ssl_internal.h"
