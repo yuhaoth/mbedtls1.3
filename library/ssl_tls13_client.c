@@ -1862,9 +1862,11 @@ static int ssl_parse_key_shares_ext(mbedtls_ssl_context *ssl,
 	 * those sent out.
 	 */
 
-	for (i = 0; gid = ssl->handshake->key_shares_curve_list[i]; i++) {
+	for( i=0;
+             ssl->handshake->key_shares_curve_list[i] != MBEDTLS_ECP_DP_NONE;
+             i++ ) {
 
-		if (gid == MBEDTLS_ECP_DP_NONE) break;
+                gid = ssl->handshake->key_shares_curve_list[i];
 
 		curve_info = mbedtls_ecp_curve_info_from_grp_id(gid);
 
