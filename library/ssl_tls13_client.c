@@ -1023,6 +1023,9 @@ static int ssl_write_key_shares_ext(mbedtls_ssl_context *ssl,
 	int nr;
 	//const int *ciphersuites;
 
+        /* TODO: Add bounds checks! Only then remove the next line. */
+        ((void) end);
+
 #if defined(MBEDTLS_CTLS)
 	if (ssl->handshake->ctls == MBEDTLS_CTLS_USE)
 	{
@@ -2090,6 +2093,9 @@ static int ssl_certificate_request_parse(mbedtls_ssl_context* ssl,
 	size_t ext_len = 0, total_len;
 	int context_len = 0;
 
+        /* TODO: Add bounds checks! Only then remove the next line. */
+        ((void) buflen);
+
 	/*
 	*
 	* struct {
@@ -2330,6 +2336,9 @@ static int ssl_encrypted_extensions_parse(mbedtls_ssl_context* ssl,
 	int ret=0;
 	size_t ext_len;
 	unsigned char *ext;
+
+        /* TODO: Add bounds checks! Only then remove the next line. */
+        ((void) buflen);
 
 	// skip handshake header
 	buf += mbedtls_ssl_hs_hdr_len(ssl);
