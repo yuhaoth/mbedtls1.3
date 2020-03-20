@@ -2044,8 +2044,6 @@ cleanup:
 static int ssl_certificate_request_coordinate(mbedtls_ssl_context* ssl)
 {
 	int ret;
-	const mbedtls_ssl_ciphersuite_t* info =
-		ssl->transform_negotiate->ciphersuite_info;
 
 	if (ssl->session_negotiate->key_exchange == MBEDTLS_KEY_EXCHANGE_PSK ||
 		ssl->session_negotiate->key_exchange == MBEDTLS_KEY_EXCHANGE_ECDHE_PSK)

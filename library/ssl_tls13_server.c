@@ -2913,6 +2913,8 @@ end_client_hello:
 
 static int ssl_client_hello_postprocess(mbedtls_ssl_context* ssl, int ret) {
 
+        ((void) ssl);
+        ((void) ret);
 	return (0);
 }
 

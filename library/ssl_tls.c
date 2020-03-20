@@ -722,14 +722,10 @@ static void ssl_calc_finished_tls_sha384(mbedtls_ssl_context*, unsigned char*, i
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3)
 #if defined(MBEDTLS_SHA256_C)
 static void ssl_update_checksum_sha256(mbedtls_ssl_context*, const unsigned char*, size_t);
-static void ssl_calc_verify_tls_sha256(const mbedtls_ssl_context*, unsigned char*, size_t*);
-static void ssl_calc_finished_tls_sha256(mbedtls_ssl_context*, unsigned char*, int);
 #endif
 
 #if defined(MBEDTLS_SHA512_C)
 static void ssl_update_checksum_sha384(mbedtls_ssl_context*, const unsigned char*, size_t);
-static void ssl_calc_verify_tls_sha384(const mbedtls_ssl_context*, unsigned char*, size_t*);
-static void ssl_calc_finished_tls_sha384(mbedtls_ssl_context*, unsigned char*, int);
 #endif
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
 
@@ -7629,6 +7625,8 @@ int mbedtls_ssl_check_signature_scheme(const mbedtls_ssl_context* ssl,
 void mbedtls_ssl_write_version(int major, int minor, int transport,
     unsigned char ver[2])
 {
+    ((void) transport);
+
     ver[0] = (unsigned char)major;
     ver[1] = (unsigned char)minor;
 
@@ -7637,6 +7635,8 @@ void mbedtls_ssl_write_version(int major, int minor, int transport,
 void mbedtls_ssl_read_version(int* major, int* minor, int transport,
     const unsigned char ver[2])
 {
+    ((void) transport);
+
     *major = ver[0];
     *minor = ver[1];
 }
