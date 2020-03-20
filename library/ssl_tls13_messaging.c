@@ -2950,8 +2950,8 @@ int mbedtls_ssl_get_record_expansion( const mbedtls_ssl_context *ssl, int direct
     if( transform == NULL && direction == MBEDTLS_SSL_DIRECTION_IN)
         return( (int) mbedtls_ssl_hdr_len( ssl, MBEDTLS_SSL_DIRECTION_IN, transform) );
 
-	if (transform == NULL && direction == MBEDTLS_SSL_DIRECTION_OUT)
-		return((int)mbedtls_ssl_hdr_len(ssl, MBEDTLS_SSL_DIRECTION_OUT, transform));
+    if (transform == NULL && direction == MBEDTLS_SSL_DIRECTION_OUT)
+        return((int)mbedtls_ssl_hdr_len(ssl, MBEDTLS_SSL_DIRECTION_OUT, transform));
 
     switch( mbedtls_cipher_get_cipher_mode( &transform->cipher_ctx_enc ) )
     {
