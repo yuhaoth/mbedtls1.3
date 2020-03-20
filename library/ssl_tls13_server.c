@@ -1851,6 +1851,7 @@ static int ssl_client_hello_parse(mbedtls_ssl_context* ssl,
 	size_t buflen);
 
 /* Update the handshake state machine */
+/* TODO: At the moment, this doesn't update the state machine - why? */
 static int ssl_client_hello_postprocess(mbedtls_ssl_context* ssl, int ret);
 
 
@@ -1868,10 +1869,9 @@ static int ssl_client_hello_process(mbedtls_ssl_context* ssl)
 
 	MBEDTLS_SSL_PROC_CHK(ssl_client_hello_fetch(ssl, &buf, &buflen));
 
-	//MBEDTLS_SSL_PROC_CHK(ssl_client_hello_parse(ssl, buf, buflen));
-	ret=ssl_client_hello_parse(ssl, buf, buflen);
+	MBEDTLS_SSL_PROC_CHK(ssl_client_hello_parse(ssl, buf, buflen));
 
-	//MBEDTLS_SSL_PROC_CHK(ssl_client_hello_postprocess(ssl, ret));
+	MBEDTLS_SSL_PROC_CHK(ssl_client_hello_postprocess(ssl, ret));
 
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
 	if (ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_DATAGRAM)
