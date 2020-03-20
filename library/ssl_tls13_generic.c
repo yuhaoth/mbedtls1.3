@@ -3830,7 +3830,7 @@ static int ssl_finished_in_preprocess(mbedtls_ssl_context* ssl)
 
     hash_len = mbedtls_hash_size_for_ciphersuite(suite_info);
 
-    if (hash_len < 0)
+    if (hash_len == 0)
     {
         MBEDTLS_SSL_DEBUG_MSG(1, ("mbedtls_hash_size_for_ciphersuite in ssl_finished_in_preprocess failed"));
         return(MBEDTLS_ERR_SSL_INTERNAL_ERROR);
