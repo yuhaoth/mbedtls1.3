@@ -30,6 +30,7 @@ option(USE_PKCS11_HELPER_LIBRARY "Build mbed TLS with the pkcs11-helper library.
 option(ENABLE_ZLIB_SUPPORT "Build mbed TLS with zlib library." OFF)
 
 option(ENABLE_PROGRAMS "Build mbed TLS programs." ON)
+option(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL "Building TLS 1.3 stack." ON)
 
 option(UNSAFE_BUILD "Allow unsafe builds. These builds ARE NOT SECURE." OFF)
 option(MBEDTLS_FATAL_WARNINGS "Compiler warnings treated as errors" ON)
