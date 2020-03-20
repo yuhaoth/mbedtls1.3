@@ -1619,6 +1619,9 @@ static int ssl_certificate_verify_write(mbedtls_ssl_context* ssl,
 	unsigned char* hash_start = hash;
 	unsigned int hashlen;
 
+        /* TODO: Add bounds checks! Only then remove the next line. */
+        ((void) buflen);
+
 	/*
 	* Make a signature of the handshake transcript
 	*/
@@ -2122,6 +2125,9 @@ static int ssl_write_certificate_write(mbedtls_ssl_context* ssl,
     size_t i, n, total_len;
     const mbedtls_x509_crt* crt;
     unsigned char* start;
+
+    /* TODO: Add bounds checks! Only then remove the next line. */
+    ((void) buflen);
 
     /*
      *  Handshake Header is 4 (before adding DTLS-specific fields, which is done later)
