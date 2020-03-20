@@ -1404,6 +1404,10 @@ void mbedtls_ssl_read_version( int *major, int *minor, int transport,
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
 static inline size_t mbedtls_ssl_hdr_len(const mbedtls_ssl_context* ssl, const int direction, mbedtls_ssl_transform* transform)
 {
+#if !defined(MBEDTLS_CID)
+    ((void) direction);
+#endif /* MBEDTLS_CID */
+
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
     if (ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_DATAGRAM) {
 
