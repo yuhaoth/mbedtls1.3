@@ -39,7 +39,7 @@ extern "C" {
 #endif
 
 /*
- * Supported ciphersuites (Official IANA names) 
+ * Supported ciphersuites (Official IANA names)
  */
 #define MBEDTLS_TLS_RSA_WITH_NULL_MD5                    0x01   /**< Weak! */
 #define MBEDTLS_TLS_RSA_WITH_NULL_SHA                    0x02   /**< Weak! */
@@ -287,11 +287,11 @@ extern "C" {
 #define MBEDTLS_TLS_RSA_PSK_WITH_CHACHA20_POLY1305_SHA256     0xCCAE /**< TLS 1.2 */
 
 /*
- * Supported ciphersuites (Official IANA names) for TLS / DTLS 1.3 
+ * Supported ciphersuites (Official IANA names) for TLS / DTLS 1.3
  */
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3)
-#define TLS_AES_128_GCM_SHA256                                0x1301 
-#define TLS_AES_256_GCM_SHA384                                0x1302 
+#define TLS_AES_128_GCM_SHA256                                0x1301
+#define TLS_AES_256_GCM_SHA384                                0x1302
 #define TLS_CHACHA20_POLY1305_SHA256                          0x1303
 #define TLS_AES_128_CCM_SHA256                                0x1304
 #define TLS_AES_128_CCM_8_SHA256                              0x1305
@@ -412,10 +412,10 @@ struct mbedtls_ssl_ciphersuite_t
     const char * name;
 
     mbedtls_cipher_type_t cipher;
-    /* For TLS 1.3 we use this field to populate it with the hash function 
+    /* For TLS 1.3 we use this field to populate it with the hash function
      * (instead of a MAC).
      */
-    mbedtls_md_type_t mac; 
+    mbedtls_md_type_t mac;
     /* In TLS 1.3 we do not make use of this key_exchange field. */
     mbedtls_key_exchange_type_t key_exchange;
 
@@ -441,7 +441,7 @@ const mbedtls_ssl_ciphersuite_t *mbedtls_ssl_ciphersuite_from_id( int ciphersuit
 *
 * \return          Size of output in bytes, -1 in case of error
 */
-int mbedtls_hash_size_for_ciphersuite(const mbedtls_ssl_ciphersuite_t* ciphersuite);
+unsigned int mbedtls_hash_size_for_ciphersuite(const mbedtls_ssl_ciphersuite_t* ciphersuite);
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
 
 #if defined(MBEDTLS_PK_C)
