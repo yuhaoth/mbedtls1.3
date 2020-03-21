@@ -3254,9 +3254,14 @@ int mbedtls_ssl_conf_ke(mbedtls_ssl_config* conf,
 *
 */
 
+#if defined(MBEDTLS_HAVE_TIME)
 int mbedtls_ssl_conf_ticket_meta(mbedtls_ssl_config* conf,
     const uint32_t ticket_age_add,
     const time_t ticket_received);
+#else
+int mbedtls_ssl_conf_ticket_meta(mbedtls_ssl_config* conf,
+    const uint32_t ticket_age_add);
+#endif /* MBEDTLS_HAVE_TIME */
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
 
 #if defined(MBEDTLS_KEY_EXCHANGE__SOME__PSK_ENABLED)
