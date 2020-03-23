@@ -2101,8 +2101,8 @@ static int ssl_parse_key_shares_ext( mbedtls_ssl_context *ssl,
                                      size_t len ) {
 
     int ret = 0;
-    unsigned char *end = ( unsigned char* )buf + len;
-    unsigned char *start = ( unsigned char* )buf;
+    unsigned char *end = (unsigned char*)buf + len;
+    unsigned char *start = (unsigned char*)buf;
     int named_group;
     int i;
     const mbedtls_ecp_curve_info *curve_info;
@@ -2440,7 +2440,7 @@ static int ssl_certificate_request_parse( mbedtls_ssl_context* ssl,
     /* skip total extension length */
     p += 2;
 
-    ext = ( unsigned char* )p; /* jump to extensions */
+    ext = (unsigned char*)p; /* jump to extensions */
     while ( ext_len )
     {
 
