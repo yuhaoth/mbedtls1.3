@@ -205,31 +205,6 @@ static int ssl_write_key_shares_ext(
 }
 #endif /* MBEDTLS_ECDH_C && MBEDTLS_ECDSA_C */
 
-#if defined(MBEDTLS_ZERO_RTT)
-static int mbedtls_ssl_parse_end_of_early_data( mbedtls_ssl_context *ssl )
-{
-    int ret;
-
-    MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> parse end_of_early_data" ) );
-
-    if( ( ret = mbedtls_ssl_read_record( ssl )) != 0 )
-    {
-        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_read_record", ret );
-        return( ret );
-    }
-
-    if( ssl->in_msgtype != MBEDTLS_SSL_MSG_HANDSHAKE ||
-        ssl->in_msg[0] != MBEDTLS_SSL_HS_END_OF_EARLY_DATA )
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad end_of_early_data message" ) );
-        return( MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE );
-    }
-
-    MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= parse end_of_early_data" ) );
-    return( 0 );
-}
-#endif /* MBEDTLS_ZERO_RTT */
-
 
 #if ( defined(MBEDTLS_ECDH_C) || defined(MBEDTLS_ECDSA_C))
 
@@ -1736,52 +1711,221 @@ static int ssl_write_new_session_ticket( mbedtls_ssl_context *ssl )
 }
 #endif /* MBEDTLS_SSL_NEW_SESSION_TICKET */
 
-#if defined(MBEDTLS_ZERO_RTT)
-/* ssl_parse_early_data( ) parses application data
- * provided by the client following the ClientHello msg.
+/*
+ *
+ * STATE HANDLING: Parse End-of-Early Data
+ *
  */
-static int ssl_parse_early_data( mbedtls_ssl_context *ssl )
+
+ /*
+  * Overview
+  */
+
+#if defined(MBEDTLS_ZERO_RTT)
+
+  /* Main state-handling entry point; orchestrates the other functions. */
+int ssl_read_end_of_early_data_process(mbedtls_ssl_context* ssl);
+
+static int ssl_read_end_of_early_data_preprocess(mbedtls_ssl_context* ssl);
+
+/* There is no parse function for the end_of_early_data message. */
+
+/* Update the state after handling the incoming end of early data message. */
+static int ssl_read_end_of_early_data_postprocess(mbedtls_ssl_context* ssl);
+
+/*
+ * Implementation
+ */
+
+int ssl_read_end_of_early_data_process(mbedtls_ssl_context* ssl)
 {
     int ret;
+    MBEDTLS_SSL_DEBUG_MSG(2, ("=> parse end_of_early_data"));
 
-    MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> parse early application data " ) );
+    MBEDTLS_SSL_PROC_CHK(ssl_read_end_of_early_data_preprocess(ssl));
 
-    if( ( ret = mbedtls_ssl_read_record( ssl )) != 0 )
+    /* Fetching step */
+    if ((ret = mbedtls_ssl_read_record(ssl)) != 0)
     {
-        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_read_record", ret );
-        return( ret );
+        MBEDTLS_SSL_DEBUG_RET(1, "mbedtls_ssl_read_record", ret);
+        goto cleanup;
+    }
+
+    if (ssl->in_msgtype != MBEDTLS_SSL_MSG_HANDSHAKE ||
+        ssl->in_msg[0] != MBEDTLS_SSL_HS_END_OF_EARLY_DATA)
+    {
+        MBEDTLS_SSL_DEBUG_MSG(1, ("bad end_of_early_data message"));
+        ret = MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE;
+        goto cleanup;
+    }
+
+    /* Postprocessing step: Update state machine */
+    MBEDTLS_SSL_PROC_CHK(ssl_read_end_of_early_data_postprocess(ssl));
+
+cleanup:
+
+    MBEDTLS_SSL_DEBUG_MSG(2, ("<= parse end_of_early_data"));
+    return(ret);
+
+}
+
+static int ssl_read_end_of_early_data_preprocess(mbedtls_ssl_context* ssl)
+{
+    int ret;
+    KeySet traffic_keys;
+
+    ret = mbedtls_ssl_early_data_key_derivation(ssl, &traffic_keys);
+    if (ret != 0)
+    {
+        MBEDTLS_SSL_DEBUG_RET(1, "mbedtls_ssl_early_data_key_derivation", ret);
+        return (ret);
+    }
+
+    ret = mbedtls_set_traffic_key(ssl, &traffic_keys, ssl->transform_negotiate, 0);
+    if (ret != 0)
+    {
+        MBEDTLS_SSL_DEBUG_RET(1, "mbedtls_set_traffic_key", ret);
+        return (ret);
+    }
+
+    return(0);
+}
+
+
+static int ssl_read_end_of_early_data_postprocess(mbedtls_ssl_context* ssl)
+{
+    mbedtls_ssl_handshake_set_state(ssl, MBEDTLS_SSL_CLIENT_FINISHED);
+    return (0);
+}
+#endif /* MBEDTLS_ZERO_RTT */
+
+/*
+ *
+ * STATE HANDLING: Parse Early Data
+ *
+ */
+
+ /*
+  * Overview
+  */
+
+#if defined(MBEDTLS_ZERO_RTT)
+
+  /* Main state-handling entry point; orchestrates the other functions. */
+int ssl_read_early_data_process(mbedtls_ssl_context* ssl);
+
+static int ssl_read_early_data_preprocess(mbedtls_ssl_context* ssl);
+
+/* Parse early data send by the peer. */
+static int ssl_read_early_data_parse(mbedtls_ssl_context* ssl,
+    unsigned char const* buf,
+    size_t buflen);
+
+/* Update the state after handling the incoming early data message. */
+static int ssl_read_early_data_postprocess(mbedtls_ssl_context* ssl);
+
+/*
+ * Implementation
+ */
+
+int ssl_read_early_data_process(mbedtls_ssl_context* ssl)
+{
+    int ret;
+    MBEDTLS_SSL_DEBUG_MSG(2, ("=> parse early data"));
+
+    MBEDTLS_SSL_PROC_CHK(ssl_read_early_data_preprocess(ssl));
+
+    /* Fetching step */
+    if ((ret = mbedtls_ssl_read_record(ssl)) != 0)
+    {
+        MBEDTLS_SSL_DEBUG_RET(1, "mbedtls_ssl_read_record", ret);
+        goto cleanup;
     }
 
     /* Check whether there is early data */
-    if( ssl->in_msg != NULL && ssl->in_msglen > 0 )
+    if (ssl->in_msg != NULL && ssl->in_msglen > 0)
     {
-        /* Check whether we have enough buffer space */
-        if( ssl->in_msglen <= ssl->conf->early_data_len )
-        {
-            /* copy data to staging area */
-            memcpy( ssl->conf->early_data_buf, ssl->in_msg, ssl->in_msglen );
-            /* execute callback to process application data */
-            ssl->conf->early_data_callback( ssl, ( unsigned char * ) ssl->conf->early_data_buf, ssl->in_msglen );
-        }
-        else
-        {
-            MBEDTLS_SSL_DEBUG_MSG( 1, ( "Buffer too small" ) );
-            return ( MBEDTLS_ERR_SSL_ALLOC_FAILED );
-        }
+
+        /* Parsing step */
+        MBEDTLS_SSL_PROC_CHK(ssl_read_early_data_parse(ssl,
+            ssl->in_msg,
+            ssl->in_msglen ));
 
     }
     else
     {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "No early data received!" ) );
-        return( MBEDTLS_ERR_SSL_BAD_EARLY_DATA );
+        MBEDTLS_SSL_DEBUG_MSG(1, ("No early data received!"));
+        ret = MBEDTLS_ERR_SSL_BAD_EARLY_DATA;
+        goto cleanup;
     }
 
-    MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= parse early application data" ) );
+    /* Postprocessing step: Update state machine */
+    MBEDTLS_SSL_PROC_CHK(ssl_read_early_data_postprocess(ssl));
 
-    return 0;
+cleanup:
+
+    MBEDTLS_SSL_DEBUG_MSG(2, ("<= parse early data"));
+    return(ret);
+
+}
+
+static int ssl_read_early_data_preprocess(mbedtls_ssl_context* ssl)
+{
+    int ret;
+    KeySet traffic_keys;
+
+    ret = mbedtls_ssl_early_data_key_derivation(ssl, &traffic_keys);
+    if (ret != 0)
+    {
+        MBEDTLS_SSL_DEBUG_RET(1, "mbedtls_ssl_early_data_key_derivation", ret);
+        return (ret);
+    }
+
+    ret = mbedtls_set_traffic_key(ssl, &traffic_keys, ssl->transform_negotiate, 0);
+    if (ret != 0)
+    {
+        MBEDTLS_SSL_DEBUG_RET(1, "mbedtls_set_traffic_key", ret);
+        return (ret);
+    }
+
+#if defined(MBEDTLS_SSL_PROTO_DTLS)
+    /* epoch value( 1 ) is used for messages protected using keys derived
+     *	from early_traffic_secret.
+     */
+    ssl->in_epoch = 1;
+    ssl->out_epoch = 1;
+#endif /* MBEDTLS_SSL_PROTO_DTLS */
+
+    return(0);
+}
+
+static int ssl_read_early_data_parse(mbedtls_ssl_context* ssl,
+    unsigned char const* buf,
+    size_t buflen)
+{
+    /* Check whether we have enough buffer space */
+    if (buflen <= ssl->conf->early_data_len)
+    {
+        /* copy data to staging area */
+        memcpy(ssl->conf->early_data_buf, buf, buflen);
+        /* execute callback to process application data */
+        ssl->conf->early_data_callback(ssl, (unsigned char*)ssl->conf->early_data_buf, buflen);
+    }
+    else
+    {
+        MBEDTLS_SSL_DEBUG_MSG(1, ("Buffer too small (received early data size = %d, buffer size = %d", buflen, ssl->conf->early_data_len));
+        return (MBEDTLS_ERR_SSL_ALLOC_FAILED);
+    }
+
+    return(0);
+}
+
+static int ssl_read_early_data_postprocess(mbedtls_ssl_context* ssl)
+{
+    mbedtls_ssl_handshake_set_state(ssl, MBEDTLS_SSL_SERVER_HELLO);
+    return (0);
 }
 #endif /* MBEDTLS_ZERO_RTT */
-
 
 
 /*
@@ -3242,7 +3386,7 @@ static int ssl_client_hello_parse( mbedtls_ssl_context* ssl,
 #if defined(MBEDTLS_ZERO_RTT)
 	if( ssl->handshake->extensions_present & EARLY_DATA_EXTENSION )
         {
-            ret = ssl_write_early_data_ext( ssl, p, end - p, &n );
+            ret = ssl_write_early_data_ext( ssl, p, (unsigned char*) (end - p), &n );
             if( ret != 0 )
                 return( ret );
 
@@ -4188,36 +4332,13 @@ static int ssl_certificate_request_postprocess( mbedtls_ssl_context* ssl )
 #if defined(MBEDTLS_ZERO_RTT)
             case MBEDTLS_SSL_EARLY_APP_DATA:
 
-		ret = mbedtls_ssl_early_data_key_derivation( ssl, &traffic_keys );
+		ret = ssl_read_early_data_process( ssl );
+
 		if( ret != 0 )
-                {
-                    MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_early_data_key_derivation", ret );
+        {
+                    MBEDTLS_SSL_DEBUG_RET( 1, "ssl_read_early_data_process", ret );
                     return ( ret );
 		}
-
-		ret = mbedtls_set_traffic_key( ssl, &traffic_keys, ssl->transform_negotiate, 0 );
-		if( ret != 0 )
-                {
-                    MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_set_traffic_key", ret );
-                    return ( ret );
-		}
-
-#if defined(MBEDTLS_SSL_PROTO_DTLS)
-		/* epoch value( 1 ) is used for messages protected using keys derived
-		 *	from early_traffic_secret.
-                 */
-		ssl->in_epoch = 1;
-		ssl->out_epoch = 1;
-#endif /* MBEDTLS_SSL_PROTO_DTLS */
-
-		ret = ssl_parse_early_data( ssl );
-		if( ret != 0 )
-                {
-                    MBEDTLS_SSL_DEBUG_RET( 1, "ssl_parse_early_data", ret );
-                    return ( ret );
-		}
-
-		mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_SERVER_HELLO );
 
 		break;
 #endif /* MBEDTLS_ZERO_RTT */
@@ -4422,27 +4543,13 @@ static int ssl_certificate_request_postprocess( mbedtls_ssl_context* ssl )
 #if defined(MBEDTLS_ZERO_RTT)
 
             case MBEDTLS_SSL_EARLY_DATA:
-		ret = mbedtls_ssl_early_data_key_derivation( ssl, &traffic_keys );
-		if( ret != 0 )
-                {
-                    MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_early_data_key_derivation", ret );
-                    return ( ret );
-		}
 
-		ret = mbedtls_set_traffic_key( ssl, &traffic_keys, ssl->transform_negotiate,0 );
-		if( ret != 0 )
-                {
-                    MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_set_traffic_key", ret );
-                    return ( ret );
-		}
-
-		ret = mbedtls_ssl_parse_end_of_early_data( ssl );
+		ret = ssl_read_end_of_early_data_process( ssl );
 		if( ret != 0 )
                 {
                     MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_parse_end_of_early_data", ret );
                     return ( ret );
 		}
-		mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_CLIENT_FINISHED );
 		break;
 #endif /* MBEDTLS_ZERO_RTT */
 

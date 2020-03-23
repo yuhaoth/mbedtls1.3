@@ -3354,7 +3354,7 @@ int mbedtls_ssl_early_data_key_derivation( mbedtls_ssl_context *ssl, KeySet *tra
         return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
     }
 
-    md = mbedtls_md_info_from_type( transform->ciphersuite_info->hash );
+    md = mbedtls_md_info_from_type( transform->ciphersuite_info->mac);
     if( md == NULL )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "md == NULL, mbedtls_ssl_early_data_key_derivation failed" ) );
@@ -3389,7 +3389,7 @@ int mbedtls_ssl_early_data_key_derivation( mbedtls_ssl_context *ssl, KeySet *tra
     }
 #endif /* MBEDTLS_SSL_PROTO_DTLS && MBEDTLS_SSL_DTLS_ANTI_REPLAY */
 
-    if( ciphersuite_info->hash == MBEDTLS_MD_SHA256 )
+    if( ciphersuite_info->mac == MBEDTLS_MD_SHA256 )
     {
 #if defined(MBEDTLS_SHA256_C)
         mbedtls_sha256_init( &sha256 );
@@ -3403,7 +3403,7 @@ int mbedtls_ssl_early_data_key_derivation( mbedtls_ssl_context *ssl, KeySet *tra
         return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
 #endif
     }
-    else if( ciphersuite_info->hash == MBEDTLS_MD_SHA384 )
+    else if( ciphersuite_info->mac == MBEDTLS_MD_SHA384 )
     {
 #if defined(MBEDTLS_SHA512_C)
         mbedtls_sha512_init( &sha512 );
@@ -3417,7 +3417,7 @@ int mbedtls_ssl_early_data_key_derivation( mbedtls_ssl_context *ssl, KeySet *tra
         return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
 #endif
     }
-    else if( ciphersuite_info->hash == MBEDTLS_MD_SHA512 )
+    else if( ciphersuite_info->mac == MBEDTLS_MD_SHA512 )
     {
 #if defined(MBEDTLS_SHA512_C)
         mbedtls_sha512_init( &sha512 );
@@ -4410,6 +4410,7 @@ int ssl_write_early_data_ext( mbedtls_ssl_context *ssl,
 
             MBEDTLS_SSL_DEBUG_MSG( 2, ( "skip write early_data extension" ) );
             ssl->handshake->early_data = MBEDTLS_SSL_EARLY_DATA_OFF;
+            *olen = 0;
             return( 0 );
         }
     }
@@ -4421,8 +4422,9 @@ int ssl_write_early_data_ext( mbedtls_ssl_context *ssl,
         if( ssl->conf->key_exchange_modes == KEY_EXCHANGE_MODE_ECDHE_ECDSA ||
             ssl->conf->early_data == MBEDTLS_SSL_EARLY_DATA_DISABLED ) {
 
-/*			MBEDTLS_SSL_DEBUG_MSG( 5, ( "<= skip write early_data extension" ) ); */
+			MBEDTLS_SSL_DEBUG_MSG( 5, ( "<= skip write early_data extension" ) ); 
             ssl->handshake->early_data = MBEDTLS_SSL_EARLY_DATA_OFF;
+            *olen = 0; 
             return( 0 );
         }
     }
@@ -4431,7 +4433,7 @@ int ssl_write_early_data_ext( mbedtls_ssl_context *ssl,
     if( (size_t)( end - p ) < 4 )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "buffer too small" ) );
-        return MBEDTLS_ERR_SSL_BUFFER_TOO_SMALL;
+        return ( MBEDTLS_ERR_SSL_BUFFER_TOO_SMALL );
     }
 
 #if defined(MBEDTLS_SSL_CLI_C)
