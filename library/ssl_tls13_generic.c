@@ -2,7 +2,7 @@
  *  Handshake-related functions shared between the TLS/DTLS client
  *  and server ( ssl_tls13_client.c and ssl_tls13_server.c ).
  *
- *  Copyright ( C ) 2006-2015, ARM Limited, All Rights Reserved
+ *  Copyright (C) 2006-2015, ARM Limited, All Rights Reserved
  *  SPDX-License-Identifier: Apache-2.0
  *
  *  Licensed under the Apache License, Version 2.0 ( the "License" ); you may
