@@ -136,8 +136,8 @@
 
 
 /* For use with cTLS only */
-#define MBEDTLS_CTLS_DO_NOT_USE         0
-#define MBEDTLS_CTLS_USE                1
+#define MBEDTLS_SSL_TLS13_CTLS_DO_NOT_USE         0
+#define MBEDTLS_SSL_TLS13_CTLS_USE                1
 
 // Constants for use with varint data type introduced by cTLS
 #define MBEDTLS_VARINT_HDR_1 128
@@ -341,9 +341,9 @@ struct mbedtls_ssl_handshake_params
 #if defined(MBEDTLS_SSL_SRV_C)
     int hello_retry_requests_sent; /*!<  Number of Hello Retry Request messages sent by the server.  */
 #endif /* MBEDTLS_SSL_SRV_C */
-#if defined(MBEDTLS_COMPATIBILITY_MODE)
+#if defined(MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE)
     int ccs_sent; /* Number of CCS messages sent */
-#endif /* MBEDTLS_COMPATIBILITY_MODE */
+#endif /* MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE */
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_2) && \
@@ -667,9 +667,9 @@ struct mbedtls_ssl_handshake_params
     int extensions_present;             /*!< which extension were present; the */
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3) && defined(MBEDTLS_CTLS)
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3) && defined(MBEDTLS_SSL_TLS13_CTLS)
     uint8_t ctls; /* value of 1 indicates we are using ctls */
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3 && MBEDTLS_CTLS */
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3 && MBEDTLS_SSL_TLS13_CTLS */
 #if (defined(MBEDTLS_SSL_SESSION_TICKETS) || (defined(MBEDTLS_SSL_NEW_SESSION_TICKET) && defined(MBEDTLS_SSL_PROTO_TLS1_3)))
     int new_session_ticket;             /*!< use NewSessionTicket?    */
 #endif /* MBEDTLS_SSL_SESSION_TICKETS || ( MBEDTLS_SSL_NEW_SESSION_TICKET && MBEDTLS_SSL_PROTO_TLS1_3 ) */
@@ -1133,11 +1133,11 @@ int ssl_parse_new_session_ticket(mbedtls_ssl_context* ssl);
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
 
 
-#if defined(MBEDTLS_CTLS)
+#if defined(MBEDTLS_SSL_TLS13_CTLS)
 static enum varint_length_enum set_varint_length(uint32_t input, uint32_t* output);
 static uint8_t get_varint_length(const uint8_t input);
 static uint32_t get_varint_value(const uint32_t input);
-#endif /* MBEDTLS_CTLS */
+#endif /* MBEDTLS_SSL_TLS13_CTLS */
 
 
 int mbedtls_ssl_key_derivation(mbedtls_ssl_context* ssl, KeySet* traffic_keys);
@@ -1155,9 +1155,9 @@ int ssl_write_encrypted_extension(mbedtls_ssl_context* ssl);
 int mbedtls_ssl_derive_traffic_keys(mbedtls_ssl_context* ssl, KeySet* traffic_keys);
 int incrementSequenceNumber(unsigned char* sequenceNumber, unsigned char* nonce, size_t ivlen);
 
-#if defined(MBEDTLS_COMPATIBILITY_MODE)
+#if defined(MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE)
 int mbedtls_ssl_write_change_cipher_spec(mbedtls_ssl_context* ssl);
-#endif /* MBEDTLS_COMPATIBILITY_MODE */
+#endif /* MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE */
 
 #if defined(MBEDTLS_KEY_EXCHANGE__SOME__PSK_ENABLED)
 int ssl_write_pre_shared_key_ext(mbedtls_ssl_context* ssl, unsigned char* buf, unsigned char* end, size_t* olen, int dummy_run);

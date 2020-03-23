@@ -807,13 +807,27 @@
 #endif /* MBEDTLS_SSL_HW_RECORD_ACCEL */
 
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3) && defined(MBEDTLS_ZERO_RTT) && ( !defined(MBEDTLS_KEY_EXCHANGE_PSK_ENABLED) || !defined(MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED))
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3) &&                        \
+    defined(MBEDTLS_ZERO_RTT)         &&                        \
+    ( !defined(MBEDTLS_KEY_EXCHANGE_PSK_ENABLED) ||             \
+      !defined(MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED) )
 #error "ZeroRTT requires MBEDTLS_ZERO_RTT and MBEDTLS_KEY_EXCHANGE__SOME__PSK_ENABLED to be defined."
 #endif
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3) && defined(MBEDTLS_COMPATIBILITY_MODE) && defined(MBEDTLS_CTLS)
+#if defined(MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE) && \
+    defined(MBEDTLS_SSL_TLS13_CTLS)
 #error "cTLS cannot be used in combination with the TLS 1.3 compatibility mode."
-#endif 
+#endif
+
+#if defined(MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE) && \
+    !defined(MBEDTLS_SSL_PROTO_TLS1_3)
+#error "MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE defined, but not all prerequesites."
+#endif
+
+#if defined(MBEDTLS_SSL_TLS13_CTLS) && \
+    !defined(MBEDTLS_SSL_PROTO_TLS1_3)
+#error "MBEDTLS_SSL_TLS13_CTLS defined, but not all prerequesites."
+#endif
 
 /*
  * The following extensions are no longer applicable to TLS 1.3,
@@ -893,7 +907,7 @@
  /* Caching in TLS 1.3 works differently than in TLS 1.2
   * Hence, SSL Cache MUST NOT be enabled.
  */
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3) && defined(MBEDTLS_SSL_CACHE_C) 
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3) && defined(MBEDTLS_SSL_CACHE_C)
 #error "SSL Caching not supported with TLS 1.3"
 #endif
 
@@ -902,17 +916,17 @@
 #error "The new session ticket concept is only available with TLS 1.3 and is not compatible with RFC 5077-style session tickets."
 #endif
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3) && defined(MBEDTLS_SSL_PROTO_DTLS) && !defined(MBEDTLS_SSL_COOKIE_C) 
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3) && defined(MBEDTLS_SSL_PROTO_DTLS) && !defined(MBEDTLS_SSL_COOKIE_C)
 #error "Cookie functionality needs to be enabled for DTLS 1.3"
 #endif
 
-#if defined(MBEDTLS_CTLS) && !defined(MBEDTLS_SSL_PROTO_TLS1_3)
+#if defined(MBEDTLS_SSL_TLS13_CTLS) && !defined(MBEDTLS_SSL_PROTO_TLS1_3)
 #error "cTLS can only be used in context with TLS and/or DTLS 1.3"
-#endif 
+#endif
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3) && defined(MBEDTLS_CTLS) && !defined(MBEDTLS_CTLS_RANDOM_MAX_LENGTH)
-#define MBEDTLS_CTLS_RANDOM_MAX_LENGTH 32
-#endif 
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3) && defined(MBEDTLS_SSL_TLS13_CTLS) && !defined(MBEDTLS_CTLS_RANDOM_MAX_LENGTH)
+#define MBEDTLS_SSL_TLS13_CTLS_RANDOM_MAX_LENGTH 32
+#endif
 
  /* Either SHA-256 or SHA-512 must be enabled.
   *
@@ -926,13 +940,13 @@
 #endif
 
 #if !defined(MBEDTLS_SSL_MAX_KEY_SHARES) && defined(MBEDTLS_ECDH_C) && defined(MBEDTLS_SSL_PROTO_TLS1_3)
-#define MBEDTLS_SSL_MAX_KEY_SHARES 1 
-#endif  
+#define MBEDTLS_SSL_MAX_KEY_SHARES 1
+#endif
 
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3) && !defined(MBEDTLS_HKDF_C)
 #error "MBEDTLS_HKDF_C is required for TLS 1_3 to work. "
-#endif 
+#endif
 
 /*
  * Avoid warning from -pedantic. This is a convenient place for this
