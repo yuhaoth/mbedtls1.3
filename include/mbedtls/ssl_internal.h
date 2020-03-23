@@ -1240,7 +1240,7 @@ int mbedtls_ssl_check_signature_scheme(const mbedtls_ssl_context* ssl, int signa
 #endif /* MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED */
 #if defined(MBEDTLS_ZERO_RTT)
 int mbedtls_ssl_early_data_key_derivation(mbedtls_ssl_context* ssl, KeySet* traffic_keys);
-int ssl_write_early_data_ext(mbedtls_ssl_context* ssl, unsigned char* buf, unsigned char* end, size_t* olen);
+int ssl_write_early_data_ext(mbedtls_ssl_context* ssl, unsigned char* buf, size_t buflen, size_t* olen);
 #endif /* MBEDTLS_ZERO_RTT */
 #if (defined(MBEDTLS_ECDH_C) || defined(MBEDTLS_ECDSA_C))
 int ssl_parse_supported_groups_ext(mbedtls_ssl_context* ssl, const unsigned char* buf, size_t len);
