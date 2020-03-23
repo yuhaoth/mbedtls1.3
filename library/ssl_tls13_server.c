@@ -3278,25 +3278,26 @@ static int ssl_encrypted_extensions_prepare( mbedtls_ssl_context* ssl )
         /* Set sequence_number of record layer to zero */
         memset( ssl->out_ctr + 2, 0, 6 );
 
+        /* TODO: Why is this commented out? Check! */
         /*
           unsigned char i;
 
-          /* Increment epoch */
-        for ( i = 2; i > 0; i-- )
-            if( ++ssl->out_ctr[i - 1] != 0 )
-                break;
+          for ( i = 2; i > 0; i-- )
+              if( ++ssl->out_ctr[i - 1] != 0 )
+                  break;
 
-        /* The loop goes to its end iff the counter is wrapping */
-        if( i == 0 )
-        {
-            MBEDTLS_SSL_DEBUG_MSG( 1, ( "DTLS epoch would wrap" ) );
-            return( MBEDTLS_ERR_SSL_COUNTER_WRAPPING );
-        }
+          if( i == 0 )
+          {
+              MBEDTLS_SSL_DEBUG_MSG( 1, ( "DTLS epoch would wrap" ) );
+              return( MBEDTLS_ERR_SSL_COUNTER_WRAPPING );
+          }
         */
-            }
+    }
     else
 #endif /* MBEDTLS_SSL_PROTO_DTLS */
+    {
         memset( ssl->out_ctr, 0, 8 );
+    }
 
     /* Set sequence number used at the handshake header to zero */
     memset( ssl->transform_out->sequence_number_enc, 0x0, 12 );
