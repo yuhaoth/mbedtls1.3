@@ -323,8 +323,11 @@ static int ssl_write_end_of_early_data_prepare(mbedtls_ssl_context* ssl)
 static int ssl_write_end_of_early_data_write(mbedtls_ssl_context* ssl,
     unsigned char* buf,
     size_t buflen,
-    size_t* olen)
+    size_t* olen )
 {
+    /* TODO: A bounds check is missing here -- fix later. */
+    ((void) buf);
+    ((void) buflen);
 
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
     if (ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_DATAGRAM)
