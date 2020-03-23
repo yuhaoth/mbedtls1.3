@@ -751,7 +751,7 @@ int mbedtls_ssl_fetch_input( mbedtls_ssl_context *ssl, size_t nb_want )
         return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
     }
 
-    if( nb_want > MBEDTLS_SSL_BUFFER_LEN - ( size_t )( ssl->in_hdr - ssl->in_buf ) )
+    if( nb_want > MBEDTLS_SSL_BUFFER_LEN - (size_t)( ssl->in_hdr - ssl->in_buf ) )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "requesting more data than fits" ) );
         return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
@@ -1271,9 +1271,9 @@ int mbedtls_ssl_write_record( mbedtls_ssl_context *ssl )
              *
              */
             /* Add handshake message length */
-            ssl->out_msg[1] = ( unsigned char )( ( len - 4 ) >> 16 );
-            ssl->out_msg[2] = ( unsigned char )( ( len - 4 ) >> 8 );
-            ssl->out_msg[3] = ( unsigned char )( ( len - 4 ) );
+            ssl->out_msg[1] = (unsigned char)( ( len - 4 ) >> 16 );
+            ssl->out_msg[2] = (unsigned char)( ( len - 4 ) >> 8 );
+            ssl->out_msg[3] = (unsigned char)( ( len - 4 ) );
 
             if( ssl->transform_out != NULL )
             {
@@ -1477,8 +1477,8 @@ int mbedtls_ssl_write_record( mbedtls_ssl_context *ssl )
                 /* TBD */
 
                 /* Write Length */
-                ssl->out_len[0] = ( unsigned char )( len >> 8 );
-                ssl->out_len[1] = ( unsigned char )( len );
+                ssl->out_len[0] = (unsigned char)( len >> 8 );
+                ssl->out_len[1] = (unsigned char)( len );
 
             }
             else
@@ -1531,8 +1531,8 @@ int mbedtls_ssl_write_record( mbedtls_ssl_context *ssl )
 
                 /* Write 16 bit length */
                 ssl->out_hdr[0] |= MBEDTLS_SSL_UNIFIED_HDR_LEN;
-                ssl->out_hdr[3 + i] = ( unsigned char )( len >> 8 );
-                ssl->out_hdr[4 + i] = ( unsigned char )( len );
+                ssl->out_hdr[3 + i] = (unsigned char)( len >> 8 );
+                ssl->out_hdr[4 + i] = (unsigned char)( len );
 
                 /* Change pointer to length field */
                 ssl->out_len = &ssl->out_hdr[3 + i];
@@ -1578,8 +1578,8 @@ int mbedtls_ssl_write_record( mbedtls_ssl_context *ssl )
             mbedtls_ssl_write_version( 3, 3, ssl->conf->transport, ssl->out_hdr + 1 );
 
             /* Write Length */
-            ssl->out_len[0] = ( unsigned char )( len >> 8 );
-            ssl->out_len[1] = ( unsigned char )( len );
+            ssl->out_len[0] = (unsigned char)( len >> 8 );
+            ssl->out_len[1] = (unsigned char)( len );
         }
 
         if( ssl->transform_out != NULL )
@@ -1591,8 +1591,8 @@ int mbedtls_ssl_write_record( mbedtls_ssl_context *ssl )
             }
 
             len = ssl->out_msglen;
-            ssl->out_len[0] = ( unsigned char )( len >> 8 );
-            ssl->out_len[1] = ( unsigned char )( len );
+            ssl->out_len[0] = (unsigned char)( len >> 8 );
+            ssl->out_len[1] = (unsigned char)( len );
         }
 
         /* Calculate the number of bytes we have to put on the wire */
@@ -1822,7 +1822,7 @@ static int ssl_reassemble_dtls_handshake( mbedtls_ssl_context *ssl )
         ssl->in_left = ssl->next_record_offset + remain_len;
 
         if( ssl->in_left > MBEDTLS_SSL_BUFFER_LEN -
-            ( size_t )( ssl->in_hdr - ssl->in_buf ) )
+            (size_t)( ssl->in_hdr - ssl->in_buf ) )
         {
             MBEDTLS_SSL_DEBUG_MSG( 1, ( "reassembled message too large for buffer" ) );
             return( MBEDTLS_ERR_SSL_BUFFER_TOO_SMALL );
@@ -2164,14 +2164,14 @@ static int ssl_check_dtls_clihlo_cookie(
     *olen = p - obuf;
 
     /* Go back and fill length fields */
-    obuf[27] = ( unsigned char )( *olen - 28 );
+    obuf[27] = (unsigned char)( *olen - 28 );
 
-    obuf[14] = obuf[22] = ( unsigned char )( ( *olen - 25 ) >> 16 );
-    obuf[15] = obuf[23] = ( unsigned char )( ( *olen - 25 ) >>  8 );
-    obuf[16] = obuf[24] = ( unsigned char )( ( *olen - 25 )       );
+    obuf[14] = obuf[22] = (unsigned char)( ( *olen - 25 ) >> 16 );
+    obuf[15] = obuf[23] = (unsigned char)( ( *olen - 25 ) >>  8 );
+    obuf[16] = obuf[24] = (unsigned char)( ( *olen - 25 )       );
 
-    obuf[11] = ( unsigned char )( ( *olen - 13 ) >>  8 );
-    obuf[12] = ( unsigned char )( ( *olen - 13 )       );
+    obuf[11] = (unsigned char)( ( *olen - 13 ) >>  8 );
+    obuf[12] = (unsigned char)( ( *olen - 13 )       );
 
     return( MBEDTLS_ERR_SSL_HELLO_VERIFY_REQUIRED );
 }
@@ -2448,7 +2448,7 @@ static int ssl_parse_record_header( mbedtls_ssl_context* ssl )
 
     /* Check length against the size of our buffer */
     if( ssl->in_msglen > MBEDTLS_SSL_BUFFER_LEN
-        - ( size_t )( ssl->in_msg - ssl->in_buf ) )
+        - (size_t)( ssl->in_msg - ssl->in_buf ) )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad message length" ) );
         return( MBEDTLS_ERR_SSL_INVALID_RECORD );
