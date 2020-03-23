@@ -79,8 +79,8 @@ static int ssl_write_sni_server_ext(
     }
 
     /* Write extension header */
-    *p++ = ( unsigned char )( ( MBEDTLS_TLS_EXT_SERVERNAME >> 8 ) & 0xFF );
-    *p++ = ( unsigned char )( ( MBEDTLS_TLS_EXT_SERVERNAME ) & 0xFF );
+    *p++ = (unsigned char)( ( MBEDTLS_TLS_EXT_SERVERNAME >> 8 ) & 0xFF );
+    *p++ = (unsigned char)( ( MBEDTLS_TLS_EXT_SERVERNAME ) & 0xFF );
 
     /* Write total extension length */
     *p++ = 0;
@@ -192,12 +192,12 @@ static int ssl_write_key_shares_ext(
     MBEDTLS_SSL_DEBUG_ECP( 3, "ECDHE: Q ", &ssl->handshake->ecdh_ctx[ssl->handshake->ecdh_ctx_selected].Q );
 
     /* Write extension header */
-    *header++ = ( unsigned char )( ( MBEDTLS_TLS_EXT_KEY_SHARES >> 8 ) & 0xFF );
-    *header++ = ( unsigned char )( ( MBEDTLS_TLS_EXT_KEY_SHARES ) & 0xFF );
+    *header++ = (unsigned char)( ( MBEDTLS_TLS_EXT_KEY_SHARES >> 8 ) & 0xFF );
+    *header++ = (unsigned char)( ( MBEDTLS_TLS_EXT_KEY_SHARES ) & 0xFF );
 
     /* Write total extension length */
-    *header++ = ( unsigned char )( ( ( len ) >> 8 ) & 0xFF );
-    *header++ = ( unsigned char )( ( ( len ) ) & 0xFF );
+    *header++ = (unsigned char)( ( ( len ) >> 8 ) & 0xFF );
+    *header++ = (unsigned char)( ( ( len ) ) & 0xFF );
 
     *olen = len + 4; /* 4 bytes for fixed header + length of key share */
 
@@ -1116,19 +1116,19 @@ static int ssl_write_server_pre_shared_key_ext( mbedtls_ssl_context *ssl,
     }
 
     /* Extension Type */
-    *p++ = ( unsigned char )( ( MBEDTLS_TLS_EXT_PRE_SHARED_KEY >> 8 ) & 0xFF );
-    *p++ = ( unsigned char )( ( MBEDTLS_TLS_EXT_PRE_SHARED_KEY ) & 0xFF );
+    *p++ = (unsigned char)( ( MBEDTLS_TLS_EXT_PRE_SHARED_KEY >> 8 ) & 0xFF );
+    *p++ = (unsigned char)( ( MBEDTLS_TLS_EXT_PRE_SHARED_KEY ) & 0xFF );
 
     /* Extension Length */
-    *p++ = ( unsigned char )( ( 2 >> 8 ) & 0xFF );
-    *p++ = ( unsigned char )( 2 & 0xFF );
+    *p++ = (unsigned char)( ( 2 >> 8 ) & 0xFF );
+    *p++ = (unsigned char)( 2 & 0xFF );
 
     /* retrieve selected_identity */
     selected_identity = 0;
 
     /* Write selected_identity */
-    *p++ = ( unsigned char )( ( selected_identity >> 8 ) & 0xFF );
-    *p++ = ( unsigned char )( selected_identity & 0xFF );
+    *p++ = (unsigned char)( ( selected_identity >> 8 ) & 0xFF );
+    *p++ = (unsigned char)( selected_identity & 0xFF );
 
     *olen = 6;
 
@@ -1394,8 +1394,8 @@ static int ssl_write_supported_version_ext( mbedtls_ssl_context *ssl,
         return MBEDTLS_ERR_SSL_BUFFER_TOO_SMALL;
     }
 
-    *p++ = ( unsigned char )( ( MBEDTLS_TLS_EXT_SUPPORTED_VERSIONS >> 8 ) & 0xFF );
-    *p++ = ( unsigned char )( ( MBEDTLS_TLS_EXT_SUPPORTED_VERSIONS ) & 0xFF );
+    *p++ = (unsigned char)( ( MBEDTLS_TLS_EXT_SUPPORTED_VERSIONS >> 8 ) & 0xFF );
+    *p++ = (unsigned char)( ( MBEDTLS_TLS_EXT_SUPPORTED_VERSIONS ) & 0xFF );
 
     /* length */
     *p++ = 0x00;
@@ -1687,8 +1687,8 @@ static int ssl_write_new_session_ticket( mbedtls_ssl_context *ssl )
     MBEDTLS_SSL_DEBUG_MSG( 3, ( "NewSessionTicket ( nonce length ): %d", MBEDTLS_SSL_TICKET_NONCE_LENGTH ) );
 
     /* Ticket Length */
-    ssl->out_msg[13+ MBEDTLS_SSL_TICKET_NONCE_LENGTH] = ( unsigned char )( ( tlen >> 8 ) & 0xFF );
-    ssl->out_msg[14+ MBEDTLS_SSL_TICKET_NONCE_LENGTH] = ( unsigned char )( ( tlen ) & 0xFF );
+    ssl->out_msg[13+ MBEDTLS_SSL_TICKET_NONCE_LENGTH] = (unsigned char)( ( tlen >> 8 ) & 0xFF );
+    ssl->out_msg[14+ MBEDTLS_SSL_TICKET_NONCE_LENGTH] = (unsigned char)( ( tlen ) & 0xFF );
 
     /* no extensions for now -> set length to zero */
     ssl->out_msg[15+ MBEDTLS_SSL_TICKET_NONCE_LENGTH +tlen] = ( ext_len >> 8 ) & 0xFF;
@@ -3106,8 +3106,8 @@ static void ssl_write_max_fragment_length_ext( mbedtls_ssl_context *ssl,
 
     MBEDTLS_SSL_DEBUG_MSG( 3, ( "server hello, max_fragment_length extension" ) );
 
-    *p++ = ( unsigned char )( ( MBEDTLS_TLS_EXT_MAX_FRAGMENT_LENGTH >> 8 ) & 0xFF );
-    *p++ = ( unsigned char )( ( MBEDTLS_TLS_EXT_MAX_FRAGMENT_LENGTH ) & 0xFF );
+    *p++ = (unsigned char)( ( MBEDTLS_TLS_EXT_MAX_FRAGMENT_LENGTH >> 8 ) & 0xFF );
+    *p++ = (unsigned char)( ( MBEDTLS_TLS_EXT_MAX_FRAGMENT_LENGTH ) & 0xFF );
 
     *p++ = 0x00;
     *p++ = 1;
@@ -3139,18 +3139,18 @@ static void ssl_write_alpn_ext( mbedtls_ssl_context *ssl,
      * 6 . 6    protocol name length
      * 7 . 7+n  protocol name
      */
-    buf[0] = ( unsigned char )( ( MBEDTLS_TLS_EXT_ALPN >> 8 ) & 0xFF );
-    buf[1] = ( unsigned char )( ( MBEDTLS_TLS_EXT_ALPN ) & 0xFF );
+    buf[0] = (unsigned char)( ( MBEDTLS_TLS_EXT_ALPN >> 8 ) & 0xFF );
+    buf[1] = (unsigned char)( ( MBEDTLS_TLS_EXT_ALPN ) & 0xFF );
 
     *olen = 7 + strlen( ssl->alpn_chosen );
 
-    buf[2] = ( unsigned char )( ( ( *olen - 4 ) >> 8 ) & 0xFF );
-    buf[3] = ( unsigned char )( ( *olen - 4 ) & 0xFF );
+    buf[2] = (unsigned char)( ( ( *olen - 4 ) >> 8 ) & 0xFF );
+    buf[3] = (unsigned char)( ( *olen - 4 ) & 0xFF );
 
-    buf[4] = ( unsigned char )( ( ( *olen - 6 ) >> 8 ) & 0xFF );
-    buf[5] = ( unsigned char )( ( *olen - 6 ) & 0xFF );
+    buf[4] = (unsigned char)( ( ( *olen - 6 ) >> 8 ) & 0xFF );
+    buf[5] = (unsigned char)( ( *olen - 6 ) & 0xFF );
 
-    buf[6] = ( unsigned char )( ( *olen - 7 ) & 0xFF );
+    buf[6] = (unsigned char)( ( *olen - 7 ) & 0xFF );
 
     memcpy( buf + 7, ssl->alpn_chosen, *olen - 7 );
 }
@@ -3398,8 +3398,8 @@ static int ssl_encrypted_extensions_write( mbedtls_ssl_context* ssl,
 
     *olen = p - buf;
 
-    *( buf + 4 ) = ( unsigned char )( ( ( *olen - 4 - 2 ) >> 8 ) & 0xFF );
-    *( buf + 5 ) = ( unsigned char )( ( *olen - 4 - 2 ) & 0xFF );
+    *( buf + 4 ) = (unsigned char)( ( ( *olen - 4 - 2 ) >> 8 ) & 0xFF );
+    *( buf + 5 ) = (unsigned char)( ( *olen - 4 - 2 ) & 0xFF );
 
     return( 0 );
 }
@@ -3493,14 +3493,14 @@ static int ssl_write_hello_retry_request( mbedtls_ssl_context *ssl )
     p += 32;
 
     /* write legacy_session_id_echo */
-    *p++ = ( unsigned char ) ssl->session_negotiate->id_len;
+    *p++ = (unsigned char) ssl->session_negotiate->id_len;
     memcpy( p, &ssl->session_negotiate->id[0], ssl->session_negotiate->id_len );
     MBEDTLS_SSL_DEBUG_BUF( 3, "session id", p, ssl->session_negotiate->id_len );
     p += ssl->session_negotiate->id_len;
 
     /* write ciphersuite ( 2 bytes ) */
-    *p++ = ( unsigned char )( ssl->session_negotiate->ciphersuite >> 8 );
-    *p++ = ( unsigned char )( ssl->session_negotiate->ciphersuite );
+    *p++ = (unsigned char)( ssl->session_negotiate->ciphersuite >> 8 );
+    *p++ = (unsigned char)( ssl->session_negotiate->ciphersuite );
     MBEDTLS_SSL_DEBUG_BUF( 3, "ciphersuite", p-2, 2 );
 
     /* write legacy_compression_method ( 0 ) */
@@ -3523,8 +3523,8 @@ static int ssl_write_hello_retry_request( mbedtls_ssl_context *ssl )
      */
 
     /* Write extension header */
-    *p++ = ( unsigned char )( ( MBEDTLS_TLS_EXT_COOKIE >> 8 ) & 0xFF );
-    *p++ = ( unsigned char )( ( MBEDTLS_TLS_EXT_COOKIE ) & 0xFF );
+    *p++ = (unsigned char)( ( MBEDTLS_TLS_EXT_COOKIE >> 8 ) & 0xFF );
+    *p++ = (unsigned char)( ( MBEDTLS_TLS_EXT_COOKIE ) & 0xFF );
 
     /* Write total extension length
      * ( Skip it for now till we know the length )
@@ -3552,8 +3552,8 @@ static int ssl_write_hello_retry_request( mbedtls_ssl_context *ssl )
     MBEDTLS_SSL_DEBUG_BUF( 3, "Cookie", ext_len_byte + 2, ext_length );
 
     /* Write length */
-    *ext_len_byte++ = ( unsigned char )( ( ext_length >> 8 ) & 0xFF );
-    *ext_len_byte = ( unsigned char )( ext_length & 0xFF );
+    *ext_len_byte++ = (unsigned char)( ( ext_length >> 8 ) & 0xFF );
+    *ext_len_byte = (unsigned char)( ext_length & 0xFF );
 
     total_ext_len += ext_length + 4  /* 2 bytes for extension_type and 2 bytes for length field */;
 #endif /* MBEDTLS_SSL_COOKIE_C */
@@ -3584,8 +3584,8 @@ static int ssl_write_hello_retry_request( mbedtls_ssl_context *ssl )
     {
 
         /* Write extension header */
-        *p++ = ( unsigned char )( ( MBEDTLS_TLS_EXT_KEY_SHARES >> 8 ) & 0xFF );
-        *p++ = ( unsigned char )( ( MBEDTLS_TLS_EXT_KEY_SHARES ) & 0xFF );
+        *p++ = (unsigned char)( ( MBEDTLS_TLS_EXT_KEY_SHARES >> 8 ) & 0xFF );
+        *p++ = (unsigned char)( ( MBEDTLS_TLS_EXT_KEY_SHARES ) & 0xFF );
 
         ext_len_byte = p;
 
@@ -3619,8 +3619,8 @@ static int ssl_write_hello_retry_request( mbedtls_ssl_context *ssl )
     total_ext_len += ext_length + 4 /* 2 bytes for extension_type and 2 bytes for length field */;
 #endif /* MBEDTLS_ECDH_C */
 
-    *extension_start++ = ( unsigned char )( ( total_ext_len >> 8 ) & 0xFF );
-    *extension_start++ = ( unsigned char )( ( total_ext_len ) & 0xFF );
+    *extension_start++ = (unsigned char)( ( total_ext_len >> 8 ) & 0xFF );
+    *extension_start++ = (unsigned char)( ( total_ext_len ) & 0xFF );
 
     ssl->out_msglen = p - ssl->out_msg;
     ssl->out_msgtype = MBEDTLS_SSL_MSG_HANDSHAKE;
@@ -3824,15 +3824,15 @@ static int ssl_server_hello_write( mbedtls_ssl_context* ssl,
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
         if( ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_DATAGRAM )
         {
-            *buf++ = ( unsigned char ) 0xfe;
-            *buf++ = ( unsigned char ) 0xfd;
+            *buf++ = (unsigned char) 0xfe;
+            *buf++ = (unsigned char) 0xfd;
             MBEDTLS_SSL_DEBUG_MSG( 3, ( "server hello, chosen version: [0xfe:0xfd]" ) );
         }
         else
 #endif /* MBEDTLS_SSL_PROTO_DTLS */
         {
-            *buf++ = ( unsigned char )0x3;
-            *buf++ = ( unsigned char )0x3;
+            *buf++ = (unsigned char)0x3;
+            *buf++ = (unsigned char)0x3;
             MBEDTLS_SSL_DEBUG_MSG( 3, ( "server hello, chosen version: [0x3:0x3]" ) );
         }
         buflen -= 2;
@@ -3856,7 +3856,7 @@ static int ssl_server_hello_write( mbedtls_ssl_context* ssl,
     if( ssl->handshake->ctls == MBEDTLS_CTLS_DO_NOT_USE )
 #endif /* MBEDTLS_CTLS */
     {
-        *buf++ = ( unsigned char )ssl->session_negotiate->id_len;
+        *buf++ = (unsigned char)ssl->session_negotiate->id_len;
         buflen--;
         memcpy( buf, &ssl->session_negotiate->id[0], ssl->session_negotiate->id_len );
         buf += ssl->session_negotiate->id_len;
@@ -3866,8 +3866,8 @@ static int ssl_server_hello_write( mbedtls_ssl_context* ssl,
     }
 
     /* write selected ciphersuite ( 2 bytes ) */
-    *buf++ = ( unsigned char )( ssl->session_negotiate->ciphersuite >> 8 );
-    *buf++ = ( unsigned char )( ssl->session_negotiate->ciphersuite );
+    *buf++ = (unsigned char)( ssl->session_negotiate->ciphersuite >> 8 );
+    *buf++ = (unsigned char)( ssl->session_negotiate->ciphersuite );
     buflen -= 2;
     MBEDTLS_SSL_DEBUG_MSG( 3, ( "server hello, chosen ciphersuite: %s ( id=%d )", mbedtls_ssl_get_ciphersuite_name( ssl->session_negotiate->ciphersuite ), ssl->session_negotiate->ciphersuite ) );
 
@@ -3948,8 +3948,8 @@ static int ssl_server_hello_write( mbedtls_ssl_context* ssl,
     MBEDTLS_SSL_DEBUG_BUF( 4, "server hello extensions", extension_start, total_ext_len );
 
     /* Write length information */
-    *extension_start++ = ( unsigned char )( ( total_ext_len >> 8 ) & 0xFF );
-    *extension_start++ = ( unsigned char )( ( total_ext_len ) & 0xFF );
+    *extension_start++ = (unsigned char)( ( total_ext_len >> 8 ) & 0xFF );
+    *extension_start++ = (unsigned char)( ( total_ext_len ) & 0xFF );
     buflen -= 2 + total_ext_len;
 
     *olen = buf - start;
@@ -4154,8 +4154,8 @@ static int ssl_certificate_request_write( mbedtls_ssl_context* ssl,
     if( ret != 0 ) return ret;
 
     /* length field for all extensions */
-    *p++ = ( unsigned char )( ( *olen >> 8 ) & 0xFF );
-    *p++ = ( unsigned char )( ( *olen ) & 0xFF );
+    *p++ = (unsigned char)( ( *olen >> 8 ) & 0xFF );
+    *p++ = (unsigned char)( ( *olen ) & 0xFF );
     p += *olen;
 
     *olen = p - buf;
