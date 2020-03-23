@@ -42,13 +42,13 @@
 #define MBEDTLS_EXIT_FAILURE    EXIT_FAILURE
 #endif
 
-#if !defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) 
+#if !defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
 int main(void)
 {
     mbedtls_printf("This example code has been written for TLS 1.3.\n");
     return(0);
 }
-#else 
+#else
 
 #if !defined(MBEDTLS_ENTROPY_C) || \
     !defined(MBEDTLS_SSL_TLS_C) || !defined(MBEDTLS_SSL_CLI_C) || \
@@ -91,7 +91,7 @@ int main( void )
 #define DFL_KEY_FILE            ""
 #define DFL_PSK                 ""
 #define DFL_PSK_IDENTITY        ""
-#define DFL_KEY_EXCHANGE_MODES KEY_EXCHANGE_MODE_ALL
+#define DFL_KEY_EXCHANGE_MODES MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_ALL
 #define DFL_ECJPAKE_PW          NULL
 #define DFL_FORCE_CIPHER        0
 #define DFL_RENEGOTIATION       MBEDTLS_SSL_RENEGOTIATION_DISABLED
@@ -676,15 +676,15 @@ int main( int argc, char *argv[] )
 			opt.psk_identity = q;
 		else if (strcmp(p, "key_exchange_modes") == 0) {
 			if (strcmp(q, "psk") == 0)
-				opt.key_exchange_modes = KEY_EXCHANGE_MODE_PSK_KE;
+				opt.key_exchange_modes = MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_KE;
 			else if (strcmp(q, "psk_dhe") == 0)
-				opt.key_exchange_modes = KEY_EXCHANGE_MODE_PSK_DHE_KE;
+				opt.key_exchange_modes = MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_DHE_KE;
 			else if (strcmp(q, "ecdhe_ecdsa") == 0)
-				opt.key_exchange_modes = KEY_EXCHANGE_MODE_ECDHE_ECDSA;
+				opt.key_exchange_modes = MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_ECDHE_ECDSA;
 			else if (strcmp(q, "psk_all") == 0)
-				opt.key_exchange_modes = KEY_EXCHANGE_MODE_PSK_ALL;
+				opt.key_exchange_modes = MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_ALL;
 			else if (strcmp(q, "all") == 0)
-				opt.key_exchange_modes = KEY_EXCHANGE_MODE_ALL;
+				opt.key_exchange_modes = MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_ALL;
 			else goto usage;
 		}
 #if defined(MBEDTLS_ECP_C)
@@ -1501,7 +1501,7 @@ int main( int argc, char *argv[] )
 		 goto exit;
 		}
 
-		if (opt.key_exchange_modes == KEY_EXCHANGE_MODE_PSK_KE || opt.key_exchange_modes == KEY_EXCHANGE_MODE_PSK_DHE_KE) {
+		if (opt.key_exchange_modes == MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_KE || opt.key_exchange_modes == MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_DHE_KE) {
 			mbedtls_ssl_conf_ke(&conf, opt.key_exchange_modes);
 		} else 	{
 			mbedtls_printf(" failed\n  ! key exchange mechanism incompatible with the provided parameters %d\n\n", ret);
@@ -1510,7 +1510,8 @@ int main( int argc, char *argv[] )
 	}
 #endif
 
-	if(opt.key_exchange_modes != KEY_EXCHANGE_MODE_NONE) {
+	if(opt.key_exchange_modes != MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_NONE)
+        {
 		mbedtls_ssl_conf_ke(&conf, opt.key_exchange_modes);
 	} else {
  	  mbedtls_printf(" failed\n  ! Some key exchange method needs to be provided %d\n\n", ret);

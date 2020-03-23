@@ -170,15 +170,15 @@
 
 
 /* Key Exchange Modes
- * KEY_EXCHANGE_MODE_PSK_ALL refers to
+ * MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_ALL refers to
  * the two PSK modes.
  */
-#define KEY_EXCHANGE_MODE_PSK_KE 0
-#define KEY_EXCHANGE_MODE_PSK_DHE_KE 1
-#define KEY_EXCHANGE_MODE_NONE 252
-#define KEY_EXCHANGE_MODE_ECDHE_ECDSA 253
-#define KEY_EXCHANGE_MODE_ALL 254
-#define KEY_EXCHANGE_MODE_PSK_ALL 255
+#define MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_KE 0
+#define MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_DHE_KE 1
+#define MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_NONE 252
+#define MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_ECDHE_ECDSA 253
+#define MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_ALL 254
+#define MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_ALL 255
 /*
  * Various constants
  */
@@ -3227,19 +3227,66 @@ int mbedtls_ssl_conf_own_cert( mbedtls_ssl_config *conf,
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
 /**
- * \brief Set the key exchange mode.
+ * \brief Set the supported key exchange modes for TLS 1.3 connections.
  *
- * \note With the new ciphersuite concept in TLS / DTLS 1.3 it is
- *       important to have a way to set the preferred key exchange
- *       mode
+ * In (D)TLS 1.2 and earlier, there is a single concept of 'ciphersuite'
+ * which specifies two separate things simultaneously:
+ * - The method of key establishment, defining how both parties
+ *   in the communication arrive at a shared secret during the
+ *   initial handshake phase of the protocol.
+ * - The method of symmetric encryption, defining the set of algorithms
+ *   which, using the keying material established in the handshake,
+ *   provide traffic protection.
  *
- * \param conf     SSL configuration
- * \param key_exchange_mode  Value for key exchange mechanism.
+ * Users can specify which ciphersuites to support in (D)TLS versions 1.2
+ * and earlier via mbedtls_ssl_conf_ciphersuites(), and should refer to the
+ * corresponding documentation for more information.
  *
+ * In (D)TLS 1.3, the former ciphersuite concept has been modified to allow
+ * separate negotiation of key establishment mode and symmetric encryption mode.
+ *
+ * In the lingo of (D)TLS 1.3, it is only the latter that is called
+ * 'ciphersuite', and it's configuration continues to be done through
+ * mbedtls_ssl_conf_ciphersuites().
+ * To configure the supported key exchange modes in (D)TLS 1.3, in turn,
+ * this function should be used.
+ *
+ * \param conf
+ *      The SSL configuration the change should apply to.
+ * \param key_exchange_mode
+ *      A bitwise combination of one or more of the following:
+ *      - MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_KE
+ *        This flag enables pure-PSK key exchanges.
+ *      - MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_DHE_KE
+ *        This flag enables combined PSK-ECDHE key exchanges.
+ *      - MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_ECDHE_ECDSA
+ *        This flag enables pure-ECDHE key exchanges.
+ *
+ * \note For convenience, the following pre-defined macros are available
+ *       for all combinations of the above:
+ *       - MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_ALL
+ *         Includes all of pure-PSK, PSK-ECDHE and pure-ECDHE.
+ *       - MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_ALL
+ *         Includes both pure-PSK and combined PSK-ECDHE key exchanges,
+ *         but excludes pure-ECDHE key exchanges.
+ *       - MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_ECDHE_ALL
+ *         Includes both pure-ECDHE and combined PSK-ECDHE key exchanges,
+ *
+ * \note If a PSK-based key exchange mode shall be supported, applications
+ *       must also use the APIs mbedtls_ssl_conf_psk() or
+ *       mbedtls_ssl_conf_psk_cb() or mbedtls_ssl_conf_psk_opaque()
+ *       to configure the PSKs to be used.
+ *
+ * \note If a ECDHE-based key exchange mode shall be supported, server-side
+ *       applications must also provide a certificate via
+ *       mbedtls_ssl_conf_own_cert().
+ *
+ * \returns \c 0 on success.
+ * \returns A negative error code on failure.
  */
 
-int mbedtls_ssl_conf_ke(mbedtls_ssl_config* conf,
-    const int key_exchange_mode);
+int mbedtls_ssl_conf_ke( mbedtls_ssl_config* conf,
+                         const int key_exchange_mode );
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
