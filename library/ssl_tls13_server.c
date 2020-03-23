@@ -340,8 +340,8 @@ static int ssl_parse_key_shares_ext(
     size_t len ) {
 
     int ret = 0, final_ret = 0, extensions_available = 1;
-    unsigned char *end = ( unsigned char* )buf + len;
-    unsigned char *start = ( unsigned char* )buf;
+    unsigned char *end = (unsigned char*)buf + len;
+    unsigned char *start = (unsigned char*)buf;
     unsigned char *old;
 #if !defined(MBEDTLS_CTLS)
     size_t n;
@@ -624,7 +624,7 @@ static int ssl_calc_binder( mbedtls_ssl_context *ssl, unsigned char *psk, size_t
     if( suite_info->mac == MBEDTLS_MD_SHA256 )
     {
 #if defined(MBEDTLS_SHA256_C)
-        mbedtls_sha256( ( const unsigned char* )"", 0, hash, 0 );
+        mbedtls_sha256( (const unsigned char*)"", 0, hash, 0 );
 #else
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "mbedtls_ssl_derive_master_secret: Unknow hash function." ) );
         return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
@@ -633,7 +633,7 @@ static int ssl_calc_binder( mbedtls_ssl_context *ssl, unsigned char *psk, size_t
     else if( suite_info->mac == MBEDTLS_MD_SHA384 )
     {
 #if defined(MBEDTLS_SHA512_C)
-        mbedtls_sha512( ( const unsigned char* )"", 0, hash, 1 /* for SHA384 */ );
+        mbedtls_sha512( (const unsigned char*)"", 0, hash, 1 /* for SHA384 */ );
 #else
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "mbedtls_ssl_derive_master_secret: Unknow hash function." ) );
         return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
@@ -645,7 +645,7 @@ static int ssl_calc_binder( mbedtls_ssl_context *ssl, unsigned char *psk, size_t
     {
         ret = Derive_Secret( ssl, mbedtls_md_get_type( md ),
                             ssl->handshake->early_secret, hash_length,
-                            ( const unsigned char* )"res binder", strlen( "res binder" ),
+                            (const unsigned char*)"res binder", strlen( "res binder" ),
                             hash, hash_length, binder_key, hash_length );
         MBEDTLS_SSL_DEBUG_MSG( 5, ( "Derive Early Secret with 'res binder'" ) );
     }
@@ -654,7 +654,7 @@ static int ssl_calc_binder( mbedtls_ssl_context *ssl, unsigned char *psk, size_t
     {
         ret = Derive_Secret( ssl, mbedtls_md_get_type( md ),
                             ssl->handshake->early_secret, hash_length,
-                            ( const unsigned char* )"ext binder", strlen( "ext binder" ),
+                            (const unsigned char*)"ext binder", strlen( "ext binder" ),
                             hash, hash_length, binder_key, hash_length );
         MBEDTLS_SSL_DEBUG_MSG( 5, ( "Derive Early Secret with 'ext binder'" ) );
     }
@@ -707,7 +707,7 @@ static int ssl_calc_binder( mbedtls_ssl_context *ssl, unsigned char *psk, size_t
      * but with the BaseKey being the binder_key.
      */
 
-    ret = hkdfExpandLabel( suite_info->mac, binder_key, hash_length, ( const unsigned char* )"finished", strlen( "finished" ), ( const unsigned char* )"", 0, hash_length, finished_key, hash_length );
+    ret = hkdfExpandLabel( suite_info->mac, binder_key, hash_length, (const unsigned char*)"finished", strlen( "finished" ), (const unsigned char*)"", 0, hash_length, finished_key, hash_length );
 
     if( ret != 0 )
     {
@@ -996,7 +996,7 @@ psk_parsing_successful:
     /* Store this pointer since we need it to compute
      *  the psk binder.
      */
-    truncated_clienthello_end = ( unsigned char* ) buf;
+    truncated_clienthello_end = (unsigned char*) buf;
 
     /* read length of psk binder array */
     item_array_length = ( buf[0] << 8 ) | buf[1];
@@ -1088,7 +1088,7 @@ static int ssl_write_server_pre_shared_key_ext( mbedtls_ssl_context *ssl,
                                                unsigned char* end,
                                                size_t* olen )
 {
-    unsigned char *p = ( unsigned char* )buf;
+    unsigned char *p = (unsigned char*)buf;
     size_t selected_identity;
     int ret=0;
 
@@ -1596,7 +1596,7 @@ static int ssl_write_new_session_ticket( mbedtls_ssl_context *ssl )
     ssl->out_msgtype = MBEDTLS_SSL_MSG_HANDSHAKE;
     ssl->out_msg[0] = MBEDTLS_SSL_HS_NEW_SESSION_TICKET;
 
-    if( ( ret = ssl->conf->f_rng( ssl->conf->p_rng, ( unsigned char* ) &ticket.ticket_age_add, 4 ) ) != 0 )
+    if( ( ret = ssl->conf->f_rng( ssl->conf->p_rng, (unsigned char*) &ticket.ticket_age_add, 4 ) ) != 0 )
     {
         MBEDTLS_SSL_DEBUG_RET( 1, "Generating the ticket_age_add failed", ret );
         return( ret );
@@ -1911,7 +1911,7 @@ static int ssl_read_early_data_parse( mbedtls_ssl_context* ssl,
         /* copy data to staging area */
         memcpy( ssl->conf->early_data_buf, buf, buflen );
         /* execute callback to process application data */
-        ssl->conf->early_data_callback( ssl, ( unsigned char* )ssl->conf->early_data_buf, buflen );
+        ssl->conf->early_data_callback( ssl, (unsigned char*)ssl->conf->early_data_buf, buflen );
     }
     else
     {
