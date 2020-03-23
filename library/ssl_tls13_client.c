@@ -937,7 +937,7 @@ int ssl_write_pre_shared_key_ext( mbedtls_ssl_context *ssl,
     if( !( ssl->handshake->extensions_present & PSK_KEY_EXCHANGE_MODES_EXTENSION ) )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "The psk_key_exchange_modes extension has not been added." ) );
-        return( MBEDTLS_ERR_SSL_BAD_HS_PRE_SHARED_KEY_EXT );
+        return( MBEDTLS_ERR_SSL_BAD_HS_PSK_KEY_EXCHANGE_MODES_EXT );
     }
 
     /* Check whether we have any PSK credentials configured. */
