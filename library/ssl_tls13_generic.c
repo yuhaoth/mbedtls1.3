@@ -74,24 +74,24 @@ static enum varint_length_enum set_varint_length( uint32_t input, uint32_t* outp
     if( input <= 127 )
     {
         *output = input;
-        return VARINT_LENGTH_1_BYTE;
+        return( VARINT_LENGTH_1_BYTE );
     }
     else if( input <= 16383 )
     {
         *output = input;
         *output |= MBEDTLS_VARINT_HDR_1;
         *output &= ~( MBEDTLS_VARINT_HDR_2 );
-        return VARINT_LENGTH_2_BYTE;
+        return( VARINT_LENGTH_2_BYTE );
     }
     else if( input <= 4194303 )
     {
         *output = input;
         *output |= MBEDTLS_VARINT_HDR_1;
         *output |= MBEDTLS_VARINT_HDR_2;
-        return VARINT_LENGTH_3_BYTE;
+        return( VARINT_LENGTH_3_BYTE );
     }
 
-    return VARINT_LENGTH_FAILURE;
+    return( VARINT_LENGTH_FAILURE );
 }
 
 
@@ -714,7 +714,7 @@ int ssl_write_signature_algorithms_ext( mbedtls_ssl_context *ssl,
     if( end < p || (size_t)( end - p ) < sig_alg_len + 6 )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "buffer too small" ) );
-        return MBEDTLS_ERR_SSL_BUFFER_TOO_SMALL;
+        return( MBEDTLS_ERR_SSL_BUFFER_TOO_SMALL );
     }
 
     /*
@@ -743,7 +743,7 @@ int ssl_write_signature_algorithms_ext( mbedtls_ssl_context *ssl,
 
     *olen = 6 + sig_alg_len;
 
-    return 0;
+    return( 0 );
 }
 
 int ssl_parse_signature_algorithms_ext( mbedtls_ssl_context *ssl,
@@ -915,7 +915,7 @@ int mbedtls_ssl_derive_traffic_keys( mbedtls_ssl_context *ssl, KeySet *traffic_k
     if( ret != 0 )
     {
         MBEDTLS_SSL_DEBUG_RET( 1, "Derive_Secret( ) with client_handshake_traffic_secret: Error", ret );
-        return ret;
+        return( ret );
     }
 
     MBEDTLS_SSL_DEBUG_MSG( 5, ( "HKDF Expand: label=[TLS 1.3, c hs traffic], requested length %d", mbedtls_hash_size_for_ciphersuite( suite_info ) ) );
@@ -937,7 +937,7 @@ int mbedtls_ssl_derive_traffic_keys( mbedtls_ssl_context *ssl, KeySet *traffic_k
     if( ret != 0 )
     {
         MBEDTLS_SSL_DEBUG_RET( 1, "Derive_Secret( ) with server_handshake_traffic_secret: Error", ret );
-        return ret;
+        return( ret );
     }
 
     MBEDTLS_SSL_DEBUG_MSG( 5, ( "HKDF Expand: label=[TLS 1.3, s hs traffic], requested length %d", mbedtls_hash_size_for_ciphersuite( suite_info ) ) );
@@ -959,7 +959,7 @@ int mbedtls_ssl_derive_traffic_keys( mbedtls_ssl_context *ssl, KeySet *traffic_k
     if( ret != 0 )
     {
         MBEDTLS_SSL_DEBUG_RET( 1, "Derive_Secret( ) with exporter_secret: Error", ret );
-        return ret;
+        return( ret );
     }
 
     MBEDTLS_SSL_DEBUG_BUF( 5, "exporter_secret", ssl->handshake->exporter_secret, mbedtls_hash_size_for_ciphersuite( suite_info ) );
@@ -1112,7 +1112,7 @@ static int ssl_calc_verify_tls_sha256( mbedtls_ssl_context *ssl, unsigned char h
     mbedtls_free( verify_buffer );
     mbedtls_free( context_string );
 
-    return 0;
+    return( 0 );
 }
 #endif /* MBEDTLS_SHA256_C */
 
@@ -1194,7 +1194,7 @@ static int ssl_calc_verify_tls_sha384( mbedtls_ssl_context *ssl, unsigned char h
     mbedtls_free( verify_buffer );
     mbedtls_free( context_string );
 
-    return 0;
+    return( 0 );
 }
 #endif /* MBEDTLS_SHA512_C */
 
@@ -1365,7 +1365,7 @@ int mbedtls_ssl_derive_master_secret( mbedtls_ssl_context *ssl ) {
     {
         MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_hkdf_extract( ) with early_secret", ret );
         if( psk_allocated == 1 ) mbedtls_free( psk );
-        return ret;
+        return( ret );
     }
 
     MBEDTLS_SSL_DEBUG_MSG( 5, ( "HKDF Extract -- early_secret" ) );
@@ -1406,7 +1406,7 @@ int mbedtls_ssl_derive_master_secret( mbedtls_ssl_context *ssl ) {
     {
         MBEDTLS_SSL_DEBUG_RET( 1, "Derive-Secret( ., 'derived', '' ): Error", ret );
         if( psk_allocated == 1 ) mbedtls_free( psk );
-        return ret;
+        return( ret );
     }
 
     /*
@@ -1453,7 +1453,7 @@ int mbedtls_ssl_derive_master_secret( mbedtls_ssl_context *ssl ) {
     {
         MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_hkdf_extract( ) with handshake_secret: Error", ret );
         if( psk_allocated == 1 ) mbedtls_free( psk );
-        return ret;
+        return( ret );
     }
 
     MBEDTLS_SSL_DEBUG_MSG( 5, ( "HKDF Extract -- handshake_secret" ) );
@@ -1475,7 +1475,7 @@ int mbedtls_ssl_derive_master_secret( mbedtls_ssl_context *ssl ) {
     {
         MBEDTLS_SSL_DEBUG_RET( 1, "Derive-Secret( ., 'derived', '' ): Error", ret );
         if( psk_allocated == 1 ) mbedtls_free( psk );
-        return ret;
+        return( ret );
     }
 
     /*
@@ -1491,7 +1491,7 @@ int mbedtls_ssl_derive_master_secret( mbedtls_ssl_context *ssl ) {
     {
         MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_hkdf_extract( ) with master_secret: Error %d.", ret );
         if( psk_allocated == 1 ) mbedtls_free( psk );
-        return ret;
+        return( ret );
     }
 
     MBEDTLS_SSL_DEBUG_MSG( 5, ( "HKDF Extract -- master_secret" ) );
@@ -2898,14 +2898,14 @@ int mbedtls_ssl_generate_resumption_master_secret( mbedtls_ssl_context *ssl ) {
     if( ret != 0 )
     {
         MBEDTLS_SSL_DEBUG_RET( 1, "Derive_Secret( ) with resumption_master_secret: Error", ret );
-        return ret;
+        return( ret );
     }
 
     MBEDTLS_SSL_DEBUG_BUF( 5, "resumption_master_secret", ssl->session_negotiate->resumption_master_secret, mbedtls_hash_size_for_ciphersuite( suite_info ) );
 
 #endif /* MBEDTLS_SSL_NEW_SESSION_TICKET */
 
-    return ret;
+    return( ret );
 }
 
 /* Generate application traffic keys since any records following a 1-RTT Finished message
@@ -3019,7 +3019,7 @@ int mbedtls_ssl_generate_application_traffic_keys( mbedtls_ssl_context *ssl, Key
     if( ret != 0 )
     {
         MBEDTLS_SSL_DEBUG_RET( 1, "Derive_Secret( ) with client_traffic_secret_0: Error", ret );
-        return ret;
+        return( ret );
     }
 
     /* Generate server_application_traffic_secret_0
@@ -3040,7 +3040,7 @@ int mbedtls_ssl_generate_application_traffic_keys( mbedtls_ssl_context *ssl, Key
     if( ret != 0 )
     {
         MBEDTLS_SSL_DEBUG_RET( 1, "Derive_Secret( ) with server_traffic_secret_0: Error", ret );
-        return ret;
+        return( ret );
     }
 
     /* Generate application traffic keys since any records following a 1-RTT Finished message
@@ -4210,7 +4210,7 @@ int mbedtls_ssl_conf_ticket_meta( mbedtls_ssl_config *conf,
 #if defined(MBEDTLS_HAVE_TIME)
     conf->ticket_received = ticket_received;
 #endif /* MBEDTLS_HAVE_TIME */
-    return 0;
+    return( 0 );
 }
 
 #endif /* MBEDTLS_SSL_NEW_SESSION_TICKET */
@@ -4257,11 +4257,11 @@ int mbedtls_ssl_conf_client_ticket( const mbedtls_ssl_context *ssl, mbedtls_ssl_
     mbedtls_ssl_config *conf = ( mbedtls_ssl_config * ) ssl->conf;
 
     /* basic consistency checks */
-    if( conf == NULL ) return -1;
-    if( ticket == NULL ) return -1;
-    if( ticket->key_len == 0 ) return -1;
-    if( ticket->ticket_len == 0 ) return -1;
-    if( ticket->ticket == NULL ) return -1;
+    if( conf == NULL ) return( -1 );
+    if( ticket == NULL ) return( -1 );
+    if( ticket->key_len == 0 ) return( -1 );
+    if( ticket->ticket_len == 0 ) return( -1 );
+    if( ticket->ticket == NULL ) return( -1 );
 
     /* We don't request another ticket from the server.
      * TBD: This function could be moved to an application-visible API call.
@@ -4273,7 +4273,7 @@ int mbedtls_ssl_conf_client_ticket( const mbedtls_ssl_context *ssl, mbedtls_ssl_
                                 ( const unsigned char * )ticket->ticket,
                                 ticket->ticket_len );
 
-    if( ret != 0 ) return -1;
+    if( ret != 0 ) return( -1 );
 
     /* Set the key exchange mode to PSK
      * TBD: Ideally, the application developer should have the option
@@ -4281,7 +4281,7 @@ int mbedtls_ssl_conf_client_ticket( const mbedtls_ssl_context *ssl, mbedtls_ssl_
      */
     ret = mbedtls_ssl_conf_ke( conf, 0 );
 
-    if( ret != 0 ) return -1;
+    if( ret != 0 ) return( -1 );
 
     /* We set the ticket_age_add and the time we received the ticket */
 #if defined(MBEDTLS_HAVE_TIME)
@@ -4290,9 +4290,9 @@ int mbedtls_ssl_conf_client_ticket( const mbedtls_ssl_context *ssl, mbedtls_ssl_
     ret = mbedtls_ssl_conf_ticket_meta( conf, ticket->ticket_age_add );
 #endif /* MBEDTLS_HAVE_TIME */
 
-    if( ret != 0 ) return -1;
+    if( ret != 0 ) return( -1 );
 
-    return 0;
+    return( 0 );
 }
 
 int mbedtls_ssl_get_client_ticket( const mbedtls_ssl_context *ssl, mbedtls_ssl_ticket *ticket )
@@ -4300,7 +4300,7 @@ int mbedtls_ssl_get_client_ticket( const mbedtls_ssl_context *ssl, mbedtls_ssl_t
     const mbedtls_ssl_ciphersuite_t *cur;
     int hash_size;
 
-    if( ssl->session == NULL ) return -1;
+    if( ssl->session == NULL ) return( -1 );
 
     /* Check whether we got a ticket already */
     if( ssl->session->ticket != NULL )
@@ -4308,9 +4308,9 @@ int mbedtls_ssl_get_client_ticket( const mbedtls_ssl_context *ssl, mbedtls_ssl_t
 
         /* store ticket */
         ticket->ticket_len = ssl->session->ticket_len;
-        if( ticket->ticket_len == 0 ) return -1;
+        if( ticket->ticket_len == 0 ) return( -1 );
         ticket->ticket = mbedtls_calloc( ticket->ticket_len,1 );
-        if( ticket->ticket == NULL ) return -1;
+        if( ticket->ticket == NULL ) return( -1 );
         memcpy( ticket->ticket, ssl->session->ticket, ticket->ticket_len );
 
         /* store ticket lifetime */
@@ -4321,7 +4321,7 @@ int mbedtls_ssl_get_client_ticket( const mbedtls_ssl_context *ssl, mbedtls_ssl_t
         if( cur == NULL )
         {
             mbedtls_free( ticket->ticket );
-            return -1;
+            return( -1 );
         }
 
         hash_size=mbedtls_hash_size_for_ciphersuite( cur );
@@ -4329,7 +4329,7 @@ int mbedtls_ssl_get_client_ticket( const mbedtls_ssl_context *ssl, mbedtls_ssl_t
         if( hash_size < 0 )
         {
             mbedtls_free( ticket->ticket );
-            return -1;
+            return( -1 );
         }
         else
         {
@@ -4346,12 +4346,12 @@ int mbedtls_ssl_get_client_ticket( const mbedtls_ssl_context *ssl, mbedtls_ssl_t
         ticket->start = ssl->session->ticket_received;
 #endif /* MBEDTLS_HAVE_TIME */
 
-        return 0;
+        return( 0 );
     }
     else
     {
         /* no ticket available */
-        return 1;
+        return( 1 );
     }
 }
 
@@ -4460,7 +4460,7 @@ int ssl_write_early_data_ext( mbedtls_ssl_context *ssl,
     *p++ = 0;
 
     *olen = 4;
-    return 0;
+    return( 0 );
 }
 #endif /* MBEDTLS_ZERO_RTT */
 

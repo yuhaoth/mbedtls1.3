@@ -485,13 +485,13 @@ static int ssl_write_max_fragment_length_ext( mbedtls_ssl_context *ssl,
 
     if( ssl->conf->mfl_code == MBEDTLS_SSL_MAX_FRAG_LEN_NONE )
     {
-        return 0;
+        return( 0 );
     }
 
     if( end < p || (size_t)( end - p ) < 5 )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "buffer too small" ) );
-        return MBEDTLS_ERR_SSL_BUFFER_TOO_SMALL;
+        return( MBEDTLS_ERR_SSL_BUFFER_TOO_SMALL );
     }
 
     MBEDTLS_SSL_DEBUG_MSG( 3, ( "client hello, adding max_fragment_length extension" ) );
@@ -506,7 +506,7 @@ static int ssl_write_max_fragment_length_ext( mbedtls_ssl_context *ssl,
     MBEDTLS_SSL_DEBUG_MSG( 3, ( "Maximum fragment length = %d", ssl->conf->mfl_code ) );
 
     *olen = 5;
-    return 0;
+    return( 0 );
 }
 #endif /* MBEDTLS_SSL_MAX_FRAGMENT_LENGTH */
 
@@ -536,7 +536,7 @@ static int ssl_write_alpn_ext( mbedtls_ssl_context *ssl,
 
     if( ssl->conf->alpn_list == NULL )
     {
-        return 0;
+        return( 0 );
     }
 
     for ( cur = ssl->conf->alpn_list; *cur != NULL; cur++ )
@@ -545,7 +545,7 @@ static int ssl_write_alpn_ext( mbedtls_ssl_context *ssl,
     if( end < p || (size_t)( end - p ) < 6 + alpnlen )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "buffer too small" ) );
-        return MBEDTLS_ERR_SSL_BUFFER_TOO_SMALL;
+        return( MBEDTLS_ERR_SSL_BUFFER_TOO_SMALL );
     }
 
     MBEDTLS_SSL_DEBUG_MSG( 3, ( "client hello, adding alpn extension" ) );
@@ -581,7 +581,7 @@ static int ssl_write_alpn_ext( mbedtls_ssl_context *ssl,
     buf[2] = (unsigned char)( ( ( *olen - 4 ) >> 8 ) & 0xFF );
     buf[3] = (unsigned char)( ( *olen - 4 ) & 0xFF );
 
-    return 0;
+    return( 0 );
 }
 #endif /* MBEDTLS_SSL_ALPN */
 
@@ -617,7 +617,7 @@ static int ssl_write_psk_key_exchange_modes_ext( mbedtls_ssl_context *ssl,
     if( (size_t)( end - p ) < ( 7 ) )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "Not enough buffer" ) );
-        return MBEDTLS_ERR_SSL_BUFFER_TOO_SMALL;
+        return( MBEDTLS_ERR_SSL_BUFFER_TOO_SMALL );
     }
 
     MBEDTLS_SSL_DEBUG_MSG( 3, ( "client hello, adding psk_key_exchange_modes extension" ) );
@@ -748,7 +748,7 @@ int ssl_create_binder( mbedtls_ssl_context *ssl, unsigned char *psk, size_t psk_
     if( ret != 0 )
     {
         MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_hkdf_extract( ) with early_secret", ret );
-        return ret;
+        return( ret );
     }
 
     MBEDTLS_SSL_DEBUG_MSG( 5, ( "HKDF Extract -- early_secret" ) );
@@ -811,7 +811,7 @@ int ssl_create_binder( mbedtls_ssl_context *ssl, unsigned char *psk, size_t psk_
     if( ret != 0 )
     {
         MBEDTLS_SSL_DEBUG_RET( 1, "Derive_Secret( ) with binder_key: Error", ret );
-        return ret;
+        return( ret );
     }
 
     if( suite_info->mac == MBEDTLS_MD_SHA256 )
@@ -914,7 +914,7 @@ int ssl_create_binder( mbedtls_ssl_context *ssl, unsigned char *psk, size_t psk_
 
     mbedtls_platform_zeroize( finished_key, hash_length );
 
-    return ret;
+    return( ret );
 }
 
 
@@ -1011,7 +1011,7 @@ int ssl_write_pre_shared_key_ext( mbedtls_ssl_context *ssl,
     if( end < p || (size_t)( end - p ) < ( ext_length + 4 ) )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "buffer too short" ) );
-        return MBEDTLS_ERR_SSL_BUFFER_TOO_SMALL;
+        return( MBEDTLS_ERR_SSL_BUFFER_TOO_SMALL );
     }
 
     if( dummy_run == 0 )
@@ -1092,7 +1092,7 @@ int ssl_write_pre_shared_key_ext( mbedtls_ssl_context *ssl,
         }
     }
     *olen = ext_length + 4;
-    return 0;
+    return( 0 );
 }
 
 
@@ -1111,7 +1111,7 @@ static int ssl_write_cookie_ext( mbedtls_ssl_context *ssl,
     if( ssl->handshake->verify_cookie == NULL )
     {
         MBEDTLS_SSL_DEBUG_MSG( 3, ( "no cookie to send; skip extension" ) );
-        return 0;
+        return( 0 );
     }
 
     MBEDTLS_SSL_DEBUG_BUF( 3, "client hello, cookie",
@@ -1122,7 +1122,7 @@ static int ssl_write_cookie_ext( mbedtls_ssl_context *ssl,
         (size_t)( end - p ) < ( ssl->handshake->verify_cookie_len + 4 ) )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "buffer too small" ) );
-        return MBEDTLS_ERR_SSL_BUFFER_TOO_SMALL;
+        return( MBEDTLS_ERR_SSL_BUFFER_TOO_SMALL );
     }
 
     MBEDTLS_SSL_DEBUG_MSG( 3, ( "client hello, adding cookie extension" ) );
@@ -1140,7 +1140,7 @@ static int ssl_write_cookie_ext( mbedtls_ssl_context *ssl,
 
     *olen = ssl->handshake->verify_cookie_len + 4;
 
-    return 0;
+    return( 0 );
 }
 
 #if defined(MBEDTLS_ECDH_C)
@@ -1190,7 +1190,7 @@ static int ssl_write_supported_groups_ext( mbedtls_ssl_context *ssl,
     if( end < p || (size_t)( end - p ) < 6 + elliptic_curve_len )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "buffer too small" ) );
-        return MBEDTLS_ERR_SSL_BUFFER_TOO_SMALL;
+        return( MBEDTLS_ERR_SSL_BUFFER_TOO_SMALL );
     }
 
     MBEDTLS_SSL_DEBUG_MSG( 3, ( "client hello, adding supported_groups extension" ) );
@@ -1225,7 +1225,7 @@ static int ssl_write_supported_groups_ext( mbedtls_ssl_context *ssl,
     MBEDTLS_SSL_DEBUG_BUF( 3, "Supported groups extension", buf + 4, elliptic_curve_len + 2 );
 
     *olen = 6 + elliptic_curve_len;
-    return 0;
+    return( 0 );
     }
 #endif /* defined(MBEDTLS_ECDH_C) */
 
@@ -1406,7 +1406,7 @@ static int ssl_write_key_shares_ext( mbedtls_ssl_context *ssl,
         *olen += 4; /* 4 bytes for fixed header */
     }
 
-    return 0;
+    return( 0 );
 }
 
 #endif /* MBEDTLS_ECDH_C && MBEDTLS_ECDSA_C */
@@ -2120,7 +2120,7 @@ static int ssl_parse_key_shares_ext( mbedtls_ssl_context *ssl,
        if( ( ret = mbedtls_ssl_send_fatal_handshake_failure( ssl ) ) != 0 )
        return( ret );
 
-       return MBEDTLS_ERR_SSL_BAD_HS_CLIENT_HELLO;
+       return( MBEDTLS_ERR_SSL_BAD_HS_CLIENT_HELLO );
        }
     */
 
@@ -2154,7 +2154,7 @@ static int ssl_parse_key_shares_ext( mbedtls_ssl_context *ssl,
     if( match_found == 0 )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "no matching curve for ECDHE" ) );
-        return MBEDTLS_ERR_SSL_BAD_HS_SERVER_HELLO;
+        return( MBEDTLS_ERR_SSL_BAD_HS_SERVER_HELLO );
     }
 
     /* We store the server-selected key share at a given place
@@ -2176,7 +2176,7 @@ static int ssl_parse_key_shares_ext( mbedtls_ssl_context *ssl,
     }
 
     ssl->handshake->extensions_present += KEY_SHARE_EXTENSION;
-    return ret;
+    return( ret );
 }
 #endif /* MBEDTLS_ECDH_C || MBEDTLS_ECDSA_C */
 
@@ -2601,7 +2601,7 @@ static int ssl_encrypted_extensions_prepare( mbedtls_ssl_context* ssl ) {
     ssl->out_epoch = 2;
 #endif /* MBEDTLS_SSL_PROTO_DTLS */
 
-    return 0;
+    return( 0 );
 }
 
 
@@ -2715,7 +2715,7 @@ static int ssl_encrypted_extensions_parse( mbedtls_ssl_context* ssl,
 
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= parse encrypted extension" ) );
 
-    return ret;
+    return( ret );
 }
 
 static int ssl_encrypted_extensions_postprocess( mbedtls_ssl_context* ssl ) {
@@ -2740,7 +2740,7 @@ static int ssl_encrypted_extensions_postprocess( mbedtls_ssl_context* ssl ) {
 #endif /* MBEDTLS_COMPATIBILITY_MODE */
     }
 
-    return 0;
+    return( 0 );
 }
 
 

@@ -88,7 +88,7 @@ static int ssl_write_sni_server_ext(
 
     *olen = 4;
 
-    return 0;
+    return( 0 );
 }
 #endif /* MBEDTLS_SSL_SERVER_NAME_INDICATION */
 
@@ -148,7 +148,7 @@ static int ssl_write_key_shares_ext(
     if( end < p || ( end - p ) < 4 )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "buffer too small" ) );
-        return MBEDTLS_ERR_SSL_BUFFER_TOO_SMALL;
+        return( MBEDTLS_ERR_SSL_BUFFER_TOO_SMALL );
     }
 
     if( ssl->conf->curve_list == NULL )
@@ -201,7 +201,7 @@ static int ssl_write_key_shares_ext(
 
     *olen = len + 4; /* 4 bytes for fixed header + length of key share */
 
-    return 0;
+    return( 0 );
 }
 #endif /* MBEDTLS_ECDH_C && MBEDTLS_ECDSA_C */
 
@@ -360,7 +360,7 @@ static int ssl_parse_key_shares_ext(
        if( ( ret = mbedtls_ssl_send_fatal_handshake_failure( ssl ) ) != 0 )
        return( ret );
 
-       return MBEDTLS_ERR_SSL_BAD_HS_CLIENT_HELLO;
+       return( MBEDTLS_ERR_SSL_BAD_HS_CLIENT_HELLO );
        }
     */
 
@@ -597,7 +597,7 @@ static int ssl_calc_binder( mbedtls_ssl_context *ssl, unsigned char *psk, size_t
     if( ret != 0 )
     {
         MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_hkdf_extract( ) with early_secret", ret );
-        return ret;
+        return( ret );
     }
 
     MBEDTLS_SSL_DEBUG_MSG( 5, ( "HKDF Extract -- early_secret" ) );
@@ -663,7 +663,7 @@ static int ssl_calc_binder( mbedtls_ssl_context *ssl, unsigned char *psk, size_t
     if( ret != 0 )
     {
         MBEDTLS_SSL_DEBUG_RET( 1, "Derive_Secret( ) with binder_key: Error", ret );
-        return ret;
+        return( ret );
     }
 
 
@@ -752,7 +752,7 @@ static int ssl_calc_binder( mbedtls_ssl_context *ssl, unsigned char *psk, size_t
 
     mbedtls_platform_zeroize( finished_key, hash_length );
 
-    return ret;
+    return( ret );
 }
 
 #if defined(MBEDTLS_KEY_EXCHANGE__SOME__PSK_ENABLED)
@@ -1060,7 +1060,7 @@ psk_parsing_successful:
 
         buf += item_length;
 
-        return 0;
+        return( 0 );
     }
 
     /* no valid psk binder value found */
@@ -1112,7 +1112,7 @@ static int ssl_write_server_pre_shared_key_ext( mbedtls_ssl_context *ssl,
     if( end < p || ( end - p ) < 6 )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "buffer too small" ) );
-        return MBEDTLS_ERR_SSL_BUFFER_TOO_SMALL;
+        return( MBEDTLS_ERR_SSL_BUFFER_TOO_SMALL );
     }
 
     /* Extension Type */
@@ -1134,7 +1134,7 @@ static int ssl_write_server_pre_shared_key_ext( mbedtls_ssl_context *ssl,
 
     MBEDTLS_SSL_DEBUG_MSG( 5, ( "sent selected_identity: %d", selected_identity ) );
 
-    return 0;
+    return( 0 );
 }
 #endif	/* MBEDTLS_KEY_EXCHANGE__SOME__PSK_ENABLED  */
 
@@ -1391,7 +1391,7 @@ static int ssl_write_supported_version_ext( mbedtls_ssl_context *ssl,
     if( end < p || (size_t)( end - p ) < 6 )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "buffer too small" ) );
-        return MBEDTLS_ERR_SSL_BUFFER_TOO_SMALL;
+        return( MBEDTLS_ERR_SSL_BUFFER_TOO_SMALL );
     }
 
     *p++ = (unsigned char)( ( MBEDTLS_TLS_EXT_SUPPORTED_VERSIONS >> 8 ) & 0xFF );
@@ -2241,7 +2241,7 @@ read_record_header:
 
     *dst = ssl->in_msg;
     *dstlen = msg_len;
-    return 0;
+    return( 0 );
 }
 
 static int ssl_client_hello_parse( mbedtls_ssl_context* ssl,
@@ -3319,7 +3319,7 @@ static int ssl_encrypted_extensions_prepare( mbedtls_ssl_context* ssl )
     ssl->out_epoch = 2;
 #endif /* MBEDTLS_SSL_PROTO_DTLS */
 
-    return 0;
+    return( 0 );
 }
 
 static int ssl_encrypted_extensions_write( mbedtls_ssl_context* ssl,
@@ -3407,7 +3407,7 @@ static int ssl_encrypted_extensions_write( mbedtls_ssl_context* ssl,
 static int ssl_encrypted_extensions_postprocess( mbedtls_ssl_context* ssl )
 {
     mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_CERTIFICATE_REQUEST );
-    return 0;
+    return( 0 );
 }
 
 
@@ -4151,7 +4151,7 @@ static int ssl_certificate_request_write( mbedtls_ssl_context* ssl,
     /* The extensions must contain the signature_algorithms. */
     /* Currently we don't use any other extension */
     ret = ssl_write_signature_algorithms_ext( ssl, p+2, end, olen );
-    if( ret != 0 ) return ret;
+    if( ret != 0 ) return( ret );
 
     /* length field for all extensions */
     *p++ = (unsigned char)( ( *olen >> 8 ) & 0xFF );
