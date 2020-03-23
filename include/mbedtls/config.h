@@ -1749,6 +1749,48 @@
  */
 #define MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
 
+/* \def MBEDTLS_TLS13_COMPATIBILITY_MODE
+ *
+ * Enable TLS 1.3 middlebox compatibility mode.
+ *
+ * As specified in Section D.4 of RFC 8449, TLS 1.3 offers a compatibility
+ * mode to make a TLS 1.3 connection more likely to pass through middle boxes
+ * expecting TLS 1.2 traffic.
+ *
+ * Turning on the compatibility mode comes at the cost of a few added bytes
+ * on the wire, but it doesn't affect compatibility with TLS 1.3 implementations
+ * that don't use it. Therefore, unless transmission bandwidth is critical and
+ * you know that middlebox compatibility issues won't occur, it is therefore
+ * recommended to set this option.
+ *
+ * Comment to disable compatibility mode for TLS 1.3.
+ *
+ * Requires: MBEDTLS_SSL_PROTO_TLS1_3
+ *
+ */
+//#define MBEDTLS_TLS13_COMPATIBILITY_MODE
+
+ /**
+ * \def MBEDTLS_SSL_TLS13_CTLS_RANDOM_MAX_LENGTH
+ *
+ * Sets the maximum length for the random
+ * in the ClientHello and the ServerHello.
+ * (in bytes). This value MUST NOT be larger
+ * than 32 bytes.
+ *
+ */
+#define MBEDTLS_SSL_TLS13_CTLS_RANDOM_MAX_LENGTH 32
+
+
+ /**
+ * \def MBEDTLS_SSL_TLS13_CTLS
+ *
+ * Enables support for CTLS.
+ *
+ */
+//#define MBEDTLS_SSL_TLS13_CTLS
+
+
 /**
 *  \def MBEDTLS_SSL_EARLY_DATA_MAX_DELAY
 *
