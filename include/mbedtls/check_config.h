@@ -893,7 +893,7 @@
  /* Caching in TLS 1.3 works differently than in TLS 1.2
   * Hence, SSL Cache MUST NOT be enabled.
  */
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3) && defined(MBEDTLS_SSL_CACHE_C) 
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3) && defined(MBEDTLS_SSL_CACHE_C)
 #error "SSL Caching not supported with TLS 1.3"
 #endif
 
@@ -902,17 +902,17 @@
 #error "The new session ticket concept is only available with TLS 1.3 and is not compatible with RFC 5077-style session tickets."
 #endif
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3) && defined(MBEDTLS_SSL_PROTO_DTLS) && !defined(MBEDTLS_SSL_COOKIE_C) 
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3) && defined(MBEDTLS_SSL_PROTO_DTLS) && !defined(MBEDTLS_SSL_COOKIE_C)
 #error "Cookie functionality needs to be enabled for DTLS 1.3"
 #endif
 
 #if defined(MBEDTLS_CTLS) && !defined(MBEDTLS_SSL_PROTO_TLS1_3)
 #error "cTLS can only be used in context with TLS and/or DTLS 1.3"
-#endif 
+#endif
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3) && defined(MBEDTLS_CTLS) && !defined(MBEDTLS_CTLS_RANDOM_MAX_LENGTH)
 #define MBEDTLS_CTLS_RANDOM_MAX_LENGTH 32
-#endif 
+#endif
 
  /* Either SHA-256 or SHA-512 must be enabled.
   *
@@ -926,13 +926,13 @@
 #endif
 
 #if !defined(MBEDTLS_SSL_MAX_KEY_SHARES) && defined(MBEDTLS_ECDH_C) && defined(MBEDTLS_SSL_PROTO_TLS1_3)
-#define MBEDTLS_SSL_MAX_KEY_SHARES 1 
-#endif  
+#define MBEDTLS_SSL_MAX_KEY_SHARES 1
+#endif
 
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3) && !defined(MBEDTLS_HKDF_C)
 #error "MBEDTLS_HKDF_C is required for TLS 1_3 to work. "
-#endif 
+#endif
 
 /*
  * Avoid warning from -pedantic. This is a convenient place for this

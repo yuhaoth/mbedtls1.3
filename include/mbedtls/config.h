@@ -41,7 +41,7 @@
  * Sets the maximum length for the random
  * in the ClientHello and the ServerHello.
  * (in bytes). This value MUST NOT be larger
- * than 32 bytes. 
+ * than 32 bytes.
  *
  */
 #define MBEDTLS_CTLS_RANDOM_MAX_LENGTH 32
@@ -89,9 +89,9 @@
  * Comment if you do not need the connection ID mechanism.
  */
 
-/* The old CID implementation has to be removed since 
- * CID functionality has been incorporated into the code 
- * already. 
+/* The old CID implementation has to be removed since
+ * CID functionality has been incorporated into the code
+ * already.
  */
  //#define MBEDTLS_CID
 
@@ -417,7 +417,7 @@
 * Enable the support for the ECDSA_SECP256r1_SHA256
 * signature scheme
 *
-* Requires: MBEDTLS_ECP_DP_SECP256R1_ENABLED, ... 
+* Requires: MBEDTLS_ECP_DP_SECP256R1_ENABLED, ...
 *
 * Comment this macro to disable the MBEDTLS_ECDSA_SECP256r1_SHA256 signature algo
 */
@@ -652,11 +652,11 @@
 *
 * Enables debug functions for the HKDF functions
 *
-* Requires: 
+* Requires:
 *
 * Uncomment this macro to include HKDF debug information
 */
-//#define HKDF_DEBUG 
+//#define HKDF_DEBUG
 
 /**
 * \def MBEDTLS_SSL_DEBUG_HANDSHAKE_HASHES
@@ -667,7 +667,7 @@
 *
 * Uncomment this macro to print handshake hash information
 */
-//#define MBEDTLS_SSL_DEBUG_HANDSHAKE_HASHES 
+//#define MBEDTLS_SSL_DEBUG_HANDSHAKE_HASHES
 
 
 /**
@@ -803,7 +803,7 @@
 *
 * Allows adjusting the length of the nonce field in the ticket.
 *
-* The default value is 32 bytes. 
+* The default value is 32 bytes.
 */
 #define MBEDTLS_SSL_TICKET_NONCE_LENGTH 32
 
@@ -822,7 +822,8 @@
 /**
 * \def MBEDTLS_SSL_PROTO_TLS1_3
 *
-* Enable support for TLS 1.3 (and DTLS 1.3 if DTLS is enabled).
+* Enable support for TLS 1.3 (and DTLS 1.3 if DTLS is enabled
+* via MBEDTLS_SSL_PROTO_DTLS).
 *
 * Requires: MBEDTLS_SHA1_C or MBEDTLS_SHA256_C or MBEDTLS_SHA512_C
 *           (Depends on ciphersuites)
@@ -831,25 +832,25 @@
 */
 #define MBEDTLS_SSL_PROTO_TLS1_3
 
-/* This is necessary to get the ECDH functions working because 
- * the new data structures expose different members. The code 
+/* This is necessary to get the ECDH functions working because
+ * the new data structures expose different members. The code
  * needs to be adjusted. */
-#define MBEDTLS_ECDH_LEGACY_CONTEXT 
+#define MBEDTLS_ECDH_LEGACY_CONTEXT
 
-/* Constant to the messaging layer working. Note: The messaging layer 
+/* Constant to the messaging layer working. Note: The messaging layer
  * will change with MPS in the future. */
 #define MBEDTLS_SSL_BUFFER_LEN 4096
 
 
-/* This declaration is needed currently because the code makes access 
+/* This declaration is needed currently because the code makes access
  * to the peer certificate. Ideally, it should be made optional. */
-#define MBEDTLS_SSL_KEEP_PEER_CERTIFICATE 
+#define MBEDTLS_SSL_KEEP_PEER_CERTIFICATE
 
 /**
 *  \def MBEDTLS_SSL_EARLY_DATA_MAX_DELAY
 *
 * Tolerance window for ticket age value.
-* Outside this tolerance window, 0-RTT mode will be disabled. 
+* Outside this tolerance window, 0-RTT mode will be disabled.
 *
 */
 
@@ -858,22 +859,22 @@
 /**
 *  \def MBEDTLS_SSL_MAX_KEY_SHARES
 *
-* Defines the maximum number of key share entires in a 
-* key share extension advertised as part of the ClientHello. 
-* 
-* The impact of increasing the number of key shares is that 
-* a client needs to store more ECDHE key pairs and the 
-* transmission size of the ClientHello is increased as well. 
+* Defines the maximum number of key share entires in a
+* key share extension advertised as part of the ClientHello.
+*
+* The impact of increasing the number of key shares is that
+* a client needs to store more ECDHE key pairs and the
+* transmission size of the ClientHello is increased as well.
 * On the positive side this allows more rapid session
 * establishment in case there is no prior knowledge between
-* the client and the server about the supported algorithms 
-* and curves. 
+* the client and the server about the supported algorithms
+* and curves.
 *
 */
 
 #define MBEDTLS_SSL_MAX_KEY_SHARES 1
 
-/** 
+/**
 *  \def MBEDTLS_SSL_DTLS_TIMEOUT_DFL_MIN
 *  \def MBEDTLS_SSL_DTLS_TIMEOUT_DFL_MAX
 *
@@ -887,7 +888,7 @@
 //#define MBEDTLS_SSL_DTLS_TIMEOUT_DFL_MIN   600000
 //#define MBEDTLS_SSL_DTLS_TIMEOUT_DFL_MAX  1800000
 
-// These values represent resonable settings. 
+// These values represent resonable settings.
 /*
 #define MBEDTLS_SSL_DTLS_TIMEOUT_DFL_MIN   1000
 #define MBEDTLS_SSL_DTLS_TIMEOUT_DFL_MAX  60000
@@ -1003,8 +1004,8 @@
 * tickets, including authenticated encryption and key management. Example
 * callbacks are provided by MBEDTLS_SSL_TICKET_C.
 *
-* Comment this macro to 
-*  - be able to issue tickets by TLS 1.3 servers, and 
+* Comment this macro to
+*  - be able to issue tickets by TLS 1.3 servers, and
 *  - use them in TLS 1.3 clients.
 */
 #define MBEDTLS_SSL_NEW_SESSION_TICKET
