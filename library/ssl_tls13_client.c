@@ -1832,7 +1832,7 @@ static int ssl_write_supported_groups_ext( mbedtls_ssl_context *ssl,
 #endif /* MBEDTLS_SSL_MAX_FRAGMENT_LENGTH */
 
 #if defined(MBEDTLS_ZERO_RTT)
-            ssl_write_early_data_ext( ssl, buf, end, &cur_ext_len );
+            ssl_write_early_data_ext( ssl, buf, (size_t)( end - buf ), &cur_ext_len );
             total_ext_len += cur_ext_len;
             buf += cur_ext_len;
 #endif /* MBEDTLS_ZERO_RTT */
