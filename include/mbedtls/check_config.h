@@ -807,13 +807,27 @@
 #endif /* MBEDTLS_SSL_HW_RECORD_ACCEL */
 
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3) && defined(MBEDTLS_ZERO_RTT) && ( !defined(MBEDTLS_KEY_EXCHANGE_PSK_ENABLED) || !defined(MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED))
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3) &&                        \
+    defined(MBEDTLS_ZERO_RTT)         &&                        \
+    ( !defined(MBEDTLS_KEY_EXCHANGE_PSK_ENABLED) ||             \
+      !defined(MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED) )
 #error "ZeroRTT requires MBEDTLS_ZERO_RTT and MBEDTLS_KEY_EXCHANGE__SOME__PSK_ENABLED to be defined."
 #endif
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3) && defined(MBEDTLS_COMPATIBILITY_MODE) && defined(MBEDTLS_CTLS)
+#if defined(MBEDTLS_COMPATIBILITY_MODE) && \
+    defined(MBEDTLS_CTLS)
 #error "cTLS cannot be used in combination with the TLS 1.3 compatibility mode."
-#endif 
+#endif
+
+#if defined(MBEDTLS_COMPATIBILITY_MODE) && \
+    !defined(MBEDTLS_SSL_PROTO_TLS1_3)
+#error "MBEDTLS_COMPATIBILITY_MODE defined, but not all prerequesites."
+#endif
+
+#if defined(MBEDTLS_CTLS) && \
+    !defined(MBEDTLS_SSL_PROTO_TLS1_3)
+#error "MBEDTLS_CTLS defined, but not all prerequesites."
+#endif
 
 /*
  * The following extensions are no longer applicable to TLS 1.3,
