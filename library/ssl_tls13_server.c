@@ -3386,7 +3386,7 @@ static int ssl_client_hello_parse( mbedtls_ssl_context* ssl,
 #if defined(MBEDTLS_ZERO_RTT)
 	if( ssl->handshake->extensions_present & EARLY_DATA_EXTENSION )
         {
-            ret = ssl_write_early_data_ext( ssl, p, (unsigned char*) (end - p), &n );
+            ret = ssl_write_early_data_ext( ssl, p, (size_t)( end - p ), &n );
             if( ret != 0 )
                 return( ret );
 
