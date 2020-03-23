@@ -68,7 +68,7 @@ static int ssl_calc_verify_tls_sha384( mbedtls_ssl_context*, unsigned char*, int
 static int ssl_calc_finished_tls_sha384( mbedtls_ssl_context*, unsigned char*, int );
 #endif /* MBEDTLS_SHA512_C */
 
-#if defined(MBEDTLS_CTLS)
+#if defined(MBEDTLS_SSL_TLS13_CTLS)
 static enum varint_length_enum set_varint_length( uint32_t input, uint32_t* output )
 {
     if( input <= 127 )
@@ -150,7 +150,7 @@ static uint32_t get_varint_value( const uint32_t input )
     }
 
 }
-#endif /* MBEDTLS_CTLS */
+#endif /* MBEDTLS_SSL_TLS13_CTLS */
 
 #if defined(MBEDTLS_SHA256_C)
 static int ssl_calc_finished_tls_sha256(

@@ -815,7 +815,7 @@
 #endif
 
 #if defined(MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE) && \
-    defined(MBEDTLS_CTLS)
+    defined(MBEDTLS_SSL_TLS13_CTLS)
 #error "cTLS cannot be used in combination with the TLS 1.3 compatibility mode."
 #endif
 
@@ -824,9 +824,9 @@
 #error "MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE defined, but not all prerequesites."
 #endif
 
-#if defined(MBEDTLS_CTLS) && \
+#if defined(MBEDTLS_SSL_TLS13_CTLS) && \
     !defined(MBEDTLS_SSL_PROTO_TLS1_3)
-#error "MBEDTLS_CTLS defined, but not all prerequesites."
+#error "MBEDTLS_SSL_TLS13_CTLS defined, but not all prerequesites."
 #endif
 
 /*
@@ -920,12 +920,12 @@
 #error "Cookie functionality needs to be enabled for DTLS 1.3"
 #endif
 
-#if defined(MBEDTLS_CTLS) && !defined(MBEDTLS_SSL_PROTO_TLS1_3)
+#if defined(MBEDTLS_SSL_TLS13_CTLS) && !defined(MBEDTLS_SSL_PROTO_TLS1_3)
 #error "cTLS can only be used in context with TLS and/or DTLS 1.3"
 #endif
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3) && defined(MBEDTLS_CTLS) && !defined(MBEDTLS_CTLS_RANDOM_MAX_LENGTH)
-#define MBEDTLS_CTLS_RANDOM_MAX_LENGTH 32
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3) && defined(MBEDTLS_SSL_TLS13_CTLS) && !defined(MBEDTLS_CTLS_RANDOM_MAX_LENGTH)
+#define MBEDTLS_SSL_TLS13_CTLS_RANDOM_MAX_LENGTH 32
 #endif
 
  /* Either SHA-256 or SHA-512 must be enabled.

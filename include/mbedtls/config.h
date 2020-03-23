@@ -36,7 +36,7 @@
 
 
  /**
- * \def MBEDTLS_CTLS_RANDOM_MAX_LENGTH
+ * \def MBEDTLS_SSL_TLS13_CTLS_RANDOM_MAX_LENGTH
  *
  * Sets the maximum length for the random
  * in the ClientHello and the ServerHello.
@@ -44,16 +44,16 @@
  * than 32 bytes.
  *
  */
-#define MBEDTLS_CTLS_RANDOM_MAX_LENGTH 32
+#define MBEDTLS_SSL_TLS13_CTLS_RANDOM_MAX_LENGTH 32
 
 
  /**
- * \def MBEDTLS_CTLS
+ * \def MBEDTLS_SSL_TLS13_CTLS
  *
  * Enables support for CTLS.
  *
  */
-//#define MBEDTLS_CTLS
+//#define MBEDTLS_SSL_TLS13_CTLS
 
 /**
 * \name SECTION: System support

@@ -136,8 +136,8 @@
 
 
 /* For use with cTLS only */
-#define MBEDTLS_CTLS_DO_NOT_USE         0
-#define MBEDTLS_CTLS_USE                1
+#define MBEDTLS_SSL_TLS13_CTLS_DO_NOT_USE         0
+#define MBEDTLS_SSL_TLS13_CTLS_USE                1
 
 // Constants for use with varint data type introduced by cTLS
 #define MBEDTLS_VARINT_HDR_1 128
@@ -667,9 +667,9 @@ struct mbedtls_ssl_handshake_params
     int extensions_present;             /*!< which extension were present; the */
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3) && defined(MBEDTLS_CTLS)
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3) && defined(MBEDTLS_SSL_TLS13_CTLS)
     uint8_t ctls; /* value of 1 indicates we are using ctls */
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3 && MBEDTLS_CTLS */
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3 && MBEDTLS_SSL_TLS13_CTLS */
 #if (defined(MBEDTLS_SSL_SESSION_TICKETS) || (defined(MBEDTLS_SSL_NEW_SESSION_TICKET) && defined(MBEDTLS_SSL_PROTO_TLS1_3)))
     int new_session_ticket;             /*!< use NewSessionTicket?    */
 #endif /* MBEDTLS_SSL_SESSION_TICKETS || ( MBEDTLS_SSL_NEW_SESSION_TICKET && MBEDTLS_SSL_PROTO_TLS1_3 ) */
@@ -1133,11 +1133,11 @@ int ssl_parse_new_session_ticket(mbedtls_ssl_context* ssl);
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
 
 
-#if defined(MBEDTLS_CTLS)
+#if defined(MBEDTLS_SSL_TLS13_CTLS)
 static enum varint_length_enum set_varint_length(uint32_t input, uint32_t* output);
 static uint8_t get_varint_length(const uint8_t input);
 static uint32_t get_varint_value(const uint32_t input);
-#endif /* MBEDTLS_CTLS */
+#endif /* MBEDTLS_SSL_TLS13_CTLS */
 
 
 int mbedtls_ssl_key_derivation(mbedtls_ssl_context* ssl, KeySet* traffic_keys);
