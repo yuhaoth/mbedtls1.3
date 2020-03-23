@@ -131,15 +131,6 @@
 #define MBEDTLS_HAVE_TIME
 
 /**
-* \def MBEDTLS_ZERO_RTT
-*
-* Allows to add functionality for TLS/DTLS 1.3 Zero-RTT.
-*
-*/
-//#define MBEDTLS_ZERO_RTT
-
-
-/**
 * \def MBEDTLS_HAVE_TIME_DATE
 *
 * System has time.h and time(), gmtime() and the clock is correct.
@@ -150,6 +141,14 @@
 * Comment if your system does not have a correct clock.
 */
 #define MBEDTLS_HAVE_TIME_DATE
+
+/**
+* \def MBEDTLS_ZERO_RTT
+*
+* Allows to add functionality for TLS/DTLS 1.3 Zero-RTT.
+*
+*/
+#define MBEDTLS_ZERO_RTT
 
 /**
 * \def MBEDTLS_PLATFORM_MEMORY

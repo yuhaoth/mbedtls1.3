@@ -987,7 +987,7 @@ run_test    "TLS_AES_256_GCM_SHA384 with external PSK (+early data)" \
             -c "Ciphersuite is TLS_AES_256_GCM_SHA384" \
 			-c "Derive Early Secret with 'ext binder'" \
 			-c "<= write EndOfEarlyData" \
-			-s "<= parse early application data" \
+			-s "<= parse early data" \
 			-s "<= parse end_of_early_data" \
 			
 # - the PSK-based ciphersuite exchange is executed
@@ -1003,7 +1003,7 @@ run_test    "TLS_AES_128_CCM_SHA256 with external PSK (+early data)" \
             -c "Ciphersuite is TLS_AES_128_CCM_SHA256" \
 			-c "Derive Early Secret with 'ext binder'" \
 			-c "<= write EndOfEarlyData" \
-			-s "<= parse early application data" \
+			-s "<= parse early data" \
 			-s "<= parse end_of_early_data" \
 
 			
@@ -1020,7 +1020,7 @@ run_test    "TLS_AES_128_GCM_SHA256 with external PSK (+early data)" \
             -c "Ciphersuite is TLS_AES_128_GCM_SHA256" \
 			-c "Derive Early Secret with 'ext binder'" \
 			-c "<= write EndOfEarlyData" \
-			-s "<= parse early application data" \
+			-s "<= parse early data" \
 			-s "<= parse end_of_early_data" \
 			
 # - the PSK-based ciphersuite exchange is executed
@@ -1036,7 +1036,7 @@ run_test    "TLS_AES_128_CCM_8_SHA256 with external PSK (+early data)" \
             -c "Ciphersuite is TLS_AES_128_CCM_8_SHA256" \
 			-c "Derive Early Secret with 'ext binder'" \
 			-c "<= write EndOfEarlyData" \
-			-s "<= parse early application data" \
+			-s "<= parse early data" \
 			-s "<= parse end_of_early_data" \
 
 			
