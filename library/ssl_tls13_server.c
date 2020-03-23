@@ -343,10 +343,10 @@ static int ssl_parse_key_shares_ext(
     unsigned char *end = (unsigned char*)buf + len;
     unsigned char *start = (unsigned char*)buf;
     unsigned char *old;
-#if !defined(MBEDTLS_CTLS)
+#if !defined(MBEDTLS_SSL_TLS13_CTLS)
     size_t n;
     unsigned int ks_entry_size;
-#endif /* MBEDTLS_CTLS */
+#endif /* MBEDTLS_SSL_TLS13_CTLS */
 
     int match_found = 0;
 
@@ -365,9 +365,9 @@ static int ssl_parse_key_shares_ext(
     */
 
     /* With CTLS there is only one key share */
-#if defined(MBEDTLS_CTLS)
-    if( ssl->handshake->ctls == MBEDTLS_CTLS_DO_NOT_USE )
-#endif /* MBEDTLS_CTLS */
+#if defined(MBEDTLS_SSL_TLS13_CTLS)
+    if( ssl->handshake->ctls == MBEDTLS_SSL_TLS13_CTLS_DO_NOT_USE )
+#endif /* MBEDTLS_SSL_TLS13_CTLS */
     {
 
         /* Pick the first KeyShareEntry  */
@@ -444,7 +444,7 @@ static int ssl_parse_key_shares_ext(
             goto finish_key_share_parsing;
         }
     skip_parsing_key_share_entry:
-#if !defined(MBEDTLS_CTLS)
+#if !defined(MBEDTLS_SSL_TLS13_CTLS)
         /* we jump to the next key share entry, if there is one */
         ks_entry_size = ( ( old[2] << 8 ) | ( old[3] ) );
         /* skip named group id + length field + key share entry length */
@@ -458,7 +458,7 @@ static int ssl_parse_key_shares_ext(
         }
 #else
         ( (void ) buf );
-#endif /* MBEDTLS_CTLS */
+#endif /* MBEDTLS_SSL_TLS13_CTLS */
     }
 
 finish_key_share_parsing:
@@ -2056,7 +2056,7 @@ read_record_header:
     if( buf[0] != MBEDTLS_SSL_MSG_HANDSHAKE )
     {
 
-#if defined(MBEDTLS_COMPATIBILITY_MODE)
+#if defined(MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE)
 
         if( buf[0] == MBEDTLS_SSL_MSG_CHANGE_CIPHER_SPEC )
         {
@@ -2107,7 +2107,7 @@ read_record_header:
             }
         }
         else
-#endif /* MBEDTLS_COMPATIBILITY_MODE */
+#endif /* MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE */
         {
             MBEDTLS_SSL_DEBUG_MSG( 1, ( "Spurious message ( maybe alert message )" ) );
 
@@ -2308,13 +2308,13 @@ static int ssl_client_hello_parse( mbedtls_ssl_context* ssl,
      * We ignore the version field in the ClientHello.
      * We use the version field in the extension.
      */
-#if defined(MBEDTLS_CTLS)
-    if( ssl->handshake->ctls == MBEDTLS_CTLS_USE )
+#if defined(MBEDTLS_SSL_TLS13_CTLS)
+    if( ssl->handshake->ctls == MBEDTLS_SSL_TLS13_CTLS_USE )
     {
         buf += 1; /* skip version */
     }
     else
-#endif /* MBEDTLS_CTLS */
+#endif /* MBEDTLS_SSL_TLS13_CTLS */
     {
         buf += 2; /* skip version */
     }
@@ -2323,8 +2323,8 @@ static int ssl_client_hello_parse( mbedtls_ssl_context* ssl,
     /*
      * Save client random
      */
-#if defined(MBEDTLS_CTLS)
-    if( ssl->handshake->ctls == MBEDTLS_CTLS_USE )
+#if defined(MBEDTLS_SSL_TLS13_CTLS)
+    if( ssl->handshake->ctls == MBEDTLS_SSL_TLS13_CTLS_USE )
     {
         MBEDTLS_SSL_DEBUG_BUF( 3, "client hello, random bytes", buf, 16 );
 
@@ -2332,7 +2332,7 @@ static int ssl_client_hello_parse( mbedtls_ssl_context* ssl,
         buf += 16; /* skip random bytes */
     }
     else
-#endif /* MBEDTLS_CTLS */
+#endif /* MBEDTLS_SSL_TLS13_CTLS */
     {
         MBEDTLS_SSL_DEBUG_BUF( 3, "client hello, random bytes", buf, 32 );
 
@@ -2341,9 +2341,9 @@ static int ssl_client_hello_parse( mbedtls_ssl_context* ssl,
     }
 
 
-#if defined(MBEDTLS_CTLS)
-    if( ssl->handshake->ctls == MBEDTLS_CTLS_DO_NOT_USE )
-#endif /* MBEDTLS_CTLS */
+#if defined(MBEDTLS_SSL_TLS13_CTLS)
+    if( ssl->handshake->ctls == MBEDTLS_SSL_TLS13_CTLS_DO_NOT_USE )
+#endif /* MBEDTLS_SSL_TLS13_CTLS */
     {
         /*
          * Parse session ID
@@ -2449,9 +2449,9 @@ static int ssl_client_hello_parse( mbedtls_ssl_context* ssl,
     /* skip ciphersuites for now */
     buf += ciph_len;
 
-#if defined(MBEDTLS_CTLS)
-    if( ssl->handshake->ctls == MBEDTLS_CTLS_DO_NOT_USE )
-#endif /* MBEDTLS_CTLS */
+#if defined(MBEDTLS_SSL_TLS13_CTLS)
+    if( ssl->handshake->ctls == MBEDTLS_SSL_TLS13_CTLS_DO_NOT_USE )
+#endif /* MBEDTLS_SSL_TLS13_CTLS */
     {
         /*
          * For TLS 1.3 we are not using compression.
@@ -3276,25 +3276,26 @@ static int ssl_encrypted_extensions_prepare( mbedtls_ssl_context* ssl )
         /* Set sequence_number of record layer to zero */
         memset( ssl->out_ctr + 2, 0, 6 );
 
+        /* TODO: Why is this commented out? Check! */
         /*
           unsigned char i;
 
-          /* Increment epoch */
-        for ( i = 2; i > 0; i-- )
-            if( ++ssl->out_ctr[i - 1] != 0 )
-                break;
+          for ( i = 2; i > 0; i-- )
+              if( ++ssl->out_ctr[i - 1] != 0 )
+                  break;
 
-        /* The loop goes to its end iff the counter is wrapping */
-        if( i == 0 )
-        {
-            MBEDTLS_SSL_DEBUG_MSG( 1, ( "DTLS epoch would wrap" ) );
-            return( MBEDTLS_ERR_SSL_COUNTER_WRAPPING );
-        }
+          if( i == 0 )
+          {
+              MBEDTLS_SSL_DEBUG_MSG( 1, ( "DTLS epoch would wrap" ) );
+              return( MBEDTLS_ERR_SSL_COUNTER_WRAPPING );
+          }
         */
-            }
+    }
     else
 #endif /* MBEDTLS_SSL_PROTO_DTLS */
+    {
         memset( ssl->out_ctr, 0, 8 );
+    }
 
     /* Set sequence number used at the handshake header to zero */
     memset( ssl->transform_out->sequence_number_enc, 0x0, 12 );
@@ -3456,9 +3457,9 @@ static int ssl_write_hello_retry_request( mbedtls_ssl_context *ssl )
      *
      *  In cTLS the version number is elided.
      */
-#if defined(MBEDTLS_CTLS)
-    if( ssl->handshake->ctls == MBEDTLS_CTLS_DO_NOT_USE )
-#endif /* MBEDTLS_CTLS */
+#if defined(MBEDTLS_SSL_TLS13_CTLS)
+    if( ssl->handshake->ctls == MBEDTLS_SSL_TLS13_CTLS_DO_NOT_USE )
+#endif /* MBEDTLS_SSL_TLS13_CTLS */
     {
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
         if( ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_DATAGRAM )
@@ -3719,8 +3720,8 @@ static int ssl_server_hello_prepare( mbedtls_ssl_context* ssl )
 {
     int ret;
 
-#if defined(MBEDTLS_CTLS)
-    if( ssl->handshake->ctls == MBEDTLS_CTLS_USE )
+#if defined(MBEDTLS_SSL_TLS13_CTLS)
+    if( ssl->handshake->ctls == MBEDTLS_SSL_TLS13_CTLS_USE )
     {
 
         if( ( ret = ssl->conf->f_rng( ssl->conf->p_rng, ssl->handshake->randbytes + 16, 16 ) ) != 0 )
@@ -3729,7 +3730,7 @@ static int ssl_server_hello_prepare( mbedtls_ssl_context* ssl )
         MBEDTLS_SSL_DEBUG_BUF( 3, "server hello, random bytes", ssl->handshake->randbytes + 16, 16 );
     }
     else
-#endif /* MBEDTLS_CTLS */
+#endif /* MBEDTLS_SSL_TLS13_CTLS */
     {
         if( ( ret = ssl->conf->f_rng( ssl->conf->p_rng, ssl->handshake->randbytes + 32, 32 ) ) != 0 )
             return( ret );
@@ -3772,13 +3773,13 @@ static int ssl_server_hello_write( mbedtls_ssl_context* ssl,
     unsigned char* start = buf;
     unsigned char* end = buf + buflen;
 
-#if defined(MBEDTLS_CTLS)
-    if( ssl->handshake->ctls == MBEDTLS_CTLS_USE )
+#if defined(MBEDTLS_SSL_TLS13_CTLS)
+    if( ssl->handshake->ctls == MBEDTLS_SSL_TLS13_CTLS_USE )
     {
-        rand_bytes_len = MBEDTLS_CTLS_RANDOM_MAX_LENGTH;
+        rand_bytes_len = MBEDTLS_SSL_TLS13_CTLS_RANDOM_MAX_LENGTH;
     }
     else
-#endif /* MBEDTLS_CTLS */
+#endif /* MBEDTLS_SSL_TLS13_CTLS */
     {
         rand_bytes_len = 32;
     }
@@ -3801,13 +3802,13 @@ static int ssl_server_hello_write( mbedtls_ssl_context* ssl,
      * The header is set by ssl_write_record.
      * For DTLS 1.3 the other fields are adjusted.
      */
-#if defined(MBEDTLS_CTLS)
-    if( ssl->handshake->ctls == MBEDTLS_CTLS_USE )
+#if defined(MBEDTLS_SSL_TLS13_CTLS)
+    if( ssl->handshake->ctls == MBEDTLS_SSL_TLS13_CTLS_USE )
     {
         buf++; /* skip handshake type */
         buflen--;
     } else
-#endif /* MBEDTLS_CTLS */
+#endif /* MBEDTLS_SSL_TLS13_CTLS */
     {
         buf += 4; /* skip handshake type + length */
         buflen -=4;
@@ -3815,10 +3816,10 @@ static int ssl_server_hello_write( mbedtls_ssl_context* ssl,
 
 
     /* Version */
-#if defined(MBEDTLS_CTLS)
-    if( ssl->handshake->ctls == MBEDTLS_CTLS_DO_NOT_USE )
+#if defined(MBEDTLS_SSL_TLS13_CTLS)
+    if( ssl->handshake->ctls == MBEDTLS_SSL_TLS13_CTLS_DO_NOT_USE )
     {
-#endif /* MBEDTLS_CTLS */
+#endif /* MBEDTLS_SSL_TLS13_CTLS */
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
         if( ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_DATAGRAM )
         {
@@ -3834,9 +3835,9 @@ static int ssl_server_hello_write( mbedtls_ssl_context* ssl,
             MBEDTLS_SSL_DEBUG_MSG( 3, ( "server hello, chosen version: [0x3:0x3]" ) );
         }
         buflen -= 2;
-#if defined(MBEDTLS_CTLS)
+#if defined(MBEDTLS_SSL_TLS13_CTLS)
     }
-#endif /* MBEDTLS_CTLS */
+#endif /* MBEDTLS_SSL_TLS13_CTLS */
 
     /* Write random bytes */
     memcpy( buf, ssl->handshake->randbytes, rand_bytes_len );
@@ -3850,9 +3851,9 @@ static int ssl_server_hello_write( mbedtls_ssl_context* ssl,
 #endif /* MBEDTLS_HAVE_TIME */
 
     /* Write legacy session id */
-#if defined(MBEDTLS_CTLS)
-    if( ssl->handshake->ctls == MBEDTLS_CTLS_DO_NOT_USE )
-#endif /* MBEDTLS_CTLS */
+#if defined(MBEDTLS_SSL_TLS13_CTLS)
+    if( ssl->handshake->ctls == MBEDTLS_SSL_TLS13_CTLS_DO_NOT_USE )
+#endif /* MBEDTLS_SSL_TLS13_CTLS */
     {
         *buf++ = (unsigned char)ssl->session_negotiate->id_len;
         buflen--;
@@ -3869,9 +3870,9 @@ static int ssl_server_hello_write( mbedtls_ssl_context* ssl,
     buflen -= 2;
     MBEDTLS_SSL_DEBUG_MSG( 3, ( "server hello, chosen ciphersuite: %s ( id=%d )", mbedtls_ssl_get_ciphersuite_name( ssl->session_negotiate->ciphersuite ), ssl->session_negotiate->ciphersuite ) );
 
-#if defined(MBEDTLS_CTLS)
-    if( ssl->handshake->ctls == MBEDTLS_CTLS_DO_NOT_USE )
-#endif /* MBEDTLS_CTLS */
+#if defined(MBEDTLS_SSL_TLS13_CTLS)
+    if( ssl->handshake->ctls == MBEDTLS_SSL_TLS13_CTLS_DO_NOT_USE )
+#endif /* MBEDTLS_SSL_TLS13_CTLS */
     {
         /* write legacy_compression_method ( 0 ) */
         *buf++ = 0x0;
@@ -4134,9 +4135,9 @@ static int ssl_certificate_request_write( mbedtls_ssl_context* ssl,
      * messages. For post-authentication handshake messages
      * this request context would be set to a non-zero value.
      */
-#if defined(MBEDTLS_CTLS)
-    if( ssl->handshake->ctls == MBEDTLS_CTLS_DO_NOT_USE )
-#endif /* MBEDTLS_CTLS */
+#if defined(MBEDTLS_SSL_TLS13_CTLS)
+    if( ssl->handshake->ctls == MBEDTLS_SSL_TLS13_CTLS_DO_NOT_USE )
+#endif /* MBEDTLS_SSL_TLS13_CTLS */
     {
         *p++ = 0x0;
     }
@@ -4205,9 +4206,9 @@ int mbedtls_ssl_handshake_server_step( mbedtls_ssl_context *ssl )
             ssl->in_epoch = 0;
 #endif /* MBEDTLS_SSL_PROTO_DTLS */
 
-#if defined(MBEDTLS_COMPATIBILITY_MODE)
+#if defined(MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE)
             ssl->handshake->ccs_sent = 0;
-#endif /* MBEDTLS_COMPATIBILITY_MODE */
+#endif /* MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE */
 
             break;
 
@@ -4314,12 +4315,12 @@ int mbedtls_ssl_handshake_server_step( mbedtls_ssl_context *ssl )
                 case MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE:
                     return ( MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE );
                     break;
-#if defined(MBEDTLS_COMPATIBILITY_MODE)
+#if defined(MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE)
                 case MBEDTLS_ERR_SSL_BAD_HS_CLIENT_HELLO_CCS:
                     mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_CLIENT_HELLO );
                     ret = 0;
                     break;
-#endif /* MBEDTLS_COMPATIBILITY_MODE */
+#endif /* MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE */
                 default:
                     /* Something went wrong and we jump back to initial state */
                     mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_HELLO_REQUEST );
@@ -4361,16 +4362,16 @@ int mbedtls_ssl_handshake_server_step( mbedtls_ssl_context *ssl )
             }
             ssl->handshake->hello_retry_requests_sent++;
 
-#if defined(MBEDTLS_COMPATIBILITY_MODE)
+#if defined(MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE)
             mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_SERVER_CCS_AFTER_HRR );
 #else
             mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_CLIENT_HELLO );
-#endif /* MBEDTLS_COMPATIBILITY_MODE */
+#endif /* MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE */
             break;
 
             /* ----- WRITE CHANGE CIPHER SPEC ----*/
 
-#if defined(MBEDTLS_COMPATIBILITY_MODE)
+#if defined(MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE)
         case MBEDTLS_SSL_SERVER_CCS_AFTER_HRR:
 
             ret = mbedtls_ssl_write_change_cipher_spec( ssl );
@@ -4378,7 +4379,7 @@ int mbedtls_ssl_handshake_server_step( mbedtls_ssl_context *ssl )
             ssl->handshake->ccs_sent++;
 
             break;
-#endif /* MBEDTLS_COMPATIBILITY_MODE */
+#endif /* MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE */
 
             /* ----- READ 2nd CLIENT HELLO ----*/
         case MBEDTLS_SSL_SECOND_CLIENT_HELLO:
@@ -4423,7 +4424,7 @@ int mbedtls_ssl_handshake_server_step( mbedtls_ssl_context *ssl )
                 return ( ret );
             }
 
-#if defined(MBEDTLS_COMPATIBILITY_MODE)
+#if defined(MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE)
             if( ssl->handshake->ccs_sent > 1 )
             {
                 mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_SERVER_CCS_AFTER_SERVER_HELLO );
@@ -4434,13 +4435,13 @@ int mbedtls_ssl_handshake_server_step( mbedtls_ssl_context *ssl )
             }
 #else
             mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_ENCRYPTED_EXTENSIONS );
-#endif /* MBEDTLS_COMPATIBILITY_MODE */
+#endif /* MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE */
 
             break;
 
             /* ----- WRITE CHANGE CIPHER SPEC ----*/
 
-#if defined(MBEDTLS_COMPATIBILITY_MODE)
+#if defined(MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE)
         case MBEDTLS_SSL_SERVER_CCS_AFTER_SERVER_HELLO:
 
             /* Only transmit the CCS if we have not done so
@@ -4450,12 +4451,12 @@ int mbedtls_ssl_handshake_server_step( mbedtls_ssl_context *ssl )
                 ret = mbedtls_ssl_write_change_cipher_spec( ssl );
 
             mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_ENCRYPTED_EXTENSIONS );
-#if defined(MBEDTLS_COMPATIBILITY_MODE)
+#if defined(MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE)
             ssl->handshake->ccs_sent++;
-#endif /* MBEDTLS_COMPATIBILITY_MODE */
+#endif /* MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE */
 
             break;
-#endif /* MBEDTLS_COMPATIBILITY_MODE */
+#endif /* MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE */
 
             /* ----- WRITE ENCRYPTED EXTENSIONS ----*/
 

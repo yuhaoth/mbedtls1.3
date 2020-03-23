@@ -843,12 +843,26 @@
 #endif /* MBEDTLS_SSL_HW_RECORD_ACCEL */
 
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && defined(MBEDTLS_ZERO_RTT) && ( !defined(MBEDTLS_KEY_EXCHANGE_PSK_ENABLED) || !defined(MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED))
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) &&           \
+    defined(MBEDTLS_ZERO_RTT)         &&                        \
+    ( !defined(MBEDTLS_KEY_EXCHANGE_PSK_ENABLED) ||             \
+      !defined(MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED) )
 #error "ZeroRTT requires MBEDTLS_ZERO_RTT and MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED to be defined."
 #endif
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && defined(MBEDTLS_COMPATIBILITY_MODE) && defined(MBEDTLS_CTLS)
+#if defined(MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE) && \
+    defined(MBEDTLS_SSL_TLS13_CTLS)
 #error "cTLS cannot be used in combination with the TLS 1.3 compatibility mode."
+#endif
+
+#if defined(MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE) && \
+    !defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+#error "MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE defined, but not all prerequesites."
+#endif
+
+#if defined(MBEDTLS_SSL_TLS13_CTLS) && \
+    !defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+#error "MBEDTLS_SSL_TLS13_CTLS defined, but not all prerequesites."
 #endif
 
 /*
@@ -942,12 +956,12 @@
 #error "Cookie functionality needs to be enabled for DTLS 1.3"
 #endif
 
-#if defined(MBEDTLS_CTLS) && !defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+#if defined(MBEDTLS_SSL_TLS13_CTLS) && !defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
 #error "cTLS can only be used in context with TLS and/or DTLS 1.3"
 #endif
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && defined(MBEDTLS_CTLS) && !defined(MBEDTLS_CTLS_RANDOM_MAX_LENGTH)
-#define MBEDTLS_CTLS_RANDOM_MAX_LENGTH 32
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && defined(MBEDTLS_SSL_TLS13_CTLS) && !defined(MBEDTLS_CTLS_RANDOM_MAX_LENGTH)
+#define MBEDTLS_SSL_TLS13_CTLS_RANDOM_MAX_LENGTH 32
 #endif
 
  /* Either SHA-256 or SHA-512 must be enabled.
