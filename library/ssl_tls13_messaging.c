@@ -2263,9 +2263,9 @@ static int ssl_parse_record_header( mbedtls_ssl_context* ssl )
         /* Check record type */
         if( ssl->in_msgtype != MBEDTLS_SSL_MSG_HANDSHAKE &&
             ssl->in_msgtype != MBEDTLS_SSL_MSG_ALERT &&
-#if defined(MBEDTLS_COMPATIBILITY_MODE)
+#if defined(MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE)
             ssl->in_msgtype != MBEDTLS_SSL_MSG_CHANGE_CIPHER_SPEC &&
-#endif /* MBEDTLS_COMPATIBILITY_MODE */
+#endif /* MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE */
             ssl->in_msgtype != MBEDTLS_SSL_MSG_ACK &&
             ssl->in_msgtype != MBEDTLS_SSL_MSG_APPLICATION_DATA )
         {
@@ -2454,7 +2454,7 @@ static int ssl_parse_record_header( mbedtls_ssl_context* ssl )
     }
     else
     {
-#if !defined(MBEDTLS_COMPATIBILITY_MODE)
+#if !defined(MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE)
         /* In compatibility mode we will receive
          * Change Cipher Spec messages, which are
          * ssl->in_msglen = 1 in length. */
@@ -2463,15 +2463,15 @@ static int ssl_parse_record_header( mbedtls_ssl_context* ssl )
             MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad message length" ) );
             return( MBEDTLS_ERR_SSL_INVALID_RECORD );
         }
-#endif /* !MBEDTLS_COMPATIBILITY_MODE */
+#endif /* !MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE */
 
         /*
          * TLS encrypted messages can have up to 256 bytes of padding
          */
         if(
-#if defined(MBEDTLS_COMPATIBILITY_MODE)
+#if defined(MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE)
             ssl->in_msgtype != MBEDTLS_SSL_MSG_CHANGE_CIPHER_SPEC &&
-#endif /* MBEDTLS_COMPATIBILITY_MODE */
+#endif /* MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE */
             ssl->minor_ver >= MBEDTLS_SSL_MINOR_VERSION_1 &&
             ssl->in_msglen > ssl->transform_in->minlen +
             MBEDTLS_SSL_MAX_CONTENT_LEN + 256 )
@@ -2530,10 +2530,10 @@ static int ssl_prepare_record_content( mbedtls_ssl_context *ssl )
 
 #endif /* MBEDTLS_SSL_PROTO_DTLS */
 
-#if defined(MBEDTLS_COMPATIBILITY_MODE)
+#if defined(MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE)
         if( ssl->in_msgtype == MBEDTLS_SSL_MSG_CHANGE_CIPHER_SPEC )
             return( 0 );
-#endif /* MBEDTLS_COMPATIBILITY_MODE */
+#endif /* MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE */
 
         if( ( ret = ssl_decrypt_buf( ssl ) ) != 0 )
         {
@@ -2852,7 +2852,7 @@ read_record_header:
         goto read_record_header;
     }
 
-#if defined(MBEDTLS_COMPATIBILITY_MODE)
+#if defined(MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE)
     /* We ignore incoming ChangeCipherSpec messages */
     if( ssl->in_msgtype == MBEDTLS_SSL_MSG_CHANGE_CIPHER_SPEC )
     {
@@ -2905,7 +2905,7 @@ read_record_header:
             return( MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE );
         }
     }
-#endif /* MBEDTLS_COMPATIBILITY_MODE */
+#endif /* MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE */
 
     MBEDTLS_SSL_DEBUG_MSG( 5, ( "<= read record" ) );
 

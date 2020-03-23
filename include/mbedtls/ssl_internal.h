@@ -341,9 +341,9 @@ struct mbedtls_ssl_handshake_params
 #if defined(MBEDTLS_SSL_SRV_C)
     int hello_retry_requests_sent; /*!<  Number of Hello Retry Request messages sent by the server.  */
 #endif /* MBEDTLS_SSL_SRV_C */
-#if defined(MBEDTLS_COMPATIBILITY_MODE)
+#if defined(MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE)
     int ccs_sent; /* Number of CCS messages sent */
-#endif /* MBEDTLS_COMPATIBILITY_MODE */
+#endif /* MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE */
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_2) && \
@@ -1155,9 +1155,9 @@ int ssl_write_encrypted_extension(mbedtls_ssl_context* ssl);
 int mbedtls_ssl_derive_traffic_keys(mbedtls_ssl_context* ssl, KeySet* traffic_keys);
 int incrementSequenceNumber(unsigned char* sequenceNumber, unsigned char* nonce, size_t ivlen);
 
-#if defined(MBEDTLS_COMPATIBILITY_MODE)
+#if defined(MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE)
 int mbedtls_ssl_write_change_cipher_spec(mbedtls_ssl_context* ssl);
-#endif /* MBEDTLS_COMPATIBILITY_MODE */
+#endif /* MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE */
 
 #if defined(MBEDTLS_KEY_EXCHANGE__SOME__PSK_ENABLED)
 int ssl_write_pre_shared_key_ext(mbedtls_ssl_context* ssl, unsigned char* buf, unsigned char* end, size_t* olen, int dummy_run);

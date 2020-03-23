@@ -814,14 +814,14 @@
 #error "ZeroRTT requires MBEDTLS_ZERO_RTT and MBEDTLS_KEY_EXCHANGE__SOME__PSK_ENABLED to be defined."
 #endif
 
-#if defined(MBEDTLS_COMPATIBILITY_MODE) && \
+#if defined(MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE) && \
     defined(MBEDTLS_CTLS)
 #error "cTLS cannot be used in combination with the TLS 1.3 compatibility mode."
 #endif
 
-#if defined(MBEDTLS_COMPATIBILITY_MODE) && \
+#if defined(MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE) && \
     !defined(MBEDTLS_SSL_PROTO_TLS1_3)
-#error "MBEDTLS_COMPATIBILITY_MODE defined, but not all prerequesites."
+#error "MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE defined, but not all prerequesites."
 #endif
 
 #if defined(MBEDTLS_CTLS) && \

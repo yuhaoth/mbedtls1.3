@@ -2058,7 +2058,7 @@ read_record_header:
     if( buf[0] != MBEDTLS_SSL_MSG_HANDSHAKE )
     {
 
-#if defined(MBEDTLS_COMPATIBILITY_MODE)
+#if defined(MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE)
 
         if( buf[0] == MBEDTLS_SSL_MSG_CHANGE_CIPHER_SPEC )
         {
@@ -2109,7 +2109,7 @@ read_record_header:
             }
         }
         else
-#endif /* MBEDTLS_COMPATIBILITY_MODE */
+#endif /* MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE */
         {
             MBEDTLS_SSL_DEBUG_MSG( 1, ( "Spurious message ( maybe alert message )" ) );
 
@@ -4209,9 +4209,9 @@ int mbedtls_ssl_handshake_server_step( mbedtls_ssl_context *ssl )
             ssl->in_epoch = 0;
 #endif /* MBEDTLS_SSL_PROTO_DTLS */
 
-#if defined(MBEDTLS_COMPATIBILITY_MODE)
+#if defined(MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE)
             ssl->handshake->ccs_sent = 0;
-#endif /* MBEDTLS_COMPATIBILITY_MODE */
+#endif /* MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE */
 
             break;
 
@@ -4318,12 +4318,12 @@ int mbedtls_ssl_handshake_server_step( mbedtls_ssl_context *ssl )
                 case MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE:
                     return ( MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE );
                     break;
-#if defined(MBEDTLS_COMPATIBILITY_MODE)
+#if defined(MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE)
                 case MBEDTLS_ERR_SSL_BAD_HS_CLIENT_HELLO_CCS:
                     mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_CLIENT_HELLO );
                     ret = 0;
                     break;
-#endif /* MBEDTLS_COMPATIBILITY_MODE */
+#endif /* MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE */
                 default:
                     /* Something went wrong and we jump back to initial state */
                     mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_HELLO_REQUEST );
@@ -4365,16 +4365,16 @@ int mbedtls_ssl_handshake_server_step( mbedtls_ssl_context *ssl )
             }
             ssl->handshake->hello_retry_requests_sent++;
 
-#if defined(MBEDTLS_COMPATIBILITY_MODE)
+#if defined(MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE)
             mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_SERVER_CCS_AFTER_HRR );
 #else
             mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_CLIENT_HELLO );
-#endif /* MBEDTLS_COMPATIBILITY_MODE */
+#endif /* MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE */
             break;
 
             /* ----- WRITE CHANGE CIPHER SPEC ----*/
 
-#if defined(MBEDTLS_COMPATIBILITY_MODE)
+#if defined(MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE)
         case MBEDTLS_SSL_SERVER_CCS_AFTER_HRR:
 
             ret = mbedtls_ssl_write_change_cipher_spec( ssl );
@@ -4382,7 +4382,7 @@ int mbedtls_ssl_handshake_server_step( mbedtls_ssl_context *ssl )
             ssl->handshake->ccs_sent++;
 
             break;
-#endif /* MBEDTLS_COMPATIBILITY_MODE */
+#endif /* MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE */
 
             /* ----- READ 2nd CLIENT HELLO ----*/
         case MBEDTLS_SSL_SECOND_CLIENT_HELLO:
@@ -4427,7 +4427,7 @@ int mbedtls_ssl_handshake_server_step( mbedtls_ssl_context *ssl )
                 return ( ret );
             }
 
-#if defined(MBEDTLS_COMPATIBILITY_MODE)
+#if defined(MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE)
             if( ssl->handshake->ccs_sent > 1 )
             {
                 mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_SERVER_CCS_AFTER_SERVER_HELLO );
@@ -4438,13 +4438,13 @@ int mbedtls_ssl_handshake_server_step( mbedtls_ssl_context *ssl )
             }
 #else
             mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_ENCRYPTED_EXTENSIONS );
-#endif /* MBEDTLS_COMPATIBILITY_MODE */
+#endif /* MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE */
 
             break;
 
             /* ----- WRITE CHANGE CIPHER SPEC ----*/
 
-#if defined(MBEDTLS_COMPATIBILITY_MODE)
+#if defined(MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE)
         case MBEDTLS_SSL_SERVER_CCS_AFTER_SERVER_HELLO:
 
             /* Only transmit the CCS if we have not done so
@@ -4454,12 +4454,12 @@ int mbedtls_ssl_handshake_server_step( mbedtls_ssl_context *ssl )
                 ret = mbedtls_ssl_write_change_cipher_spec( ssl );
 
             mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_ENCRYPTED_EXTENSIONS );
-#if defined(MBEDTLS_COMPATIBILITY_MODE)
+#if defined(MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE)
             ssl->handshake->ccs_sent++;
-#endif /* MBEDTLS_COMPATIBILITY_MODE */
+#endif /* MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE */
 
             break;
-#endif /* MBEDTLS_COMPATIBILITY_MODE */
+#endif /* MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE */
 
             /* ----- WRITE ENCRYPTED EXTENSIONS ----*/
 
