@@ -1662,7 +1662,7 @@ static int ssl_client_hello_write( mbedtls_ssl_context* ssl,
         return( MBEDTLS_ERR_SSL_BUFFER_TOO_SMALL );
     }
 
-    *buff++ = (unsigned char)ssl->session_negotiate->id_len; /* write session id length */
+    *buf++ = (unsigned char)ssl->session_negotiate->id_len; /* write session id length */
     memcpy( buf, ssl->session_negotiate->id, ssl->session_negotiate->id_len ); /* write session id */
 
     buf += ssl->session_negotiate->id_len;
@@ -3986,8 +3986,13 @@ int mbedtls_ssl_handshake_client_step( mbedtls_ssl_context *ssl )
 #if defined(MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE)
         case MBEDTLS_SSL_CLIENT_CCS_AFTER_CLIENT_HELLO:
 
-            ret = mbedtls_ssl_write_change_cipher_spec( ssl );
-            mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_EARLY_APP_DATA );
+            ret = ssl_write_change_cipher_spec_process( ssl );
+
+            if (ret != 0)
+            {
+                MBEDTLS_SSL_DEBUG_RET(1, "ssl_write_change_cipher_spec_process", ret);
+                return (ret);
+            }
 
             break;
 #endif /* MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE */
@@ -4065,8 +4070,13 @@ int mbedtls_ssl_handshake_client_step( mbedtls_ssl_context *ssl )
 #if defined(MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE)
         case MBEDTLS_SSL_CLIENT_CCS_BEFORE_2ND_CLIENT_HELLO:
 
-            ret = mbedtls_ssl_write_change_cipher_spec( ssl );
-            mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_SECOND_CLIENT_HELLO );
+            ret = ssl_write_change_cipher_spec_process( ssl );
+
+            if (ret != 0)
+            {
+                MBEDTLS_SSL_DEBUG_RET(1, "ssl_write_change_cipher_spec_process", ret);
+                return (ret);
+            }
 
             break;
 #endif /* MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE */
@@ -4074,6 +4084,7 @@ int mbedtls_ssl_handshake_client_step( mbedtls_ssl_context *ssl )
             /* ----- WRITE 2nd CLIENT HELLO ----*/
         case MBEDTLS_SSL_SECOND_CLIENT_HELLO:
             ret = ssl_client_hello_process( ssl );
+
             if( ret != 0 )
             {
                 MBEDTLS_SSL_DEBUG_RET( 1, "ssl_write_client_hello", ret );
@@ -4142,8 +4153,13 @@ int mbedtls_ssl_handshake_client_step( mbedtls_ssl_context *ssl )
 #if defined(MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE)
         case MBEDTLS_SSL_CLIENT_CCS_BEFORE_CERTIFICATE_REQUEST:
 
-            ret = mbedtls_ssl_write_change_cipher_spec( ssl );
-            mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_CERTIFICATE_REQUEST );
+            ret = ssl_write_change_cipher_spec_process( ssl );
+
+            if (ret != 0)
+            {
+                MBEDTLS_SSL_DEBUG_RET(1, "ssl_write_change_cipher_spec_process", ret);
+                return (ret);
+            }
 
             break;
 #endif /* MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE */
@@ -4255,10 +4271,14 @@ int mbedtls_ssl_handshake_client_step( mbedtls_ssl_context *ssl )
 #if defined(MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE)
         case MBEDTLS_SSL_CLIENT_CCS_BEFORE_FINISHED:
 
-            if( ssl->transform_out == NULL )
-                ret = mbedtls_ssl_write_change_cipher_spec( ssl );
+            ret = ssl_write_change_cipher_spec_process( ssl );
 
-            mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_CLIENT_FINISHED );
+            if (ret != 0)
+            {
+                MBEDTLS_SSL_DEBUG_RET(1, "ssl_write_change_cipher_spec_process", ret);
+                return (ret);
+            }
+
             break;
 #endif /* MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE */
 
@@ -4266,6 +4286,7 @@ int mbedtls_ssl_handshake_client_step( mbedtls_ssl_context *ssl )
 
         case MBEDTLS_SSL_CLIENT_FINISHED:
             ret = ssl_finished_out_process( ssl );
+
             if( ret != 0 )
             {
                 MBEDTLS_SSL_DEBUG_RET( 1, "ssl_finished_out_process", ret );
