@@ -2073,7 +2073,7 @@ read_record_header:
 
             MBEDTLS_SSL_DEBUG_MSG( 3, ( "CCS, message len.: %d", msg_len ) );
 
-            if( ( ret = mbedtls_ssl_fetch_input( ssl, mbedtls_ssl_hdr_len( ssl, MBEDTLS_SSL_DIRECTION_IN ) + msg_len ) ) != 0 )
+            if( ( ret = mbedtls_ssl_fetch_input( ssl, mbedtls_ssl_hdr_len( ssl, MBEDTLS_SSL_DIRECTION_IN, ssl->transform_negotiate) + msg_len ) ) != 0 )
             {
                 MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_fetch_input", ret );
                 return( MBEDTLS_ERR_SSL_BAD_HS_CHANGE_CIPHER_SPEC );
@@ -3416,7 +3416,7 @@ static int ssl_encrypted_extensions_postprocess( mbedtls_ssl_context* ssl )
  *
  * Servers send this message in response to a ClientHello message when
  * the server was able to find an acceptable set of algorithms and groups
- * that are mutually supported, but the client�s KeyShare did not contain
+ * that are mutually supported, but the client's KeyShare did not contain
  * an acceptable offer.
  *
  * We also send this message with DTLS 1.3 to perform a return-routability
@@ -4377,9 +4377,13 @@ int mbedtls_ssl_handshake_server_step( mbedtls_ssl_context *ssl )
 #if defined(MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE)
         case MBEDTLS_SSL_SERVER_CCS_AFTER_HRR:
 
-            ret = mbedtls_ssl_write_change_cipher_spec( ssl );
-            mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_SECOND_CLIENT_HELLO );
-            ssl->handshake->ccs_sent++;
+            ret = ssl_write_change_cipher_spec_process( ssl );
+
+            if (ret != 0)
+            {
+                MBEDTLS_SSL_DEBUG_RET(1, "ssl_write_change_cipher_spec_process", ret);
+                return (ret);
+            }
 
             break;
 #endif /* MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE */
@@ -4423,7 +4427,7 @@ int mbedtls_ssl_handshake_server_step( mbedtls_ssl_context *ssl )
 
             if( ret != 0 )
             {
-                MBEDTLS_SSL_DEBUG_RET( 1, "ssl_write_server_hello", ret );
+                MBEDTLS_SSL_DEBUG_RET( 1, "ssl_server_hello_process", ret );
                 return ( ret );
             }
 
@@ -4447,16 +4451,13 @@ int mbedtls_ssl_handshake_server_step( mbedtls_ssl_context *ssl )
 #if defined(MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE)
         case MBEDTLS_SSL_SERVER_CCS_AFTER_SERVER_HELLO:
 
-            /* Only transmit the CCS if we have not done so
-             * earlier already after the HRR.
-             */
-            if( ssl->handshake->hello_retry_requests_sent == 0 )
-                ret = mbedtls_ssl_write_change_cipher_spec( ssl );
+            ret = ssl_write_change_cipher_spec_process(ssl);
 
-            mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_ENCRYPTED_EXTENSIONS );
-#if defined(MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE)
-            ssl->handshake->ccs_sent++;
-#endif /* MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE */
+            if (ret != 0)
+            {
+                MBEDTLS_SSL_DEBUG_RET(1, "ssl_write_change_cipher_spec_process", ret);
+                return (ret);
+            }
 
             break;
 #endif /* MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE */
