@@ -1147,8 +1147,12 @@ int mbedtls_ssl_parse_certificate( mbedtls_ssl_context *ssl );
 int mbedtls_ssl_write_certificate( mbedtls_ssl_context *ssl );
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && defined(MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE)
+int ssl_write_change_cipher_spec_process( mbedtls_ssl_context* ssl );
+#else
 int mbedtls_ssl_parse_change_cipher_spec( mbedtls_ssl_context *ssl );
 int mbedtls_ssl_write_change_cipher_spec( mbedtls_ssl_context *ssl );
+#endif  /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL && MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE */
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
 int ssl_finished_in_process(mbedtls_ssl_context* ssl);
