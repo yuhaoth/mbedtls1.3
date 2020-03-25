@@ -466,6 +466,10 @@ const char * mbedtls_high_level_strerr( int error_code )
             return( "SSL - The peer notified us that the connection is going to be closed" );
         case -(MBEDTLS_ERR_SSL_BAD_HS_CLIENT_HELLO):
             return( "SSL - Processing of the ClientHello handshake message failed" );
+#if defined(MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE) && defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+        case -(MBEDTLS_ERR_SSL_BAD_HS_CLIENT_HELLO_CCS):
+            return( "SSL - Processing of the ClientHello handshake message failed; CCS received instead" );
+#endif /* MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE && MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
         case -(MBEDTLS_ERR_SSL_BAD_HS_SERVER_HELLO):
             return( "SSL - Processing of the ServerHello handshake message failed" );
         case -(MBEDTLS_ERR_SSL_BAD_HS_CERTIFICATE):
