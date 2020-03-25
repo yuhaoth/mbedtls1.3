@@ -893,10 +893,14 @@ int ssl_parse_signature_algorithms_ext( mbedtls_ssl_context *ssl,
         return( MBEDTLS_ERR_SSL_BAD_HS_CLIENT_HELLO );
     }
 
-    for ( md_cur = ssl->conf->signature_schemes; *md_cur != SIGNATURE_NONE; md_cur++ ) {
-        for ( p = buf + 2; p < end; p += 2 ) {
-            offered_signature_scheme = ( p[0] << 8 ) | p[1];
+    for( p = buf + 2; p < end; p += 2 )
+    {
+        offered_signature_scheme = ( p[0] << 8 ) | p[1];
 
+        MBEDTLS_SSL_DEBUG_MSG( 5, ( "received signature algorithm: 0x%x", offered_signature_scheme ) );
+
+        for( md_cur = ssl->conf->signature_schemes; *md_cur != SIGNATURE_NONE; md_cur++ )
+        {
             if( *md_cur == offered_signature_scheme )
             {
                 ssl->handshake->signature_scheme = offered_signature_scheme;
