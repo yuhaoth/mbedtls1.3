@@ -4379,10 +4379,10 @@ int mbedtls_ssl_handshake_server_step( mbedtls_ssl_context *ssl )
 
             ret = ssl_write_change_cipher_spec_process( ssl );
 
-            if (ret != 0)
+            if ( ret != 0 )
             {
-                MBEDTLS_SSL_DEBUG_RET(1, "ssl_write_change_cipher_spec_process", ret);
-                return (ret);
+                MBEDTLS_SSL_DEBUG_RET( 1, "ssl_write_change_cipher_spec_process", ret );
+                return ( ret );
             }
 
             break;
@@ -4453,10 +4453,10 @@ int mbedtls_ssl_handshake_server_step( mbedtls_ssl_context *ssl )
 
             ret = ssl_write_change_cipher_spec_process(ssl);
 
-            if (ret != 0)
+            if ( ret != 0 )
             {
-                MBEDTLS_SSL_DEBUG_RET(1, "ssl_write_change_cipher_spec_process", ret);
-                return (ret);
+                MBEDTLS_SSL_DEBUG_RET( 1, "ssl_write_change_cipher_spec_process", ret );
+                return ( ret );
             }
 
             break;
