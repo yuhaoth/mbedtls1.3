@@ -3242,7 +3242,7 @@ int mbedtls_ssl_conf_own_cert( mbedtls_ssl_config *conf,
  * separate negotiation of key establishment mode and symmetric encryption mode.
  *
  * In the lingo of (D)TLS 1.3, it is only the latter that is called
- * 'ciphersuite', and it's configuration continues to be done through
+ * 'ciphersuite', and its configuration continues to be done through
  * mbedtls_ssl_conf_ciphersuites().
  * To configure the supported key exchange modes in (D)TLS 1.3, in turn,
  * this function should be used.
@@ -3273,7 +3273,7 @@ int mbedtls_ssl_conf_own_cert( mbedtls_ssl_config *conf,
  *       mbedtls_ssl_conf_psk_cb() or mbedtls_ssl_conf_psk_opaque()
  *       to configure the PSKs to be used.
  *
- * \note If a ECDHE-based key exchange mode shall be supported, server-side
+ * \note If an ECDHE-based key exchange mode shall be supported, server-side
  *       applications must also provide a certificate via
  *       mbedtls_ssl_conf_own_cert().
  *
