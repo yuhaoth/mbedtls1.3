@@ -302,6 +302,8 @@ int ssl_parse_supported_groups_ext(
         if( curve_info != NULL )
         {
             *curves++ = curve_info;
+            MBEDTLS_SSL_DEBUG_MSG( 5, ( "supported curve: %s", curve_info->name ) );
+
             our_size--;
         }
 
@@ -1775,14 +1777,14 @@ static int ssl_read_end_of_early_data_preprocess( mbedtls_ssl_context* ssl )
     KeySet traffic_keys;
 
     ret = mbedtls_ssl_early_data_key_derivation( ssl, &traffic_keys );
-    if ( ret != 0 )
+    if( ret != 0 )
     {
         MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_early_data_key_derivation", ret );
-        return ( ret );
+        return( ret );
     }
 
     ret = mbedtls_set_traffic_key( ssl, &traffic_keys, ssl->transform_negotiate, 0 );
-    if ( ret != 0 )
+    if( ret != 0 )
     {
         MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_set_traffic_key", ret );
         return ( ret );
@@ -1875,17 +1877,17 @@ static int ssl_read_early_data_preprocess( mbedtls_ssl_context* ssl )
     KeySet traffic_keys;
 
     ret = mbedtls_ssl_early_data_key_derivation( ssl, &traffic_keys );
-    if ( ret != 0 )
+    if( ret != 0 )
     {
         MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_early_data_key_derivation", ret );
-        return ( ret );
+        return( ret );
     }
 
     ret = mbedtls_set_traffic_key( ssl, &traffic_keys, ssl->transform_negotiate, 0 );
-    if ( ret != 0 )
+    if( ret != 0 )
     {
         MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_set_traffic_key", ret );
-        return ( ret );
+        return( ret );
     }
 
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
@@ -3232,7 +3234,7 @@ static int ssl_encrypted_extensions_prepare( mbedtls_ssl_context* ssl )
     if( ret != 0 )
     {
         MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_key_derivation", ret );
-        return ( ret );
+        return( ret );
     }
 
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
@@ -3248,10 +3250,11 @@ static int ssl_encrypted_extensions_prepare( mbedtls_ssl_context* ssl )
     ssl->session_out = ssl->session_negotiate;
 
     ret = mbedtls_set_traffic_key( ssl, &traffic_keys, ssl->transform_negotiate, 0 );
+
     if( ret != 0 )
     {
         MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_set_traffic_key", ret );
-        return ( ret );
+        return( ret );
     }
 
     /*
@@ -4355,10 +4358,11 @@ int mbedtls_ssl_handshake_server_step( mbedtls_ssl_context *ssl )
             }
 
             ret = ssl_write_hello_retry_request( ssl );
+
             if( ret != 0 )
             {
                 MBEDTLS_SSL_DEBUG_RET( 1, "ssl_write_hello_retry_request", ret );
-                return ( ret );
+                return( ret );
             }
             ssl->handshake->hello_retry_requests_sent++;
 
@@ -4376,10 +4380,10 @@ int mbedtls_ssl_handshake_server_step( mbedtls_ssl_context *ssl )
 
             ret = ssl_write_change_cipher_spec_process( ssl );
 
-            if ( ret != 0 )
+            if( ret != 0 )
             {
                 MBEDTLS_SSL_DEBUG_RET( 1, "ssl_write_change_cipher_spec_process", ret );
-                return ( ret );
+                return( ret );
             }
 
             break;
@@ -4413,7 +4417,7 @@ int mbedtls_ssl_handshake_server_step( mbedtls_ssl_context *ssl )
                     ret = 0;
                     break;
                 default:
-                    return ( ret );
+                    return( ret );
             }
 
             break;
@@ -4425,7 +4429,7 @@ int mbedtls_ssl_handshake_server_step( mbedtls_ssl_context *ssl )
             if( ret != 0 )
             {
                 MBEDTLS_SSL_DEBUG_RET( 1, "ssl_server_hello_process", ret );
-                return ( ret );
+                return( ret );
             }
 
 #if defined(MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE)
@@ -4450,10 +4454,10 @@ int mbedtls_ssl_handshake_server_step( mbedtls_ssl_context *ssl )
 
             ret = ssl_write_change_cipher_spec_process(ssl);
 
-            if ( ret != 0 )
+            if( ret != 0 )
             {
                 MBEDTLS_SSL_DEBUG_RET( 1, "ssl_write_change_cipher_spec_process", ret );
-                return ( ret );
+                return( ret );
             }
 
             break;
@@ -4468,7 +4472,7 @@ int mbedtls_ssl_handshake_server_step( mbedtls_ssl_context *ssl )
             if( ret != 0 )
             {
                 MBEDTLS_SSL_DEBUG_RET( 1, "ssl_encrypted_extensions_process", ret );
-                return ( ret );
+                return( ret );
             }
 
             break;
@@ -4480,7 +4484,7 @@ int mbedtls_ssl_handshake_server_step( mbedtls_ssl_context *ssl )
             if( ret != 0 )
             {
                 MBEDTLS_SSL_DEBUG_RET( 1, "ssl_certificate_request_process", ret );
-                return ( ret );
+                return( ret );
             }
 
             break;
@@ -4489,10 +4493,11 @@ int mbedtls_ssl_handshake_server_step( mbedtls_ssl_context *ssl )
 
         case MBEDTLS_SSL_SERVER_CERTIFICATE:
             ret = ssl_write_certificate_process( ssl );
+
             if( ret != 0 )
             {
-                MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_write_certificate", ret );
-                return ( ret );
+                MBEDTLS_SSL_DEBUG_RET( 1, "ssl_write_certificate_process", ret );
+                return( ret );
             }
 
             break;
@@ -4501,10 +4506,11 @@ int mbedtls_ssl_handshake_server_step( mbedtls_ssl_context *ssl )
 
         case MBEDTLS_SSL_CERTIFICATE_VERIFY:
             ret = ssl_certificate_verify_process( ssl );
+
             if( ret != 0 )
             {
                 MBEDTLS_SSL_DEBUG_RET( 1, "ssl_certificate_verify_process", ret );
-                return ( ret );
+                return( ret );
             }
             break;
 
@@ -4512,10 +4518,11 @@ int mbedtls_ssl_handshake_server_step( mbedtls_ssl_context *ssl )
 
         case MBEDTLS_SSL_SERVER_FINISHED:
             ret = ssl_finished_out_process( ssl );
+
             if( ret != 0 )
             {
                 MBEDTLS_SSL_DEBUG_RET( 1, "ssl_finished_out_process", ret );
-                return ( ret );
+                return( ret );
             }
             break;
 
@@ -4523,10 +4530,11 @@ int mbedtls_ssl_handshake_server_step( mbedtls_ssl_context *ssl )
 
         case MBEDTLS_SSL_CLIENT_CERTIFICATE:
             ret = ssl_read_certificate_process( ssl );
+
             if( ret != 0 )
             {
                 MBEDTLS_SSL_DEBUG_RET( 1, "ssl_read_certificate_process", ret );
-                return ( ret );
+                return( ret );
             }
             break;
 
@@ -4534,10 +4542,11 @@ int mbedtls_ssl_handshake_server_step( mbedtls_ssl_context *ssl )
 
         case MBEDTLS_SSL_CLIENT_CERTIFICATE_VERIFY:
             ret=ssl_read_certificate_verify_process( ssl );
+
             if( ret != 0 )
             {
                 MBEDTLS_SSL_DEBUG_RET( 1, "ssl_read_certificate_verify_process", ret );
-                return ( ret );
+                return( ret );
             }
 
             break;
@@ -4562,48 +4571,54 @@ int mbedtls_ssl_handshake_server_step( mbedtls_ssl_context *ssl )
             if( ssl->handshake->early_data == MBEDTLS_SSL_EARLY_DATA_ON )
             {
                 ret = mbedtls_ssl_key_derivation( ssl, &traffic_keys );
+
                 if( ret != 0 )
                 {
                     MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_key_derivation", ret );
-                    return ( ret );
+                    return( ret );
                 }
 
                 ret = mbedtls_set_traffic_key( ssl, &traffic_keys, ssl->transform_negotiate,0 );
+
                 if( ret != 0 )
                 {
                     MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_set_traffic_key", ret );
-                    return ( ret );
+                    return( ret );
                 }
             }
 #endif /* MBEDTLS_ZERO_RTT */
 
             ret = mbedtls_ssl_generate_application_traffic_keys( ssl, &traffic_keys );
+
             if( ret != 0 )
             {
                 MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_generate_application_traffic_keys", ret );
-                return ( ret );
+                return( ret );
             }
 
             ret = ssl_finished_in_process( ssl );
+
             if( ret != 0 )
             {
                 MBEDTLS_SSL_DEBUG_RET( 1, "ssl_finished_in_process", ret );
-                return ( ret );
+                return( ret );
             }
 
             /* Compute resumption_master_secret */
             ret = mbedtls_ssl_generate_resumption_master_secret( ssl );
+
             if( ret != 0 )
             {
                 MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_generate_resumption_master_secret ", ret );
-                return ( ret );
+                return( ret );
             }
 
-            ret = mbedtls_set_traffic_key( ssl, &traffic_keys, ssl->transform_negotiate,0 );
+            ret = mbedtls_set_traffic_key( ssl, &traffic_keys, ssl->transform_negotiate, 0 );
+
             if( ret != 0 )
             {
                 MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_set_traffic_key", ret );
-                return ( ret );
+                return( ret );
             }
 
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
@@ -4629,7 +4644,7 @@ int mbedtls_ssl_handshake_server_step( mbedtls_ssl_context *ssl )
             if( ret != 0 )
             {
                 MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_write_ack", ret );
-                return ( ret );
+                return( ret );
             }
             mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_HANDSHAKE_WRAPUP );
             break;
@@ -4642,10 +4657,11 @@ int mbedtls_ssl_handshake_server_step( mbedtls_ssl_context *ssl )
 
 #if defined(MBEDTLS_SSL_NEW_SESSION_TICKET)
             ret = ssl_write_new_session_ticket( ssl );
+
             if( ret != 0 )
             {
                 MBEDTLS_SSL_DEBUG_RET( 1, "ssl_write_new_session_ticket ", ret );
-                return ( ret );
+                return( ret );
             }
 #endif /* MBEDTLS_SSL_NEW_SESSION_TICKET */
             break;
