@@ -473,8 +473,8 @@ void mbedtls_strerror( int ret, char *buf, size_t buflen )
         if( use_ret == -(MBEDTLS_ERR_SSL_BAD_HS_CLIENT_HELLO) )
             mbedtls_snprintf( buf, buflen, "SSL - Processing of the ClientHello handshake message failed" );
 #if defined(MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE) && defined(MBEDTLS_SSL_PROTO_TLS1_3)
-        if (use_ret == -(MBEDTLS_ERR_SSL_BAD_HS_CLIENT_HELLO_CCS))
-            mbedtls_snprintf(buf, buflen, "SSL - Processing of the ClientHello handshake message failed; CCS received instead");
+        if( use_ret == -(MBEDTLS_ERR_SSL_BAD_HS_CLIENT_HELLO_CCS) )
+            mbedtls_snprintf( buf, buflen, "SSL - Processing of the ClientHello handshake message failed; CCS received instead" );
 #endif /* MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE && MBEDTLS_SSL_PROTO_TLS1_3 */        
         if( use_ret == -(MBEDTLS_ERR_SSL_BAD_HS_SERVER_HELLO) )
             mbedtls_snprintf( buf, buflen, "SSL - Processing of the ServerHello handshake message failed" );
