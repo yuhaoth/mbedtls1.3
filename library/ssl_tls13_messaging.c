@@ -1333,10 +1333,10 @@ int mbedtls_ssl_write_record( mbedtls_ssl_context *ssl )
                 &&
                 ( ssl->handshake->extensions_present & PRE_SHARED_KEY_EXTENSION )
                 &&
-                ( ssl->conf->key_exchange_modes == KEY_EXCHANGE_MODE_PSK_ALL ||
-                  ssl->conf->key_exchange_modes == KEY_EXCHANGE_MODE_ALL ||
-                  ssl->conf->key_exchange_modes == KEY_EXCHANGE_MODE_PSK_KE ||
-                  ssl->conf->key_exchange_modes == KEY_EXCHANGE_MODE_PSK_DHE_KE ) ) {
+                ( ssl->conf->key_exchange_modes == MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_ALL ||
+                  ssl->conf->key_exchange_modes == MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_ALL ||
+                  ssl->conf->key_exchange_modes == MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_KE ||
+                  ssl->conf->key_exchange_modes == MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_DHE_KE ) ) {
 
                 ssl_write_pre_shared_key_ext( ssl, ssl->handshake->ptr_to_psk_ext, &ssl->out_msg[len], &dummy_length, 1 );
             }

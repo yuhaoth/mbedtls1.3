@@ -110,7 +110,7 @@ int main( void )
 #define DFL_KEY_FILE2           ""
 #define DFL_PSK                 ""
 #define DFL_PSK_IDENTITY        ""
-#define DFL_KEY_EXCHANGE_MODES KEY_EXCHANGE_MODE_ALL 
+#define DFL_KEY_EXCHANGE_MODES MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_ALL 
 #define DFL_ECJPAKE_PW          NULL
 #define DFL_PSK_LIST            NULL
 #define DFL_FORCE_CIPHER        0
@@ -1095,15 +1095,15 @@ int main( int argc, char *argv[] )
 			opt.psk_identity = q;
 		else if (strcmp(p, "key_exchange_modes") == 0) {
 			if (strcmp(q, "psk") == 0)
-				opt.key_exchange_modes = KEY_EXCHANGE_MODE_PSK_KE;
+				opt.key_exchange_modes = MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_KE;
 			else if (strcmp(q, "psk_dhe") == 0)
-				opt.key_exchange_modes = KEY_EXCHANGE_MODE_PSK_DHE_KE;
+				opt.key_exchange_modes = MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_DHE_KE;
 			else if (strcmp(q, "ecdhe_ecdsa") == 0)
-				opt.key_exchange_modes = KEY_EXCHANGE_MODE_ECDHE_ECDSA;
+				opt.key_exchange_modes = MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_ECDHE_ECDSA;
 			else if (strcmp(q, "psk_all") == 0)
-				opt.key_exchange_modes = KEY_EXCHANGE_MODE_PSK_ALL;
+				opt.key_exchange_modes = MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_ALL;
 			else if (strcmp(q, "all") == 0)
-				opt.key_exchange_modes = KEY_EXCHANGE_MODE_ALL;
+				opt.key_exchange_modes = MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_ALL;
 			else goto usage;
 		}
 #if defined(MBEDTLS_ECP_C)
@@ -1580,7 +1580,7 @@ int main( int argc, char *argv[] )
 	 * 1.1. Load the trusted CA
 	 */
 
-	if (opt.key_exchange_modes == KEY_EXCHANGE_MODE_ECDHE_ECDSA || opt.key_exchange_modes == KEY_EXCHANGE_MODE_ALL)
+	if (opt.key_exchange_modes == MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_ECDHE_ECDSA || opt.key_exchange_modes == MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_ALL)
 	{
 
 		mbedtls_printf("  . Loading the CA root certificate ...\n");
