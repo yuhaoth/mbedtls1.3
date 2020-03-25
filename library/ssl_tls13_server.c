@@ -1335,9 +1335,9 @@ static int ssl_parse_key_exchange_modes_ext( mbedtls_ssl_context *ssl,
     /* We check for the allowed combinations and set the key_exchange_modes variable accordingly */
     if( buf[0] == 2 )
     {
-        if( ( buf[1] == KEY_EXCHANGE_MODE_PSK_KE || buf[1] == KEY_EXCHANGE_MODE_PSK_DHE_KE ) &&
-            ( buf[2] == KEY_EXCHANGE_MODE_PSK_KE || buf[2] == KEY_EXCHANGE_MODE_PSK_DHE_KE ) ) {
-            ssl->session_negotiate->key_exchange_modes = KEY_EXCHANGE_MODE_PSK_ALL;
+        if( ( buf[1] == MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_KE || buf[1] == MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_DHE_KE ) &&
+            ( buf[2] == MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_KE || buf[2] == MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_DHE_KE ) ) {
+            ssl->session_negotiate->key_exchange_modes = MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_ALL;
         }
         else ret = MBEDTLS_ERR_SSL_BAD_HS_CLIENT_HELLO;
     }
@@ -1346,10 +1346,10 @@ static int ssl_parse_key_exchange_modes_ext( mbedtls_ssl_context *ssl,
         switch ( buf[1] )
         {
             case 0:
-                ssl->session_negotiate->key_exchange_modes = KEY_EXCHANGE_MODE_PSK_KE;
+                ssl->session_negotiate->key_exchange_modes = MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_KE;
                 break;
             case 1:
-                ssl->session_negotiate->key_exchange_modes = KEY_EXCHANGE_MODE_PSK_DHE_KE;
+                ssl->session_negotiate->key_exchange_modes = MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_DHE_KE;
                 break;
             default:
                 ret = MBEDTLS_ERR_SSL_BAD_HS_CLIENT_HELLO;
@@ -2844,12 +2844,12 @@ static int ssl_client_hello_parse( mbedtls_ssl_context* ssl,
             ( ssl->handshake->extensions_present & PRE_SHARED_KEY_EXTENSION ) &&
             ( ssl->handshake->extensions_present & PSK_KEY_EXCHANGE_MODES_EXTENSION ) ) {
             /* Test whether we are allowed to use this mode ( server-side check ) */
-            if( ( ssl->conf->key_exchange_modes == KEY_EXCHANGE_MODE_PSK_KE ) ||
-                ( ssl->conf->key_exchange_modes == KEY_EXCHANGE_MODE_PSK_ALL ) ||
-                ( ssl->conf->key_exchange_modes == KEY_EXCHANGE_MODE_ALL ) ) {
+            if( ( ssl->conf->key_exchange_modes == MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_KE ) ||
+                ( ssl->conf->key_exchange_modes == MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_ALL ) ||
+                ( ssl->conf->key_exchange_modes == MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_ALL ) ) {
                 /* Test whether we are allowed to use this mode ( client-side check ) */
-                if( ( ssl->session_negotiate->key_exchange_modes == KEY_EXCHANGE_MODE_PSK_KE ) ||
-                    ( ssl->session_negotiate->key_exchange_modes == KEY_EXCHANGE_MODE_PSK_ALL ) ) {
+                if( ( ssl->session_negotiate->key_exchange_modes == MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_KE ) ||
+                    ( ssl->session_negotiate->key_exchange_modes == MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_ALL ) ) {
 
                     if( ( ret = ssl_parse_client_psk_identity_ext( ssl, ext_psk_ptr, ext_len_psk_ext ) ) != 0 )
                     {
@@ -2869,10 +2869,10 @@ static int ssl_client_hello_parse( mbedtls_ssl_context* ssl,
             ( ssl->handshake->extensions_present & KEY_SHARE_EXTENSION ) &&
             ( ssl->handshake->extensions_present & PSK_KEY_EXCHANGE_MODES_EXTENSION ) ) {
             /* Test whether we are allowed to use this mode ( server-side check ) */
-            if( ssl->conf->key_exchange_modes == KEY_EXCHANGE_MODE_PSK_DHE_KE || ssl->conf->key_exchange_modes == KEY_EXCHANGE_MODE_PSK_ALL || ssl->conf->key_exchange_modes == KEY_EXCHANGE_MODE_ALL )
+            if( ssl->conf->key_exchange_modes == MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_DHE_KE || ssl->conf->key_exchange_modes == MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_ALL || ssl->conf->key_exchange_modes == MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_ALL )
             {
                 /* Test whether we are allowed to use this mode ( client-side check ) */
-                if( ssl->session_negotiate->key_exchange_modes == KEY_EXCHANGE_MODE_PSK_DHE_KE || ssl->session_negotiate->key_exchange_modes == KEY_EXCHANGE_MODE_PSK_ALL )
+                if( ssl->session_negotiate->key_exchange_modes == MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_DHE_KE || ssl->session_negotiate->key_exchange_modes == MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_ALL )
                 {
 
                     if( ( ret = ssl_parse_client_psk_identity_ext( ssl, ext_psk_ptr, ext_len_psk_ext ) ) != 0 )
@@ -2906,10 +2906,10 @@ static int ssl_client_hello_parse( mbedtls_ssl_context* ssl,
     if( ( ssl->handshake->extensions_present & PRE_SHARED_KEY_EXTENSION ) && ( ssl->handshake->extensions_present & PSK_KEY_EXCHANGE_MODES_EXTENSION ) )
     {
         /* Test whether we are allowed to use this mode ( server-side check ) */
-        if( ssl->conf->key_exchange_modes == KEY_EXCHANGE_MODE_PSK_KE || ssl->conf->key_exchange_modes == KEY_EXCHANGE_MODE_PSK_ALL || ssl->conf->key_exchange_modes == KEY_EXCHANGE_MODE_ALL )
+        if( ssl->conf->key_exchange_modes == MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_KE || ssl->conf->key_exchange_modes == MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_ALL || ssl->conf->key_exchange_modes == MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_ALL )
         {
             /* Test whether we are allowed to use this mode ( client-side check ) */
-            if( ssl->session_negotiate->key_exchange_modes == KEY_EXCHANGE_MODE_PSK_KE || ssl->session_negotiate->key_exchange_modes == KEY_EXCHANGE_MODE_PSK_ALL )
+            if( ssl->session_negotiate->key_exchange_modes == MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_KE || ssl->session_negotiate->key_exchange_modes == MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_ALL )
             {
 
                 if( ( ret = ssl_parse_client_psk_identity_ext( ssl, ext_psk_ptr, ext_len_psk_ext ) ) != 0 )
@@ -2932,10 +2932,10 @@ static int ssl_client_hello_parse( mbedtls_ssl_context* ssl,
     if( ( ssl->handshake->extensions_present & PRE_SHARED_KEY_EXTENSION ) && ( ssl->handshake->extensions_present & KEY_SHARE_EXTENSION ) && ( ssl->handshake->extensions_present & PSK_KEY_EXCHANGE_MODES_EXTENSION ) )
     {
         /* Test whether we are allowed to use this mode ( server-side check ) */
-        if( ssl->conf->key_exchange_modes == KEY_EXCHANGE_MODE_PSK_DHE_KE || ssl->conf->key_exchange_modes == KEY_EXCHANGE_MODE_PSK_ALL || ssl->conf->key_exchange_modes == KEY_EXCHANGE_MODE_ALL )
+        if( ssl->conf->key_exchange_modes == MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_DHE_KE || ssl->conf->key_exchange_modes == MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_ALL || ssl->conf->key_exchange_modes == MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_ALL )
         {
             /* Test whether we are allowed to use this mode ( client-side check ) */
-            if( ssl->session_negotiate->key_exchange_modes == KEY_EXCHANGE_MODE_PSK_DHE_KE || ssl->session_negotiate->key_exchange_modes == KEY_EXCHANGE_MODE_PSK_ALL )
+            if( ssl->session_negotiate->key_exchange_modes == MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_DHE_KE || ssl->session_negotiate->key_exchange_modes == MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_ALL )
             {
 
                 if( ( ret = ssl_parse_client_psk_identity_ext( ssl, ext_psk_ptr, ext_len_psk_ext ) ) != 0 )
@@ -2959,7 +2959,7 @@ static int ssl_client_hello_parse( mbedtls_ssl_context* ssl,
     if( ( ssl->handshake->extensions_present & SUPPORTED_GROUPS_EXTENSION ) && ( ssl->handshake->extensions_present & SIGNATURE_ALGORITHM_EXTENSION ) && ( ssl->handshake->extensions_present & KEY_SHARE_EXTENSION ) )
     {
         /* Test whether we are allowed to use this mode ( server-side check ) */
-        if( ssl->conf->key_exchange_modes == KEY_EXCHANGE_MODE_ECDHE_ECDSA || ssl->conf->key_exchange_modes == KEY_EXCHANGE_MODE_ALL )
+        if( ssl->conf->key_exchange_modes == MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_ECDHE_ECDSA || ssl->conf->key_exchange_modes == MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_ALL )
         {
             MBEDTLS_SSL_DEBUG_MSG( 3, ( "Using a ECDSA-ECDHE key exchange" ) );
             ssl->session_negotiate->key_exchange = MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA;
