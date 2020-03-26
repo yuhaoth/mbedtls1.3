@@ -302,6 +302,8 @@ int ssl_parse_supported_groups_ext(
         if( curve_info != NULL )
         {
             *curves++ = curve_info;
+            MBEDTLS_SSL_DEBUG_MSG( 5, ( "supported curve: %s", curve_info->name ) );
+
             our_size--;
         }
 
