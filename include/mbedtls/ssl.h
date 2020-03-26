@@ -3534,7 +3534,7 @@ void mbedtls_ssl_conf_key_share_curves(mbedtls_ssl_config* conf,
     const mbedtls_ecp_group_id* curve_list);
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3 && MBEDTLS_SSL_CLI_C && MBEDTLS_ECP_C */
 
-#if defined(MBEDTLS_KEY_EXCHANGE__WITH_CERT__ENABLED)
+#if defined(MBEDTLS_KEY_EXCHANGE__WITH_CERT__ENABLED) && !defined(MBEDTLS_SSL_PROTO_TLS1_3)
 /**
  * \brief          Set the allowed hashes for signatures during the handshake.
  *                 (Default: all available hashes except MD5.)
@@ -3555,7 +3555,7 @@ void mbedtls_ssl_conf_key_share_curves(mbedtls_ssl_config* conf,
  */
 void mbedtls_ssl_conf_sig_hashes( mbedtls_ssl_config *conf,
                                   const int *hashes );
-#endif /* MBEDTLS_KEY_EXCHANGE__WITH_CERT__ENABLED */
+#endif /* MBEDTLS_KEY_EXCHANGE__WITH_CERT__ENABLED && !MBEDTLS_SSL_PROTO_TLS1_3 */
 
 #if defined(MBEDTLS_X509_CRT_PARSE_C)
 /**

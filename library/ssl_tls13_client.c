@@ -2720,7 +2720,7 @@ static int ssl_encrypted_extensions_parse( mbedtls_ssl_context* ssl,
 
 static int ssl_encrypted_extensions_postprocess( mbedtls_ssl_context* ssl ) {
 
-#if	defined(MBEDTLS_SSL_PROTO_DTLS)
+#if defined(MBEDTLS_SSL_PROTO_DTLS)
     if( ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_DATAGRAM )
         mbedtls_ack_add_record( ssl, MBEDTLS_SSL_HS_ENCRYPTED_EXTENSION, MBEDTLS_SSL_ACK_RECORDS_RECEIVED );
 #endif /* MBEDTLS_SSL_PROTO_DTLS */
