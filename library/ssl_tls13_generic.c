@@ -568,7 +568,7 @@ int ssl_write_change_cipher_spec_process( mbedtls_ssl_context* ssl )
     if( ret == SSL_WRITE_CCS_NEEDED )
     {
         /* Make sure we can write a new message. */
-        MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_flush_output(ssl) );
+        MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_flush_output( ssl ) );
 
         /* Write CCS message */
         MBEDTLS_SSL_PROC_CHK( ssl_write_change_cipher_spec_write( ssl, ssl->out_msg,
