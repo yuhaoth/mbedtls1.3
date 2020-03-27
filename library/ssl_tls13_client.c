@@ -3994,7 +3994,7 @@ int mbedtls_ssl_handshake_client_step( mbedtls_ssl_context *ssl )
             if (ret != 0)
             {
                 MBEDTLS_SSL_DEBUG_RET(1, "ssl_write_change_cipher_spec_process", ret);
-                return (ret);
+                return( ret );
             }
 
             break;
