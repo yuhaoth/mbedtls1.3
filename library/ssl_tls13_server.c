@@ -2073,7 +2073,9 @@ read_record_header:
 
             MBEDTLS_SSL_DEBUG_MSG( 3, ( "CCS, message len.: %d", msg_len ) );
 
-            if( ( ret = mbedtls_ssl_fetch_input( ssl, mbedtls_ssl_hdr_len( ssl, MBEDTLS_SSL_DIRECTION_IN, ssl->transform_negotiate) + msg_len ) ) != 0 )
+            if( ( ret = mbedtls_ssl_fetch_input( ssl, mbedtls_ssl_hdr_len( ssl,
+                          MBEDTLS_SSL_DIRECTION_IN,
+                          ssl->transform_negotiate ) + msg_len ) ) != 0 )
             {
                 MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_fetch_input", ret );
                 return( MBEDTLS_ERR_SSL_BAD_HS_CHANGE_CIPHER_SPEC );
