@@ -635,7 +635,7 @@ static int ssl_write_change_cipher_spec_write( mbedtls_ssl_context* ssl,
     if( buflen < 1 )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "buffer too small" ) );
-        return ( MBEDTLS_ERR_SSL_ALLOC_FAILED );
+        return( MBEDTLS_ERR_SSL_ALLOC_FAILED );
     }
 
     buf[0] = 1;
