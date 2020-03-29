@@ -677,8 +677,8 @@ static int ssl_write_change_cipher_spec_postprocess( mbedtls_ssl_context* ssl )
             case MBEDTLS_SSL_CLIENT_CCS_BEFORE_2ND_CLIENT_HELLO:    
                 mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_SECOND_CLIENT_HELLO );
                 break;
-            case MBEDTLS_SSL_CLIENT_CCS_BEFORE_CERTIFICATE_REQUEST:
-                mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_CERTIFICATE_REQUEST );
+            case MBEDTLS_SSL_CLIENT_CCS_AFTER_SERVER_FINISHED:
+                mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_CLIENT_CERTIFICATE );
                 break;
             default: 
                 MBEDTLS_SSL_DEBUG_MSG( 1, ( "should never happen" ) );
