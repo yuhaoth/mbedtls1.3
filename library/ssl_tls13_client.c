@@ -2730,11 +2730,7 @@ static int ssl_encrypted_extensions_postprocess( mbedtls_ssl_context* ssl ) {
     else
 #endif /* MBEDTLS_ZERO_RTT */
     {
-#if defined(MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE)
-        mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_CLIENT_CCS_BEFORE_CERTIFICATE_REQUEST );
-#else
         mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_CERTIFICATE_REQUEST );
-#endif /* MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE */
     }
 
     return( 0 );
@@ -4150,22 +4146,6 @@ int mbedtls_ssl_handshake_client_step( mbedtls_ssl_context *ssl )
 
             break;
 
-            /* ----- WRITE CHANGE CIPHER SPEC ----*/
-
-#if defined(MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE)
-        case MBEDTLS_SSL_CLIENT_CCS_BEFORE_CERTIFICATE_REQUEST:
-
-            ret = ssl_write_change_cipher_spec_process( ssl );
-
-            if( ret != 0 )
-            {
-                MBEDTLS_SSL_DEBUG_RET( 1, "ssl_write_change_cipher_spec_process", ret );
-                return( ret );
-            }
-
-            break;
-#endif /* MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE */
-
             /* ----- READ CERTIFICATE REQUEST ----*/
 
         case MBEDTLS_SSL_CERTIFICATE_REQUEST:
@@ -4228,7 +4208,12 @@ int mbedtls_ssl_handshake_client_step( mbedtls_ssl_context *ssl )
             else
 #endif /* MBEDTLS_ZERO_RTT */
             {
+#if defined(MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE)
+                mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_CLIENT_CCS_AFTER_SERVER_FINISHED );
+#else
                 mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_CLIENT_CERTIFICATE );
+#endif /* MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE */
+
             }
             break;
 
@@ -4248,6 +4233,23 @@ int mbedtls_ssl_handshake_client_step( mbedtls_ssl_context *ssl )
 
             break;
 #endif /* MBEDTLS_ZERO_RTT */
+
+            /* ----- WRITE CHANGE CIPHER SPEC ----*/
+
+#if defined(MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE)
+        case MBEDTLS_SSL_CLIENT_CCS_AFTER_SERVER_FINISHED:
+
+            ret = ssl_write_change_cipher_spec_process( ssl );
+
+            if( ret != 0 )
+            {
+                MBEDTLS_SSL_DEBUG_RET( 1, "ssl_write_change_cipher_spec_process", ret );
+                return( ret );
+            }
+
+            break;
+#endif /* MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE */
+
 
             /* ----- WRITE CERTIFICATE ----*/
 
