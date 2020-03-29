@@ -4277,22 +4277,6 @@ int mbedtls_ssl_handshake_client_step( mbedtls_ssl_context *ssl )
             }
             break;
 
-            /* ----- WRITE CHANGE CIPHER SPEC ----*/
-
-#if defined(MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE)
-        case MBEDTLS_SSL_CLIENT_CCS_BEFORE_FINISHED:
-
-            ret = ssl_write_change_cipher_spec_process( ssl );
-
-            if( ret != 0 )
-            {
-                MBEDTLS_SSL_DEBUG_RET( 1, "ssl_write_change_cipher_spec_process", ret );
-                return( ret );
-            }
-
-            break;
-#endif /* MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE */
-
             /* ----- WRITE CLIENT FINISHED ----*/
 
         case MBEDTLS_SSL_CLIENT_FINISHED:
