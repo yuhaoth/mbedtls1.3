@@ -680,9 +680,6 @@ static int ssl_write_change_cipher_spec_postprocess( mbedtls_ssl_context* ssl )
             case MBEDTLS_SSL_CLIENT_CCS_BEFORE_CERTIFICATE_REQUEST:
                 mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_CERTIFICATE_REQUEST );
                 break;
-            case MBEDTLS_SSL_CLIENT_CCS_BEFORE_FINISHED:
-                mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_CLIENT_FINISHED );
-                break;
             default:
                 MBEDTLS_SSL_DEBUG_MSG( 1, ( "should never happen" ) );
                 return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
@@ -1882,11 +1879,7 @@ static int ssl_certificate_verify_postprocess( mbedtls_ssl_context* ssl )
             mbedtls_ack_add_record( ssl, MBEDTLS_SSL_HS_CERTIFICATE_VERIFY, MBEDTLS_SSL_ACK_RECORDS_SENT );
 #endif /* MBEDTLS_SSL_PROTO_DTLS */
 
-#if defined(MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE)
-        mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_CLIENT_CCS_BEFORE_FINISHED );
-#else
         mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_CLIENT_FINISHED );
-#endif /* MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE */
     }
     else
     {
