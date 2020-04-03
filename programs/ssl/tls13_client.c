@@ -1805,7 +1805,7 @@ send_request:
                 }
             }
 
-            if (ret == 0)
+            if( ret == 0 )
             {
                 mbedtls_printf( " no data received.\n" );
                 ret = -1; 
