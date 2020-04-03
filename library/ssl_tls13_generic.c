@@ -894,7 +894,7 @@ int ssl_parse_signature_algorithms_ext( mbedtls_ssl_context *ssl,
     {
         offered_signature_scheme = ( p[0] << 8 ) | p[1];
 
-        MBEDTLS_SSL_DEBUG_MSG( 5, ( "received signature algorithm: 0x%x", offered_signature_scheme ) );
+        MBEDTLS_SSL_DEBUG_MSG( 4, ( "received signature algorithm: 0x%x", offered_signature_scheme ) );
 
         for( md_cur = ssl->conf->signature_schemes; *md_cur != SIGNATURE_NONE; md_cur++ )
         {
