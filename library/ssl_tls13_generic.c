@@ -2620,7 +2620,11 @@ static int ssl_read_certificate_parse( mbedtls_ssl_context* ssl,
             if( authmode == MBEDTLS_SSL_VERIFY_OPTIONAL )
                 return( 0 );
             else
+            {
+                MBEDTLS_SSL_DEBUG_MSG( 1, ( "client certificate required" ) );
+                SSL_PEND_FATAL_ALERT(MBEDTLS_SSL_ALERT_MSG_CERT_REQUIRED);
                 return( MBEDTLS_ERR_SSL_NO_CLIENT_CERTIFICATE );
+            }
         }
     }
 #endif /* MBEDTLS_SSL_SRV_C */
