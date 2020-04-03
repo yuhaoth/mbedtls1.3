@@ -1772,12 +1772,17 @@ send_request:
                 ret == MBEDTLS_ERR_SSL_WANT_WRITE )
                 continue;
 
-            if( ret <= 0 )
+            if( ret < 0 )
             {
                 switch( ret )
                 {
                     case MBEDTLS_ERR_SSL_PEER_CLOSE_NOTIFY:
                         mbedtls_printf( " connection was closed gracefully\n" );
+                        ret = 0;
+                        goto close_notify;
+
+                    case MBEDTLS_ERR_SSL_CONN_EOF: 
+                        mbedtls_printf( " connnection eof \n" );
                         ret = 0;
                         goto close_notify;
 
@@ -1790,7 +1795,7 @@ send_request:
 						/* We were waiting for application data but got a NewSessionTicket instead
 						* That's perfectly fine.
 						*/
-//						mbedtls_printf(" Received a ticket. \n");
+						mbedtls_printf( " received a ticket.\n" );
 						continue;
 
                     default:
@@ -1799,10 +1804,18 @@ send_request:
                 }
             }
 
-            len = ret;
-            buf[len] = '\0';
-            mbedtls_printf( " %d bytes read\n\n%s", len, (char *) buf );
-
+            if( ret == 0 )
+            {
+                mbedtls_printf( " no data received.\n" );
+                ret = -1; 
+                goto exit;
+            }
+            else
+            {
+                len = ret;
+                buf[len] = '\0';
+                mbedtls_printf( " %d bytes read\n\n%s", len, (char*)buf );
+            }
             /* End of message should be detected according to the syntax of the
              * application protocol (eg HTTP), just use a dummy test here. */
             if( ret > 0 && buf[len-1] == '\n' )

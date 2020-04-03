@@ -90,6 +90,7 @@
 #define MBEDTLS_ERR_SSL_PEER_VERIFY_FAILED                -0x7800  /**< Verification of our peer failed. */
 #define MBEDTLS_ERR_SSL_PEER_CLOSE_NOTIFY                 -0x7880  /**< The peer notified us that the connection is going to be closed. */
 #define MBEDTLS_ERR_SSL_BAD_HS_CLIENT_HELLO               -0x7900  /**< Processing of the ClientHello handshake message failed. */
+#define MBEDTLS_ERR_SSL_BAD_HS_CLIENT_HELLO_CCS           -0x7910  /**< Processing of the ClientHello handshake message failed; CCS received instead. */
 #define MBEDTLS_ERR_SSL_BAD_HS_SERVER_HELLO               -0x7980  /**< Processing of the ServerHello handshake message failed. */
 #define MBEDTLS_ERR_SSL_BAD_HS_CERTIFICATE                -0x7A00  /**< Processing of the Certificate handshake message failed. */
 #define MBEDTLS_ERR_SSL_BAD_HS_CERTIFICATE_REQUEST        -0x7A80  /**< Processing of the CertificateRequest handshake message failed. */
@@ -433,40 +434,40 @@
 #define MBEDTLS_SSL_ALERT_LEVEL_WARNING         1
 #define MBEDTLS_SSL_ALERT_LEVEL_FATAL           2
 
-#define MBEDTLS_SSL_ALERT_MSG_CLOSE_NOTIFY           0  /* 0x00 */
-#define MBEDTLS_SSL_ALERT_MSG_UNEXPECTED_MESSAGE    10  /* 0x0A */
-#define MBEDTLS_SSL_ALERT_MSG_BAD_RECORD_MAC        20  /* 0x14 */
-#define MBEDTLS_SSL_ALERT_MSG_DECRYPTION_FAILED     21  /* 0x15 */
-#define MBEDTLS_SSL_ALERT_MSG_RECORD_OVERFLOW       22  /* 0x16 */
-#define MBEDTLS_SSL_ALERT_MSG_DECOMPRESSION_FAILURE 30  /* 0x1E */
-#define MBEDTLS_SSL_ALERT_MSG_HANDSHAKE_FAILURE     40  /* 0x28 */
-#define MBEDTLS_SSL_ALERT_MSG_NO_CERT               41  /* 0x29 */
-#define MBEDTLS_SSL_ALERT_MSG_BAD_CERT              42  /* 0x2A */
-#define MBEDTLS_SSL_ALERT_MSG_UNSUPPORTED_CERT      43  /* 0x2B */
-#define MBEDTLS_SSL_ALERT_MSG_CERT_REVOKED          44  /* 0x2C */
-#define MBEDTLS_SSL_ALERT_MSG_CERT_EXPIRED          45  /* 0x2D */
-#define MBEDTLS_SSL_ALERT_MSG_CERT_UNKNOWN          46  /* 0x2E */
-#define MBEDTLS_SSL_ALERT_MSG_ILLEGAL_PARAMETER     47  /* 0x2F */
-#define MBEDTLS_SSL_ALERT_MSG_UNKNOWN_CA            48  /* 0x30 */
-#define MBEDTLS_SSL_ALERT_MSG_ACCESS_DENIED         49  /* 0x31 */
-#define MBEDTLS_SSL_ALERT_MSG_DECODE_ERROR          50  /* 0x32 */
-#define MBEDTLS_SSL_ALERT_MSG_DECRYPT_ERROR         51  /* 0x33 */
-#define MBEDTLS_SSL_ALERT_MSG_EXPORT_RESTRICTION    60  /* 0x3C */
-#define MBEDTLS_SSL_ALERT_MSG_PROTOCOL_VERSION      70  /* 0x46 */
-#define MBEDTLS_SSL_ALERT_MSG_INSUFFICIENT_SECURITY 71  /* 0x47 */
-#define MBEDTLS_SSL_ALERT_MSG_INTERNAL_ERROR        80  /* 0x50 */
-#define MBEDTLS_SSL_ALERT_MSG_INAPROPRIATE_FALLBACK 86  /* 0x56 */
-#define MBEDTLS_SSL_ALERT_MSG_USER_CANCELED         90  /* 0x5A */
-#define MBEDTLS_SSL_ALERT_MSG_NO_RENEGOTIATION     100  /* 0x64 */
-#define MBEDTLS_SSL_ALERT_MSG_MISSING_EXTENSION     109  /* 0x6d -- new in TLS 1.3 */
-#define MBEDTLS_SSL_ALERT_MSG_UNSUPPORTED_EXT      110  /* 0x6E */
-#define MBEDTLS_SSL_ALERT_MSG_CERT_UNOBTAINABLE      111  /* 0x6f -- new in TLS 1.3 */
-#define MBEDTLS_SSL_ALERT_MSG_UNRECOGNIZED_NAME    112  /* 0x70 */
-#define MBEDTLS_SSL_ALERT_MSG_BAD_CERT_STATUS_RESPONSE      113  /* 0x71 -- new in TLS 1.3 */
-#define MBEDTLS_SSL_ALERT_MSG_BAD_CERT_HASH_VALUE      114  /* 0x72 -- new in TLS 1.3 */
-#define MBEDTLS_SSL_ALERT_MSG_UNKNOWN_PSK_IDENTITY 115  /* 0x73 */
-#define MBEDTLS_SSL_ALERT_MSG_CERT_REQUIRED 116 /* 0x74 -- new in TLS 1.3*/
-#define MBEDTLS_SSL_ALERT_MSG_NO_APPLICATION_PROTOCOL 120 /* 0x78 */
+#define MBEDTLS_SSL_ALERT_MSG_CLOSE_NOTIFY                 0  /* 0x00 */
+#define MBEDTLS_SSL_ALERT_MSG_UNEXPECTED_MESSAGE          10  /* 0x0A */
+#define MBEDTLS_SSL_ALERT_MSG_BAD_RECORD_MAC              20  /* 0x14 */
+#define MBEDTLS_SSL_ALERT_MSG_DECRYPTION_FAILED           21  /* 0x15 */
+#define MBEDTLS_SSL_ALERT_MSG_RECORD_OVERFLOW             22  /* 0x16 */
+#define MBEDTLS_SSL_ALERT_MSG_DECOMPRESSION_FAILURE       30  /* 0x1E */
+#define MBEDTLS_SSL_ALERT_MSG_HANDSHAKE_FAILURE           40  /* 0x28 */
+#define MBEDTLS_SSL_ALERT_MSG_NO_CERT                     41  /* 0x29 */
+#define MBEDTLS_SSL_ALERT_MSG_BAD_CERT                    42  /* 0x2A */
+#define MBEDTLS_SSL_ALERT_MSG_UNSUPPORTED_CERT            43  /* 0x2B */
+#define MBEDTLS_SSL_ALERT_MSG_CERT_REVOKED                44  /* 0x2C */
+#define MBEDTLS_SSL_ALERT_MSG_CERT_EXPIRED                45  /* 0x2D */
+#define MBEDTLS_SSL_ALERT_MSG_CERT_UNKNOWN                46  /* 0x2E */
+#define MBEDTLS_SSL_ALERT_MSG_ILLEGAL_PARAMETER           47  /* 0x2F */
+#define MBEDTLS_SSL_ALERT_MSG_UNKNOWN_CA                  48  /* 0x30 */
+#define MBEDTLS_SSL_ALERT_MSG_ACCESS_DENIED               49  /* 0x31 */
+#define MBEDTLS_SSL_ALERT_MSG_DECODE_ERROR                50  /* 0x32 */
+#define MBEDTLS_SSL_ALERT_MSG_DECRYPT_ERROR               51  /* 0x33 */
+#define MBEDTLS_SSL_ALERT_MSG_EXPORT_RESTRICTION          60  /* 0x3C */
+#define MBEDTLS_SSL_ALERT_MSG_PROTOCOL_VERSION            70  /* 0x46 */
+#define MBEDTLS_SSL_ALERT_MSG_INSUFFICIENT_SECURITY       71  /* 0x47 */
+#define MBEDTLS_SSL_ALERT_MSG_INTERNAL_ERROR              80  /* 0x50 */
+#define MBEDTLS_SSL_ALERT_MSG_INAPROPRIATE_FALLBACK       86  /* 0x56 */
+#define MBEDTLS_SSL_ALERT_MSG_USER_CANCELED               90  /* 0x5A */
+#define MBEDTLS_SSL_ALERT_MSG_NO_RENEGOTIATION           100  /* 0x64 */
+#define MBEDTLS_SSL_ALERT_MSG_MISSING_EXTENSION          109  /* 0x6d -- new in TLS 1.3 */
+#define MBEDTLS_SSL_ALERT_MSG_UNSUPPORTED_EXT            110  /* 0x6E */
+#define MBEDTLS_SSL_ALERT_MSG_CERT_UNOBTAINABLE          111  /* 0x6f -- new in TLS 1.3 */
+#define MBEDTLS_SSL_ALERT_MSG_UNRECOGNIZED_NAME          112  /* 0x70 */
+#define MBEDTLS_SSL_ALERT_MSG_BAD_CERT_STATUS_RESPONSE   113  /* 0x71 -- new in TLS 1.3 */
+#define MBEDTLS_SSL_ALERT_MSG_BAD_CERT_HASH_VALUE        114  /* 0x72 -- new in TLS 1.3 */
+#define MBEDTLS_SSL_ALERT_MSG_UNKNOWN_PSK_IDENTITY       115  /* 0x73 */
+#define MBEDTLS_SSL_ALERT_MSG_CERT_REQUIRED              116 /* 0x74 -- new in TLS 1.3*/
+#define MBEDTLS_SSL_ALERT_MSG_NO_APPLICATION_PROTOCOL    120 /* 0x78 */
 
 #define MBEDTLS_SSL_HS_HELLO_REQUEST            0
 #define MBEDTLS_SSL_HS_CLIENT_HELLO             1
@@ -600,7 +601,7 @@ extern "C" {
         MBEDTLS_SSL_SERVER_NEW_SESSION_TICKET,
 #if defined(MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE)
         MBEDTLS_SSL_CLIENT_CCS_BEFORE_2ND_CLIENT_HELLO,
-        MBEDTLS_SSL_CLIENT_CCS_BEFORE_CERTIFICATE_REQUEST,
+        MBEDTLS_SSL_CLIENT_CCS_AFTER_SERVER_FINISHED,
         MBEDTLS_SSL_CLIENT_CCS_BEFORE_FINISHED,
         MBEDTLS_SSL_CLIENT_CCS_AFTER_CLIENT_HELLO,
         MBEDTLS_SSL_SERVER_CCS_AFTER_SERVER_HELLO,
@@ -3580,7 +3581,7 @@ void mbedtls_ssl_conf_key_share_curves(mbedtls_ssl_config* conf,
     const mbedtls_ecp_group_id* curve_list);
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3 && MBEDTLS_SSL_CLI_C && MBEDTLS_ECP_C */
 
-#if defined(MBEDTLS_KEY_EXCHANGE__WITH_CERT__ENABLED)
+#if defined(MBEDTLS_KEY_EXCHANGE__WITH_CERT__ENABLED) && !defined(MBEDTLS_SSL_PROTO_TLS1_3)
 /**
  * \brief          Set the allowed hashes for signatures during the handshake.
  *                 (Default: all available hashes except MD5.)
@@ -3601,7 +3602,7 @@ void mbedtls_ssl_conf_key_share_curves(mbedtls_ssl_config* conf,
  */
 void mbedtls_ssl_conf_sig_hashes( mbedtls_ssl_config *conf,
                                   const int *hashes );
-#endif /* MBEDTLS_KEY_EXCHANGE__WITH_CERT__ENABLED */
+#endif /* MBEDTLS_KEY_EXCHANGE__WITH_CERT__ENABLED && !MBEDTLS_SSL_PROTO_TLS1_3 */
 
 #if defined(MBEDTLS_X509_CRT_PARSE_C)
 /**
