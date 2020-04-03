@@ -2622,7 +2622,7 @@ static int ssl_read_certificate_parse( mbedtls_ssl_context* ssl,
             else
             {
                 MBEDTLS_SSL_DEBUG_MSG( 1, ( "client certificate required" ) );
-                SSL_PEND_FATAL_ALERT(MBEDTLS_SSL_ALERT_MSG_CERT_REQUIRED);
+                SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_CERT_REQUIRED );
                 return( MBEDTLS_ERR_SSL_NO_CLIENT_CERTIFICATE );
             }
         }
