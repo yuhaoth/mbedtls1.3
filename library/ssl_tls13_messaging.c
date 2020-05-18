@@ -751,7 +751,7 @@ int mbedtls_ssl_fetch_input( mbedtls_ssl_context *ssl, size_t nb_want )
         return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
     }
 
-    if( nb_want > MBEDTLS_SSL_BUFFER_LEN - (size_t)( ssl->in_hdr - ssl->in_buf ) )
+    if( nb_want > MBEDTLS_SSL_IN_BUFFER_LEN - (size_t)( ssl->in_hdr - ssl->in_buf ) )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "requesting more data than fits" ) );
         return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
@@ -1223,6 +1223,9 @@ int mbedtls_ssl_write_record( mbedtls_ssl_context *ssl )
     int ret, done = 0;
     size_t dummy_length;
     size_t len = ssl->out_msglen;
+
+
+    ((void) dummy_length); /* TODO: Guard this appropriately. */
 
     MBEDTLS_SSL_DEBUG_MSG( 5, ( "=> write record" ) );
 
@@ -2447,7 +2450,7 @@ static int ssl_parse_record_header( mbedtls_ssl_context* ssl )
 #endif /* MBEDTLS_SSL_PROTO_DTLS */
 
     /* Check length against the size of our buffer */
-    if( ssl->in_msglen > MBEDTLS_SSL_BUFFER_LEN
+    if( ssl->in_msglen > MBEDTLS_SSL_IN_BUFFER_LEN
         - (size_t)( ssl->in_msg - ssl->in_buf ) )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad message length" ) );
