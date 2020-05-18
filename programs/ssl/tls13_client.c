@@ -1955,7 +1955,7 @@ reconnect:
 		 */
 		if ((ret = mbedtls_ssl_conf_client_ticket(&ssl, &ticket)) != 0)
 		{
-			mbedtls_printf(" failed\n  ! mbedtls_ssl_conf_psk returned %d\n\n", ret);
+			mbedtls_printf(" failed\n  ! mbedtls_ssl_conf_client_ticket returned %d\n\n", ret);
 			goto exit;
 		}
 
