@@ -1050,7 +1050,7 @@ psk_parsing_successful:
                 MBEDTLS_SSL_DEBUG_MSG( 1, ( "should never happen" ) );
                 return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
             }
-            ret = ssl_calc_binder( ssl, psk, psk_len,
+            ret = ssl_calc_binder( ssl, (unsigned char *) psk, psk_len,
                                   mbedtls_md_info_from_type( ssl->transform_negotiate->ciphersuite_info->mac ), ssl->transform_negotiate->ciphersuite_info,
                                   truncated_clienthello_start, truncated_clienthello_end - truncated_clienthello_start, server_computed_binder );
         }
