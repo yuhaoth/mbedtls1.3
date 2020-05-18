@@ -4381,17 +4381,45 @@ void mbedtls_ssl_del_client_ticket( mbedtls_ssl_ticket *ticket )
     mbedtls_platform_zeroize( ticket->key, sizeof( ticket->key ) );
 }
 
-int mbedtls_ssl_conf_client_ticket( const mbedtls_ssl_context *ssl, mbedtls_ssl_ticket *ticket ) {
-
+int mbedtls_ssl_conf_client_ticket( const mbedtls_ssl_context *ssl,
+                                    mbedtls_ssl_ticket *ticket )
+{
     int ret;
     mbedtls_ssl_config *conf = ( mbedtls_ssl_config * ) ssl->conf;
 
-    /* basic consistency checks */
-    if( conf == NULL ) return( -1 );
-    if( ticket == NULL ) return( -1 );
-    if( ticket->key_len == 0 ) return( -1 );
-    if( ticket->ticket_len == 0 ) return( -1 );
-    if( ticket->ticket == NULL ) return( -1 );
+    /* TODO: Remove some of these checks? We sometimes omit explicit NULL
+     * pointer checks and leave those as preconditions. */
+
+    if( conf == NULL )
+    {
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "Invalid configuration in "
+                                    "mbedtls_ssl_conf_client_ticket()" ) );
+        return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
+    }
+    if( ticket == NULL )
+    {
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "Invalid ticket in "
+                                    "mbedtls_ssl_conf_client_ticket()" ) );
+        return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
+    }
+    if( ticket->key_len == 0 )
+    {
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "Invalid ticket key length in "
+                                    "mbedtls_ssl_conf_client_ticket()" ) );
+        return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
+    }
+    if( ticket->ticket_len == 0 )
+    {
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "Invalid ticket length in "
+                                    "mbedtls_ssl_conf_client_ticket()" ) );
+        return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
+    }
+    if( ticket->ticket == NULL )
+    {
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "Invalid ticket in "
+                                    "mbedtls_ssl_conf_client_ticket()" ) );
+        return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
+    }
 
     /* We don't request another ticket from the server.
      * TBD: This function could be moved to an application-visible API call.
@@ -4402,16 +4430,16 @@ int mbedtls_ssl_conf_client_ticket( const mbedtls_ssl_context *ssl, mbedtls_ssl_
     ret = mbedtls_ssl_conf_psk( conf, ticket->key, ticket->key_len,
                                 ( const unsigned char * )ticket->ticket,
                                 ticket->ticket_len );
-
-    if( ret != 0 ) return( -1 );
+    if( ret != 0 )
+        return( ret );
 
     /* Set the key exchange mode to PSK
      * TBD: Ideally, the application developer should have the option
      * to decide between plain PSK-KE and PSK-KE-DH
      */
     ret = mbedtls_ssl_conf_ke( conf, 0 );
-
-    if( ret != 0 ) return( -1 );
+    if( ret != 0 )
+        return( ret );
 
     /* We set the ticket_age_add and the time we received the ticket */
 #if defined(MBEDTLS_HAVE_TIME)
@@ -4420,7 +4448,8 @@ int mbedtls_ssl_conf_client_ticket( const mbedtls_ssl_context *ssl, mbedtls_ssl_
     ret = mbedtls_ssl_conf_ticket_meta( conf, ticket->ticket_age_add );
 #endif /* MBEDTLS_HAVE_TIME */
 
-    if( ret != 0 ) return( -1 );
+    if( ret != 0 )
+        return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
 
     return( 0 );
 }
