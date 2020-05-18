@@ -1161,7 +1161,8 @@ int main( int argc, char *argv[] )
                                (const unsigned char *) pers,
                                strlen( pers ) ) ) != 0 )
     {
-        mbedtls_printf( " failed\n  ! mbedtls_ctr_drbg_seed returned -0x%x\n", -ret );
+        mbedtls_printf( " failed\n  ! mbedtls_ctr_drbg_seed returned -0x%x\n",
+                        (unsigned) -ret );
         goto exit;
     }
 
@@ -1204,7 +1205,8 @@ int main( int argc, char *argv[] )
 #endif
     if( ret < 0 )
     {
-        mbedtls_printf( " failed\n  !  mbedtls_x509_crt_parse returned -0x%x\n\n", -ret );
+        mbedtls_printf( " failed\n  !  mbedtls_x509_crt_parse returned -0x%x\n\n",
+                        (unsigned) -ret );
         goto exit;
     }
 
@@ -1242,7 +1244,8 @@ int main( int argc, char *argv[] )
 #endif
     if( ret != 0 )
     {
-        mbedtls_printf( " failed\n  !  mbedtls_x509_crt_parse returned -0x%x\n\n", -ret );
+        mbedtls_printf( " failed\n  !  mbedtls_x509_crt_parse returned -0x%x\n\n",
+                        (unsigned) -ret );
         goto exit;
     }
 
@@ -1270,7 +1273,8 @@ int main( int argc, char *argv[] )
 #endif
     if( ret != 0 )
     {
-        mbedtls_printf( " failed\n  !  mbedtls_pk_parse_key returned -0x%x\n\n", -ret );
+        mbedtls_printf( " failed\n  !  mbedtls_pk_parse_key returned -0x%x\n\n",
+                        (unsigned) -ret );
         goto exit;
     }
 
@@ -1292,7 +1296,7 @@ int main( int argc, char *argv[] )
                              opt.transport == MBEDTLS_SSL_TRANSPORT_STREAM ?
                              MBEDTLS_NET_PROTO_TCP : MBEDTLS_NET_PROTO_UDP ) ) != 0 )
     {
-        mbedtls_printf( " failed\n  ! mbedtls_net_connect returned -0x%x\n\n", -ret );
+        mbedtls_printf( " failed\n  ! mbedtls_net_connect returned -0x%x\n\n", (unsigned) -ret );
         goto exit;
     }
 
@@ -1302,7 +1306,7 @@ int main( int argc, char *argv[] )
         ret = mbedtls_net_set_block( &server_fd );
     if( ret != 0 )
     {
-        mbedtls_printf( " failed\n  ! net_set_(non)block() returned -0x%x\n\n", -ret );
+        mbedtls_printf( " failed\n  ! net_set_(non)block() returned -0x%x\n\n", (unsigned) -ret );
         goto exit;
     }
 
@@ -1319,7 +1323,7 @@ int main( int argc, char *argv[] )
                     opt.transport,
                     MBEDTLS_SSL_PRESET_DEFAULT ) ) != 0 )
     {
-        mbedtls_printf( " failed\n  ! mbedtls_ssl_config_defaults returned -0x%x\n\n", -ret );
+        mbedtls_printf( " failed\n  ! mbedtls_ssl_config_defaults returned -0x%x\n\n", (unsigned) -ret );
         goto exit;
     }
 
@@ -1512,10 +1516,10 @@ int main( int argc, char *argv[] )
 
 	if(opt.key_exchange_modes != MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_NONE)
         {
-		mbedtls_ssl_conf_ke(&conf, opt.key_exchange_modes);
+            mbedtls_ssl_conf_ke(&conf, opt.key_exchange_modes);
 	} else {
- 	  mbedtls_printf(" failed\n  ! Some key exchange method needs to be provided %d\n\n", ret);
-	  goto exit;
+            mbedtls_printf(" failed\n  ! Some key exchange method needs to be provided %d\n\n", ret);
+            goto exit;
 	}
 
     if( opt.min_version != DFL_MIN_VERSION )
@@ -1531,7 +1535,7 @@ int main( int argc, char *argv[] )
 
     if( ( ret = mbedtls_ssl_setup( &ssl, &conf ) ) != 0 )
     {
-        mbedtls_printf( " failed\n  ! mbedtls_ssl_setup returned -0x%x\n\n", -ret );
+        mbedtls_printf( " failed\n  ! mbedtls_ssl_setup returned -0x%x\n\n", (unsigned) -ret );
         goto exit;
     }
 
@@ -1579,7 +1583,8 @@ int main( int argc, char *argv[] )
     {
         if( ret != MBEDTLS_ERR_SSL_WANT_READ && ret != MBEDTLS_ERR_SSL_WANT_WRITE )
         {
-            mbedtls_printf( " failed\n  ! mbedtls_ssl_handshake returned -0x%x\n", -ret );
+            mbedtls_printf( " failed\n  ! mbedtls_ssl_handshake returned -0x%x\n",
+                            (unsigned) -ret );
             if( ret == MBEDTLS_ERR_X509_CERT_VERIFY_FAILED )
                 mbedtls_printf(
                     "    Unable to verify the server's certificate. "
@@ -1628,7 +1633,8 @@ int main( int argc, char *argv[] )
 
         if( ( ret = mbedtls_ssl_get_session( &ssl, &saved_session ) ) != 0 )
         {
-            mbedtls_printf( " failed\n  ! mbedtls_ssl_get_session returned -0x%x\n\n", -ret );
+            mbedtls_printf( " failed\n  ! mbedtls_ssl_get_session returned -0x%x\n\n",
+                            (unsigned) -ret );
             goto exit;
         }
 
@@ -1732,7 +1738,8 @@ send_request:
                 if( ret != MBEDTLS_ERR_SSL_WANT_READ &&
                     ret != MBEDTLS_ERR_SSL_WANT_WRITE )
                 {
-                    mbedtls_printf( " failed\n  ! mbedtls_ssl_write returned -0x%x\n\n", -ret );
+                    mbedtls_printf( " failed\n  ! mbedtls_ssl_write returned -0x%x\n\n",
+                                    (unsigned) -ret );
                     goto exit;
                 }
             }
@@ -1782,7 +1789,7 @@ send_request:
                         ret = 0;
                         goto close_notify;
 
-                    case MBEDTLS_ERR_SSL_CONN_EOF: 
+                    case MBEDTLS_ERR_SSL_CONN_EOF:
                         mbedtls_printf( " connnection eof \n" );
                         ret = 0;
                         goto close_notify;
@@ -1800,7 +1807,8 @@ send_request:
 						continue;
 
                     default:
-                        mbedtls_printf( " mbedtls_ssl_read returned -0x%x\n", -ret );
+                        mbedtls_printf( " mbedtls_ssl_read returned -0x%x\n",
+                                        (unsigned) -ret );
                         goto exit;
                 }
             }
@@ -1808,7 +1816,7 @@ send_request:
             if( ret == 0 )
             {
                 mbedtls_printf( " no data received.\n" );
-                ret = -1; 
+                ret = -1;
                 goto exit;
             }
             else
@@ -1841,7 +1849,8 @@ send_request:
 
 		if (ret < 0)
 		{
-			mbedtls_printf(" failed\n  ! mbedtls_ssl_get_ticket returned -0x%x\n\n", -ret);
+			mbedtls_printf(" failed\n  ! mbedtls_ssl_get_ticket returned -0x%x\n\n",
+                                       (unsigned) -ret);
 			goto exit;
 		}
 		else if (ret == 1) {
@@ -1871,7 +1880,8 @@ send_request:
 
         if( ( ret = mbedtls_ssl_session_reset( &ssl ) ) != 0 )
         {
-            mbedtls_printf( " failed\n  ! mbedtls_ssl_session_reset returned -0x%x\n\n", -ret );
+            mbedtls_printf( " failed\n  ! mbedtls_ssl_session_reset returned -0x%x\n\n",
+                            (unsigned) -ret );
             goto exit;
         }
 
@@ -1880,7 +1890,8 @@ send_request:
             if( ret != MBEDTLS_ERR_SSL_WANT_READ &&
                 ret != MBEDTLS_ERR_SSL_WANT_WRITE )
             {
-                mbedtls_printf( " failed\n  ! mbedtls_ssl_handshake returned -0x%x\n\n", -ret );
+                mbedtls_printf( " failed\n  ! mbedtls_ssl_handshake returned -0x%x\n\n",
+                                (unsigned) -ret );
                 goto exit;
             }
         }
@@ -1932,7 +1943,8 @@ reconnect:
 
         if( ( ret = mbedtls_ssl_session_reset( &ssl ) ) != 0 )
         {
-            mbedtls_printf( " failed\n  ! mbedtls_ssl_session_reset returned -0x%x\n\n", -ret );
+            mbedtls_printf( " failed\n  ! mbedtls_ssl_session_reset returned -0x%x\n\n",
+                            (unsigned) -ret );
             goto exit;
         }
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && defined(MBEDTLS_SSL_NEW_SESSION_TICKET)
@@ -1960,7 +1972,8 @@ reconnect:
                                  opt.transport == MBEDTLS_SSL_TRANSPORT_STREAM ?
                                  MBEDTLS_NET_PROTO_TCP : MBEDTLS_NET_PROTO_UDP ) ) != 0 )
         {
-            mbedtls_printf( " failed\n  ! mbedtls_net_connect returned -0x%x\n\n", -ret );
+            mbedtls_printf( " failed\n  ! mbedtls_net_connect returned -0x%x\n\n",
+                            (unsigned) -ret );
             goto exit;
         }
 
@@ -1971,7 +1984,7 @@ reconnect:
         if( ret != 0 )
         {
             mbedtls_printf( " failed\n  ! net_set_(non)block() returned -0x%x\n\n",
-                    -ret );
+                            (unsigned) -ret );
             goto exit;
         }
 
@@ -1980,7 +1993,8 @@ reconnect:
             if( ret != MBEDTLS_ERR_SSL_WANT_READ &&
                 ret != MBEDTLS_ERR_SSL_WANT_WRITE )
             {
-                mbedtls_printf( " failed\n  ! mbedtls_ssl_handshake returned -0x%x\n\n", -ret );
+                mbedtls_printf( " failed\n  ! mbedtls_ssl_handshake returned -0x%x\n\n",
+                                (unsigned) -ret );
                 goto exit;
             }
         }
@@ -1999,7 +2013,8 @@ exit:
     {
         char error_buf[100];
         mbedtls_strerror( ret, error_buf, 100 );
-        mbedtls_printf("Last error was: -0x%X - %s\n\n", -ret, error_buf );
+        mbedtls_printf( "Last error was: -0x%X - %s\n\n",
+                        (unsigned) -ret, error_buf );
     }
 #endif
 
