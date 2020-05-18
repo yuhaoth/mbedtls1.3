@@ -556,7 +556,13 @@ int mbedtls_ssl_parse_new_session_ticket_server(
 
 */
 
-static int ssl_calc_binder( mbedtls_ssl_context *ssl, unsigned char *psk, size_t psk_len, const mbedtls_md_info_t *md, const mbedtls_ssl_ciphersuite_t *suite_info, unsigned char *buffer, size_t blen, unsigned char *computed_binder ) {
+__attribute__((unused)) /* TODO: Guard appropriately */
+static int ssl_calc_binder( mbedtls_ssl_context *ssl, unsigned char *psk,
+                            size_t psk_len, const mbedtls_md_info_t *md,
+                            const mbedtls_ssl_ciphersuite_t *suite_info,
+                            unsigned char *buffer, size_t blen,
+                            unsigned char *computed_binder )
+{
     int ret = 0;
     int hash_length;
 
@@ -3544,8 +3550,8 @@ static int ssl_write_hello_retry_request( mbedtls_ssl_context *ssl )
     }
 
     if( ( ret = ssl->conf->f_cookie_write( ssl->conf->p_cookie,
-                                           &p, ssl->out_buf + MBEDTLS_SSL_BUFFER_LEN,
-                                           ssl->cli_id, ssl->cli_id_len ) ) != 0 )
+                                 &p, ssl->out_buf + MBEDTLS_SSL_OUT_BUFFER_LEN,
+                                 ssl->cli_id, ssl->cli_id_len ) ) != 0 )
     {
         MBEDTLS_SSL_DEBUG_RET( 1, "f_cookie_write", ret );
         return( ret );
