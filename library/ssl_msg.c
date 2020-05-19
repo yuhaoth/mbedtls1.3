@@ -34,8 +34,6 @@
 #include MBEDTLS_CONFIG_FILE
 #endif
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_2)
-
 #if defined(MBEDTLS_SSL_TLS_C)
 
 #if defined(MBEDTLS_PLATFORM_C)
@@ -63,8 +61,6 @@
 #if defined(MBEDTLS_X509_CRT_PARSE_C)
 #include "mbedtls/oid.h"
 #endif
-
-static uint32_t ssl_get_hs_total_len( mbedtls_ssl_context const *ssl );
 
 /*
  * Start a timer.
@@ -95,6 +91,10 @@ int mbedtls_ssl_check_timer( mbedtls_ssl_context *ssl )
 
     return( 0 );
 }
+
+#if defined(MBEDTLS_SSL_PROTO_TLS1_2)
+
+static uint32_t ssl_get_hs_total_len( mbedtls_ssl_context const *ssl );
 
 #if defined(MBEDTLS_SSL_RECORD_CHECKING)
 static int ssl_parse_record_header( mbedtls_ssl_context const *ssl,

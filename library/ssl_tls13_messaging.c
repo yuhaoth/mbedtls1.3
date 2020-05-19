@@ -59,19 +59,6 @@
 #define mbedtls_free       free
 #endif /* MBEDTLS_PLATFORM_C */
 
-/*
- * Start a timer.
- * Passing millisecs = 0 cancels a running timer.
- */
-void mbedtls_ssl_set_timer( mbedtls_ssl_context *ssl, uint32_t millisecs )
-{
-    if( ssl->f_set_timer == NULL )
-        return;
-
-    MBEDTLS_SSL_DEBUG_MSG( 3, ( "set_timer to %d ms", (int) millisecs ) );
-    ssl->f_set_timer( ssl->p_timer, millisecs / 4, millisecs );
-}
-
 /* Once ssl->out_hdr as the address of the beginning of the
  * next outgoing record is set, deduce the other pointers.
  *
@@ -205,25 +192,6 @@ size_t mbedtls_ssl_get_bytes_avail( const mbedtls_ssl_context* ssl )
 {
     return( ssl->in_offt == NULL ? 0 : ssl->in_msglen );
 }
-
-
-/*
- * Return -1 is timer is expired, 0 if it isn't.
- */
-static int ssl_check_timer( mbedtls_ssl_context *ssl )
-{
-    if( ssl->f_get_timer == NULL )
-        return( 0 );
-
-    if( ssl->f_get_timer( ssl->p_timer ) == 2 )
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 3, ( "timer expired" ) );
-        return( -1 );
-    }
-
-    return( 0 );
-}
-
 
 /* Length of the "epoch" field in the record header */
 static inline size_t ssl_ep_len( const mbedtls_ssl_context* ssl )
@@ -830,7 +798,7 @@ int mbedtls_ssl_fetch_input( mbedtls_ssl_context *ssl, size_t nb_want )
          * This avoids by-passing the timer when repeatedly receiving messages
          * that will end up being dropped.
          */
-        if( ssl_check_timer( ssl ) != 0 )
+        if( mbedtls_ssl_check_timer( ssl ) != 0 )
             ret = MBEDTLS_ERR_SSL_TIMEOUT;
         else
         {
@@ -893,7 +861,7 @@ int mbedtls_ssl_fetch_input( mbedtls_ssl_context *ssl, size_t nb_want )
         {
             len = nb_want - ssl->in_left;
 
-            if( ssl_check_timer( ssl ) != 0 )
+            if( mbedtls_ssl_check_timer( ssl ) != 0 )
                 ret = MBEDTLS_ERR_SSL_TIMEOUT;
             else
             {
