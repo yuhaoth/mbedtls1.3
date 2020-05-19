@@ -1047,8 +1047,7 @@ psk_parsing_successful:
             /* Case 2: We are using an externally configured PSK, or a dynamically configured PSK if one is defined */
             if( mbedtls_ssl_get_psk( ssl, &psk, &psk_len ) == MBEDTLS_ERR_SSL_PRIVATE_KEY_REQUIRED )
             {
-                MBEDTLS_SSL_DEBUG_MSG( 1, ( "should never happen" ) );
-                return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
+                return( MBEDTLS_ERR_SSL_PRIVATE_KEY_REQUIRED );
             }
             ret = ssl_calc_binder( ssl, (unsigned char *) psk, psk_len,
                                   mbedtls_md_info_from_type( ssl->transform_negotiate->ciphersuite_info->mac ), ssl->transform_negotiate->ciphersuite_info,
