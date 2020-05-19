@@ -59,14 +59,6 @@
 #define mbedtls_free       free
 #endif /* MBEDTLS_PLATFORM_C */
 
-/*
- * SSL get accessors
- */
-size_t mbedtls_ssl_get_bytes_avail( const mbedtls_ssl_context* ssl )
-{
-    return( ssl->in_offt == NULL ? 0 : ssl->in_msglen );
-}
-
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
 
 /*
