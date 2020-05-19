@@ -5137,8 +5137,6 @@ void mbedtls_ssl_reset_in_out_pointers( mbedtls_ssl_context *ssl )
     mbedtls_ssl_update_in_pointers ( ssl );
 }
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_2)
-
 /*
  * SSL get accessors
  */
@@ -5146,6 +5144,8 @@ size_t mbedtls_ssl_get_bytes_avail( const mbedtls_ssl_context *ssl )
 {
     return( ssl->in_offt == NULL ? 0 : ssl->in_msglen );
 }
+
+#if defined(MBEDTLS_SSL_PROTO_TLS1_2)
 
 int mbedtls_ssl_check_pending( const mbedtls_ssl_context *ssl )
 {
