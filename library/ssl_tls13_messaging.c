@@ -67,20 +67,7 @@ size_t mbedtls_ssl_get_bytes_avail( const mbedtls_ssl_context* ssl )
     return( ssl->in_offt == NULL ? 0 : ssl->in_msglen );
 }
 
-/* Length of the "epoch" field in the record header */
-static inline size_t ssl_ep_len( const mbedtls_ssl_context* ssl )
-{
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
-    if( ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_DATAGRAM )
-        return( 2 );
-#else
-    ( ( void )ssl );
-#endif /* MBEDTLS_SSL_PROTO_DTLS */
-    return( 0 );
-}
-
-#if defined(MBEDTLS_SSL_PROTO_DTLS)
-
 
 /*
  * Double the retransmit timeout value, within the allowed range,
@@ -546,12 +533,12 @@ static int ssl_decrypt_buf( mbedtls_ssl_context *ssl )
     else
 #endif /* MBEDTLS_SSL_PROTO_DTLS */
     {
-        for( i = 8; i > ssl_ep_len( ssl ); i-- )
+        for( i = 8; i > mbedtls_ssl_ep_len( ssl ); i-- )
             if( ++ssl->in_ctr[i - 1] != 0 )
                 break;
 
         /* The loop goes to its end iff the counter is wrapping */
-        if( i == ssl_ep_len( ssl ) )
+        if( i == mbedtls_ssl_ep_len( ssl ) )
         {
             MBEDTLS_SSL_DEBUG_MSG( 1, ( "incoming message counter would wrap" ) );
             return( MBEDTLS_ERR_SSL_COUNTER_WRAPPING );
@@ -819,12 +806,12 @@ int mbedtls_ssl_flush_output( mbedtls_ssl_context *ssl )
     }
 
     /* Increment record layer sequence number */
-    for ( i = 8; i > ssl_ep_len( ssl ); i-- )
+    for ( i = 8; i > mbedtls_ssl_ep_len( ssl ); i-- )
         if( ++ssl->out_ctr[i - 1] != 0 )
             break;
 
     /* The loop goes to its end iff the sequence number is wrapping */
-    if( i == ssl_ep_len( ssl ) )
+    if( i == mbedtls_ssl_ep_len( ssl ) )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "outgoing message counter / sequence number would wrap" ) );
         return( MBEDTLS_ERR_SSL_COUNTER_WRAPPING );
