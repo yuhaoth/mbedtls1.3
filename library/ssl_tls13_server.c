@@ -1044,7 +1044,7 @@ psk_parsing_successful:
                                   truncated_clienthello_start, truncated_clienthello_end - truncated_clienthello_start, server_computed_binder );
         }
         else {
-            /* Case 2: We are using an externally configured PSK, or a dynamically configured PSK if one is defined */
+            /* Case 2: We are using a static PSK, or a dynamic PSK if one is defined */
             if( mbedtls_ssl_get_psk( ssl, &psk, &psk_len ) == MBEDTLS_ERR_SSL_PRIVATE_KEY_REQUIRED )
             {
                 return( MBEDTLS_ERR_SSL_PRIVATE_KEY_REQUIRED );
