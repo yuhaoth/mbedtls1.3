@@ -5008,6 +5008,8 @@ int mbedtls_ssl_parse_change_cipher_spec( mbedtls_ssl_context *ssl )
     return( 0 );
 }
 
+#endif /* MBEDTLS_SSL_PROTO_TLS1_2 */
+
 /* Once ssl->out_hdr as the address of the beginning of the
  * next outgoing record is set, deduce the other pointers.
  *
@@ -5134,6 +5136,8 @@ void mbedtls_ssl_reset_in_out_pointers( mbedtls_ssl_context *ssl )
     mbedtls_ssl_update_out_pointers( ssl, NULL /* no transform enabled */ );
     mbedtls_ssl_update_in_pointers ( ssl );
 }
+
+#if defined(MBEDTLS_SSL_PROTO_TLS1_2)
 
 /*
  * SSL get accessors
