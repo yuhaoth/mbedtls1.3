@@ -59,45 +59,6 @@
 #define mbedtls_free       free
 #endif /* MBEDTLS_PLATFORM_C */
 
-#if defined(MBEDTLS_SSL_PROTO_DTLS)
-
-/*
- * Double the retransmit timeout value, within the allowed range,
- * returning -1 if the maximum value has already been reached.
- */
-static int ssl_double_retransmit_timeout( mbedtls_ssl_context *ssl )
-{
-    uint32_t new_timeout;
-
-    if( ssl->handshake->retransmit_timeout >= ssl->conf->hs_timeout_max )
-        return( -1 );
-
-    new_timeout = 2 * ssl->handshake->retransmit_timeout;
-
-    /* Avoid arithmetic overflow and range overflow */
-    if( new_timeout < ssl->handshake->retransmit_timeout ||
-        new_timeout > ssl->conf->hs_timeout_max )
-    {
-        new_timeout = ssl->conf->hs_timeout_max;
-    }
-
-    ssl->handshake->retransmit_timeout = new_timeout;
-    MBEDTLS_SSL_DEBUG_MSG( 3, ( "update timeout value to %d millisecs",
-                                ssl->handshake->retransmit_timeout ) );
-
-    return( 0 );
-}
-
-static void ssl_reset_retransmit_timeout( mbedtls_ssl_context *ssl )
-{
-    ssl->handshake->retransmit_timeout = ssl->conf->hs_timeout_min;
-    MBEDTLS_SSL_DEBUG_MSG( 3, ( "update timeout value to %d millisecs",
-                                ssl->handshake->retransmit_timeout ) );
-}
-
-#endif /* MBEDTLS_SSL_PROTO_DTLS */
-
-
 /*
  * Encryption/decryption functions
  */
@@ -683,7 +644,7 @@ int mbedtls_ssl_fetch_input( mbedtls_ssl_context *ssl, size_t nb_want )
 
             if( ssl->state != MBEDTLS_SSL_HANDSHAKE_OVER )
             {
-                if( ssl_double_retransmit_timeout( ssl ) != 0 )
+                if( mbedtls_ssl_double_retransmit_timeout( ssl ) != 0 )
                 {
                     MBEDTLS_SSL_DEBUG_MSG( 1, ( "handshake timeout" ) );
                     return( MBEDTLS_ERR_SSL_TIMEOUT );

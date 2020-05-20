@@ -256,11 +256,16 @@ static int ssl_get_remaining_payload_in_datagram( mbedtls_ssl_context const *ssl
     return( (int) remaining );
 }
 
+#endif /* MBEDTLS_SSL_PROTO_DTLS */
+#endif /* MBEDTLS_SSL_PROTO_TLS1_2 */
+
+#if defined(MBEDTLS_SSL_PROTO_DTLS)
+
 /*
  * Double the retransmit timeout value, within the allowed range,
  * returning -1 if the maximum value has already been reached.
  */
-static int ssl_double_retransmit_timeout( mbedtls_ssl_context *ssl )
+int mbedtls_ssl_double_retransmit_timeout( mbedtls_ssl_context *ssl )
 {
     uint32_t new_timeout;
 
@@ -295,13 +300,15 @@ static int ssl_double_retransmit_timeout( mbedtls_ssl_context *ssl )
     return( 0 );
 }
 
-static void ssl_reset_retransmit_timeout( mbedtls_ssl_context *ssl )
+void mbedtls_ssl_reset_retransmit_timeout( mbedtls_ssl_context *ssl )
 {
     ssl->handshake->retransmit_timeout = ssl->conf->hs_timeout_min;
     MBEDTLS_SSL_DEBUG_MSG( 3, ( "update timeout value to %d millisecs",
                         ssl->handshake->retransmit_timeout ) );
 }
 #endif /* MBEDTLS_SSL_PROTO_DTLS */
+
+#if defined(MBEDTLS_SSL_PROTO_TLS1_2)
 
 #if defined(MBEDTLS_SSL_HW_RECORD_ACCEL)
 int (*mbedtls_ssl_hw_record_init)( mbedtls_ssl_context *ssl,
@@ -1975,7 +1982,7 @@ int mbedtls_ssl_fetch_input( mbedtls_ssl_context *ssl, size_t nb_want )
 
             if( ssl->state != MBEDTLS_SSL_HANDSHAKE_OVER )
             {
-                if( ssl_double_retransmit_timeout( ssl ) != 0 )
+                if( mbedtls_ssl_double_retransmit_timeout( ssl ) != 0 )
                 {
                     MBEDTLS_SSL_DEBUG_MSG( 1, ( "handshake timeout" ) );
                     return( MBEDTLS_ERR_SSL_TIMEOUT );
