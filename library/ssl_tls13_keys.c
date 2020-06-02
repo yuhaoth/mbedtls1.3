@@ -181,7 +181,7 @@ int mbedtls_ssl_tls1_3_make_traffic_keys(
                      const unsigned char *server_key,
                      int slen,
                      int keyLen, int ivLen,
-                     KeySet *keys )
+                     mbedtls_ssl_key_set *keys )
 {
     int ret = 0;
 

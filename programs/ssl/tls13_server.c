@@ -429,9 +429,9 @@ struct options
     unsigned char mfl_code;     /* code for maximum fragment length         */
     int trunc_hmac;             /* accept truncated hmac?                   */
     int tickets;                /* enable / disable session tickets         */
-    int ticket_lifetime;         /* session ticket lifetime                  */
+    int ticket_lifetime;        /* session ticket lifetime                  */
 #if defined(MBEDTLS_SSL_NEW_SESSION_TICKET)
-	TicketFlags ticket_flags;   /* ticket flags                             */
+	mbedtls_ssl_ticket_flags ticket_flags;   /* ticket flags                */
 #endif
     int cache_max;              /* max number of session cache entries      */
     int cache_timeout;          /* expiration delay of session cache entries */
@@ -1332,9 +1332,9 @@ int main( int argc, char *argv[] )
 #if defined(MBEDTLS_SSL_NEW_SESSION_TICKET)
 		else if (strcmp(p, "ticket_flags") == 0)
 		{
-			TicketFlags temp = atoi(q);
-			if ((temp & (TicketFlags)allow_early_data) || (temp & (TicketFlags)allow_dhe_resumption) || (temp & (TicketFlags)allow_psk_resumption)) {
-				opt.ticket_flags = temp & (TicketFlags)allow_early_data & (TicketFlags)allow_dhe_resumption & (TicketFlags)allow_psk_resumption;
+			mbedtls_ssl_ticket_flags temp = atoi(q);
+			if ((temp & (mbedtls_ssl_ticket_flags)allow_early_data) || (temp & (mbedtls_ssl_ticket_flags)allow_dhe_resumption) || (temp & (mbedtls_ssl_ticket_flags)allow_psk_resumption)) {
+				opt.ticket_flags = temp & (mbedtls_ssl_ticket_flags)allow_early_data & (mbedtls_ssl_ticket_flags)allow_dhe_resumption & (mbedtls_ssl_ticket_flags)allow_psk_resumption;
 			} else goto usage;
 		}
 #endif
