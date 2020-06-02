@@ -937,7 +937,7 @@ have_sig_alg:
  * TLS 1.3.
  */
 
-int mbedtls_ssl_derive_traffic_keys( mbedtls_ssl_context *ssl, KeySet *traffic_keys )
+int mbedtls_ssl_derive_traffic_keys( mbedtls_ssl_context *ssl, mbedtls_ssl_key_set *traffic_keys )
 {
     int ret = 0;
     const mbedtls_cipher_info_t *cipher_info;
@@ -3056,7 +3056,7 @@ int mbedtls_ssl_generate_resumption_master_secret( mbedtls_ssl_context *ssl ) {
 /* Generate application traffic keys since any records following a 1-RTT Finished message
  * MUST be encrypted under the application traffic key.
  */
-int mbedtls_ssl_generate_application_traffic_keys( mbedtls_ssl_context *ssl, KeySet *traffic_keys ) {
+int mbedtls_ssl_generate_application_traffic_keys( mbedtls_ssl_context *ssl, mbedtls_ssl_key_set *traffic_keys ) {
     int ret;
     const mbedtls_md_info_t *md_info;
     const mbedtls_ssl_ciphersuite_t *suite_info;
@@ -3226,7 +3226,7 @@ int mbedtls_ssl_generate_application_traffic_keys( mbedtls_ssl_context *ssl, Key
  *   - Do not backup keys -- use 1
  *   - Backup keys -- use 0
  */
-int mbedtls_set_traffic_key( mbedtls_ssl_context *ssl, KeySet *traffic_keys, mbedtls_ssl_transform *transform, int mode ) {
+int mbedtls_set_traffic_key( mbedtls_ssl_context *ssl, mbedtls_ssl_key_set *traffic_keys, mbedtls_ssl_transform *transform, int mode ) {
     mbedtls_cipher_info_t const *cipher_info;
     int ret;
     unsigned char *key1;
@@ -3425,7 +3425,7 @@ int mbedtls_set_traffic_key( mbedtls_ssl_context *ssl, KeySet *traffic_keys, mbe
  *   - Generate client_early_traffic_secret
  *   - Generate traffic key material
  */
-int mbedtls_ssl_early_data_key_derivation( mbedtls_ssl_context *ssl, KeySet *traffic_keys )
+int mbedtls_ssl_early_data_key_derivation( mbedtls_ssl_context *ssl, mbedtls_ssl_key_set *traffic_keys )
 {
     int ret;
     int hash_length;
@@ -3651,7 +3651,7 @@ int mbedtls_ssl_early_data_key_derivation( mbedtls_ssl_context *ssl, KeySet *tra
  *   - Generate master key
  *   - Generate handshake traffic keys
  */
-int mbedtls_ssl_key_derivation( mbedtls_ssl_context *ssl, KeySet *traffic_keys )
+int mbedtls_ssl_key_derivation( mbedtls_ssl_context *ssl, mbedtls_ssl_key_set *traffic_keys )
 {
     int ret;
 
@@ -3765,11 +3765,11 @@ static int ssl_finished_out_postprocess( mbedtls_ssl_context* ssl );
 int ssl_finished_out_process( mbedtls_ssl_context* ssl )
 {
     int ret;
-    KeySet traffic_keys;
+    mbedtls_ssl_key_set traffic_keys;
 
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> write finished" ) );
 
-    memset( ( void* )&traffic_keys, 0, sizeof( KeySet ) );
+    memset( ( void* )&traffic_keys, 0, sizeof( mbedtls_ssl_key_set ) );
 
     ssl->handshake->state_local.finished_out.traffic_keys = &traffic_keys;
 
@@ -3801,7 +3801,7 @@ cleanup:
 static int ssl_finished_out_prepare( mbedtls_ssl_context* ssl )
 {
     int ret;
-    KeySet* traffic_keys=ssl->handshake->state_local.finished_out.traffic_keys;
+    mbedtls_ssl_key_set* traffic_keys=ssl->handshake->state_local.finished_out.traffic_keys;
 
 #if defined(MBEDTLS_SSL_CLI_C)
     if( ssl->conf->endpoint == MBEDTLS_SSL_IS_CLIENT )
@@ -3888,7 +3888,7 @@ static int ssl_finished_out_prepare( mbedtls_ssl_context* ssl )
 static int ssl_finished_out_postprocess( mbedtls_ssl_context* ssl )
 {
     int ret;
-    KeySet* traffic_keys = ssl->handshake->state_local.finished_out.traffic_keys;
+    mbedtls_ssl_key_set* traffic_keys = ssl->handshake->state_local.finished_out.traffic_keys;
 
 #if defined(MBEDTLS_SSL_CLI_C)
     if( ssl->conf->endpoint == MBEDTLS_SSL_IS_CLIENT )

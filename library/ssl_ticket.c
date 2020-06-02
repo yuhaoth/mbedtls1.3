@@ -130,7 +130,7 @@ static int ssl_ticket_update_keys( mbedtls_ssl_ticket_context *ctx )
 int mbedtls_ssl_ticket_setup( mbedtls_ssl_ticket_context* ctx,
     int (*f_rng)(void *, unsigned char *, size_t), void* p_rng,
     mbedtls_cipher_type_t cipher,
-    uint32_t lifetime, TicketFlags flags )
+    uint32_t lifetime, mbedtls_ssl_ticket_flags flags )
 #else
 int mbedtls_ssl_ticket_setup( mbedtls_ssl_ticket_context *ctx,
     int (*f_rng)(void *, unsigned char *, size_t), void *p_rng,
@@ -325,7 +325,7 @@ int mbedtls_ssl_ticket_write(void* p_ticket,
     const unsigned char* end,
     size_t* tlen,
     uint32_t* ticket_lifetime,
-    TicketFlags* flags)
+    mbedtls_ssl_ticket_flags* flags)
 #else
 int mbedtls_ssl_ticket_write( void *p_ticket,
                               const mbedtls_ssl_session *session,

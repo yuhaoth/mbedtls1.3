@@ -602,7 +602,7 @@ struct mbedtls_ssl_handshake_params
              * but excluding the outgoing finished message. */
             unsigned char digest[MBEDTLS_MD_MAX_SIZE];
             size_t digest_len;
-            KeySet* traffic_keys;
+            mbedtls_ssl_key_set* traffic_keys;
         } finished_out;
 
         /* Incoming Finished message */
@@ -871,8 +871,8 @@ struct mbedtls_ssl_transform
     /*!<  Chosen cipersuite_info  */
     unsigned int keylen;                /*!<  symmetric key length (bytes)  */
 
-    KeySet traffic_keys;
-    KeySet traffic_keys_previous;
+    mbedtls_ssl_key_set traffic_keys;
+    mbedtls_ssl_key_set traffic_keys_previous;
 
     unsigned char* iv_enc;           /*!<  IV (encryption)         */
     unsigned char* iv_dec;           /*!<  IV (decryption)         */
@@ -1211,7 +1211,7 @@ static uint32_t get_varint_value(const uint32_t input);
 #endif /* MBEDTLS_SSL_TLS13_CTLS */
 
 
-int mbedtls_ssl_key_derivation(mbedtls_ssl_context* ssl, KeySet* traffic_keys);
+int mbedtls_ssl_key_derivation(mbedtls_ssl_context* ssl, mbedtls_ssl_key_set* traffic_keys);
 
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
@@ -1219,11 +1219,11 @@ int ssl_read_certificate_verify_process(mbedtls_ssl_context* ssl);
 int ssl_certificate_verify_process(mbedtls_ssl_context* ssl);
 
 int mbedtls_ssl_derive_master_secret(mbedtls_ssl_context* ssl);
-int mbedtls_set_traffic_key(mbedtls_ssl_context* ssl, KeySet* traffic_keys, mbedtls_ssl_transform* transform, int mode);
-int mbedtls_ssl_generate_application_traffic_keys(mbedtls_ssl_context* ssl, KeySet* traffic_keys);
+int mbedtls_set_traffic_key(mbedtls_ssl_context* ssl, mbedtls_ssl_key_set* traffic_keys, mbedtls_ssl_transform* transform, int mode);
+int mbedtls_ssl_generate_application_traffic_keys(mbedtls_ssl_context* ssl, mbedtls_ssl_key_set* traffic_keys);
 int mbedtls_ssl_generate_resumption_master_secret(mbedtls_ssl_context* ssl);
 int ssl_write_encrypted_extension(mbedtls_ssl_context* ssl);
-int mbedtls_ssl_derive_traffic_keys(mbedtls_ssl_context* ssl, KeySet* traffic_keys);
+int mbedtls_ssl_derive_traffic_keys(mbedtls_ssl_context* ssl, mbedtls_ssl_key_set* traffic_keys);
 int incrementSequenceNumber(unsigned char* sequenceNumber, unsigned char* nonce, size_t ivlen);
 
 #if defined(MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE)
@@ -1239,7 +1239,7 @@ int ssl_parse_signature_algorithms_ext(mbedtls_ssl_context* ssl, const unsigned 
 int mbedtls_ssl_check_signature_scheme(const mbedtls_ssl_context* ssl, int signature_scheme);
 #endif /* MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED */
 #if defined(MBEDTLS_ZERO_RTT)
-int mbedtls_ssl_early_data_key_derivation(mbedtls_ssl_context* ssl, KeySet* traffic_keys);
+int mbedtls_ssl_early_data_key_derivation(mbedtls_ssl_context* ssl, mbedtls_ssl_key_set* traffic_keys);
 int ssl_write_early_data_ext(mbedtls_ssl_context* ssl, unsigned char* buf, size_t buflen, size_t* olen);
 #endif /* MBEDTLS_ZERO_RTT */
 #if (defined(MBEDTLS_ECDH_C) || defined(MBEDTLS_ECDSA_C))
@@ -1673,7 +1673,8 @@ int mbedtls_ssl_tls1_3_derive_secret(
 * \param slen      Length of hash value
 * \param keyLen	  Length of the key
 * \param ivLen    Length of IV
-* \param keys     KeySet structure containing client/server key and IVs
+* \param keys     mbedtls_ssl_key_set structure containing client/server key
+*                 and IVs
 *
 * \return          0 if successful,
 *                  or MBEDTLS_ERR_HKDF_BUFFER_TOO_SMALL
@@ -1686,7 +1687,8 @@ int mbedtls_ssl_tls1_3_make_traffic_keys(
                      mbedtls_md_type_t hash_alg,
                      const unsigned char *client_key,
                      const unsigned char *server_key,
-                     int slen, int keyLen, int ivLen, KeySet *keys );
+                     int slen, int keyLen, int ivLen,
+                     mbedtls_ssl_key_set *keys );
 
 /**
 * \brief           HKDF-Expand-Label( Secret, Label, HashValue, Length ) =

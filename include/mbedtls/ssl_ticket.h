@@ -68,7 +68,7 @@ typedef struct
 
     uint32_t ticket_lifetime;       /*!< lifetime of tickets in seconds     */
 #if defined(MBEDTLS_SSL_NEW_SESSION_TICKET) && defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
-    TicketFlags flags;              /*!< ticket flags                       */
+    mbedtls_ssl_ticket_flags flags; /*!< ticket flags                       */
 #endif /* MBEDTLS_SSL_NEW_SESSION_TICKET && MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL  */
     /** Callback for getting (pseudo-)random numbers                        */
     int  (*f_rng)(void *, unsigned char *, size_t);
@@ -124,7 +124,7 @@ int mbedtls_ssl_conf_client_ticket(const mbedtls_ssl_context* ssl, mbedtls_ssl_t
 int mbedtls_ssl_ticket_setup( mbedtls_ssl_ticket_context *ctx,
     int (*f_rng)(void *, unsigned char *, size_t), void *p_rng,
     mbedtls_cipher_type_t cipher,
-    uint32_t lifetime, TicketFlags flags);
+    uint32_t lifetime, mbedtls_ssl_ticket_flags flags);
 #else 
 int mbedtls_ssl_ticket_setup(mbedtls_ssl_ticket_context* ctx,
     int (*f_rng)(void*, unsigned char*, size_t), void* p_rng,

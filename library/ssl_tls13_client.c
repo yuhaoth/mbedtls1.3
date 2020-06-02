@@ -150,7 +150,7 @@ cleanup:
 static int ssl_write_early_data_prepare( mbedtls_ssl_context* ssl )
 {
     int ret;
-    KeySet traffic_keys;
+    mbedtls_ssl_key_set traffic_keys;
 
     ret = mbedtls_ssl_early_data_key_derivation( ssl, &traffic_keys );
     if( ret != 0 )
@@ -288,7 +288,7 @@ cleanup:
 static int ssl_write_end_of_early_data_prepare( mbedtls_ssl_context* ssl )
 {
     int ret;
-    KeySet traffic_keys;
+    mbedtls_ssl_key_set traffic_keys;
 
     ret = mbedtls_ssl_early_data_key_derivation( ssl, &traffic_keys );
     if( ret != 0 )
@@ -2570,7 +2570,7 @@ cleanup:
 static int ssl_encrypted_extensions_prepare( mbedtls_ssl_context* ssl ) {
 
     int ret;
-    KeySet traffic_keys;
+    mbedtls_ssl_key_set traffic_keys;
 
     if( ssl->transform_in == NULL )
     {
