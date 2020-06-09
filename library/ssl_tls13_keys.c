@@ -25,15 +25,13 @@
 #include MBEDTLS_CONFIG_FILE
 #endif
 
-//#if defined(MBEDTLS_SSL_TLS_C)
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
 
 #include "mbedtls/debug.h"
 #include "mbedtls/ssl.h"
 #include "mbedtls/ssl_internal.h"
 
-
 #include "mbedtls/hkdf.h"
-#include "mbedtls/hkdf-tls.h"
 #include <stdint.h>
 #include <string.h>
 
@@ -48,7 +46,7 @@
 #endif
 
 /*
- * The hkdfEncodeLabel( ) function creates the HkdfLabel structure.
+ * The mbedtls_ssl_tls1_3_hkdf_encode_label() function creates the HkdfLabel structure.
  *
  * The function assumes that the info buffer space has been
  * allocated accordingly and no further length checking is needed.
@@ -66,7 +64,8 @@
  * - HkdfLabel.context is HashValue.
  */
 
-static int hkdfEncodeLabel( const unsigned char *label, int llen,
+static int ssl_tls1_3_hkdf_encode_label(
+                            const unsigned char *label, int llen,
                             const unsigned char *hashValue, int hlen,
                             unsigned char *info, int length )
 {
@@ -74,7 +73,7 @@ static int hkdfEncodeLabel( const unsigned char *label, int llen,
     char constant[7] = "tls13 ";
     int labelLen;
 
-    labelLen = ( strlen( (const char *)constant ) + llen );
+    labelLen = ( strlen( ( const char * )constant ) + llen );
 
     // create header
     *p++ = (unsigned char)( ( length >> 8 ) & 0xFF );
@@ -82,8 +81,8 @@ static int hkdfEncodeLabel( const unsigned char *label, int llen,
     *p++ = (unsigned char)( ( labelLen ) &0xFF );
 
     // copy label
-    memcpy( p, constant, strlen( (const char *)constant ) );
-    p += (unsigned char) strlen( (const char *)constant );
+    memcpy( p, constant, strlen( ( const char * )constant ) );
+    p += (unsigned char) strlen( ( const char * )constant );
 
     memcpy( p, label, llen );
     p += llen;
@@ -97,7 +96,8 @@ static int hkdfEncodeLabel( const unsigned char *label, int llen,
     return( 0 );
 }
 
-int Derive_Secret( mbedtls_ssl_context *ssl, mbedtls_md_type_t hash_alg,
+int mbedtls_ssl_tls1_3_derive_secret(
+                   mbedtls_ssl_context *ssl, mbedtls_md_type_t hash_alg,
                    const unsigned char *secret, int slen,
                    const unsigned char *label, int llen,
                    const unsigned char *message, int mlen,
@@ -124,7 +124,7 @@ int Derive_Secret( mbedtls_ssl_context *ssl, mbedtls_md_type_t hash_alg,
     hashValue = mbedtls_calloc( L, 1 );
     if( hashValue == NULL )
     {
-        mbedtls_printf( "calloc( ) failed in Derive_Secret( )." );
+        mbedtls_printf( "calloc() failed in mbedtls_ssl_tls1_3_derive_secret()." );
         return( -1 );
     }
 
@@ -132,13 +132,13 @@ int Derive_Secret( mbedtls_ssl_context *ssl, mbedtls_md_type_t hash_alg,
 
     if( mlen != L )
     {
-        mbedtls_printf( "Derive_Secret: Incorrect length of hash - mlen ( %d ) != L ( %d )\n", mlen, L );
+        mbedtls_printf( "mbedtls_ssl_tls1_3_derive_secret: Incorrect length of hash - mlen ( %d ) != L ( %d )\n", mlen, L );
         mbedtls_free( hashValue );
         return( -1 );
     }
     memcpy( hashValue, message, L );
 
-    ret = hkdfExpandLabel( hash_alg, secret, slen, label, llen,
+    ret = mbedtls_ssl_tls1_3_hkdf_expand_label( hash_alg, secret, slen, label, llen,
                            hashValue, L, L, dstbuf, buflen );
 
 #if defined(HKDF_DEBUG)
@@ -153,7 +153,7 @@ int Derive_Secret( mbedtls_ssl_context *ssl, mbedtls_md_type_t hash_alg,
 
     if( ret < 0 )
     {
-        mbedtls_printf( "hkdfExpandLabel( ): Error %d.\n", ret );
+        mbedtls_printf( "mbedtls_ssl_tls1_3_hkdf_expand_label(): Error %d.\n", ret );
         return( ret );
     }
 
@@ -175,7 +175,8 @@ int Derive_Secret( mbedtls_ssl_context *ssl, mbedtls_md_type_t hash_alg,
 * [sender] denotes the sending side and the Secret value is provided by the function caller.
 * We generate server and client side keys in a single function call.
 */
-int makeTrafficKeys( mbedtls_md_type_t hash_alg,
+int mbedtls_ssl_tls1_3_make_traffic_keys(
+                     mbedtls_md_type_t hash_alg,
                      const unsigned char *client_key,
                      const unsigned char *server_key,
                      int slen,
@@ -187,34 +188,34 @@ int makeTrafficKeys( mbedtls_md_type_t hash_alg,
     keys->clientWriteKey = mbedtls_calloc( keyLen,1 );
     if( keys->clientWriteKey == NULL )
     {
-        mbedtls_printf( "makeTrafficKeys( ): Error allocating clientWriteKey.\n" );
-        return( ( MBEDTLS_ERR_HKDF_BUFFER_TOO_SMALL ) );
+        mbedtls_printf( "mbedtls_ssl_tls1_3_make_traffic_keys(): Error allocating clientWriteKey.\n" );
+        return( ( MBEDTLS_ERR_SSL_BUFFER_TOO_SMALL ) );
     }
 
-    ret = hkdfExpandLabel( hash_alg, client_key, slen, (const unsigned char *) "key", 3,
+    ret = mbedtls_ssl_tls1_3_hkdf_expand_label( hash_alg, client_key, slen, (const unsigned char *) "key", 3,
                           (const unsigned char *)"", 0, keyLen,
                           keys->clientWriteKey, keyLen );
 
     if( ret < 0 )
     {
-        mbedtls_printf( "makeTrafficKeys( ): Error for clientWriteKey %d.\n", ret );
+        mbedtls_printf( "mbedtls_ssl_tls1_3_make_traffic_keys(): Error for clientWriteKey %d.\n", ret );
         return( ( ret ) );
     }
 
     keys->serverWriteKey = mbedtls_calloc( keyLen,1 );
     if( keys->serverWriteKey == NULL )
     {
-        mbedtls_printf( "makeTrafficKeys( ): Error allocating serverWriteKey.\n" );
+        mbedtls_printf( "mbedtls_ssl_tls1_3_make_traffic_keys(): Error allocating serverWriteKey.\n" );
         return( ( ret ) );
     }
 
-    ret = hkdfExpandLabel( hash_alg, server_key, slen, (const unsigned char *)"key", 3,
+    ret = mbedtls_ssl_tls1_3_hkdf_expand_label( hash_alg, server_key, slen, (const unsigned char *)"key", 3,
                           (const unsigned char *)"", 0, keyLen,
                           keys->serverWriteKey, keyLen );
 
     if( ret < 0 )
     {
-        mbedtls_printf( "makeTrafficKeys( ): Error for serverWriteKey %d.\n", ret );
+        mbedtls_printf( "mbedtls_ssl_tls1_3_make_traffic_keys(): Error for serverWriteKey %d.\n", ret );
         return( ( ret ) );
     }
 
@@ -222,17 +223,17 @@ int makeTrafficKeys( mbedtls_md_type_t hash_alg,
     keys->clientWriteIV = mbedtls_calloc( ivLen,1 );
     if( keys->clientWriteIV == NULL )
     {
-        mbedtls_printf( "makeTrafficKeys( ): Error allocating clientWriteIV.\n" );
+        mbedtls_printf( "mbedtls_ssl_tls1_3_make_traffic_keys(): Error allocating clientWriteIV.\n" );
         return( ( ret ) );
     }
 
-    ret = hkdfExpandLabel( hash_alg, client_key, slen, (const unsigned char *) "iv", 2,
+    ret = mbedtls_ssl_tls1_3_hkdf_expand_label( hash_alg, client_key, slen, (const unsigned char *) "iv", 2,
                           (const unsigned char *)"", 0, ivLen,
                           keys->clientWriteIV, ivLen );
 
     if( ret < 0 )
     {
-        mbedtls_printf( "makeTrafficKeys( ): Error for clientWriteIV %d.\n", ret );
+        mbedtls_printf( "mbedtls_ssl_tls1_3_make_traffic_keys(): Error for clientWriteIV %d.\n", ret );
         return( ( ret ) );
     }
 
@@ -240,17 +241,17 @@ int makeTrafficKeys( mbedtls_md_type_t hash_alg,
     keys->serverWriteIV = mbedtls_calloc( ivLen,1 );
     if( keys->serverWriteIV == NULL )
     {
-        mbedtls_printf( "makeTrafficKeys( ): Error allocating serverWriteIV.\n" );
+        mbedtls_printf( "mbedtls_ssl_tls1_3_make_traffic_keys(): Error allocating serverWriteIV.\n" );
         return( ( ret ) );
     }
 
-    ret = hkdfExpandLabel( hash_alg, server_key, slen, (const unsigned char *) "iv", 2,
+    ret = mbedtls_ssl_tls1_3_hkdf_expand_label( hash_alg, server_key, slen, (const unsigned char *) "iv", 2,
                           (const unsigned char *)"", 0, ivLen,
                           keys->serverWriteIV, ivLen );
 
     if( ret < 0 )
     {
-        mbedtls_printf( "makeTrafficKeys( ): Error for serverWriteIV %d.\n", ret );
+        mbedtls_printf( "mbedtls_ssl_tls1_3_make_traffic_keys(): Error for serverWriteIV %d.\n", ret );
         return( ( ret ) );
     }
 
@@ -260,17 +261,17 @@ int makeTrafficKeys( mbedtls_md_type_t hash_alg,
     keys->client_sn_key = mbedtls_calloc( keyLen, 1 );
     if( keys->client_sn_key == NULL )
     {
-        mbedtls_printf( "makeTrafficKeys( ): Error allocating client_sn_key.\n" );
+        mbedtls_printf( "mbedtls_ssl_tls1_3_make_traffic_keys(): Error allocating client_sn_key.\n" );
         return( ( ret ) );
     }
 
-    ret = hkdfExpandLabel( hash_alg, client_key, slen, (const unsigned char *) "sn", 2,
+    ret = mbedtls_ssl_tls1_3_hkdf_expand_label( hash_alg, client_key, slen, (const unsigned char *) "sn", 2,
                           (const unsigned char *)"", 0, keyLen,
                           keys->client_sn_key, keyLen );
 
     if( ret < 0 )
     {
-        mbedtls_printf( "makeTrafficKeys( ): Error for client_sn_key %d.\n", ret );
+        mbedtls_printf( "mbedtls_ssl_tls1_3_make_traffic_keys(): Error for client_sn_key %d.\n", ret );
         return( ( ret ) );
     }
 
@@ -278,17 +279,17 @@ int makeTrafficKeys( mbedtls_md_type_t hash_alg,
     keys->server_sn_key = mbedtls_calloc( keyLen, 1 );
     if( keys->server_sn_key == NULL )
     {
-        mbedtls_printf( "makeTrafficKeys( ): Error allocating server_sn_key.\n" );
+        mbedtls_printf( "mbedtls_ssl_tls1_3_make_traffic_keys(): Error allocating server_sn_key.\n" );
         return( ( ret ) );
     }
 
-    ret = hkdfExpandLabel( hash_alg, server_key, slen, (const unsigned char *) "sn", 2,
+    ret = mbedtls_ssl_tls1_3_hkdf_expand_label( hash_alg, server_key, slen, (const unsigned char *) "sn", 2,
                           (const unsigned char *)"", 0, keyLen,
                           keys->server_sn_key, keyLen );
 
     if( ret < 0 )
     {
-        mbedtls_printf( "makeTrafficKeys( ): Error for server_sn_key %d.\n", ret );
+        mbedtls_printf( "mbedtls_ssl_tls1_3_make_traffic_keys(): Error for server_sn_key %d.\n", ret );
         return( ( ret ) );
     }
 
@@ -307,8 +308,9 @@ int makeTrafficKeys( mbedtls_md_type_t hash_alg,
     return( 0 );
 }
 
-int hkdfExpandLabel( mbedtls_md_type_t hash_alg, const unsigned char *secret, int slen,
-                     const unsigned char *label, int llen,
+int mbedtls_ssl_tls1_3_hkdf_expand_label(
+                     mbedtls_md_type_t hash_alg, const unsigned char *secret,
+                     int slen, const unsigned char *label, int llen,
                      const unsigned char *hashValue, int hlen, int length,
                      unsigned char *buf, int blen )
 {
@@ -359,15 +361,15 @@ int hkdfExpandLabel( mbedtls_md_type_t hash_alg, const unsigned char *secret, in
 
     if( info == NULL )
     {
-        mbedtls_printf( "calloc( ) failed in hkdfExpandLabel( )." );
-        return( ( MBEDTLS_ERR_HKDF_BUFFER_TOO_SMALL ) );
+        mbedtls_printf( "calloc() failed in mbedtls_ssl_tls1_3_hkdf_expand_label()." );
+        return( ( MBEDTLS_ERR_SSL_BUFFER_TOO_SMALL ) );
     }
 
-    ret = hkdfEncodeLabel( label, llen, hashValue, hlen, info, length );
+    ret = ssl_tls1_3_hkdf_encode_label( label, llen, hashValue, hlen, info, length );
 
     if( ret < 0 )
     {
-        mbedtls_printf( "hkdfEncodeLabel( ): Error %d.\n", ret );
+        mbedtls_printf( "ssl_tls1_3_hkdf_encode_label(): Error %d.\n", ret );
         goto clean_up;
     }
 
@@ -389,7 +391,7 @@ int hkdfExpandLabel( mbedtls_md_type_t hash_alg, const unsigned char *secret, in
 
         if( md == NULL )
         {
-            mbedtls_printf( "mbedtls_md_info_from_type( ) failed in hkdfExpandLabel( )." );
+            mbedtls_printf( "mbedtls_md_info_from_type() failed in mbedtls_ssl_tls1_3_hkdf_expand_label()." );
             goto clean_up;
         }
 
@@ -397,7 +399,7 @@ int hkdfExpandLabel( mbedtls_md_type_t hash_alg, const unsigned char *secret, in
 
     if( ret != 0 )
     {
-        mbedtls_printf( "hkdfExpand( ): Error %d.\n", ret );
+        mbedtls_printf( "hkdfExpand(): Error %d.\n", ret );
         goto clean_up;
     }
 
@@ -417,3 +419,5 @@ clean_up:
     mbedtls_free( info );
     return( ret );
 }
+
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */

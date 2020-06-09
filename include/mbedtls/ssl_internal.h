@@ -33,10 +33,6 @@
 #include "mbedtls/ssl.h"
 #include "mbedtls/cipher.h"
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
-#include "mbedtls/hkdf-tls.h"
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
-
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
 #include "psa/crypto.h"
 #endif
@@ -1589,5 +1585,98 @@ void mbedtls_ssl_flight_free( mbedtls_ssl_flight_item *flight );
 int mbedtls_ssl_double_retransmit_timeout( mbedtls_ssl_context *ssl );
 void mbedtls_ssl_reset_retransmit_timeout( mbedtls_ssl_context *ssl );
 #endif /* MBEDTLS_SSL_PROTO_DTLS */
+
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+
+/**
+ * \brief   mbedtls_ssl_tls1_3_derive_secret( ) implements the TLS 1.3 Derive-Secret( ) function.
+ *
+ * Derive-Secret( Secret, Label, Messages ) =
+ *   HKDF-Expand-Label( Secret, Label,
+ *    Hash( Messages ), Hash.Length ))
+ *
+ * Note: In this implementation of the function we assume that
+ * the parameter message contains the already hashed value and
+ * the Derive-Secret function does not need to hash it again.
+ *
+ * \param ssl     mbedtls_ssl_context
+ * \param secret  Secret key
+ * \param slen    Length of secret
+ * \param label   Label
+ * \param llen    Length of label
+ * \param message TLS messages to hash
+ * \param mlen    Length of message
+ * \param dstbuf  Buffer to write to
+ * \param buflen  Buffer length
+ *
+ * \return          0 if successful,
+ *                  or MBEDTLS_ERR_HKDF_BUFFER_TOO_SMALL
+ *                  or MBEDTLS_ERR_HKDF_BAD_INPUT_DATA
+ *                  or MBEDTLS_ERR_HKDF_ALLOC_FAILED
+ */
+
+int mbedtls_ssl_tls1_3_derive_secret(
+                   mbedtls_ssl_context *ssl, mbedtls_md_type_t hash_alg,
+                   const unsigned char *secret, int slen,
+                   const unsigned char *label, int llen,
+                   const unsigned char *message, int mlen,
+                   unsigned char *dstbuf, int buflen );
+
+/**
+* \brief           mbedtls_ssl_tls1_3_make_traffic_keys generates keys/IVs
+*                  for record layer encryption.
+*
+* \param hash_alg        Hash algorithm
+* \param client_key      Label Length
+* \param server_key Hash Value
+* \param slen      Length of hash value
+* \param keyLen	  Length of the key
+* \param ivLen    Length of IV
+* \param keys     KeySet structure containing client/server key and IVs
+*
+* \return          0 if successful,
+*                  or MBEDTLS_ERR_HKDF_BUFFER_TOO_SMALL
+*                  or MBEDTLS_ERR_HKDF_BAD_INPUT_DATA
+*                  or MBEDTLS_ERR_HKDF_ALLOC_FAILED
+*
+*/
+
+int mbedtls_ssl_tls1_3_make_traffic_keys(
+                     mbedtls_md_type_t hash_alg,
+                     const unsigned char *client_key,
+                     const unsigned char *server_key,
+                     int slen, int keyLen, int ivLen, KeySet *keys );
+
+/**
+* \brief           HKDF-Expand-Label( Secret, Label, HashValue, Length ) =
+*                       HKDF-Expand( Secret, HkdfLabel, Length ).
+*
+*                  mbedtls_ssl_tls1_3_hkdf_expand_label( ) uses mbedtls_ssl_tls1_3_hkdf_encode_label( ) to create the
+*                  HkdfLabel structure.
+*
+* \param hash_alg  Hash algorithm
+* \param secret    Secret key
+* \param slen      Secret key length
+* \param label     Label
+* \param llen      Label length
+* \param hashValue Hash value
+* \param hlen      Hash value length
+* \param length    Length ( must be <= blen )
+* \param buf       Output buffer
+* \param blen      Output buffer length
+*
+* \return          0 if successful,
+*                  or MBEDTLS_ERR_HKDF_BAD_PARAM
+*                  or MBEDTLS_ERR_MD_BAD_INPUT_DATA
+*                  or MBEDTLS_ERR_MD_ALLOC_FAILED
+*/
+
+int mbedtls_ssl_tls1_3_hkdf_expand_label(
+                     mbedtls_md_type_t  hash_alg, const unsigned char *secret,
+                     int slen, const unsigned char *label, int llen,
+                     const unsigned char *hashValue, int hlen, int length,
+                     unsigned char *buf, int blen );
+
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) */
 
 #endif /* ssl_internal.h */

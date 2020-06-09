@@ -42,7 +42,6 @@
 #include "mbedtls/debug.h"
 #include "mbedtls/ssl.h"
 #include "mbedtls/ssl_internal.h"
-#include "mbedtls/hkdf-tls.h"
 #include "mbedtls/hkdf.h"
 #include <string.h>
 
