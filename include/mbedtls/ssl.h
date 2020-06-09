@@ -790,7 +790,7 @@ typedef enum
     allow_early_data = 1,
     allow_dhe_resumption = 2,
     allow_psk_resumption = 4,
-} TicketFlags;
+} mbedtls_ssl_ticket_flags;
 
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL && MBEDTLS_SSL_NEW_SESSION_TICKET && MBEDTLS_SSL_CLI_C */
 
@@ -814,9 +814,9 @@ struct mbedtls_ssl_ticket {
     time_t start;
 #endif
 #if defined(MBEDTLS_X509_CRT_PARSE_C)
-    mbedtls_x509_crt* peer_cert;         /*!< entry peer_cert    */
+    mbedtls_x509_crt* peer_cert;    /*!< entry peer_cert */
 #endif
-    TicketFlags flags;          /*!< ticket flags */
+    mbedtls_ssl_ticket_flags flags; /*!< ticket flags    */
 };
 
 #if defined(MBEDTLS_SSL_ASYNC_PRIVATE)
@@ -1052,10 +1052,10 @@ typedef void mbedtls_ssl_async_cancel_t( mbedtls_ssl_context *ssl );
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
 /**
-* \brief          KeySet data structure holding client/server write keys
-*                 as well as the respective IVs.
+* \brief          mbedtls_ssl_key_set data structure holding client/server
+*                 write keys as well as the respective IVs.
 */
-typedef struct KeySet {
+typedef struct mbedtls_ssl_key_set {
 	unsigned char *clientWriteKey;
 	unsigned char *serverWriteKey;
 	unsigned char *clientWriteIV;
@@ -1076,7 +1076,7 @@ typedef struct KeySet {
 	 */
 	unsigned char *server_sn_key;
 	unsigned char *client_sn_key;
-} KeySet;
+} mbedtls_ssl_key_set;
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 
 /*
@@ -1138,14 +1138,14 @@ struct mbedtls_ssl_session
 #if defined(MBEDTLS_SSL_NEW_SESSION_TICKET) && defined(MBEDTLS_SSL_CLI_C)
 // TBD: Replace fields by ticket structure
 // We currently only store a single ticket on the client size
-    unsigned char* ticket;      /*!< TLS 1.3 session ticket acting as psk identity */
-    size_t ticket_len;          /*!< ticket length   */
-    uint32_t ticket_lifetime;   /*!< ticket lifetime hint    */
-    TicketFlags flags;          /*!< ticket flags */
-    uint32_t ticket_age_add;    /* A randomly generated 32-bit value that is used to obscure the age of the ticket */
-    unsigned char* ticket_nonce;/*!< ticket nonce value */
-    uint8_t ticket_nonce_len;   /*!< ticket nonce length */
-    size_t key_len;             /*!< psk key length */
+    unsigned char* ticket;          /*!< TLS 1.3 session ticket acting as psk identity */
+    size_t ticket_len;              /*!< ticket length   */
+    uint32_t ticket_lifetime;       /*!< ticket lifetime hint    */
+    mbedtls_ssl_ticket_flags flags; /*!< ticket flags */
+    uint32_t ticket_age_add;        /* A randomly generated 32-bit value that is used to obscure the age of the ticket */
+    unsigned char* ticket_nonce;    /*!< ticket nonce value */
+    uint8_t ticket_nonce_len;       /*!< ticket nonce length */
+    size_t key_len;                 /*!< psk key length */
 #if defined(MBEDTLS_SHA256_C) && !defined(MBEDTLS_SHA512_C)
     unsigned char key[32];
 #else /* MBEDTLS_SHA512_C */
@@ -1263,7 +1263,8 @@ struct mbedtls_ssl_config
     /** Callback to create & write a session ticket                         */
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
     int(*f_ticket_write)(void*, const mbedtls_ssl_ticket*,
-        unsigned char*, const unsigned char*, size_t*, uint32_t*, TicketFlags*);
+        unsigned char*, const unsigned char*, size_t*, uint32_t*,
+        mbedtls_ssl_ticket_flags*);
     /** Callback to parse a session ticket into a session structure         */
     int(*f_ticket_parse)(void*, mbedtls_ssl_ticket*, unsigned char*, size_t);
     void* p_ticket;                 /*!< context for the ticket callbacks   */
@@ -2330,7 +2331,7 @@ typedef int mbedtls_ssl_ticket_write_t(void* p_ticket,
     unsigned char* start,
     const unsigned char* end,
     size_t* tlen,
-    uint32_t* lifetime, TicketFlags* flags);
+    uint32_t* lifetime, mbedtls_ssl_ticket_flags* flags);
 
 #else
 

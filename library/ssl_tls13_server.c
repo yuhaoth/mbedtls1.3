@@ -1789,7 +1789,7 @@ cleanup:
 static int ssl_read_end_of_early_data_preprocess( mbedtls_ssl_context* ssl )
 {
     int ret;
-    KeySet traffic_keys;
+    mbedtls_ssl_key_set traffic_keys;
 
     ret = mbedtls_ssl_early_data_key_derivation( ssl, &traffic_keys );
     if( ret != 0 )
@@ -1889,7 +1889,7 @@ cleanup:
 static int ssl_read_early_data_preprocess( mbedtls_ssl_context* ssl )
 {
     int ret;
-    KeySet traffic_keys;
+    mbedtls_ssl_key_set traffic_keys;
 
     ret = mbedtls_ssl_early_data_key_derivation( ssl, &traffic_keys );
     if( ret != 0 )
@@ -3290,7 +3290,7 @@ cleanup:
 static int ssl_encrypted_extensions_prepare( mbedtls_ssl_context* ssl )
 {
     int ret;
-    KeySet traffic_keys;
+    mbedtls_ssl_key_set traffic_keys;
 
     ret = mbedtls_ssl_key_derivation( ssl, &traffic_keys );
 
@@ -4241,7 +4241,7 @@ static int ssl_certificate_request_postprocess( mbedtls_ssl_context* ssl )
 int mbedtls_ssl_handshake_server_step( mbedtls_ssl_context *ssl )
 {
     int ret = 0;
-    KeySet traffic_keys;
+    mbedtls_ssl_key_set traffic_keys;
 
 
     if( ssl->state == MBEDTLS_SSL_HANDSHAKE_OVER || ssl->handshake == NULL )
