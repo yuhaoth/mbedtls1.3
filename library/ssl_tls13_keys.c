@@ -70,10 +70,10 @@ static int ssl_tls1_3_hkdf_encode_label(
                             unsigned char *info, int length )
 {
     unsigned char *p = info;
-    char label_prefix[7] = "tls13 ";
+    char label_prefix[] = "tls13 ";
     int labelLen;
 
-    labelLen = ( strlen( ( const char * )label_prefix ) + llen );
+    labelLen = sizeof(label_prefix) + llen;
 
     // create header
     *p++ = (unsigned char)( ( length >> 8 ) & 0xFF );
@@ -81,8 +81,8 @@ static int ssl_tls1_3_hkdf_encode_label(
     *p++ = (unsigned char)( ( labelLen ) &0xFF );
 
     // copy label
-    memcpy( p, label_prefix, strlen( (const char *) label_prefix ) );
-    p += (unsigned char) strlen( (const char *) label_prefix );
+    memcpy( p, label_prefix, sizeof(label_prefix) );
+    p += sizeof(label_prefix);
 
     memcpy( p, label, llen );
     p += llen;
