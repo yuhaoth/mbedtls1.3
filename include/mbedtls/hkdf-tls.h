@@ -1,25 +1,25 @@
 /**
-* \file hkdf-tls.h
-*
-* \brief TLS 1.3-specific HKDF functionality
-*
-*  Copyright (C) 2006-2015, ARM Limited, All Rights Reserved
-*  SPDX-License-Identifier: Apache-2.0
-*
-*  Licensed under the Apache License, Version 2.0 (the "License"); you may
-*  not use this file except in compliance with the License.
-*  You may obtain a copy of the License at
-*
-*  http://www.apache.org/licenses/LICENSE-2.0
-*
-*  Unless required by applicable law or agreed to in writing, software
-*  distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
-*  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-*  See the License for the specific language governing permissions and
-*  limitations under the License.
-*
-*  This file is part of mbed TLS (https://tls.mbed.org)
-*/
+ * \file hkdf-tls.h
+ *
+ * \brief TLS 1.3-specific HKDF functionality
+ *
+ *  Copyright (C) 2006-2020, ARM Limited, All Rights Reserved
+ *  SPDX-License-Identifier: Apache-2.0
+ *
+ *  Licensed under the Apache License, Version 2.0 (the "License"); you may
+ *  not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *
+ *  http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ *
+ *  This file is part of mbed TLS (https://tls.mbed.org)
+ */
 #ifndef MBEDTLS_HKDF_TLS_H
 #define MBEDTLS_HKDF_TLS_H
 
@@ -43,44 +43,18 @@
 extern "C" {
 #endif
 
-
-
 /**
- * \brief           hkdfEncodeLabel creates the HkdfLabel structure.
+ * \brief   Derive_Secret( ) implements the TLS 1.3 Derive-Secret( ) function.
  *
- * \param label     Label Text
- * \param llen      Label Length 
- * \param hashValue Hash Value
- * \param hlen      Length of hash value 
- * \param buf		Output buffer 
- * \param length    Length is a value encoded in the HkdfLabel structure.
+ * Derive-Secret( Secret, Label, Messages ) =
+ *   HKDF-Expand-Label( Secret, Label,
+ *    Hash( Messages ), Hash.Length ))
  *
- * \return          0 if successful,
- *                  or MBEDTLS_ERR_HKDF_BUFFER_TOO_SMALL
- *
- * \note            TLS 1.3 encodes the labels for the HKDF function
- *                  in a unique way. This function allows to 
- *                  conveniently create these labels. 
- * 
- *                  The function assumes that enough buffer has been 
- *                  allocated in buf to hold the result. 
- */
-int hkdfEncodeLabel(const unsigned char *label, int llen,
-                    const unsigned char *hashValue, int hlen,
-                    unsigned char *buf, int length);
-
-/**
- * \brief   Derive_Secret() implements the TLS 1.3 Derive-Secret() function.
- *                  
- * Derive-Secret(Secret, Label, Messages) =
- *   HKDF-Expand-Label(Secret, Label,
- *    Hash(Messages), Hash.Length))
- * 
  * Note: In this implementation of the function we assume that
  * the parameter message contains the already hashed value and
  * the Derive-Secret function does not need to hash it again.
  *
- * \param ssl     mbedtls_ssl_context 
+ * \param ssl     mbedtls_ssl_context
  * \param secret  Secret key
  * \param slen    Length of secret
  * \param label   Label
@@ -96,13 +70,14 @@ int hkdfEncodeLabel(const unsigned char *label, int llen,
  *                  or MBEDTLS_ERR_HKDF_ALLOC_FAILED
  */
 
-int Derive_Secret(mbedtls_ssl_context *ssl, mbedtls_md_type_t hash_alg, const unsigned char *secret, int slen,
-                  const unsigned char *label, int llen,
-                  const unsigned char *message, int mlen,
-                  unsigned char *dstbuf, int buflen);
+int Derive_Secret( mbedtls_ssl_context *ssl, mbedtls_md_type_t hash_alg,
+                   const unsigned char *secret, int slen,
+                   const unsigned char *label, int llen,
+                   const unsigned char *message, int mlen,
+                   unsigned char *dstbuf, int buflen );
 
 /**
-* \brief           makeTrafficKeys generates keys/IVs 
+* \brief           makeTrafficKeys generates keys/IVs
 *                  for record layer encryption.
 *
 * \param hash_alg        Hash algorithm
@@ -118,19 +93,19 @@ int Derive_Secret(mbedtls_ssl_context *ssl, mbedtls_md_type_t hash_alg, const un
 *                  or MBEDTLS_ERR_HKDF_BAD_INPUT_DATA
 *                  or MBEDTLS_ERR_HKDF_ALLOC_FAILED
 *
-*/ 
+*/
 
-int makeTrafficKeys(mbedtls_md_type_t hash_alg,
-	                const unsigned char *client_key,
-	                const unsigned char *server_key,
-	                int slen, int keyLen, int ivLen, KeySet *keys);
+int makeTrafficKeys( mbedtls_md_type_t hash_alg,
+                     const unsigned char *client_key,
+                     const unsigned char *server_key,
+                     int slen, int keyLen, int ivLen, KeySet *keys );
 
 /**
-* \brief           HKDF-Expand-Label(Secret, Label, HashValue, Length) =
-*                       HKDF-Expand(Secret, HkdfLabel, Length). 
-* 
-*                  hkdfExpandLabel() uses hkdfEncodeLabel() to create the 
-*                  HkdfLabel structure.  
+* \brief           HKDF-Expand-Label( Secret, Label, HashValue, Length ) =
+*                       HKDF-Expand( Secret, HkdfLabel, Length ).
+*
+*                  hkdfExpandLabel( ) uses hkdfEncodeLabel( ) to create the
+*                  HkdfLabel structure.
 *
 * \param hash_alg  Hash algorithm
 * \param secret    Secret key
@@ -139,7 +114,7 @@ int makeTrafficKeys(mbedtls_md_type_t hash_alg,
 * \param llen      Label length
 * \param hashValue Hash value
 * \param hlen      Hash value length
-* \param length    Length (must be <= blen)
+* \param length    Length ( must be <= blen )
 * \param buf       Output buffer
 * \param blen      Output buffer length
 *
@@ -149,10 +124,10 @@ int makeTrafficKeys(mbedtls_md_type_t hash_alg,
 *                  or MBEDTLS_ERR_MD_ALLOC_FAILED
 */
 
-int hkdfExpandLabel(mbedtls_md_type_t  hash_alg, const unsigned char *secret,
-                    int slen, const unsigned char *label, int llen,
-                    const unsigned char *hashValue, int hlen, int length,
-                    unsigned char *buf, int blen);
+int hkdfExpandLabel( mbedtls_md_type_t  hash_alg, const unsigned char *secret,
+                     int slen, const unsigned char *label, int llen,
+                     const unsigned char *hashValue, int hlen, int length,
+                     unsigned char *buf, int blen );
 
 #ifdef __cplusplus
 }
