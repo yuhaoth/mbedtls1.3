@@ -1077,7 +1077,7 @@ typedef struct mbedtls_ssl_key_set {
 	unsigned char *server_sn_key;
 	unsigned char *client_sn_key;
 } mbedtls_ssl_key_set;
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 
 /*
  * This structure is used for storing current session data.
