@@ -107,7 +107,7 @@ set(src_tls
     ssl_tls13_generic.c
     ssl_tls13_messaging.c
     ssl_tls13_server.c
-    hkdf-tls.c
+    ssl_tls13_keys.c
 )
 
 if(CMAKE_COMPILER_IS_GNUCC)

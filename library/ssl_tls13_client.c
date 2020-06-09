@@ -28,7 +28,6 @@
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
 
-#include "mbedtls/hkdf-tls.h"
 #include "mbedtls/hkdf.h"
 
 #if defined(MBEDTLS_SSL_CLI_C)
@@ -54,7 +53,7 @@
 #endif
 
 
-#if ( defined(MBEDTLS_ECDH_C) || defined(MBEDTLS_ECDSA_C) )
+#if (defined(MBEDTLS_ECDH_C) || defined(MBEDTLS_ECDSA_C))
 
 /* TODO: Code for MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED missing */
 static int check_ecdh_params( const mbedtls_ssl_context *ssl )
@@ -791,7 +790,7 @@ int ssl_create_binder( mbedtls_ssl_context *ssl, unsigned char *psk, size_t psk_
 
     if( ssl->conf->resumption_mode == 1 )
     {
-        ret = Derive_Secret( ssl, mbedtls_md_get_type( md ),
+        ret = mbedtls_ssl_tls1_3_derive_secret( ssl, mbedtls_md_get_type( md ),
                             ssl->handshake->early_secret, hash_length,
                             ( const unsigned char * )"res binder", strlen( "res binder" ),
                             hash, hash_length, binder_key, hash_length );
@@ -799,7 +798,7 @@ int ssl_create_binder( mbedtls_ssl_context *ssl, unsigned char *psk, size_t psk_
     }
     else
     {
-        ret = Derive_Secret( ssl, mbedtls_md_get_type( md ),
+        ret = mbedtls_ssl_tls1_3_derive_secret( ssl, mbedtls_md_get_type( md ),
                             ssl->handshake->early_secret, hash_length,
                             ( const unsigned char * )"ext binder", strlen( "ext binder" ),
                             hash, hash_length, binder_key, hash_length );
@@ -808,7 +807,7 @@ int ssl_create_binder( mbedtls_ssl_context *ssl, unsigned char *psk, size_t psk_
 
     if( ret != 0 )
     {
-        MBEDTLS_SSL_DEBUG_RET( 1, "Derive_Secret( ) with binder_key: Error", ret );
+        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_tls1_3_derive_secret( ) with binder_key: Error", ret );
         return( ret );
     }
 
@@ -867,7 +866,11 @@ int ssl_create_binder( mbedtls_ssl_context *ssl, unsigned char *psk, size_t psk_
      * but with the BaseKey being the binder_key.
      */
 
-    ret = hkdfExpandLabel( suite_info->mac, binder_key, hash_length,  ( const unsigned char * )"finished", strlen( "finished" ),  ( const unsigned char * )"", 0, hash_length, finished_key, hash_length );
+    ret = mbedtls_ssl_tls1_3_hkdf_expand_label( suite_info->mac, binder_key,
+                            hash_length,
+                            (const unsigned char *)"finished", strlen( "finished" ),
+                            (const unsigned char *)"", 0, hash_length,
+                            finished_key, hash_length );
 
     if( ret != 0 )
     {

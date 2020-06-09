@@ -41,7 +41,6 @@
 #include "mbedtls/ecp.h"
 #endif /* MBEDTLS_ECP_C */
 
-#include "mbedtls/hkdf-tls.h"
 #include "mbedtls/hkdf.h"
 
 #if defined(MBEDTLS_SSL_NEW_SESSION_TICKET)
@@ -651,7 +650,7 @@ static int ssl_calc_binder( mbedtls_ssl_context *ssl, unsigned char *psk,
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && defined(MBEDTLS_SSL_NEW_SESSION_TICKET)
     if( ( ssl->handshake->resume == 1 ) || ( ssl->conf->resumption_mode == 1 ) )
     {
-        ret = Derive_Secret( ssl, mbedtls_md_get_type( md ),
+        ret = mbedtls_ssl_tls1_3_derive_secret( ssl, mbedtls_md_get_type( md ),
                             ssl->handshake->early_secret, hash_length,
                             (const unsigned char*)"res binder", strlen( "res binder" ),
                             hash, hash_length, binder_key, hash_length );
@@ -660,7 +659,7 @@ static int ssl_calc_binder( mbedtls_ssl_context *ssl, unsigned char *psk,
     else
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL && MBEDTLS_SSL_NEW_SESSION_TICKET */
     {
-        ret = Derive_Secret( ssl, mbedtls_md_get_type( md ),
+        ret = mbedtls_ssl_tls1_3_derive_secret( ssl, mbedtls_md_get_type( md ),
                             ssl->handshake->early_secret, hash_length,
                             (const unsigned char*)"ext binder", strlen( "ext binder" ),
                             hash, hash_length, binder_key, hash_length );
@@ -670,7 +669,7 @@ static int ssl_calc_binder( mbedtls_ssl_context *ssl, unsigned char *psk,
 
     if( ret != 0 )
     {
-        MBEDTLS_SSL_DEBUG_RET( 1, "Derive_Secret( ) with binder_key: Error", ret );
+        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_tls1_3_derive_secret( ) with binder_key: Error", ret );
         return( ret );
     }
 
@@ -715,7 +714,11 @@ static int ssl_calc_binder( mbedtls_ssl_context *ssl, unsigned char *psk,
      * but with the BaseKey being the binder_key.
      */
 
-    ret = hkdfExpandLabel( suite_info->mac, binder_key, hash_length, (const unsigned char*)"finished", strlen( "finished" ), (const unsigned char*)"", 0, hash_length, finished_key, hash_length );
+    ret = mbedtls_ssl_tls1_3_hkdf_expand_label( suite_info->mac,
+                          binder_key, hash_length,
+                          (const unsigned char*) "finished", strlen( "finished" ),
+                          (const unsigned char*)"", 0, hash_length,
+                          finished_key, hash_length );
 
     if( ret != 0 )
     {
@@ -1648,7 +1651,13 @@ static int ssl_write_new_session_ticket( mbedtls_ssl_context *ssl )
     MBEDTLS_SSL_DEBUG_BUF( 3, "resumption_master_secret", ssl->session->resumption_master_secret, hash_length );
     MBEDTLS_SSL_DEBUG_BUF( 3, "ticket_nonce:", &ssl->out_msg[13], MBEDTLS_SSL_TICKET_NONCE_LENGTH );
 
-    ret = hkdfExpandLabel( suite_info->mac, ssl->session->resumption_master_secret, hash_length, ( const unsigned char * )"resumption", strlen( "resumption" ), ( const unsigned char * )&ssl->out_msg[13], MBEDTLS_SSL_TICKET_NONCE_LENGTH, hash_length, ticket.key, hash_length );
+    ret = mbedtls_ssl_tls1_3_hkdf_expand_label( suite_info->mac,
+               ssl->session->resumption_master_secret,
+               hash_length,
+               (const unsigned char *) "resumption", strlen( "resumption" ),
+               (const unsigned char *) &ssl->out_msg[13],
+               MBEDTLS_SSL_TICKET_NONCE_LENGTH, hash_length,
+               ticket.key, hash_length );
 
     if( ret != 0 )
     {
