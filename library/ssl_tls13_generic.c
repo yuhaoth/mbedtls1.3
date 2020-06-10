@@ -1063,6 +1063,14 @@ int mbedtls_ssl_derive_traffic_keys( mbedtls_ssl_context *ssl, mbedtls_ssl_key_s
         return( ret );
     }
 
+    /*
+     * Export client handshake traffic secret
+     */
+#if defined(MBEDTLS_SSL_EXPORT_KEYS)
+    if( ssl->conf->f_export_client_hs_traffic_secret != NULL )
+        ssl->conf->f_export_client_hs_traffic_secret( ssl->conf->p_export_client_hs_traffic_secret, ssl->handshake->client_handshake_traffic_secret, (size_t) mbedtls_hash_size_for_ciphersuite( suite_info ) );
+#endif
+
     MBEDTLS_SSL_DEBUG_MSG( 5, ( "HKDF Expand: label=[TLS 1.3, c hs traffic], requested length %d", mbedtls_hash_size_for_ciphersuite( suite_info ) ) );
     MBEDTLS_SSL_DEBUG_BUF( 5, "Secret: ", ssl->handshake->handshake_secret, mbedtls_hash_size_for_ciphersuite( suite_info ) );
     MBEDTLS_SSL_DEBUG_BUF( 5, "Hash:", hash, mbedtls_hash_size_for_ciphersuite( suite_info ) );
@@ -1085,6 +1093,14 @@ int mbedtls_ssl_derive_traffic_keys( mbedtls_ssl_context *ssl, mbedtls_ssl_key_s
         return( ret );
     }
 
+    /*
+     * Export server handshake traffic secret
+     */
+#if defined(MBEDTLS_SSL_EXPORT_KEYS)
+    if( ssl->conf->f_export_server_hs_traffic_secret != NULL )
+        ssl->conf->f_export_server_hs_traffic_secret( ssl->conf->p_export_server_hs_traffic_secret, ssl->handshake->server_handshake_traffic_secret, (size_t) mbedtls_hash_size_for_ciphersuite( suite_info ) );
+#endif
+
     MBEDTLS_SSL_DEBUG_MSG( 5, ( "HKDF Expand: label=[TLS 1.3, s hs traffic], requested length %d", mbedtls_hash_size_for_ciphersuite( suite_info ) ) );
     MBEDTLS_SSL_DEBUG_BUF( 5, "Secret: ", ssl->handshake->handshake_secret, mbedtls_hash_size_for_ciphersuite( suite_info ) );
     MBEDTLS_SSL_DEBUG_BUF( 5, "Hash:", hash, mbedtls_hash_size_for_ciphersuite( suite_info ) );
@@ -1106,6 +1122,14 @@ int mbedtls_ssl_derive_traffic_keys( mbedtls_ssl_context *ssl, mbedtls_ssl_key_s
         MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_tls1_3_derive_secret( ) with exporter_secret: Error", ret );
         return( ret );
     }
+
+    /*
+     * Export exporter master secret
+     */
+#if defined(MBEDTLS_SSL_EXPORT_KEYS)
+    if( ssl->conf->f_export_exporter_master_secret != NULL )
+        ssl->conf->f_export_exporter_master_secret( ssl->conf->p_export_exporter_master_secret, ssl->handshake->exporter_secret, (size_t) mbedtls_hash_size_for_ciphersuite( suite_info ) );
+#endif
 
     MBEDTLS_SSL_DEBUG_BUF( 5, "exporter_secret", ssl->handshake->exporter_secret, mbedtls_hash_size_for_ciphersuite( suite_info ) );
 
@@ -1512,6 +1536,14 @@ int mbedtls_ssl_derive_master_secret( mbedtls_ssl_context *ssl ) {
         if( psk_allocated == 1 ) mbedtls_free( psk );
         return( ret );
     }
+
+    /*
+     * Export client early traffic secret
+     */
+#if defined(MBEDTLS_SSL_EXPORT_KEYS)
+    if( ssl->conf->f_export_client_early_traffic_secret != NULL )
+        ssl->conf->f_export_client_early_traffic_secret( ssl->conf->p_export_client_early_traffic_secret, ssl->handshake->early_secret, hash_size );
+#endif
 
     MBEDTLS_SSL_DEBUG_MSG( 5, ( "HKDF Extract -- early_secret" ) );
     MBEDTLS_SSL_DEBUG_BUF( 5, "Salt", salt, hash_size );
@@ -3167,6 +3199,14 @@ int mbedtls_ssl_generate_application_traffic_keys( mbedtls_ssl_context *ssl, mbe
         return( ret );
     }
 
+    /*
+     * Export client application traffic secret 0
+     */
+#if defined(MBEDTLS_SSL_EXPORT_KEYS)
+    if( ssl->conf->f_export_client_app_traffic_secret_0 != NULL )
+        ssl->conf->f_export_client_app_traffic_secret_0( ssl->conf->p_export_client_app_traffic_secret_0, ssl->handshake->client_traffic_secret, (size_t) mbedtls_hash_size_for_ciphersuite( suite_info ) );
+#endif
+
     /* Generate server_application_traffic_secret_0
      *
      * Master Secret
@@ -3187,6 +3227,14 @@ int mbedtls_ssl_generate_application_traffic_keys( mbedtls_ssl_context *ssl, mbe
         MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_tls1_3_derive_secret( ) with server_traffic_secret_0: Error", ret );
         return( ret );
     }
+
+    /*
+     * Export server application traffic secret 0
+     */
+#if defined(MBEDTLS_SSL_EXPORT_KEYS)
+    if( ssl->conf->f_export_server_app_traffic_secret_0 != NULL )
+        ssl->conf->f_export_server_app_traffic_secret_0( ssl->conf->p_export_server_app_traffic_secret_0, ssl->handshake->server_traffic_secret, (size_t) mbedtls_hash_size_for_ciphersuite( suite_info ) );
+#endif
 
     /* Generate application traffic keys since any records following a 1-RTT Finished message
      * MUST be encrypted under the application traffic key.
