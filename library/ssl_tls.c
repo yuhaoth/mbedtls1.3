@@ -733,6 +733,7 @@ static int ssl_use_opaque_psk( mbedtls_ssl_context const *ssl )
 #endif /* MBEDTLS_USE_PSA_CRYPTO &&
           MBEDTLS_KEY_EXCHANGE_PSK_ENABLED */
 
+#if !defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
 #if defined(MBEDTLS_SSL_EXPORT_KEYS)
 static mbedtls_tls_prf_types tls_prf_get_type( mbedtls_ssl_tls_prf_cb *tls_prf )
 {
@@ -770,7 +771,6 @@ static mbedtls_tls_prf_types tls_prf_get_type( mbedtls_ssl_tls_prf_cb *tls_prf )
 }
 #endif /* MBEDTLS_SSL_EXPORT_KEYS */
 
-#if !defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
 int  mbedtls_ssl_tls_prf( const mbedtls_tls_prf_types prf,
                           const unsigned char *secret, size_t slen,
                           const char *label,
@@ -5139,6 +5139,8 @@ void mbedtls_ssl_conf_session_tickets_cb( mbedtls_ssl_config* conf,
 #endif /* MBEDTLS_SSL_SESSION_TICKETS || ( MBEDTLS_SSL_NEW_SESSION_TICKET && MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL ) */
 
 #if defined(MBEDTLS_SSL_EXPORT_KEYS)
+#if defined(MBEDTLS_SSL_PROTO_TLS1) || defined(MBEDTLS_SSL_PROTO_TLS1_1) || \
+    defined(MBEDTLS_SSL_PROTO_TLS1_2)
 void mbedtls_ssl_conf_export_keys_cb( mbedtls_ssl_config *conf,
         mbedtls_ssl_export_keys_t *f_export_keys,
         void *p_export_keys )
@@ -5154,7 +5156,38 @@ void mbedtls_ssl_conf_export_keys_ext_cb( mbedtls_ssl_config *conf,
     conf->f_export_keys_ext = f_export_keys_ext;
     conf->p_export_keys = p_export_keys;
 }
-#endif
+#endif /* MBEDTLS_SSL_PROTO_TLS1 || MBEDTLS_SSL_PROTO_TLS1_1 || \
+          MBEDTLS_SSL_PROTO_TLS1_2 */
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+void mbedtls_ssl_conf_export_secrets_cb( mbedtls_ssl_config *conf,
+        mbedtls_ssl_export_secret_t *f_export_client_early_traffic_secret,
+        void *p_export_client_early_traffic_secret,
+        mbedtls_ssl_export_secret_t *f_export_client_hs_traffic_secret,
+        void *p_export_client_hs_traffic_secret,
+        mbedtls_ssl_export_secret_t *f_export_server_hs_traffic_secret,
+        void *p_export_server_hs_traffic_secret,
+        mbedtls_ssl_export_secret_t *f_export_client_app_traffic_secret_0,
+        void *p_export_client_app_traffic_secret_0,
+        mbedtls_ssl_export_secret_t *f_export_server_app_traffic_secret_0,
+        void *p_export_server_app_traffic_secret_0,
+        mbedtls_ssl_export_secret_t *f_export_exporter_master_secret,
+        void *p_export_exporter_master_secret )
+{
+    conf->f_export_client_early_traffic_secret = f_export_client_early_traffic_secret;
+    conf->p_export_client_early_traffic_secret = p_export_client_early_traffic_secret;
+    conf->f_export_client_hs_traffic_secret = f_export_client_hs_traffic_secret;
+    conf->p_export_client_hs_traffic_secret = p_export_client_hs_traffic_secret;
+    conf->f_export_server_hs_traffic_secret = f_export_server_hs_traffic_secret;
+    conf->p_export_server_hs_traffic_secret = p_export_server_hs_traffic_secret;
+    conf->f_export_client_app_traffic_secret_0 = f_export_client_app_traffic_secret_0;
+    conf->p_export_client_app_traffic_secret_0 = p_export_client_app_traffic_secret_0;
+    conf->f_export_server_app_traffic_secret_0 = f_export_server_app_traffic_secret_0;
+    conf->p_export_server_app_traffic_secret_0 = p_export_server_app_traffic_secret_0;
+    conf->f_export_exporter_master_secret = f_export_exporter_master_secret;
+    conf->p_export_exporter_master_secret = p_export_exporter_master_secret;
+}
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+#endif /* MBEDTLS_SSL_EXPORT_KEYS */
 
 #if defined(MBEDTLS_SSL_ASYNC_PRIVATE)
 void mbedtls_ssl_conf_async_private_cb(
