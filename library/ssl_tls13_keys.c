@@ -177,8 +177,8 @@ int mbedtls_ssl_tls1_3_derive_secret(
 */
 int mbedtls_ssl_tls1_3_make_traffic_keys(
                      mbedtls_md_type_t hash_alg,
-                     const unsigned char *client_key,
-                     const unsigned char *server_key,
+                     const unsigned char *client_secret,
+                     const unsigned char *server_secret,
                      int slen,
                      int keyLen, int ivLen,
                      mbedtls_ssl_key_set *keys )
@@ -192,7 +192,7 @@ int mbedtls_ssl_tls1_3_make_traffic_keys(
         return( ( MBEDTLS_ERR_SSL_BUFFER_TOO_SMALL ) );
     }
 
-    ret = mbedtls_ssl_tls1_3_hkdf_expand_label( hash_alg, client_key, slen, (const unsigned char *) "key", 3,
+    ret = mbedtls_ssl_tls1_3_hkdf_expand_label( hash_alg, client_secret, slen, (const unsigned char *) "key", 3,
                           (const unsigned char *)"", 0, keyLen,
                           keys->clientWriteKey, keyLen );
 
@@ -209,7 +209,7 @@ int mbedtls_ssl_tls1_3_make_traffic_keys(
         return( ( ret ) );
     }
 
-    ret = mbedtls_ssl_tls1_3_hkdf_expand_label( hash_alg, server_key, slen, (const unsigned char *)"key", 3,
+    ret = mbedtls_ssl_tls1_3_hkdf_expand_label( hash_alg, server_secret, slen, (const unsigned char *)"key", 3,
                           (const unsigned char *)"", 0, keyLen,
                           keys->serverWriteKey, keyLen );
 
@@ -227,7 +227,7 @@ int mbedtls_ssl_tls1_3_make_traffic_keys(
         return( ( ret ) );
     }
 
-    ret = mbedtls_ssl_tls1_3_hkdf_expand_label( hash_alg, client_key, slen, (const unsigned char *) "iv", 2,
+    ret = mbedtls_ssl_tls1_3_hkdf_expand_label( hash_alg, client_secret, slen, (const unsigned char *) "iv", 2,
                           (const unsigned char *)"", 0, ivLen,
                           keys->clientWriteIV, ivLen );
 
@@ -245,7 +245,7 @@ int mbedtls_ssl_tls1_3_make_traffic_keys(
         return( ( ret ) );
     }
 
-    ret = mbedtls_ssl_tls1_3_hkdf_expand_label( hash_alg, server_key, slen, (const unsigned char *) "iv", 2,
+    ret = mbedtls_ssl_tls1_3_hkdf_expand_label( hash_alg, server_secret, slen, (const unsigned char *) "iv", 2,
                           (const unsigned char *)"", 0, ivLen,
                           keys->serverWriteIV, ivLen );
 
@@ -265,7 +265,7 @@ int mbedtls_ssl_tls1_3_make_traffic_keys(
         return( ( ret ) );
     }
 
-    ret = mbedtls_ssl_tls1_3_hkdf_expand_label( hash_alg, client_key, slen, (const unsigned char *) "sn", 2,
+    ret = mbedtls_ssl_tls1_3_hkdf_expand_label( hash_alg, client_secret, slen, (const unsigned char *) "sn", 2,
                           (const unsigned char *)"", 0, keyLen,
                           keys->client_sn_key, keyLen );
 
@@ -283,7 +283,7 @@ int mbedtls_ssl_tls1_3_make_traffic_keys(
         return( ( ret ) );
     }
 
-    ret = mbedtls_ssl_tls1_3_hkdf_expand_label( hash_alg, server_key, slen, (const unsigned char *) "sn", 2,
+    ret = mbedtls_ssl_tls1_3_hkdf_expand_label( hash_alg, server_secret, slen, (const unsigned char *) "sn", 2,
                           (const unsigned char *)"", 0, keyLen,
                           keys->server_sn_key, keyLen );
 
