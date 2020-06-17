@@ -941,8 +941,7 @@ int ssl_write_pre_shared_key_ext( mbedtls_ssl_context *ssl,
     }
 
     /* Check whether we have any PSK credentials configured. */
-    if( ssl->conf->psk == NULL || ssl->conf->psk_identity == NULL ||
-        ssl->conf->psk_identity_len == 0 || ssl->conf->psk_len == 0 )
+    if( mbedtls_ssl_get_psk( ssl, NULL, NULL ) != 0 )
     {
         MBEDTLS_SSL_DEBUG_MSG( 3, ( "No externally configured PSK available." ) );
 
@@ -2046,9 +2045,7 @@ static int ssl_parse_server_psk_identity_ext( mbedtls_ssl_context *ssl,
     int ret = 0;
     size_t selected_identity;
 
-    if( ssl->conf->f_psk == NULL &&
-        ( ssl->conf->psk == NULL || ssl->conf->psk_identity == NULL ||
-          ssl->conf->psk_identity_len == 0 || ssl->conf->psk_len == 0 ) )
+    if( mbedtls_ssl_get_psk( ssl, NULL, NULL ) != 0 )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "got no pre-shared key" ) );
         return( MBEDTLS_ERR_SSL_PRIVATE_KEY_REQUIRED );
