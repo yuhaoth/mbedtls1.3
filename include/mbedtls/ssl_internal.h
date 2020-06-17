@@ -1233,30 +1233,41 @@ void mbedtls_ssl_optimize_checksum( mbedtls_ssl_context *ssl,
 int mbedtls_ssl_psk_derive_premaster( mbedtls_ssl_context *ssl, mbedtls_key_exchange_type_t key_ex );
 
 /**
- * Get the first defined PSK by order of precedence:
+ * Get the first properly defined PSK by order of precedence:
  * 1. handshake PSK set by \c mbedtls_ssl_set_hs_psk() in the PSK callback
  * 2. static PSK configured by \c mbedtls_ssl_conf_psk()
- * Return a code and update the pair (PSK, PSK length) passed to this function
+ * Update the pair (PSK, PSK length) passed to the function if they're not null.
+ * Return whether any PSK was found
  */
 static inline int mbedtls_ssl_get_psk( const mbedtls_ssl_context *ssl,
     const unsigned char **psk, size_t *psk_len )
 {
     if( ssl->handshake->psk != NULL && ssl->handshake->psk_len > 0 )
     {
-        *psk = ssl->handshake->psk;
-        *psk_len = ssl->handshake->psk_len;
+        if( psk != NULL && psk_len != NULL )
+        {
+            *psk = ssl->handshake->psk;
+            *psk_len = ssl->handshake->psk_len;
+        }
     }
 
-    else if( ssl->conf->psk != NULL && ssl->conf->psk_len > 0 )
+    else if( ssl->conf->psk != NULL && ssl->conf->psk_len > 0 &&
+             ssl->conf->psk_identity != NULL && ssl->conf->psk_identity_len > 0)
     {
-        *psk = ssl->conf->psk;
-        *psk_len = ssl->conf->psk_len;
+        if( psk != NULL && psk_len != NULL )
+        {
+            *psk = ssl->conf->psk;
+            *psk_len = ssl->conf->psk_len;
+        }
     }
 
     else
     {
-        *psk = NULL;
-        *psk_len = 0;
+        if( psk != NULL && psk_len != NULL )
+        {
+            *psk = NULL;
+            *psk_len = 0;
+        }
         return( MBEDTLS_ERR_SSL_PRIVATE_KEY_REQUIRED );
     }
 
