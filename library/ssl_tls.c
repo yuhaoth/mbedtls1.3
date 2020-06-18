@@ -5160,31 +5160,11 @@ void mbedtls_ssl_conf_export_keys_ext_cb( mbedtls_ssl_config *conf,
           MBEDTLS_SSL_PROTO_TLS1_2 */
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
 void mbedtls_ssl_conf_export_secrets_cb( mbedtls_ssl_config *conf,
-        mbedtls_ssl_export_secret_t *f_export_client_early_traffic_secret,
-        void *p_export_client_early_traffic_secret,
-        mbedtls_ssl_export_secret_t *f_export_client_hs_traffic_secret,
-        void *p_export_client_hs_traffic_secret,
-        mbedtls_ssl_export_secret_t *f_export_server_hs_traffic_secret,
-        void *p_export_server_hs_traffic_secret,
-        mbedtls_ssl_export_secret_t *f_export_client_app_traffic_secret_0,
-        void *p_export_client_app_traffic_secret_0,
-        mbedtls_ssl_export_secret_t *f_export_server_app_traffic_secret_0,
-        void *p_export_server_app_traffic_secret_0,
-        mbedtls_ssl_export_secret_t *f_export_exporter_master_secret,
-        void *p_export_exporter_master_secret )
+        mbedtls_ssl_export_secret_t *f_export_secret,
+        void *p_export_secret )
 {
-    conf->f_export_client_early_traffic_secret = f_export_client_early_traffic_secret;
-    conf->p_export_client_early_traffic_secret = p_export_client_early_traffic_secret;
-    conf->f_export_client_hs_traffic_secret = f_export_client_hs_traffic_secret;
-    conf->p_export_client_hs_traffic_secret = p_export_client_hs_traffic_secret;
-    conf->f_export_server_hs_traffic_secret = f_export_server_hs_traffic_secret;
-    conf->p_export_server_hs_traffic_secret = p_export_server_hs_traffic_secret;
-    conf->f_export_client_app_traffic_secret_0 = f_export_client_app_traffic_secret_0;
-    conf->p_export_client_app_traffic_secret_0 = p_export_client_app_traffic_secret_0;
-    conf->f_export_server_app_traffic_secret_0 = f_export_server_app_traffic_secret_0;
-    conf->p_export_server_app_traffic_secret_0 = p_export_server_app_traffic_secret_0;
-    conf->f_export_exporter_master_secret = f_export_exporter_master_secret;
-    conf->p_export_exporter_master_secret = p_export_exporter_master_secret;
+    conf->f_export_secret = f_export_secret;
+    conf->p_export_secret = p_export_secret;
 }
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 #endif /* MBEDTLS_SSL_EXPORT_KEYS */
