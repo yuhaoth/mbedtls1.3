@@ -2453,14 +2453,19 @@ typedef int mbedtls_ssl_export_keys_ext_t( void *p_expkey,
           MBEDTLS_SSL_PROTO_TLS1_2 */
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
 /**
- * \brief           Callback type: Export TLS 1.3 secrets (client early traffic
- *                  secret, client handshake traffic secret, server handshake
- *                  traffic secret, client application 0 traffic secret, server
- *                  application 0 traffic secret, exporter master secret)
+ * \brief           Callback type: Export the client's randbytes
+ *                  (ClientHello.random) and TLS 1.3 secrets (client early
+ *                  traffic secret, client handshake traffic secret, server
+ *                  handshake traffic secret, client application traffic secret
+ *                  0, server application traffic secret 0, exporter master
+ *                  secret) used to derive keys.
+ *                  Follows the NSS Key Log format
  *
- * \param p_expkey  Context for the callback
- * \param secret    Pointer to secret
- * \param len       Secret length
+ * \param p_expkey      Context for the callback
+ * \param client_random ClientHello.random bytes
+ * \param type          Secret type
+ * \param secret        Pointer to secret
+ * \param len           Secret length
  *
  * \return          0 if successful, or
  *                  a specific MBEDTLS_ERR_XXX code.
