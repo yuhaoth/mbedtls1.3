@@ -1637,14 +1637,14 @@ int mbedtls_ssl_tls1_3_derive_secret(
 * \brief           mbedtls_ssl_tls1_3_make_traffic_keys generates keys/IVs
 *                  for record layer encryption.
 *
-* \param hash_alg        Hash algorithm
-* \param client_key      Label Length
-* \param server_key Hash Value
-* \param slen      Length of hash value
-* \param keyLen	  Length of the key
-* \param ivLen    Length of IV
-* \param keys     mbedtls_ssl_key_set structure containing client/server key
-*                 and IVs
+* \param hash_alg      Hash algorithm
+* \param client_secret Client traffic secret
+* \param server_secret Server traffic secret
+* \param slen          Length of the secrets
+* \param keyLen        Length of the key
+* \param ivLen         Length of IV
+* \param keys          mbedtls_ssl_key_set structure containing client/server
+*                      keys and IVs
 *
 * \return          0 if successful,
 *                  or MBEDTLS_ERR_HKDF_BUFFER_TOO_SMALL
@@ -1655,8 +1655,8 @@ int mbedtls_ssl_tls1_3_derive_secret(
 
 int mbedtls_ssl_tls1_3_make_traffic_keys(
                      mbedtls_md_type_t hash_alg,
-                     const unsigned char *client_key,
-                     const unsigned char *server_key,
+                     const unsigned char *client_secret,
+                     const unsigned char *server_secret,
                      int slen, int keyLen, int ivLen,
                      mbedtls_ssl_key_set *keys );
 
