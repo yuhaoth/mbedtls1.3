@@ -2466,7 +2466,7 @@ typedef int mbedtls_ssl_export_keys_ext_t( void *p_expkey,
  *                  secret) used to derive keys.
  *                  Follows the NSS Key Log format
  *
- * \param p_expkey      Context for the callback
+ * \param p_expsecret   Context for the callback
  * \param client_random ClientHello.random bytes
  * \param type          Secret type
  * \param secret        Pointer to secret
@@ -2475,7 +2475,7 @@ typedef int mbedtls_ssl_export_keys_ext_t( void *p_expkey,
  * \return          0 if successful, or
  *                  a specific MBEDTLS_ERR_XXX code.
  */
-typedef int mbedtls_ssl_export_secret_t( void *p_expkey,
+typedef int mbedtls_ssl_export_secret_t( void *p_expsecret,
                                          const unsigned char client_random[32],
                                          mbedtls_ssl_tls1_3_secret_type type,
                                          const unsigned char *secret,
