@@ -805,7 +805,7 @@ typedef enum
     MBEDTLS_SSL_TLS1_3_SERVER_APPLICATION_TRAFFIC_SECRET_0,
     MBEDTLS_SSL_TLS1_3_EXPORTER_MASTER_SECRET
 } mbedtls_ssl_tls1_3_secret_type;
-#endif
+#endif /* MBEDTLS_SSL_EXPORT_KEYS && MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 
 /**
 * \brief  Ticket Structure
