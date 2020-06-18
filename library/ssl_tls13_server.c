@@ -3910,7 +3910,7 @@ static int ssl_server_hello_write( mbedtls_ssl_context* ssl,
 #endif /* MBEDTLS_SSL_TLS13_CTLS */
 
     /* Write random bytes */
-    memcpy( buf, ssl->handshake->randbytes, rand_bytes_len );
+    memcpy( buf, ssl->handshake->randbytes + 32, rand_bytes_len );
     MBEDTLS_SSL_DEBUG_BUF( 3, "server hello, random bytes", buf, rand_bytes_len );
 
     buf += rand_bytes_len;
