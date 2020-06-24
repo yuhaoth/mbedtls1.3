@@ -794,6 +794,18 @@ typedef enum
 
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL && MBEDTLS_SSL_NEW_SESSION_TICKET && MBEDTLS_SSL_CLI_C */
 
+#if defined(MBEDTLS_SSL_EXPORT_KEYS) && \
+    defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+typedef enum
+{
+    MBEDTLS_SSL_TLS1_3_CLIENT_EARLY_TRAFFIC_SECRET,
+    MBEDTLS_SSL_TLS1_3_CLIENT_HANDSHAKE_TRAFFIC_SECRET,
+    MBEDTLS_SSL_TLS1_3_SERVER_HANDSHAKE_TRAFFIC_SECRET,
+    MBEDTLS_SSL_TLS1_3_CLIENT_APPLICATION_TRAFFIC_SECRET_0,
+    MBEDTLS_SSL_TLS1_3_SERVER_APPLICATION_TRAFFIC_SECRET_0,
+    MBEDTLS_SSL_TLS1_3_EXPORTER_MASTER_SECRET
+} mbedtls_ssl_tls1_3_secret_type;
+#endif /* MBEDTLS_SSL_EXPORT_KEYS && MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 
 /**
 * \brief  Ticket Structure
@@ -1278,6 +1290,8 @@ struct mbedtls_ssl_config
 #endif /* (MBEDTLS_SSL_SESSION_TICKETS || (MBEDTLS_SSL_NEW_SESSION_TICKET && MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) ) && MBEDTLS_SSL_SRV_C */
 
 #if defined(MBEDTLS_SSL_EXPORT_KEYS)
+#if defined(MBEDTLS_SSL_PROTO_TLS1) || defined(MBEDTLS_SSL_PROTO_TLS1_1) || \
+    defined(MBEDTLS_SSL_PROTO_TLS1_2)
     /** Callback to export key block and master secret                      */
     int (*f_export_keys)( void *, const unsigned char *,
             const unsigned char *, size_t, size_t, size_t );
@@ -1288,6 +1302,15 @@ struct mbedtls_ssl_config
                 const unsigned char[32], const unsigned char[32],
                 mbedtls_tls_prf_types );
     void *p_export_keys;            /*!< context for key export callback    */
+#endif /* MBEDTLS_SSL_PROTO_TLS1 || MBEDTLS_SSL_PROTO_TLS1_1 || \
+          MBEDTLS_SSL_PROTO_TLS1_2 */
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+    /** Callback to export TLS 1.3 secret                                   */
+    int (*f_export_secret)( void *, const unsigned char[32],
+            mbedtls_ssl_tls1_3_secret_type type,
+            const unsigned char *, size_t );
+    void *p_export_secret; /*!< context for key export callback             */
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 #endif
 
 #if defined(MBEDTLS_SSL_DTLS_CONNECTION_ID)
@@ -2363,6 +2386,8 @@ typedef int mbedtls_ssl_ticket_write_t( void *p_ticket,
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 
 #if defined(MBEDTLS_SSL_EXPORT_KEYS)
+#if defined(MBEDTLS_SSL_PROTO_TLS1) || defined(MBEDTLS_SSL_PROTO_TLS1_1) || \
+    defined(MBEDTLS_SSL_PROTO_TLS1_2)
 /**
  * \brief           Callback type: Export key block and master secret
  *
@@ -2424,6 +2449,33 @@ typedef int mbedtls_ssl_export_keys_ext_t( void *p_expkey,
                                            const unsigned char client_random[32],
                                            const unsigned char server_random[32],
                                            mbedtls_tls_prf_types tls_prf_type );
+#endif /* MBEDTLS_SSL_PROTO_TLS1 || MBEDTLS_SSL_PROTO_TLS1_1 || \
+          MBEDTLS_SSL_PROTO_TLS1_2 */
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+/**
+ * \brief           Callback type: Export the client's randbytes
+ *                  (ClientHello.random) and TLS 1.3 secrets (client early
+ *                  traffic secret, client handshake traffic secret, server
+ *                  handshake traffic secret, client application traffic secret
+ *                  0, server application traffic secret 0, exporter master
+ *                  secret) used to derive keys.
+ *                  Follows the NSS Key Log format
+ *
+ * \param p_expsecret   Context for the callback
+ * \param client_random ClientHello.random bytes
+ * \param type          Secret type
+ * \param secret        Pointer to secret
+ * \param len           Secret length
+ *
+ * \return          0 if successful, or
+ *                  a specific MBEDTLS_ERR_XXX code.
+ */
+typedef int mbedtls_ssl_export_secret_t( void *p_expsecret,
+                                         const unsigned char client_random[32],
+                                         mbedtls_ssl_tls1_3_secret_type type,
+                                         const unsigned char *secret,
+                                         size_t len );
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 #endif /* MBEDTLS_SSL_EXPORT_KEYS */
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
@@ -2531,6 +2583,8 @@ void mbedtls_ssl_conf_session_tickets_cb( mbedtls_ssl_config *conf,
 #endif /* MBEDTLS_SSL_SESSION_TICKETS && MBEDTLS_SSL_SRV_C */
 
 #if defined(MBEDTLS_SSL_EXPORT_KEYS)
+#if defined(MBEDTLS_SSL_PROTO_TLS1) || defined(MBEDTLS_SSL_PROTO_TLS1_1) || \
+    defined(MBEDTLS_SSL_PROTO_TLS1_2)
 /**
  * \brief           Configure key export callback.
  *                  (Default: none.)
@@ -2558,6 +2612,13 @@ void mbedtls_ssl_conf_export_keys_cb( mbedtls_ssl_config *conf,
 void mbedtls_ssl_conf_export_keys_ext_cb( mbedtls_ssl_config *conf,
         mbedtls_ssl_export_keys_ext_t *f_export_keys_ext,
         void *p_export_keys );
+#endif /* MBEDTLS_SSL_PROTO_TLS1 || MBEDTLS_SSL_PROTO_TLS1_1 || \
+          MBEDTLS_SSL_PROTO_TLS1_2 */
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+void mbedtls_ssl_conf_export_secrets_cb( mbedtls_ssl_config *conf,
+        mbedtls_ssl_export_secret_t *f_export_secret,
+        void *p_export_secret );
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 #endif /* MBEDTLS_SSL_EXPORT_KEYS */
 
 #if defined(MBEDTLS_SSL_ASYNC_PRIVATE)
