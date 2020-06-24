@@ -72,7 +72,7 @@ static int check_ecdh_params( const mbedtls_ssl_context *ssl )
 #if defined(MBEDTLS_ECP_C)
     if( mbedtls_ssl_check_curve( ssl, ssl->handshake->ecdh_ctx[ssl->handshake->ecdh_ctx_selected].grp.id ) != 0 )
 #else
-	if( ssl->handshake->ecdh_ctx.grp.nbits < 163 ||
+    if( ssl->handshake->ecdh_ctx.grp.nbits < 163 ||
             ssl->handshake->ecdh_ctx.grp.nbits > 521 )
 #endif
             return( -1 );
@@ -937,7 +937,7 @@ int ssl_write_pre_shared_key_ext( mbedtls_ssl_context *ssl,
     if( !( ssl->handshake->extensions_present & PSK_KEY_EXCHANGE_MODES_EXTENSION ) )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "The psk_key_exchange_modes extension has not been added." ) );
-        return( MBEDTLS_ERR_SSL_BAD_HS_CLIENT_HELLO );
+        return( MBEDTLS_ERR_SSL_BAD_HS_PSK_KEY_EXCHANGE_MODES_EXT );
     }
 
     /* Check whether we have any PSK credentials configured. */
@@ -945,7 +945,7 @@ int ssl_write_pre_shared_key_ext( mbedtls_ssl_context *ssl,
     {
         MBEDTLS_SSL_DEBUG_MSG( 3, ( "No externally configured PSK available." ) );
 
-        return( 0 );
+        return( MBEDTLS_ERR_SSL_PRIVATE_KEY_REQUIRED );
     }
 
     MBEDTLS_SSL_DEBUG_MSG( 3, ( "client hello, adding pre_shared_key extension" ) );
@@ -966,8 +966,8 @@ int ssl_write_pre_shared_key_ext( mbedtls_ssl_context *ssl,
 
         if( hash_len == -1 )
         {
-            MBEDTLS_SSL_DEBUG_MSG( 1, ( "mbedtls_hash_size_for_ciphersuite in ssl_write_pre_shared_key_ext failed: Unknown hash function" ) );
-            return( MBEDTLS_ERR_SSL_BAD_HS_CLIENT_HELLO );
+            MBEDTLS_SSL_DEBUG_MSG( 1, ( "mbedtls_hash_size_for_ciphersuite == -1, ssl_write_pre_shared_key_ext failed" ) );
+            return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
         }
 
         /* In this implementation we only add one pre-shared-key extension. */
@@ -986,8 +986,8 @@ int ssl_write_pre_shared_key_ext( mbedtls_ssl_context *ssl,
     }
     if( hash_len == -1 )
     {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "mbedtls_hash_size_for_ciphersuite in ssl_write_pre_shared_key_ext failed: Unknown hash function" ) );
-        return( MBEDTLS_ERR_SSL_BAD_HS_CLIENT_HELLO );
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "mbedtls_hash_size_for_ciphersuite == -1, ssl_write_pre_shared_key_ext failed" ) );
+        return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
     }
 
     /*
@@ -1052,7 +1052,7 @@ int ssl_write_pre_shared_key_ext( mbedtls_ssl_context *ssl,
             {
                 MBEDTLS_SSL_DEBUG_MSG( 3, ( "ticket expired" ) );
                 /* TBD: We would have to fall back to another PSK */
-                return( MBEDTLS_ERR_SSL_BAD_HS_CLIENT_HELLO );
+                return( MBEDTLS_ERR_SSL_SESSION_TICKET_EXPIRED );
             }
 
             obfuscated_ticket_age = ( uint32_t )( now - ssl->conf->ticket_received ) + ssl->conf->ticket_age_add;
