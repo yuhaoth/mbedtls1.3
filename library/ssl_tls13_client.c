@@ -792,15 +792,16 @@ int ssl_create_binder( mbedtls_ssl_context *ssl, unsigned char *psk, size_t psk_
     {
         ret = mbedtls_ssl_tls1_3_derive_secret( ssl, mbedtls_md_get_type( md ),
                             ssl->handshake->early_secret, hash_length,
-                            ( const unsigned char * )"res binder", sizeof( "res binder" ),
+                            ( const unsigned char * )"res binder", strlen ( "res binder" ),
                             hash, hash_length, binder_key, hash_length );
         MBEDTLS_SSL_DEBUG_MSG( 5, ( "Derive Early Secret with 'res binder'" ) );
     }
     else
     {
+
         ret = mbedtls_ssl_tls1_3_derive_secret( ssl, mbedtls_md_get_type( md ),
                             ssl->handshake->early_secret, hash_length,
-                            ( const unsigned char * )"ext binder", sizeof( "ext binder" ),
+                            ( const unsigned char * )"ext binder", strlen ( "ext binder" ),
                             hash, hash_length, binder_key, hash_length );
         MBEDTLS_SSL_DEBUG_MSG( 5, ( "Derive Early Secret with 'ext binder'" ) );
     }
@@ -868,7 +869,7 @@ int ssl_create_binder( mbedtls_ssl_context *ssl, unsigned char *psk, size_t psk_
 
     ret = mbedtls_ssl_tls1_3_hkdf_expand_label( suite_info->mac, binder_key,
                             hash_length,
-                            (const unsigned char *)"finished", sizeof( "finished" ),
+                            (const unsigned char *)"finished", strlen( "finished" ),
                             (const unsigned char *)"", 0, hash_length,
                             finished_key, hash_length );
 
@@ -2905,7 +2906,10 @@ static int ssl_server_hello_parse( mbedtls_ssl_context* ssl,
     unsigned int ext_size; /* size of an individual extension */
 
     const mbedtls_ssl_ciphersuite_t* suite_info; /* pointer to ciphersuite */
-
+    
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && defined(MBEDTLS_X509_CRT_PARSE_C)
+    const int *alg; 
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL && MBEDTLS_X509_CRT_PARSE_C */
 
     /* Check for minimal length */
 #if defined(MBEDTLS_SSL_TLS13_CTLS)
@@ -3067,6 +3071,42 @@ static int ssl_server_hello_parse( mbedtls_ssl_context* ssl,
         SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_INTERNAL_ERROR );
         return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
     }
+
+#if defined(MBEDTLS_X509_CRT_PARSE_C)
+    /* Configure signature algorithm. Compare the offered signature algorithm(s) 
+     * with the selected ciphersuite matches the signature algorithm.
+     */
+
+    for( alg = ssl->conf->signature_schemes; *alg != MBEDTLS_SIG_NONE; alg++ )
+    {
+        if( ( ssl->transform_negotiate->ciphersuite_info->mac == MBEDTLS_MD_SHA256 ) && 
+            ( *alg == MBEDTLS_SIG_ECDSA_SECP256r1_SHA256 ) )
+        {
+            ssl->handshake->signature_scheme = MBEDTLS_SIG_ECDSA_SECP256r1_SHA256; 
+            break;
+        }
+        else if( ( ssl->transform_negotiate->ciphersuite_info->mac == MBEDTLS_MD_SHA384 ) && 
+            ( *alg == MBEDTLS_SIG_ECDSA_SECP384r1_SHA384 ) )
+        {
+            ssl->handshake->signature_scheme = MBEDTLS_SIG_ECDSA_SECP384r1_SHA384; 
+            break;
+        }
+        else if( ( ssl->transform_negotiate->ciphersuite_info->mac == MBEDTLS_MD_SHA512 ) && 
+            ( *alg == MBEDTLS_SIG_ECDSA_SECP521r1_SHA512 ) ) 
+        {
+            ssl->handshake->signature_scheme = MBEDTLS_SIG_ECDSA_SECP521r1_SHA512; 
+            break;
+        }
+    }
+
+    /* Error if we are unable to configure an appropriate signature algorithm. */
+    if( ssl->conf->signature_schemes[0] == MBEDTLS_SIG_NONE)
+    {
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "no signature algorithm for ciphersuite %04x was found", i ) );
+        SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_INTERNAL_ERROR );
+        return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
+    }
+#endif /* MBEDTLS_X509_CRT_PARSE_C */
 
     mbedtls_ssl_optimize_checksum( ssl, ssl->transform_negotiate->ciphersuite_info );
 
@@ -4112,7 +4152,7 @@ int mbedtls_ssl_handshake_client_step( mbedtls_ssl_context *ssl )
 
             if( ret != 0 )
             {
-                MBEDTLS_SSL_DEBUG_RET( 1, "ssl_parse_server_hello", ret );
+                MBEDTLS_SSL_DEBUG_RET( 1, "ssl_server_hello_process", ret );
                 return( ret );
             }
 

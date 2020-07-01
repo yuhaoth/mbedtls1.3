@@ -73,7 +73,8 @@ static int ssl_tls1_3_hkdf_encode_label(
     const char label_prefix[] = "tls13 ";
     int total_label_len;
 
-    total_label_len = sizeof(label_prefix) + llen;
+    // Length of label_prefix is 6 bytes (without NUL byte)
+    total_label_len = 6 + llen;
 
     // create header
     *p++ = (unsigned char)( ( length >> 8 ) & 0xFF );
@@ -81,8 +82,8 @@ static int ssl_tls1_3_hkdf_encode_label(
     *p++ = (unsigned char)( total_label_len & 0xFF );
 
     // copy label
-    memcpy( p, label_prefix, sizeof(label_prefix) );
-    p += sizeof(label_prefix);
+    memcpy( p, label_prefix, 6 );
+    p += 6;
 
     memcpy( p, label, llen );
     p += llen;
@@ -320,16 +321,25 @@ int mbedtls_ssl_tls1_3_hkdf_expand_label(
     unsigned char *info = NULL;
 
     /* Compute length of info, which
-         * is computed as follows:
+     * is computed as follows:
      *
      * struct {
-     *  uint16 length = Length;
+     *   uint16 length = Length;
      *   opaque label<7..255> = "tls13 " + Label;
      *   opaque context<0..255> = Context;
      * } HkdfLabel;
-         *
-         */
-    len = 2 + 1 + llen + 1 + hlen + 6;
+     *
+     * This is: 
+     *
+     * 2 bytes length
+     * 1 byte label length
+     * 6 bytes pre-fix label "tls13 " (without NUL byte)
+     * llen bytes label
+     * 1 byte for length of hash algorithm 
+     * hlen length of bytes hash 
+
+     */
+    len = 2 + 1 + 6 + llen + 1 + hlen;
 
 #if defined(HKDF_DEBUG)
     // ----------------------------- DEBUG ---------------------------
@@ -357,7 +367,7 @@ int mbedtls_ssl_tls1_3_hkdf_expand_label(
         // ----------------------------- DEBUG ---------------------------
 #endif
 
-        info = mbedtls_calloc( len,1 );
+    info = mbedtls_calloc( len, 1 );
 
     if( info == NULL )
     {
@@ -373,27 +383,26 @@ int mbedtls_ssl_tls1_3_hkdf_expand_label(
         goto clean_up;
     }
 
-
 #if defined(HKDF_DEBUG)
-        // ----------------------------- DEBUG ---------------------------
+    // ----------------------------- DEBUG ---------------------------
 
-        mbedtls_printf( "Info ( %d ):", len );
-        for ( int i = 0; i < len; i++ )
-        {
-            mbedtls_printf( "%02x", info[i] );
-        }
-        mbedtls_printf( "\n" );
+    mbedtls_printf( "Info ( %d ):", len );
+    for ( int i = 0; i < len; i++ )
+    {
+        mbedtls_printf( "%02x", info[i] );
+    }
+    mbedtls_printf( "\n" );
 
-        // ----------------------------- DEBUG ---------------------------
+    // ----------------------------- DEBUG ---------------------------
 #endif
 
-        md = mbedtls_md_info_from_type( hash_alg );
+    md = mbedtls_md_info_from_type( hash_alg );
 
-        if( md == NULL )
-        {
-            mbedtls_printf( "mbedtls_md_info_from_type() failed in mbedtls_ssl_tls1_3_hkdf_expand_label()." );
-            goto clean_up;
-        }
+    if( md == NULL )
+    {
+        mbedtls_printf( "mbedtls_md_info_from_type() failed in mbedtls_ssl_tls1_3_hkdf_expand_label()." );
+        goto clean_up;
+    }
 
     ret = mbedtls_hkdf_expand( md, secret, slen, info, len, buf, blen );
 
@@ -415,6 +424,7 @@ int mbedtls_ssl_tls1_3_hkdf_expand_label(
 
     // ----------------------------- DEBUG ---------------------------
 #endif
+
 clean_up:
     mbedtls_free( info );
     return( ret );

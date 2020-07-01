@@ -555,7 +555,7 @@ int mbedtls_ssl_parse_new_session_ticket_server(
 
 */
 
-__attribute__((unused)) /* TODO: Guard appropriately */
+//__attribute__((unused)) /* TODO: Guard appropriately */
 static int ssl_calc_binder( mbedtls_ssl_context *ssl, unsigned char *psk,
                             size_t psk_len, const mbedtls_md_info_t *md,
                             const mbedtls_ssl_ciphersuite_t *suite_info,
@@ -652,7 +652,7 @@ static int ssl_calc_binder( mbedtls_ssl_context *ssl, unsigned char *psk,
     {
         ret = mbedtls_ssl_tls1_3_derive_secret( ssl, mbedtls_md_get_type( md ),
                             ssl->handshake->early_secret, hash_length,
-                            (const unsigned char*)"res binder", sizeof( "res binder" ),
+                            (const unsigned char*)"res binder", strlen ( "res binder" ),
                             hash, hash_length, binder_key, hash_length );
         MBEDTLS_SSL_DEBUG_MSG( 5, ( "Derive Early Secret with 'res binder'" ) );
     }
@@ -661,7 +661,7 @@ static int ssl_calc_binder( mbedtls_ssl_context *ssl, unsigned char *psk,
     {
         ret = mbedtls_ssl_tls1_3_derive_secret( ssl, mbedtls_md_get_type( md ),
                             ssl->handshake->early_secret, hash_length,
-                            (const unsigned char*)"ext binder", sizeof( "ext binder" ),
+                            (const unsigned char*)"ext binder", strlen ( "ext binder" ),
                             hash, hash_length, binder_key, hash_length );
         MBEDTLS_SSL_DEBUG_MSG( 5, ( "Derive Early Secret with 'ext binder'" ) );
     }
@@ -716,7 +716,7 @@ static int ssl_calc_binder( mbedtls_ssl_context *ssl, unsigned char *psk,
 
     ret = mbedtls_ssl_tls1_3_hkdf_expand_label( suite_info->mac,
                           binder_key, hash_length,
-                          (const unsigned char*) "finished", sizeof( "finished" ),
+                          (const unsigned char*) "finished", strlen( "finished" ),
                           (const unsigned char*)"", 0, hash_length,
                           finished_key, hash_length );
 
@@ -1658,7 +1658,7 @@ static int ssl_write_new_session_ticket( mbedtls_ssl_context *ssl )
     ret = mbedtls_ssl_tls1_3_hkdf_expand_label( suite_info->mac,
                ssl->session->resumption_master_secret,
                hash_length,
-               (const unsigned char *) "resumption", sizeof( "resumption" ),
+               (const unsigned char *) "resumption", strlen( "resumption" ),
                (const unsigned char *) &ssl->out_msg[13],
                MBEDTLS_SSL_TICKET_NONCE_LENGTH, hash_length,
                ticket.key, hash_length );
@@ -2287,6 +2287,9 @@ static int ssl_client_hello_parse( mbedtls_ssl_context* ssl,
     mbedtls_sha512_context sha512;
 #endif /* MBEDTLS_SHA512_C */
 
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && defined(MBEDTLS_X509_CRT_PARSE_C)
+    int *alg; 
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL && MBEDTLS_X509_CRT_PARSE_C */
     const int* ciphersuites;
     const mbedtls_ssl_ciphersuite_t* ciphersuite_info;
 
@@ -2774,26 +2777,60 @@ static int ssl_client_hello_parse( mbedtls_ssl_context* ssl,
         {
             if( p[0] != ( ( ciphersuites[i] >> 8 ) & 0xFF ) ||
                 p[1] != ( ( ciphersuites[i] ) & 0xFF ) )
-                continue;
-
-            got_common_suite = 1;
-            ciphersuite_info = mbedtls_ssl_ciphersuite_from_id( ciphersuites[i] );
-
-            if( ciphersuite_info == NULL )
             {
-                MBEDTLS_SSL_DEBUG_MSG( 1, ( "mbedtls_ssl_ciphersuite_from_id: should never happen" ) );
-                return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
+                continue;
             }
 
-            goto have_ciphersuite;
-            /*
-              if( ( ret = ssl_ciphersuite_match( ssl, ciphersuites[i],
-              &ciphersuite_info ) ) != 0 )
-              return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
+#if defined(MBEDTLS_X509_CRT_PARSE_C)
+            if( ssl->handshake->extensions_present & SIGNATURE_ALGORITHM_EXTENSION ) 
+            {
+                /* We found a matching ciphersuite but now we need to find out whether it 
+                * matches the signature algorithm(s). 
+                */
 
-              if( ciphersuite_info != NULL )
-              goto have_ciphersuite;
-            */
+                ciphersuite_info = mbedtls_ssl_ciphersuite_from_id( ciphersuites[i] );
+
+                if( ciphersuite_info != NULL )
+                {
+
+                    for( alg = ssl->handshake->offered_signature_schemes; *alg != MBEDTLS_SIG_NONE; alg++ )
+                    {
+                
+                        if( ( ciphersuite_info->mac == MBEDTLS_MD_SHA256 ) && ( *alg == MBEDTLS_SIG_ECDSA_SECP256r1_SHA256 ) )
+                        {
+                            ssl->handshake->signature_scheme = MBEDTLS_SIG_ECDSA_SECP256r1_SHA256; 
+                            got_common_suite = 1;
+                            goto have_ciphersuite;
+                        }
+                        else if( ( ciphersuite_info->mac == MBEDTLS_MD_SHA384 ) && ( *alg == MBEDTLS_SIG_ECDSA_SECP384r1_SHA384 ) )
+                        {
+                            ssl->handshake->signature_scheme = MBEDTLS_SIG_ECDSA_SECP384r1_SHA384; 
+                            got_common_suite = 1;
+                            goto have_ciphersuite;
+                        }
+                        else if( ( ciphersuite_info->mac == MBEDTLS_MD_SHA512 ) && ( *alg == MBEDTLS_SIG_ECDSA_SECP521r1_SHA512 ) ) 
+                        {
+                            ssl->handshake->signature_scheme = MBEDTLS_SIG_ECDSA_SECP521r1_SHA512; 
+                            got_common_suite = 1;
+                            goto have_ciphersuite;
+                        }
+                    }
+                }
+            }
+            else 
+#endif /* MBEDTLS_X509_CRT_PARSE_C */
+            {
+                got_common_suite = 1;
+                ciphersuite_info = mbedtls_ssl_ciphersuite_from_id( ciphersuites[i] );
+
+                if( ciphersuite_info == NULL )
+                {
+                    MBEDTLS_SSL_DEBUG_MSG( 1, ( "mbedtls_ssl_ciphersuite_from_id: should never happen" ) );
+                    return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
+                }
+
+                goto have_ciphersuite;
+            }
 
         }
     }
@@ -2815,6 +2852,13 @@ static int ssl_client_hello_parse( mbedtls_ssl_context* ssl,
 
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "selected ciphersuite: %s",
                                 ciphersuite_info->name ) );
+
+#if defined(MBEDTLS_X509_CRT_PARSE_C)
+    MBEDTLS_SSL_DEBUG_MSG( 3, ( "selected signature algorithm: 0x%x", ssl->handshake->signature_scheme ) );
+
+    if( ssl->handshake->offered_signature_schemes != NULL )
+        mbedtls_free(ssl->handshake->offered_signature_schemes); 
+#endif /* MBEDTLS_X509_CRT_PARSE_C */
 
     ssl->session_negotiate->ciphersuite = ciphersuites[i];
     ssl->transform_negotiate->ciphersuite_info = ciphersuite_info;
@@ -4493,12 +4537,6 @@ int mbedtls_ssl_handshake_server_step( mbedtls_ssl_context *ssl )
         case MBEDTLS_SSL_SERVER_HELLO:
             ret = ssl_server_hello_process( ssl );
 
-            if( ret != 0 )
-            {
-                MBEDTLS_SSL_DEBUG_RET( 1, "ssl_server_hello_process", ret );
-                return( ret );
-            }
-
 #if defined(MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE)
             if( ssl->handshake->ccs_sent > 1 )
             {
@@ -4533,89 +4571,43 @@ int mbedtls_ssl_handshake_server_step( mbedtls_ssl_context *ssl )
             /* ----- WRITE ENCRYPTED EXTENSIONS ----*/
 
         case MBEDTLS_SSL_ENCRYPTED_EXTENSIONS:
-
             ret = ssl_encrypted_extensions_process( ssl );
-
-            if( ret != 0 )
-            {
-                MBEDTLS_SSL_DEBUG_RET( 1, "ssl_encrypted_extensions_process", ret );
-                return( ret );
-            }
-
             break;
 
             /* ----- WRITE CERTIFICATE REQUEST ----*/
 
         case MBEDTLS_SSL_CERTIFICATE_REQUEST:
             ret = ssl_certificate_request_process( ssl );
-            if( ret != 0 )
-            {
-                MBEDTLS_SSL_DEBUG_RET( 1, "ssl_certificate_request_process", ret );
-                return( ret );
-            }
-
             break;
 
             /* ----- WRITE SERVER CERTIFICATE ----*/
 
         case MBEDTLS_SSL_SERVER_CERTIFICATE:
             ret = ssl_write_certificate_process( ssl );
-
-            if( ret != 0 )
-            {
-                MBEDTLS_SSL_DEBUG_RET( 1, "ssl_write_certificate_process", ret );
-                return( ret );
-            }
-
             break;
 
             /* ----- WRITE SERVER CERTIFICATE VERIFY ----*/
 
         case MBEDTLS_SSL_CERTIFICATE_VERIFY:
             ret = ssl_certificate_verify_process( ssl );
-
-            if( ret != 0 )
-            {
-                MBEDTLS_SSL_DEBUG_RET( 1, "ssl_certificate_verify_process", ret );
-                return( ret );
-            }
             break;
 
             /* ----- WRITE FINISHED ----*/
 
         case MBEDTLS_SSL_SERVER_FINISHED:
             ret = ssl_finished_out_process( ssl );
-
-            if( ret != 0 )
-            {
-                MBEDTLS_SSL_DEBUG_RET( 1, "ssl_finished_out_process", ret );
-                return( ret );
-            }
             break;
 
             /* ----- READ CLIENT CERTIFICATE ----*/
 
         case MBEDTLS_SSL_CLIENT_CERTIFICATE:
             ret = ssl_read_certificate_process( ssl );
-
-            if( ret != 0 )
-            {
-                MBEDTLS_SSL_DEBUG_RET( 1, "ssl_read_certificate_process", ret );
-                return( ret );
-            }
             break;
 
             /* ----- READ CLIENT CERTIFICATE VERIFY ----*/
 
         case MBEDTLS_SSL_CLIENT_CERTIFICATE_VERIFY:
             ret=ssl_read_certificate_verify_process( ssl );
-
-            if( ret != 0 )
-            {
-                MBEDTLS_SSL_DEBUG_RET( 1, "ssl_read_certificate_verify_process", ret );
-                return( ret );
-            }
-
             break;
 
 #if defined(MBEDTLS_ZERO_RTT)
@@ -4724,12 +4716,6 @@ int mbedtls_ssl_handshake_server_step( mbedtls_ssl_context *ssl )
 
 #if defined(MBEDTLS_SSL_NEW_SESSION_TICKET)
             ret = ssl_write_new_session_ticket( ssl );
-
-            if( ret != 0 )
-            {
-                MBEDTLS_SSL_DEBUG_RET( 1, "ssl_write_new_session_ticket ", ret );
-                return( ret );
-            }
 #endif /* MBEDTLS_SSL_NEW_SESSION_TICKET */
             break;
 
@@ -4738,6 +4724,11 @@ int mbedtls_ssl_handshake_server_step( mbedtls_ssl_context *ssl )
             return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
     }
 
+
+    /* Ignore error code for now to not shadow the original failure reason. */
+    /* QUESTION: Should we default to sending INTERNAL_ERROR if ret != 0
+     *           but no alert is pending? */
+    mbedtls_ssl_handle_pending_alert( ssl );
     return( ret );
 }
 

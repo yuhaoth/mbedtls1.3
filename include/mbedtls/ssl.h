@@ -410,10 +410,10 @@
 
  /* ECDSA algorithms */
 
-#define SIGNATURE_ECDSA_SECP256r1_SHA256 0x0403 // 1027
-#define	SIGNATURE_ECDSA_SECP384r1_SHA384 0x0503 // 1283
-#define SIGNATURE_ECDSA_SECP521r1_SHA512 0x0603 // 1539
-#define SIGNATURE_NONE 0x0
+#define MBEDTLS_SIG_ECDSA_SECP256r1_SHA256 0x0403 // 1027
+#define	MBEDTLS_SIG_ECDSA_SECP384r1_SHA384 0x0503 // 1283
+#define MBEDTLS_SIG_ECDSA_SECP521r1_SHA512 0x0603 // 1539
+#define MBEDTLS_SIG_NONE 0x0
 
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 
@@ -1963,6 +1963,22 @@ void mbedtls_ssl_conf_verify( mbedtls_ssl_config *conf,
                      int (*f_vrfy)(void *, mbedtls_x509_crt *, int, uint32_t *),
                      void *p_vrfy );
 #endif /* MBEDTLS_X509_CRT_PARSE_C */
+
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && defined(MBEDTLS_X509_CRT_PARSE_C)
+/**
+ * \brief          Set the signature algorithms (Optional).
+ *
+ *                 If set, the signature algorithms will be advertised in 
+ *                 the signature_algorithms extension in the ClientHello of 
+ *                 TLS/DTLS 1.3. 
+ *
+ *
+ * \param conf     The SSL configuration to use.
+ * \param sig_algs A list of signature algorithms with the most preferred algorithm listed first.  
+ */
+void mbedtls_ssl_conf_signature_algorithms( mbedtls_ssl_config *conf,
+                     const int* sig_algs );
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL && MBEDTLS_X509_CRT_PARSE_C */
 
 /**
  * \brief          Set the random number generator callback

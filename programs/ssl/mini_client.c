@@ -53,7 +53,7 @@
 
 #if !defined(MBEDTLS_CTR_DRBG_C) || !defined(MBEDTLS_ENTROPY_C) || \
     !defined(MBEDTLS_NET_C) || !defined(MBEDTLS_SSL_CLI_C) || \
-    !defined(UNIX)
+    !defined(UNIX) || defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) 
 
 int main( void )
 {

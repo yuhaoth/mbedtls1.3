@@ -214,7 +214,7 @@ static int ssl_calc_finished_tls_sha256(
     /* create client finished_key */
     ret = mbedtls_ssl_tls1_3_hkdf_expand_label( MBEDTLS_MD_SHA256,
                           ssl->handshake->client_handshake_traffic_secret, 32,
-                          (const unsigned char*)"finished", sizeof( "finished" ),
+                          (const unsigned char*)"finished", strlen( "finished" ),
                           (const unsigned char*)"", 0, 32,
                           ssl->handshake->client_finished_key, 32 );
 
@@ -229,7 +229,7 @@ static int ssl_calc_finished_tls_sha256(
     /* create server finished_key */
     ret = mbedtls_ssl_tls1_3_hkdf_expand_label( MBEDTLS_MD_SHA256,
                            ssl->handshake->server_handshake_traffic_secret, 32,
-                           (const unsigned char*)"finished", sizeof( "finished" ),
+                           (const unsigned char*)"finished", strlen( "finished" ),
                            (const unsigned char*)"", 0, 32,
                            ssl->handshake->server_finished_key, 32 );
 
@@ -338,7 +338,7 @@ static int ssl_calc_finished_tls_sha384(
     /* create client finished_key */
     ret = mbedtls_ssl_tls1_3_hkdf_expand_label( MBEDTLS_MD_SHA384,
                       ssl->handshake->client_handshake_traffic_secret, 48,
-                      (const unsigned char*) "finished", sizeof( "finished" ),
+                      (const unsigned char*) "finished", strlen( "finished" ),
                       (const unsigned char*)"", 0, 48,
                       ssl->handshake->client_finished_key, 48 );
 
@@ -353,7 +353,7 @@ static int ssl_calc_finished_tls_sha384(
     /* create server finished_key */
     ret = mbedtls_ssl_tls1_3_hkdf_expand_label( MBEDTLS_MD_SHA384,
                           ssl->handshake->server_handshake_traffic_secret, 48,
-                          (const unsigned char*)"finished", sizeof( "finished" ),
+                          (const unsigned char*)"finished", strlen( "finished" ),
                           (const unsigned char*)"", 0, 48,
                           ssl->handshake->server_finished_key, 48 );
 
@@ -847,7 +847,7 @@ int ssl_write_signature_algorithms_ext( mbedtls_ssl_context *ssl,
     /*
      * Determine length of the signature scheme list
      */
-    for ( md = ssl->conf->signature_schemes; *md != SIGNATURE_NONE; md++ )
+    for ( md = ssl->conf->signature_schemes; *md != MBEDTLS_SIG_NONE; md++ )
     {
         sig_alg_len += 2;
     }
@@ -862,7 +862,7 @@ int ssl_write_signature_algorithms_ext( mbedtls_ssl_context *ssl,
      * Write signature schemes
      */
 
-    for ( md = ssl->conf->signature_schemes; *md != SIGNATURE_NONE; md++ )
+    for ( md = ssl->conf->signature_schemes; *md != MBEDTLS_SIG_NONE; md++ )
     {
         *sig_alg_list++ = (unsigned char)( ( *md >> 8 ) & 0xFF );
         *sig_alg_list++ = (unsigned char)( ( *md ) & 0xFF );
@@ -896,6 +896,8 @@ int ssl_parse_signature_algorithms_ext( mbedtls_ssl_context *ssl,
     const unsigned char *end = buf + len;
     const int *md_cur;
     int offered_signature_scheme;
+    int got_common_sig_alg=0; 
+    uint32_t i;
 
     sig_alg_list_size = ( ( buf[0] << 8 ) | ( buf[1] ) );
     if( sig_alg_list_size + 2 != len ||
@@ -905,27 +907,50 @@ int ssl_parse_signature_algorithms_ext( mbedtls_ssl_context *ssl,
         return( MBEDTLS_ERR_SSL_BAD_HS_CLIENT_HELLO );
     }
 
+    /* Determine the number of signature algorithms we support. */
+    if( ssl->conf->signature_schemes != NULL) 
+    {
+        for( i=0, md_cur = ssl->conf->signature_schemes; *md_cur != MBEDTLS_SIG_NONE; md_cur++, i++ ); 
+    }
+
+    /* Store the offered and compatible signature algorithms for later use. */
+    ssl->handshake->offered_signature_schemes = mbedtls_calloc( i+1, sizeof(uint32_t)); 
+
+    if( ssl->handshake->offered_signature_schemes == NULL )
+    {
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "malloc failed in ssl_parse_signature_algorithms_ext( )" ) );
+        return( MBEDTLS_ERR_SSL_ALLOC_FAILED );
+    }
+
+    i=0; 
+
     for( p = buf + 2; p < end; p += 2 )
     {
         offered_signature_scheme = ( p[0] << 8 ) | p[1];
 
         MBEDTLS_SSL_DEBUG_MSG( 4, ( "received signature algorithm: 0x%x", offered_signature_scheme ) );
 
-        for( md_cur = ssl->conf->signature_schemes; *md_cur != SIGNATURE_NONE; md_cur++ )
+         for( md_cur = ssl->conf->signature_schemes; *md_cur != MBEDTLS_SIG_NONE; md_cur++ )
         {
             if( *md_cur == offered_signature_scheme )
             {
-                ssl->handshake->signature_scheme = offered_signature_scheme;
-                goto have_sig_alg;
+                ssl->handshake->offered_signature_schemes[i] = offered_signature_scheme;
+                i++; 
+                got_common_sig_alg=1;
             }
         }
+       
     }
 
-    MBEDTLS_SSL_DEBUG_MSG( 3, ( "no signature_algorithm in common" ) );
-    return( 0 );
 
-have_sig_alg:
-    MBEDTLS_SSL_DEBUG_MSG( 3, ( "signature_algorithm ext: %d", ssl->handshake->signature_scheme ) );
+    if( got_common_sig_alg == 0 )
+    {
+        MBEDTLS_SSL_DEBUG_MSG( 3, ( "no signature algorithm in common" ) );
+        mbedtls_free(ssl->handshake->offered_signature_schemes); 
+        return( MBEDTLS_ERR_SSL_NO_USABLE_CIPHERSUITE );
+    } 
+
+    ssl->handshake->offered_signature_schemes[i]=MBEDTLS_SIG_NONE; 
 
     return( 0 );
 }
@@ -1053,7 +1078,7 @@ int mbedtls_ssl_derive_traffic_keys( mbedtls_ssl_context *ssl, mbedtls_ssl_key_s
 
     ret = mbedtls_ssl_tls1_3_derive_secret( ssl, mbedtls_md_get_type( md_info ),
                          (const unsigned char*) ssl->handshake->handshake_secret, ( int ) mbedtls_hash_size_for_ciphersuite( suite_info ),
-                         (const unsigned char*) "c hs traffic", sizeof( "c hs traffic" ),
+                         (const unsigned char*) "c hs traffic", strlen( "c hs traffic" ),
                          ( const unsigned char * ) hash, ( int ) mbedtls_hash_size_for_ciphersuite( suite_info ),
                          ( unsigned char * ) ssl->handshake->client_handshake_traffic_secret, ( int ) mbedtls_hash_size_for_ciphersuite( suite_info ) );
 
@@ -1089,7 +1114,7 @@ int mbedtls_ssl_derive_traffic_keys( mbedtls_ssl_context *ssl, mbedtls_ssl_key_s
 
     ret = mbedtls_ssl_tls1_3_derive_secret( ssl, mbedtls_md_get_type( md_info ),
                          ssl->handshake->handshake_secret, mbedtls_hash_size_for_ciphersuite( suite_info ),
-                         (const unsigned char*) "s hs traffic", sizeof( "s hs traffic" ),
+                         (const unsigned char*) "s hs traffic", strlen( "s hs traffic" ),
                          hash, mbedtls_hash_size_for_ciphersuite( suite_info ),
                          ssl->handshake->server_handshake_traffic_secret, mbedtls_hash_size_for_ciphersuite( suite_info ) );
 
@@ -1125,7 +1150,7 @@ int mbedtls_ssl_derive_traffic_keys( mbedtls_ssl_context *ssl, mbedtls_ssl_key_s
 
     ret = mbedtls_ssl_tls1_3_derive_secret( ssl, mbedtls_md_get_type( md_info ),
                          ssl->handshake->master_secret, mbedtls_hash_size_for_ciphersuite( suite_info ),
-                         (const unsigned char*)"exp master", sizeof( "exp master" ),
+                         (const unsigned char*)"exp master", strlen( "exp master" ),
                          hash, mbedtls_hash_size_for_ciphersuite( suite_info ),
                          ssl->handshake->exporter_secret, mbedtls_hash_size_for_ciphersuite( suite_info ) );
 
@@ -1251,7 +1276,7 @@ static int ssl_calc_verify_tls_sha256( mbedtls_ssl_context *ssl, unsigned char h
 
     if( from == MBEDTLS_SSL_IS_CLIENT )
     {
-        context_string_len = sizeof( "TLS 1.3, client CertificateVerify" );
+        context_string_len = strlen( "TLS 1.3, client CertificateVerify" );
         context_string = mbedtls_calloc( context_string_len,1 );
 
         if( context_string == NULL )
@@ -1263,7 +1288,7 @@ static int ssl_calc_verify_tls_sha256( mbedtls_ssl_context *ssl, unsigned char h
     }
     else /* from == MBEDTLS_SSL_IS_SERVER */
     {
-        context_string_len = sizeof( "TLS 1.3, server CertificateVerify" );
+        context_string_len = strlen( "TLS 1.3, server CertificateVerify" );
         context_string = mbedtls_calloc( context_string_len,1 );
         if( context_string == NULL )
         {
@@ -1333,7 +1358,7 @@ static int ssl_calc_verify_tls_sha384( mbedtls_ssl_context *ssl, unsigned char h
 
     if( from == MBEDTLS_SSL_IS_CLIENT )
     {
-        context_string_len = sizeof( "TLS 1.3, client CertificateVerify" );
+        context_string_len = strlen( "TLS 1.3, client CertificateVerify" );
         context_string = mbedtls_calloc( context_string_len, 1 );
 
         if( context_string == NULL )
@@ -1345,7 +1370,7 @@ static int ssl_calc_verify_tls_sha384( mbedtls_ssl_context *ssl, unsigned char h
     }
     else
     { /* from == MBEDTLS_SSL_IS_SERVER */
-        context_string_len = sizeof( "TLS 1.3, server CertificateVerify" );
+        context_string_len = strlen( "TLS 1.3, server CertificateVerify" );
         context_string = mbedtls_calloc( context_string_len, 1 );
         if( context_string == NULL )
         {
@@ -1598,7 +1623,7 @@ int mbedtls_ssl_derive_master_secret( mbedtls_ssl_context *ssl ) {
 
     ret = mbedtls_ssl_tls1_3_derive_secret( ssl, ssl->transform_in->ciphersuite_info->mac,
                          ssl->handshake->early_secret, hash_size,
-                         (const unsigned char*)"derived", sizeof( "derived" ),
+                         (const unsigned char*)"derived", strlen( "derived" ),
                          padbuf, hash_size,
                          intermediary_secret, hash_size );
 
@@ -1667,7 +1692,7 @@ int mbedtls_ssl_derive_master_secret( mbedtls_ssl_context *ssl ) {
 
     ret = mbedtls_ssl_tls1_3_derive_secret( ssl, ssl->transform_in->ciphersuite_info->mac,
                          ssl->handshake->handshake_secret, hash_size,
-                         (const unsigned char*)"derived", sizeof( "derived" ),
+                         (const unsigned char*)"derived", strlen( "derived" ),
                          padbuf, hash_size,
                          intermediary_secret, hash_size );
 
@@ -1840,25 +1865,7 @@ static int ssl_certificate_verify_coordinate( mbedtls_ssl_context* ssl )
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "Certificate Verify: Only ECDSA signature algorithm is currently supported." ) );
         return( MBEDTLS_ERR_SSL_BAD_HS_CERTIFICATE_VERIFY );
     }
-
-    /*
-     * Check whether the signature scheme corresponds to the hash algorithm of the negotiated ciphersuite
-     * TBD: Double-check whether this is really a good approach.
-
-     if( ( ssl->handshake->signature_scheme == SIGNATURE_ECDSA_SECP256r1_SHA256 ) && ( ciphersuite_info->hash != MBEDTLS_MD_SHA256 ) ) {
-     MBEDTLS_SSL_DEBUG_MSG( 1, ( "Certificate Verify: SIGNATURE_ECDSA_SECP256r1_SHA256 only matches with MBEDTLS_MD_SHA256." ) );
-     return( MBEDTLS_ERR_SSL_BAD_HS_CERTIFICATE_VERIFY );
-     }
-     else if( ( ssl->handshake->signature_scheme == SIGNATURE_ECDSA_SECP384r1_SHA384 ) && ( ciphersuite_info->hash != MBEDTLS_MD_SHA384 ) ) {
-     MBEDTLS_SSL_DEBUG_MSG( 1, ( "Certificate Verify: SIGNATURE_ECDSA_SECP384r1_SHA384 only matches with MBEDTLS_MD_SHA384." ) );
-     return( MBEDTLS_ERR_SSL_BAD_HS_CERTIFICATE_VERIFY );
-     }
-     else if( ( ssl->handshake->signature_scheme == SIGNATURE_ECDSA_SECP521r1_SHA512 ) && ( ciphersuite_info->hash != MBEDTLS_MD_SHA512 ) ) {
-     MBEDTLS_SSL_DEBUG_MSG( 1, ( "Certificate Verify: SIGNATURE_ECDSA_SECP521r1_SHA512 only matches with MBEDTLS_MD_SHA512." ) );
-     return( MBEDTLS_ERR_SSL_BAD_HS_CERTIFICATE_VERIFY );
-     }
-    */
-
+    
     return( SSL_CERTIFICATE_VERIFY_SEND );
 #endif /* MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED */
 }
@@ -1871,12 +1878,12 @@ static int ssl_certificate_verify_write( mbedtls_ssl_context* ssl,
                                          size_t* olen )
 {
     int ret;
-    const mbedtls_ssl_ciphersuite_t* ciphersuite_info = ssl->transform_negotiate->ciphersuite_info;
-    size_t n = 0, offset = 0;
+    size_t n = 0;
 
     unsigned char hash[MBEDTLS_MD_MAX_SIZE];
-    unsigned char* hash_start = hash;
     unsigned int hashlen;
+    const mbedtls_md_info_t *md_info;
+    mbedtls_md_type_t hash_algo; 
 
     /* TODO: Add bounds checks! Only then remove the next line. */
     ( (void ) buflen );
@@ -1898,42 +1905,41 @@ static int ssl_certificate_verify_write( mbedtls_ssl_context* ssl,
      *    opaque signature<0..2^16-1>;
      *  } CertificateVerify;
      */
-
-    /* The algorithm used for computing the hash above must
-     * correspond to the algorithm indicated in the signature_scheme below.
-     *
-     * TBD: ssl->handshake->signature_scheme should already contain the correct value
-     *      based on the parsing of the ClientHello / transmission of the ServerHello
-     *      message.
-     */
-
-    switch ( ciphersuite_info->mac ) {
-	case MBEDTLS_MD_SHA256: ssl->handshake->signature_scheme = SIGNATURE_ECDSA_SECP256r1_SHA256; break;
-	case MBEDTLS_MD_SHA384: ssl->handshake->signature_scheme = SIGNATURE_ECDSA_SECP384r1_SHA384;  break;
-	case MBEDTLS_MD_SHA512: ssl->handshake->signature_scheme = SIGNATURE_ECDSA_SECP521r1_SHA512;  break;
-	default: MBEDTLS_SSL_DEBUG_MSG( 1, ( "Certificate Verify: Unknown hash algorithm." ) );
+    
+    switch ( ssl->handshake->signature_scheme ) {
+    case MBEDTLS_SIG_ECDSA_SECP256r1_SHA256: hash_algo=MBEDTLS_MD_SHA256; break;
+    case MBEDTLS_SIG_ECDSA_SECP384r1_SHA384: hash_algo=MBEDTLS_MD_SHA384; break;
+    case MBEDTLS_SIG_ECDSA_SECP521r1_SHA512: hash_algo=MBEDTLS_MD_SHA512; break;
+	default: MBEDTLS_SSL_DEBUG_MSG( 1, ( "Certificate Verify: Unknown hash algorithm.: [%d]", ssl->handshake->signature_scheme ) );
             return( MBEDTLS_ERR_SSL_BAD_HS_CERTIFICATE_VERIFY );
     }
 
     buf[4] = (unsigned char)( ( ssl->handshake->signature_scheme >> 8 ) & 0xFF );
     buf[5] = (unsigned char)( ( ssl->handshake->signature_scheme ) & 0xFF );
+    
+    /* 6 bytes header; 2 byte length field for signature will be written later */
 
-    /* Info from ssl->transform_negotiate->ciphersuite_info->mac will be used instead */
-    hashlen = 0;
-    offset = 2;
+    if( ( md_info = mbedtls_md_info_from_type( hash_algo ) ) == NULL )
+    {
+        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_md_info_from_type", ret );
+        return( ret );
+    }
+    hashlen = mbedtls_md_get_size( md_info );
 
-    if( ( ret = mbedtls_pk_sign( mbedtls_ssl_own_key( ssl ), ciphersuite_info->mac, hash_start, hashlen,
-                                 buf + 6 + offset, &n,
+    if( ( ret = mbedtls_pk_sign( mbedtls_ssl_own_key( ssl ), hash_algo, hash, hashlen,
+                                 buf + 6 + 2, &n,
                                  ssl->conf->f_rng, ssl->conf->p_rng ) ) != 0 )
     {
         MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_pk_sign", ret );
         return( ret );
     }
 
-    buf[4 + offset] = (unsigned char)( n >> 8 );
-    buf[5 + offset] = (unsigned char)( n );
+    buf[4 + 2] = (unsigned char)( n >> 8 );
+    buf[5 + 2] = (unsigned char)( n );
 
-    *olen = 6 + n + offset;
+    MBEDTLS_SSL_DEBUG_BUF( 5, "Signature (+ length)", buf + 6, n + 2);
+
+    *olen = 6 + n + 2;
 
     return( ret );
 }
@@ -2132,15 +2138,15 @@ static int ssl_read_certificate_verify_parse( mbedtls_ssl_context* ssl,
 
     /* We currently only support ECDSA-based signatures */
     switch ( signature_scheme ) {
-        case SIGNATURE_ECDSA_SECP256r1_SHA256:
+        case MBEDTLS_SIG_ECDSA_SECP256r1_SHA256:
             md_alg = MBEDTLS_MD_SHA256;
             pk_alg = MBEDTLS_PK_ECDSA;
             break;
-        case SIGNATURE_ECDSA_SECP384r1_SHA384:
+        case MBEDTLS_SIG_ECDSA_SECP384r1_SHA384:
             md_alg = MBEDTLS_MD_SHA384;
             pk_alg = MBEDTLS_PK_ECDSA;
             break;
-        case SIGNATURE_ECDSA_SECP521r1_SHA512:
+        case MBEDTLS_SIG_ECDSA_SECP521r1_SHA512:
             md_alg = MBEDTLS_MD_SHA512;
             pk_alg = MBEDTLS_PK_ECDSA;
             break;
@@ -2997,29 +3003,27 @@ static int ssl_read_certificate_postprocess( mbedtls_ssl_context* ssl )
     if( ssl->conf->endpoint == MBEDTLS_SSL_IS_SERVER )
     {
         mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_CLIENT_CERTIFICATE_VERIFY );
-
         /*
-          if( ret != 0 ) {
-          MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_parse_certificate", ret );
-          switch ( ret ) {
-          case MBEDTLS_ERR_SSL_BAD_HS_CERTIFICATE:
-          mbedtls_ssl_send_alert_message( ssl, MBEDTLS_SSL_ALERT_LEVEL_FATAL, MBEDTLS_SSL_ALERT_MSG_BAD_CERT );
-          break;
-          case MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE:
-          mbedtls_ssl_send_alert_message( ssl, MBEDTLS_SSL_ALERT_LEVEL_FATAL, MBEDTLS_SSL_ALERT_MSG_UNEXPECTED_MESSAGE );
-          break;
-          case MBEDTLS_ERR_SSL_NO_CLIENT_CERTIFICATE:
-          mbedtls_ssl_send_alert_message( ssl, MBEDTLS_SSL_ALERT_LEVEL_FATAL, MBEDTLS_SSL_ALERT_MSG_CERT_REQUIRED );
-          break;
-          case MBEDTLS_ERR_SSL_CA_CHAIN_REQUIRED:
-          mbedtls_ssl_send_alert_message( ssl, MBEDTLS_SSL_ALERT_LEVEL_FATAL, MBEDTLS_SSL_ALERT_MSG_UNKNOWN_CA );
-          break;
-          default:
-          mbedtls_ssl_send_alert_message( ssl, MBEDTLS_SSL_ALERT_LEVEL_FATAL, MBEDTLS_SSL_ALERT_MSG_UNSUPPORTED_CERT );
+        if( ret != 0 ) {
+            switch ( ret ) {
+            case MBEDTLS_ERR_SSL_BAD_HS_CERTIFICATE:
+                mbedtls_ssl_send_alert_message( ssl, MBEDTLS_SSL_ALERT_LEVEL_FATAL, MBEDTLS_SSL_ALERT_MSG_BAD_CERT );
+                break;
+            case MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE:
+                mbedtls_ssl_send_alert_message( ssl, MBEDTLS_SSL_ALERT_LEVEL_FATAL, MBEDTLS_SSL_ALERT_MSG_UNEXPECTED_MESSAGE );
+                break;
+            case MBEDTLS_ERR_SSL_NO_CLIENT_CERTIFICATE:
+                mbedtls_ssl_send_alert_message( ssl, MBEDTLS_SSL_ALERT_LEVEL_FATAL, MBEDTLS_SSL_ALERT_MSG_CERT_REQUIRED );
+                break;
+            case MBEDTLS_ERR_SSL_CA_CHAIN_REQUIRED:
+                mbedtls_ssl_send_alert_message( ssl, MBEDTLS_SSL_ALERT_LEVEL_FATAL, MBEDTLS_SSL_ALERT_MSG_UNKNOWN_CA );
+                break;
+            default:
+                mbedtls_ssl_send_alert_message( ssl, MBEDTLS_SSL_ALERT_LEVEL_FATAL, MBEDTLS_SSL_ALERT_MSG_UNSUPPORTED_CERT );
           }
-          return ( ret );
-          }
-	*/
+         return ( ret );
+        }
+        */
     }
     else
 #endif /* MBEDTLS_SSL_SRV_C */
@@ -3091,7 +3095,7 @@ int mbedtls_ssl_generate_resumption_master_secret( mbedtls_ssl_context *ssl ) {
 
     ret = mbedtls_ssl_tls1_3_derive_secret( ssl, mbedtls_md_get_type( md_info ),
                          ssl->handshake->master_secret, mbedtls_hash_size_for_ciphersuite( suite_info ),
-                         (const unsigned char*)"res master", sizeof( "res master" ),
+                         (const unsigned char*)"res master", strlen( "res master" ),
                          hash, mbedtls_hash_size_for_ciphersuite( suite_info ),
                          ssl->session_negotiate->resumption_master_secret, mbedtls_hash_size_for_ciphersuite( suite_info ) );
 
@@ -3212,7 +3216,7 @@ int mbedtls_ssl_generate_application_traffic_keys( mbedtls_ssl_context *ssl, mbe
 
     ret = mbedtls_ssl_tls1_3_derive_secret( ssl, mbedtls_md_get_type( md_info ),
                          ssl->handshake->master_secret, mbedtls_hash_size_for_ciphersuite( suite_info ),
-                         (const unsigned char*)"c ap traffic", sizeof( "c ap traffic" ),
+                         (const unsigned char*)"c ap traffic", strlen( "c ap traffic" ),
                          padbuf, mbedtls_hash_size_for_ciphersuite( suite_info ),
                          ssl->handshake->client_traffic_secret, mbedtls_hash_size_for_ciphersuite( suite_info ) );
 
@@ -3247,7 +3251,7 @@ int mbedtls_ssl_generate_application_traffic_keys( mbedtls_ssl_context *ssl, mbe
 
     ret = mbedtls_ssl_tls1_3_derive_secret( ssl, mbedtls_md_get_type( md_info ),
                          ssl->handshake->master_secret, mbedtls_hash_size_for_ciphersuite( suite_info ),
-                         (const unsigned char*)"s ap traffic", sizeof( "s ap traffic" ),
+                         (const unsigned char*)"s ap traffic", strlen( "s ap traffic" ),
                          padbuf, mbedtls_hash_size_for_ciphersuite( suite_info ),
                          ssl->handshake->server_traffic_secret, mbedtls_hash_size_for_ciphersuite( suite_info ) );
 
@@ -3665,7 +3669,7 @@ int mbedtls_ssl_early_data_key_derivation( mbedtls_ssl_context *ssl, mbedtls_ssl
     /* Create client_early_traffic_secret */
     ret = mbedtls_ssl_tls1_3_derive_secret( ssl, mbedtls_md_get_type( md ),
                          ssl->handshake->early_secret, hash_length,
-                         (const unsigned char*)"c e traffic", sizeof( "c e traffic" ),
+                         (const unsigned char*)"c e traffic", strlen( "c e traffic" ),
                          padbuf, hash_length, ssl->handshake->client_early_traffic_secret, hash_length );
 
     MBEDTLS_SSL_DEBUG_BUF( 5, "early_secret", ssl->handshake->early_secret, hash_length );
@@ -4400,7 +4404,7 @@ int ssl_parse_new_session_ticket( mbedtls_ssl_context *ssl )
     ret = mbedtls_ssl_tls1_3_hkdf_expand_label( suite_info->mac,
                     ssl->session->resumption_master_secret,
                     mbedtls_hash_size_for_ciphersuite( suite_info ),
-                    (const unsigned char *)"resumption", sizeof( "resumption" ),
+                    (const unsigned char *)"resumption", strlen( "resumption" ),
                     ssl->session->ticket_nonce, ssl->session->ticket_nonce_len,
                     mbedtls_hash_size_for_ciphersuite( suite_info ),
                     ssl->session->key,
@@ -4465,7 +4469,7 @@ void mbedtls_ssl_init_client_ticket( mbedtls_ssl_ticket *ticket )
         return;
 
     ticket->ticket = NULL;
-    memset( ticket->key,0,sizeof( ticket->key ) );
+    memset( ticket->key,0, sizeof( ticket->key ) );
 }
 
 
