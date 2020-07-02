@@ -714,6 +714,7 @@ struct options
 int query_config( const char *config );
 
 #if defined(MBEDTLS_SSL_EXPORT_KEYS)
+#if !defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
 typedef struct eap_tls_keys
 {
     unsigned char master_secret[48];
@@ -747,7 +748,96 @@ static int eap_tls_key_derivation ( void *p_expkey,
     }
     return( 0 );
 }
+#endif
 
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+static int nss_keylog_export( void *p_expsecret,
+                              const unsigned char client_random[32],
+                              mbedtls_ssl_tls1_3_secret_type type,
+                              const unsigned char *secret,
+                              size_t len )
+{
+    char label[ 64 ];
+    char nss_keylog_line[ 200 ];
+    size_t const client_random_len = 32;
+    size_t total_len = 0;
+    size_t j;
+    int ret = 0;
+
+    ((void) p_expsecret);
+
+    switch( type )
+    {
+        case MBEDTLS_SSL_TLS1_3_CLIENT_EARLY_TRAFFIC_SECRET:
+            strcpy(label, "CLIENT_EARLY_TRAFFIC_SECRET ");
+            break;
+        case MBEDTLS_SSL_TLS1_3_CLIENT_HANDSHAKE_TRAFFIC_SECRET:
+            strcpy(label, "CLIENT_HANDSHAKE_TRAFFIC_SECRET ");
+            break;
+        case MBEDTLS_SSL_TLS1_3_SERVER_HANDSHAKE_TRAFFIC_SECRET:
+            strcpy(label, "SERVER_HANDSHAKE_TRAFFIC_SECRET ");
+            break;
+        case MBEDTLS_SSL_TLS1_3_CLIENT_APPLICATION_TRAFFIC_SECRET_0:
+            strcpy(label, "CLIENT_TRAFFIC_SECRET_0 ");
+            break;
+        case MBEDTLS_SSL_TLS1_3_SERVER_APPLICATION_TRAFFIC_SECRET_0:
+            strcpy(label, "SERVER_TRAFFIC_SECRET_0 ");
+            break;
+        case MBEDTLS_SSL_TLS1_3_EXPORTER_MASTER_SECRET:
+            strcpy(label, "EXPORTER_SECRET ");
+            break;
+    }
+    total_len += sprintf( nss_keylog_line + total_len,
+                    "%s", label );
+
+    for( j = 0; j < client_random_len; j++ )
+    {
+        total_len += sprintf( nss_keylog_line + total_len,
+                        "%02x", client_random[j] );
+    }
+
+    total_len += sprintf( nss_keylog_line + total_len, " " );
+
+    for( j = 0; j < len; j++ )
+    {
+        total_len += sprintf( nss_keylog_line + total_len,
+                        "%02x", secret[j] );
+    }
+
+    total_len += sprintf( nss_keylog_line + total_len, "\n" );
+    nss_keylog_line[ total_len ] = '\0';
+
+    mbedtls_printf( "\n" );
+    mbedtls_printf( "---------------- NSS KEYLOG -----------------\n" );
+    mbedtls_printf( "%s", nss_keylog_line );
+    mbedtls_printf( "---------------------------------------------\n" );
+
+    if( opt.nss_keylog_file != NULL )
+    {
+        FILE *f;
+
+        if( ( f = fopen( opt.nss_keylog_file, "a" ) ) == NULL )
+        {
+            ret = -1;
+            goto exit;
+        }
+
+        if( fwrite( nss_keylog_line, 1, total_len, f ) != total_len )
+        {
+            ret = -1;
+            fclose( f );
+            goto exit;
+        }
+
+        fclose( f );
+    }
+
+exit:
+    mbedtls_platform_zeroize( nss_keylog_line,
+                              sizeof( nss_keylog_line ) );
+    return( ret );
+}
+#else
 static int nss_keylog_export( void *p_expkey,
                               const unsigned char *ms,
                               const unsigned char *kb,
@@ -823,8 +913,8 @@ exit:
                               sizeof( nss_keylog_line ) );
     return( ret );
 }
-
-#endif
+#endif /* !MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+#endif /* MBEDTLS_SSL_EXPORT_KEYS */
 
 static void my_debug( void *ctx, int level,
                       const char *file, int line,
@@ -1906,10 +1996,12 @@ int main( int argc, char *argv[] )
     psa_status_t status;
 #endif
 #if defined(MBEDTLS_SSL_EXPORT_KEYS)
+#if !defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
     unsigned char eap_tls_keymaterial[16];
     unsigned char eap_tls_iv[8];
     const char* eap_tls_label = "client EAP encryption";
     eap_tls_keys eap_tls_keying;
+#endif
 #endif
 
 #if defined(MBEDTLS_MEMORY_BUFFER_ALLOC_C)
@@ -3310,14 +3402,22 @@ int main( int argc, char *argv[] )
 #if defined(MBEDTLS_SSL_EXPORT_KEYS)
     if( opt.eap_tls != 0 )
     {
+#if !defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
         mbedtls_ssl_conf_export_keys_ext_cb( &conf, eap_tls_key_derivation,
                                              &eap_tls_keying );
+#endif
     }
     else if( opt.nss_keylog != 0 )
     {
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+        mbedtls_ssl_conf_export_secrets_cb( &conf,
+                                            nss_keylog_export,
+                                            NULL );
+#else
         mbedtls_ssl_conf_export_keys_ext_cb( &conf,
                                              nss_keylog_export,
                                              NULL );
+#endif
     }
 #endif
 
@@ -4010,6 +4110,7 @@ handshake:
 #endif /* MBEDTLS_X509_CRT_PARSE_C */
 
 #if defined(MBEDTLS_SSL_EXPORT_KEYS)
+#if !defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
     if( opt.eap_tls != 0 )
     {
         size_t j = 0;
@@ -4059,6 +4160,7 @@ handshake:
         }
         mbedtls_printf("\n");
     }
+#endif
 #endif
 
 #if defined(MBEDTLS_SSL_DTLS_CONNECTION_ID)
