@@ -652,7 +652,7 @@ static int ssl_calc_binder( mbedtls_ssl_context *ssl, unsigned char *psk,
     {
         ret = mbedtls_ssl_tls1_3_derive_secret( ssl, mbedtls_md_get_type( md ),
                             ssl->handshake->early_secret, hash_length,
-                            (const unsigned char*)"res binder", sizeof( "res binder" ),
+                            (const unsigned char*)"res binder", 10 /* strlen( "res binder" ) */,
                             hash, hash_length, binder_key, hash_length );
         MBEDTLS_SSL_DEBUG_MSG( 5, ( "Derive Early Secret with 'res binder'" ) );
     }
@@ -661,7 +661,7 @@ static int ssl_calc_binder( mbedtls_ssl_context *ssl, unsigned char *psk,
     {
         ret = mbedtls_ssl_tls1_3_derive_secret( ssl, mbedtls_md_get_type( md ),
                             ssl->handshake->early_secret, hash_length,
-                            (const unsigned char*)"ext binder", sizeof( "ext binder" ),
+                            (const unsigned char*)"ext binder", 10 /* strlen( "ext binder" ) */,
                             hash, hash_length, binder_key, hash_length );
         MBEDTLS_SSL_DEBUG_MSG( 5, ( "Derive Early Secret with 'ext binder'" ) );
     }
@@ -716,7 +716,7 @@ static int ssl_calc_binder( mbedtls_ssl_context *ssl, unsigned char *psk,
 
     ret = mbedtls_ssl_tls1_3_hkdf_expand_label( suite_info->mac,
                           binder_key, hash_length,
-                          (const unsigned char*) "finished", sizeof( "finished" ),
+                          (const unsigned char*) "finished", 8 /* strlen( "finished" ) */,
                           (const unsigned char*)"", 0, hash_length,
                           finished_key, hash_length );
 
@@ -1658,7 +1658,7 @@ static int ssl_write_new_session_ticket( mbedtls_ssl_context *ssl )
     ret = mbedtls_ssl_tls1_3_hkdf_expand_label( suite_info->mac,
                ssl->session->resumption_master_secret,
                hash_length,
-               (const unsigned char *) "resumption", sizeof( "resumption" ),
+               (const unsigned char *) "resumption", 10 /* strlen( "resumption" ) */,
                (const unsigned char *) &ssl->out_msg[13],
                MBEDTLS_SSL_TICKET_NONCE_LENGTH, hash_length,
                ticket.key, hash_length );
