@@ -2287,9 +2287,11 @@ static int ssl_client_hello_parse( mbedtls_ssl_context* ssl,
     mbedtls_sha512_context sha512;
 #endif /* MBEDTLS_SHA512_C */
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && defined(MBEDTLS_X509_CRT_PARSE_C)
+#if defined(MBEDTLS_X509_CRT_PARSE_C)
     int *alg; 
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL && MBEDTLS_X509_CRT_PARSE_C */
+    size_t bitlen;  
+    mbedtls_pk_context *own_cert_pk_context; 
+#endif /* MBEDTLS_X509_CRT_PARSE_C */
     const int* ciphersuites;
     const mbedtls_ssl_ciphersuite_t* ciphersuite_info;
 
@@ -2759,6 +2761,20 @@ static int ssl_client_hello_parse( mbedtls_ssl_context* ssl,
         }
     }
 
+#if defined(MBEDTLS_X509_CRT_PARSE_C)
+    /* Determine keysize of our own cert */
+    own_cert_pk_context=mbedtls_ssl_own_key( ssl ); 
+
+    if( own_cert_pk_context == NULL ) 
+    {
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "mbedtls_ssl_own_key returned NULL" ) );
+        return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
+    }
+
+    bitlen = mbedtls_pk_get_bitlen(own_cert_pk_context); 
+    MBEDTLS_SSL_DEBUG_MSG( 3, ( "Own certificate uses %d bits", bitlen ) );
+#endif /* MBEDTLS_X509_CRT_PARSE_C */
+
     /*
      * Search for a matching ciphersuite
      */
@@ -2784,10 +2800,12 @@ static int ssl_client_hello_parse( mbedtls_ssl_context* ssl,
 #if defined(MBEDTLS_X509_CRT_PARSE_C)
             if( ssl->handshake->extensions_present & SIGNATURE_ALGORITHM_EXTENSION ) 
             {
-                /* We found a matching ciphersuite but now we need to find out whether it 
-                * matches the signature algorithm(s). 
-                */
-
+                /* We found a matching ciphersuite.
+                 * 
+                 * Two checks are needed: 
+                 * - Does the ciphersuite match the signature algorithm?
+                 * - Does the signature algorithm match the certificate being used? 
+                 */
                 ciphersuite_info = mbedtls_ssl_ciphersuite_from_id( ciphersuites[i] );
 
                 if( ciphersuite_info != NULL )
@@ -2796,19 +2814,19 @@ static int ssl_client_hello_parse( mbedtls_ssl_context* ssl,
                     for( alg = ssl->handshake->offered_signature_schemes; *alg != MBEDTLS_SIG_NONE; alg++ )
                     {
                 
-                        if( ( ciphersuite_info->mac == MBEDTLS_MD_SHA256 ) && ( *alg == MBEDTLS_SIG_ECDSA_SECP256r1_SHA256 ) )
+                        if( ( ciphersuite_info->mac == MBEDTLS_MD_SHA256 ) && ( bitlen == 256 ) && ( *alg == MBEDTLS_SIG_ECDSA_SECP256r1_SHA256 ) )
                         {
                             ssl->handshake->signature_scheme = MBEDTLS_SIG_ECDSA_SECP256r1_SHA256; 
                             got_common_suite = 1;
                             goto have_ciphersuite;
                         }
-                        else if( ( ciphersuite_info->mac == MBEDTLS_MD_SHA384 ) && ( *alg == MBEDTLS_SIG_ECDSA_SECP384r1_SHA384 ) )
+                        else if( ( ciphersuite_info->mac == MBEDTLS_MD_SHA384 ) && ( bitlen == 384 ) && ( *alg == MBEDTLS_SIG_ECDSA_SECP384r1_SHA384 ) )
                         {
                             ssl->handshake->signature_scheme = MBEDTLS_SIG_ECDSA_SECP384r1_SHA384; 
                             got_common_suite = 1;
                             goto have_ciphersuite;
                         }
-                        else if( ( ciphersuite_info->mac == MBEDTLS_MD_SHA512 ) && ( *alg == MBEDTLS_SIG_ECDSA_SECP521r1_SHA512 ) ) 
+                        else if( ( ciphersuite_info->mac == MBEDTLS_MD_SHA512 ) && ( bitlen == 512 ) && ( *alg == MBEDTLS_SIG_ECDSA_SECP521r1_SHA512 ) ) 
                         {
                             ssl->handshake->signature_scheme = MBEDTLS_SIG_ECDSA_SECP521r1_SHA512; 
                             got_common_suite = 1;
