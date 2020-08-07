@@ -3899,7 +3899,9 @@ int mbedtls_ssl_handshake_client_step( mbedtls_ssl_context *ssl )
                     MBEDTLS_SSL_DEBUG_MSG( 1, ( "should never happen" ) );
                     return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
                 }
-                memcpy( ssl->handshake->key_shares_curve_list, ssl->conf->key_shares_curve_list, sizeof( mbedtls_ecp_group_id* ) * ( MBEDTLS_SSL_MAX_KEY_SHARES+1 ) );
+                memcpy( ssl->handshake->key_shares_curve_list,
+                        ssl->conf->key_shares_curve_list,
+                        sizeof( mbedtls_ecp_group_id ) * MBEDTLS_SSL_MAX_KEY_SHARES );
 
                 /* We need to put a delimiter to the end of the key shares curve list */
                 ssl->handshake->key_shares_curve_list[MBEDTLS_SSL_MAX_KEY_SHARES] = MBEDTLS_ECP_DP_NONE;
