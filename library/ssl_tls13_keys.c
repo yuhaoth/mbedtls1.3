@@ -46,54 +46,89 @@
 #endif
 
 /*
- * The mbedtls_ssl_tls1_3_hkdf_encode_label() function creates the HkdfLabel structure.
+ * This function creates a HkdfLabel structure used in the TLS 1.3 key schedule.
  *
- * The function assumes that the info buffer space has been
- * allocated accordingly and no further length checking is needed.
- *
- * The HkdfLabel is specified in the TLS 1.3 spec as follows:
+ * The HkdfLabel is specified in RFC 8446 as follows:
  *
  * struct HkdfLabel {
- *   uint16 length;
- *   opaque label<7..255>;
- *   opaque context<0..255>;
+ *   uint16 length;            // Length of expanded key material
+ *   opaque label<7..255>;     // Always prefixed by "tls13 "
+ *   opaque context<0..255>;   // Usually a communication transcript hash
  * };
  *
- * - HkdfLabel.length is Length
- * - HkdfLabel.label is "tls13 " + Label
- * - HkdfLabel.context is HashValue.
+ * Parameters:
+ * - desired_length: Length of expanded key material
+ *                   Even though the standard allows expansion to up to
+ *                   2**16 Bytes, TLS 1.3 never uses expansion to more than
+ *                   255 Bytes, so we require `desired_length` to be at most
+ *                   255. This allows us to save a few Bytes of code by
+ *                   hardcoding the writing of the high bytes.
+ * - (label, llen): label + label length, without "tls13 " prefix
+ *                  The label length MUST be
+ *                  <= MBEDTLS_SSL_TLS1_3_KEY_SCHEDULE_MAX_LABEL_LEN
+ *                  It is the caller's responsiblity to ensure this.
+ * - (ctx, clen): context + context length
+ *                The context length MUST be
+ *                <= MBEDTLS_SSL_TLS1_3_KEY_SCHEDULE_MAX_CONTEXT_LEN
+ *                It is the caller's responsiblity to ensure this.
+ * - dst: Target buffer for HkdfLabel structure,
+ *        This MUST be a writable buffer of size
+ *        at least SSL_TLS1_3_KEY_SCHEDULE_MAX_HKDF_LABEL_LEN Bytes.
+ * - dlen: Pointer at which to store the actual length of
+ *         the HkdfLabel structure on success.
  */
 
-static int ssl_tls1_3_hkdf_encode_label(
-                            const unsigned char *label, int llen,
-                            const unsigned char *hashValue, int hlen,
-                            unsigned char *info, int length )
+#define SSL_TLS1_3_KEY_SCHEDULE_MAX_HKDF_LABEL_LEN \
+    (   2                  /* expansion length           */ \
+      + 1                  /* label length               */ \
+      + MBEDTLS_SSL_TLS1_3_KEY_SCHEDULE_MAX_LABEL_LEN       \
+      + 1                  /* context length             */ \
+      + MBEDTLS_SSL_TLS1_3_KEY_SCHEDULE_MAX_CONTEXT_LEN )
+
+#define _JOIN(x,y) x ## y
+#define JOIN(x,y) _JOIN( x, y )
+#define STATIC_ASSERT( const_expr )                                           \
+    struct JOIN(_static_assert_struct, __LINE__) {                            \
+        int JOIN(__static_assert_field, __LINE__) : 1 - 2 * ! ( const_expr ); \
+    }
+
+STATIC_ASSERT( SSL_TLS1_3_KEY_SCHEDULE_MAX_HKDF_LABEL_LEN < 255 );
+
+static void ssl_tls1_3_hkdf_encode_label(
+                            size_t desired_length,
+                            const unsigned char *label, size_t llen,
+                            const unsigned char *ctx, size_t clen,
+                            unsigned char *dst, size_t *dlen )
 {
-    unsigned char *p = info;
-    const char label_prefix[] = "tls13 ";
-    int total_label_len;
+    const char label_prefix[6] = { 't', 'l', 's', '1', '3', ' ' };
+    size_t total_label_len = sizeof( label_prefix ) + llen;
+    size_t total_hkdf_lbl_len =
+          2                  /* length of expanded key material */
+        + 1                  /* label length                    */
+        + total_label_len    /* actual label, incl. prefix      */
+        + 1                  /* context length                  */
+        + clen;              /* actual context                  */
 
-    total_label_len = sizeof(label_prefix) + llen;
+    unsigned char *p = dst;
 
-    // create header
-    *p++ = (unsigned char)( ( length >> 8 ) & 0xFF );
-    *p++ = (unsigned char)( ( length >> 0 ) & 0xFF );
+    /* Add total length. */
+    *p++ = 0;
+    *p++ = (unsigned char)( ( desired_length >> 0 ) & 0xFF );
+
+    /* Add label incl. prefix */
     *p++ = (unsigned char)( total_label_len & 0xFF );
-
-    // copy label
     memcpy( p, label_prefix, sizeof(label_prefix) );
     p += sizeof(label_prefix);
-
     memcpy( p, label, llen );
     p += llen;
 
-    // copy hash length
-    *p++ = (unsigned char)( hlen & 0xFF );
+    /* Add context value */
+    *p++ = (unsigned char)( clen & 0xFF );
+    if( ctx != NULL )
+        memcpy( p, ctx, clen );
 
-    // copy hash value
-    memcpy( p, hashValue, hlen );
-
-    return( 0 );
+    /* Return total length to the caller.  */
+    *dlen = total_hkdf_lbl_len;
 }
 
 /*
@@ -250,7 +285,6 @@ int mbedtls_ssl_tls1_3_hkdf_expand_label(
                      const unsigned char *ctx, size_t clen,
                      unsigned char *buf, size_t blen )
 {
-    int ret = 0;
     const mbedtls_md_info_t *md;
     unsigned char hkdf_label[ SSL_TLS1_3_KEY_SCHEDULE_MAX_HKDF_LABEL_LEN ];
     size_t hkdf_label_len;
@@ -279,18 +313,11 @@ int mbedtls_ssl_tls1_3_hkdf_expand_label(
     if( md == NULL )
         return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
 
-    ret = ssl_tls1_3_hkdf_encode_label( label, llen,
-                                        ctx, clen,
-                                        hkdf_label, sizeof( hkdf_label ),
-                                        &hkdf_label_len );
-    if( ret != 0 )
-    {
-        /* Should not happen since the only possible
-         * error is the buffer being too small, but
-         * we know all maximum sizes here and should
-         * have allocated enough space in hkdf_label. */
-        return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
-    }
+    ssl_tls1_3_hkdf_encode_label( blen,
+                                  label, llen,
+                                  ctx, clen,
+                                  hkdf_label,
+                                  &hkdf_label_len );
 
     return( mbedtls_hkdf_expand( md,
                                  secret, slen,
