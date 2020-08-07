@@ -792,7 +792,7 @@ int ssl_create_binder( mbedtls_ssl_context *ssl, unsigned char *psk, size_t psk_
     {
         ret = mbedtls_ssl_tls1_3_derive_secret( mbedtls_md_get_type( md ),
                             ssl->handshake->early_secret, hash_length,
-                            ( const unsigned char * )"res binder", sizeof( "res binder" ),
+                            MBEDTLS_SSL_TLS1_3_LBL_WITH_LEN( res_binder ),
                             hash, hash_length, binder_key, hash_length );
         MBEDTLS_SSL_DEBUG_MSG( 5, ( "Derive Early Secret with 'res binder'" ) );
     }
@@ -800,7 +800,7 @@ int ssl_create_binder( mbedtls_ssl_context *ssl, unsigned char *psk, size_t psk_
     {
         ret = mbedtls_ssl_tls1_3_derive_secret( mbedtls_md_get_type( md ),
                             ssl->handshake->early_secret, hash_length,
-                            ( const unsigned char * )"ext binder", sizeof( "ext binder" ),
+                            MBEDTLS_SSL_TLS1_3_LBL_WITH_LEN( ext_binder ),
                             hash, hash_length, binder_key, hash_length );
         MBEDTLS_SSL_DEBUG_MSG( 5, ( "Derive Early Secret with 'ext binder'" ) );
     }
@@ -868,8 +868,8 @@ int ssl_create_binder( mbedtls_ssl_context *ssl, unsigned char *psk, size_t psk_
 
     ret = mbedtls_ssl_tls1_3_hkdf_expand_label( suite_info->mac, binder_key,
                             hash_length,
-                            (const unsigned char *)"finished", sizeof( "finished" ),
-                            (const unsigned char *)"", 0,
+                            MBEDTLS_SSL_TLS1_3_LBL_WITH_LEN( finished ),
+                            NULL, 0,
                             finished_key, hash_length );
 
     if( ret != 0 )

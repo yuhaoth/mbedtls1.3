@@ -652,7 +652,7 @@ static int ssl_calc_binder( mbedtls_ssl_context *ssl, unsigned char *psk,
     {
         ret = mbedtls_ssl_tls1_3_derive_secret( mbedtls_md_get_type( md ),
                             ssl->handshake->early_secret, hash_length,
-                            (const unsigned char*)"res binder", sizeof( "res binder" ),
+                            MBEDTLS_SSL_TLS1_3_LBL_WITH_LEN( res_binder ),
                             hash, hash_length, binder_key, hash_length );
         MBEDTLS_SSL_DEBUG_MSG( 5, ( "Derive Early Secret with 'res binder'" ) );
     }
@@ -661,7 +661,7 @@ static int ssl_calc_binder( mbedtls_ssl_context *ssl, unsigned char *psk,
     {
         ret = mbedtls_ssl_tls1_3_derive_secret( mbedtls_md_get_type( md ),
                             ssl->handshake->early_secret, hash_length,
-                            (const unsigned char*)"ext binder", sizeof( "ext binder" ),
+                            MBEDTLS_SSL_TLS1_3_LBL_WITH_LEN( ext_binder ),
                             hash, hash_length, binder_key, hash_length );
         MBEDTLS_SSL_DEBUG_MSG( 5, ( "Derive Early Secret with 'ext binder'" ) );
     }
@@ -716,7 +716,7 @@ static int ssl_calc_binder( mbedtls_ssl_context *ssl, unsigned char *psk,
 
     ret = mbedtls_ssl_tls1_3_hkdf_expand_label( suite_info->mac,
                           binder_key, hash_length,
-                          (const unsigned char*) "finished", sizeof( "finished" ),
+                          MBEDTLS_SSL_TLS1_3_LBL_WITH_LEN( finished ),
                           NULL, 0,
                           finished_key, hash_length );
 
@@ -1658,7 +1658,7 @@ static int ssl_write_new_session_ticket( mbedtls_ssl_context *ssl )
     ret = mbedtls_ssl_tls1_3_hkdf_expand_label( suite_info->mac,
                ssl->session->resumption_master_secret,
                hash_length,
-               (const unsigned char *) "resumption", sizeof( "resumption" ),
+               MBEDTLS_SSL_TLS1_3_LBL_WITH_LEN( resumption ),
                (const unsigned char *) &ssl->out_msg[13],
                MBEDTLS_SSL_TICKET_NONCE_LENGTH,
                ticket.key, hash_length );

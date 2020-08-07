@@ -1636,9 +1636,43 @@ void mbedtls_ssl_reset_retransmit_timeout( mbedtls_ssl_context *ssl );
 #endif /* MBEDTLS_SSL_PROTO_DTLS */
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+#define MBEDTLS_SSL_TLS1_3_LABEL_LIST                                   \
+    const unsigned char finished    [ sizeof("finished")     - 1 ];     \
+    const unsigned char resumption  [ sizeof("resumption")   - 1 ];     \
+    const unsigned char traffic_upd [ sizeof("traffic upd")  - 1 ];     \
+    const unsigned char export      [ sizeof("exporter")     - 1 ];     \
+    const unsigned char key         [ sizeof("key")          - 1 ];     \
+    const unsigned char iv          [ sizeof("iv")           - 1 ];     \
+    const unsigned char sn          [ sizeof("sn")           - 1 ];     \
+    const unsigned char c_hs_traffic[ sizeof("c hs traffic") - 1 ];     \
+    const unsigned char c_ap_traffic[ sizeof("c ap traffic") - 1 ];     \
+    const unsigned char c_e_traffic [ sizeof("c e traffic")  - 1 ];     \
+    const unsigned char s_hs_traffic[ sizeof("s hs traffic") - 1 ];     \
+    const unsigned char s_ap_traffic[ sizeof("s ap traffic") - 1 ];     \
+    const unsigned char s_e_traffic [ sizeof("s e traffic")  - 1 ];     \
+    const unsigned char exp_master  [ sizeof("exp master")   - 1 ];     \
+    const unsigned char res_master  [ sizeof("res master")   - 1 ];     \
+    const unsigned char ext_binder  [ sizeof("ext binder")   - 1 ];     \
+    const unsigned char res_binder  [ sizeof("res binder")   - 1 ];     \
+    const unsigned char derived     [ sizeof("derived")      - 1 ];     \
 
-/* The maximum length of HKDF labels used in the TLS 1.3 standard. */
-#define MBEDTLS_SSL_TLS1_3_KEY_SCHEDULE_MAX_LABEL_LEN    32
+union mbedtls_ssl_tls1_3_labels_union
+{
+    MBEDTLS_SSL_TLS1_3_LABEL_LIST
+};
+struct mbedtls_ssl_tls1_3_labels_struct
+{
+    MBEDTLS_SSL_TLS1_3_LABEL_LIST
+};
+extern const struct mbedtls_ssl_tls1_3_labels_struct mbedtls_ssl_tls1_3_labels;
+
+#define MBEDTLS_SSL_TLS1_3_LBL_WITH_LEN( LABEL )  \
+    mbedtls_ssl_tls1_3_labels.LABEL,              \
+    sizeof(mbedtls_ssl_tls1_3_labels.LABEL)
+
+#define MBEDTLS_SSL_TLS1_3_KEY_SCHEDULE_MAX_LABEL_LEN  \
+    sizeof( union mbedtls_ssl_tls1_3_labels_union )
+
 /* The maximum length of HKDF contexts used in the TLS 1.3 standad.
  * Since contexts are always hashes of message transcripts, this can
  * be approximated from above by the maximum hash size. */

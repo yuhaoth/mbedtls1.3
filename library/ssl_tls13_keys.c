@@ -45,6 +45,30 @@
 #define mbedtls_free       free
 #endif
 
+struct mbedtls_ssl_tls1_3_labels_struct const mbedtls_ssl_tls1_3_labels =
+{
+    /* This seems to work in C, despite the string literal being one
+     * character too long due to the 0-termination. */
+    .finished     = "finished",
+    .resumption   = "resumption",
+    .traffic_upd  = "traffic upd",
+    .export       = "exporter",
+    .key          = "key",
+    .iv           = "iv",
+    .sn           = "sn",
+    .c_hs_traffic = "c hs traffic",
+    .c_ap_traffic = "c ap traffic",
+    .c_e_traffic  = "c e traffic",
+    .s_hs_traffic = "s hs traffic",
+    .s_ap_traffic = "s ap traffic",
+    .s_e_traffic  = "s e traffic",
+    .exp_master   = "exp master",
+    .res_master   = "res master",
+    .ext_binder   = "ext binder",
+    .res_binder   = "res binder",
+    .derived      = "derived"
+};
+
 /*
  * This function creates a HkdfLabel structure used in the TLS 1.3 key schedule.
  *
@@ -158,7 +182,7 @@ int mbedtls_ssl_tls1_3_make_traffic_keys(
 
     ret = mbedtls_ssl_tls1_3_hkdf_expand_label( hash_alg,
                     client_secret, slen,
-                    (const unsigned char *) "key", sizeof("key"),
+                    MBEDTLS_SSL_TLS1_3_LBL_WITH_LEN( key ),
                     NULL, 0,
                     keys->clientWriteKey, keyLen );
     if( ret != 0 )
@@ -166,7 +190,7 @@ int mbedtls_ssl_tls1_3_make_traffic_keys(
 
     ret = mbedtls_ssl_tls1_3_hkdf_expand_label( hash_alg,
                     server_secret, slen,
-                    (const unsigned char *)"key", sizeof("key"),
+                    MBEDTLS_SSL_TLS1_3_LBL_WITH_LEN( key ),
                     NULL, 0,
                     keys->serverWriteKey, keyLen );
     if( ret != 0 )
@@ -174,7 +198,7 @@ int mbedtls_ssl_tls1_3_make_traffic_keys(
 
     ret = mbedtls_ssl_tls1_3_hkdf_expand_label( hash_alg,
                     client_secret, slen,
-                    (const unsigned char *) "iv", sizeof("iv"),
+                    MBEDTLS_SSL_TLS1_3_LBL_WITH_LEN( iv ),
                     NULL, 0,
                     keys->clientWriteIV, ivLen );
     if( ret != 0 )
@@ -182,7 +206,7 @@ int mbedtls_ssl_tls1_3_make_traffic_keys(
 
     ret = mbedtls_ssl_tls1_3_hkdf_expand_label( hash_alg,
                     server_secret, slen,
-                    (const unsigned char *) "iv", sizeof("iv"),
+                    MBEDTLS_SSL_TLS1_3_LBL_WITH_LEN( iv ),
                     NULL, 0,
                     keys->serverWriteIV, ivLen );
     if( ret != 0 )
@@ -195,7 +219,7 @@ int mbedtls_ssl_tls1_3_make_traffic_keys(
 
     ret = mbedtls_ssl_tls1_3_hkdf_expand_label( hash_alg,
                     client_secret, slen,
-                    (const unsigned char *) "sn", sizeof("cn"),
+                    MBEDTLS_SSL_TLS1_3_LBL_WITH_LEN( sn ),
                     NULL, 0,
                     keys->client_sn_key, keyLen );
     if( ret != 0 )
@@ -203,7 +227,7 @@ int mbedtls_ssl_tls1_3_make_traffic_keys(
 
     ret = mbedtls_ssl_tls1_3_hkdf_expand_label( hash_alg,
                     server_secret, slen,
-                    (const unsigned char *) "sn", sizeof("sn"),
+                    MBEDTLS_SSL_TLS1_3_LBL_WITH_LEN( sn ),
                     (const unsigned char *)"", 0,
                     keys->server_sn_key, keyLen );
     if( ret != 0 )
