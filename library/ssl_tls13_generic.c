@@ -1386,7 +1386,7 @@ static int ssl_calc_verify_tls_sha384( mbedtls_ssl_context *ssl, unsigned char h
 #endif /* MBEDTLS_SHA512_C */
 
 
-/* mbedtls_ssl_derive_master_secret( )
+/* mbedtls_ssl_tls1_3_derive_master_secret( )
  *
  * Generates the keys based on the TLS 1.3 key hierachy:
  *
@@ -1408,7 +1408,7 @@ static int ssl_calc_verify_tls_sha384( mbedtls_ssl_context *ssl, unsigned char h
  *     0 -> HKDF-Extract = Master Secret
  *
  */
-int mbedtls_ssl_derive_master_secret( mbedtls_ssl_context *ssl ) {
+int mbedtls_ssl_tls1_3_derive_master_secret( mbedtls_ssl_context *ssl ) {
 
 #if defined(MBEDTLS_SHA256_C) && !defined(MBEDTLS_SHA512_C)
     unsigned char salt[32];
@@ -1454,27 +1454,27 @@ int mbedtls_ssl_derive_master_secret( mbedtls_ssl_context *ssl ) {
 
     if( ssl->transform_in == NULL )
     {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "transform_in == NULL, mbedtls_ssl_derive_master_secret failed" ) );
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "transform_in == NULL, mbedtls_ssl_tls1_3_derive_master_secret failed" ) );
         return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
     }
 
     if( ssl->session_negotiate == NULL )
     {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "session_negotiate == NULL, mbedtls_ssl_derive_master_secret failed" ) );
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "session_negotiate == NULL, mbedtls_ssl_tls1_3_derive_master_secret failed" ) );
         return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
     }
 
     md = mbedtls_md_info_from_type( ssl->transform_in->ciphersuite_info->mac );
     if( md == NULL )
     {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "md == NULL, mbedtls_ssl_derive_master_secret failed" ) );
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "md == NULL, mbedtls_ssl_tls1_3_derive_master_secret failed" ) );
         return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
     }
 
     suite_info = mbedtls_ssl_ciphersuite_from_id( ssl->session_negotiate->ciphersuite );
     if( suite_info == NULL )
     {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "suite_info == NULL, mbedtls_ssl_derive_master_secret failed" ) );
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "suite_info == NULL, mbedtls_ssl_tls1_3_derive_master_secret failed" ) );
         return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
     }
 
@@ -1507,7 +1507,7 @@ int mbedtls_ssl_derive_master_secret( mbedtls_ssl_context *ssl ) {
         psk = mbedtls_calloc( hash_size,1 );
         if( psk == NULL )
         {
-            MBEDTLS_SSL_DEBUG_MSG( 1, ( "malloc for psk == NULL, mbedtls_ssl_derive_master_secret failed" ) );
+            MBEDTLS_SSL_DEBUG_MSG( 1, ( "malloc for psk == NULL, mbedtls_ssl_tls1_3_derive_master_secret failed" ) );
             return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
         }
         psk_allocated = 1;
@@ -1539,7 +1539,7 @@ int mbedtls_ssl_derive_master_secret( mbedtls_ssl_context *ssl ) {
 	}
 	else
 	{
-            MBEDTLS_SSL_DEBUG_MSG( 1, ( "unknown ciphersuite hash size, mbedtls_ssl_derive_master_secret failed" ) );
+            MBEDTLS_SSL_DEBUG_MSG( 1, ( "unknown ciphersuite hash size, mbedtls_ssl_tls1_3_derive_master_secret failed" ) );
             if( psk_allocated == 1 ) mbedtls_free( psk );
             return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
 	}
@@ -1644,7 +1644,7 @@ int mbedtls_ssl_derive_master_secret( mbedtls_ssl_context *ssl ) {
     } else
 #endif	/* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED */
     {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "Unsupported key exchange -- mbedtls_ssl_derive_master_secret failed." ) );
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "Unsupported key exchange -- mbedtls_ssl_tls1_3_derive_master_secret failed." ) );
         if( psk_allocated == 1 ) mbedtls_free( psk );
         return( MBEDTLS_ERR_SSL_BAD_HS_SERVER_HELLO );
     }
@@ -3629,7 +3629,7 @@ int mbedtls_ssl_early_data_key_derivation( mbedtls_ssl_context *ssl, mbedtls_ssl
         mbedtls_sha256_finish( &sha256, padbuf );
         MBEDTLS_SSL_DEBUG_BUF( 5, "handshake hash", padbuf, 32 );
 #else
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "mbedtls_ssl_derive_master_secret: Unknow hash function." ) );
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "mbedtls_ssl_tls1_3_derive_master_secret: Unknow hash function." ) );
         return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
 #endif
     }
@@ -3643,7 +3643,7 @@ int mbedtls_ssl_early_data_key_derivation( mbedtls_ssl_context *ssl, mbedtls_ssl
         mbedtls_sha512_finish( &sha512, padbuf );
         MBEDTLS_SSL_DEBUG_BUF( 5, "handshake hash", padbuf, 48 );
 #else
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "mbedtls_ssl_derive_master_secret: Unknow hash function." ) );
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "mbedtls_ssl_tls1_3_derive_master_secret: Unknow hash function." ) );
         return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
 #endif
     }
@@ -3660,7 +3660,7 @@ int mbedtls_ssl_early_data_key_derivation( mbedtls_ssl_context *ssl, mbedtls_ssl
     else
     {
 #else
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "mbedtls_ssl_derive_master_secret: Unknow hash function." ) );
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "mbedtls_ssl_tls1_3_derive_master_secret: Unknow hash function." ) );
         return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
 #endif
     }
@@ -3755,9 +3755,9 @@ int mbedtls_ssl_key_derivation( mbedtls_ssl_context *ssl, mbedtls_ssl_key_set *t
 #endif /* MBEDTLS_SSL_PROTO_DTLS && MBEDTLS_SSL_DTLS_ANTI_REPLAY */
 
     /* Creating the Master Secret ( TLS 1.3 ) */
-    if( ( ret = mbedtls_ssl_derive_master_secret( ssl ) ) != 0 )
+    if( ( ret = mbedtls_ssl_tls1_3_derive_master_secret( ssl ) ) != 0 )
     {
-        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_derive_master_secret", ret );
+        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_tls1_3_derive_master_secret", ret );
         return( ret );
     }
 

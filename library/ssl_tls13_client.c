@@ -774,7 +774,7 @@ int ssl_create_binder( mbedtls_ssl_context *ssl, unsigned char *psk, size_t psk_
 #if defined(MBEDTLS_SHA256_C)
         mbedtls_sha256( ( const unsigned char * )"", 0, hash, 0 );
 #else
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "mbedtls_ssl_derive_master_secret: Unknow hash function." ) );
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "mbedtls_ssl_tls1_3_derive_master_secret: Unknow hash function." ) );
         return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
 #endif
     }
@@ -783,7 +783,7 @@ int ssl_create_binder( mbedtls_ssl_context *ssl, unsigned char *psk, size_t psk_
 #if defined(MBEDTLS_SHA512_C)
         mbedtls_sha512( ( const unsigned char * )"", 0, hash, 1 /* for SHA384 */ );
 #else
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "mbedtls_ssl_derive_master_secret: Unknow hash function." ) );
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "mbedtls_ssl_tls1_3_derive_master_secret: Unknow hash function." ) );
         return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
 #endif
     }
@@ -825,7 +825,7 @@ int ssl_create_binder( mbedtls_ssl_context *ssl, unsigned char *psk, size_t psk_
         mbedtls_sha256_finish( &sha256, padbuf );
         MBEDTLS_SSL_DEBUG_BUF( 5, "handshake hash for psk binder", padbuf, 32 );
 #else
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "mbedtls_ssl_derive_master_secret: Unknow hash function." ) );
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "mbedtls_ssl_tls1_3_derive_master_secret: Unknow hash function." ) );
         return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
 #endif
     }
@@ -853,7 +853,7 @@ int ssl_create_binder( mbedtls_ssl_context *ssl, unsigned char *psk, size_t psk_
     else
     {
 #else
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "mbedtls_ssl_derive_master_secret: Unknow hash function." ) );
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "mbedtls_ssl_tls1_3_derive_master_secret: Unknow hash function." ) );
         return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
 #endif
     }
@@ -909,7 +909,7 @@ int ssl_create_binder( mbedtls_ssl_context *ssl, unsigned char *psk, size_t psk_
         else
 #endif
         {
-            MBEDTLS_SSL_DEBUG_MSG( 1, ( "mbedtls_ssl_derive_master_secret: Unknow hash function." ) );
+            MBEDTLS_SSL_DEBUG_MSG( 1, ( "mbedtls_ssl_tls1_3_derive_master_secret: Unknow hash function." ) );
             return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
         }
 
@@ -3742,7 +3742,7 @@ static int ssl_hrr_postprocess( mbedtls_ssl_context* ssl,
         mbedtls_sha256_starts( &ssl->handshake->fin_sha256, 0 /* = use SHA256 */ );
         /*mbedtls_sha256_update( &ssl->handshake->fin_sha256, &transcript[0], hash_length + 4 ); */
 #else
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "mbedtls_ssl_derive_master_secret: Unknow hash function." ) );
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "mbedtls_ssl_tls1_3_derive_master_secret: Unknow hash function." ) );
         return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
 #endif /* MBEDTLS_SHA256_C */
     }
@@ -3757,7 +3757,7 @@ static int ssl_hrr_postprocess( mbedtls_ssl_context* ssl,
         mbedtls_sha512_starts( &ssl->handshake->fin_sha512, 1 /* = use SHA384 */ );
         /*mbedtls_sha256_update( &ssl->handshake->fin_sha512, &transcript[0], hash_length + 4 ); */
 #else
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "mbedtls_ssl_derive_master_secret: Unknow hash function." ) );
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "mbedtls_ssl_tls1_3_derive_master_secret: Unknow hash function." ) );
         return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
 #endif /* MBEDTLS_SHA512_C */
     }
@@ -3775,7 +3775,7 @@ static int ssl_hrr_postprocess( mbedtls_ssl_context* ssl,
     else
     {
 #else
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "mbedtls_ssl_derive_master_secret: Unknow hash function." ) );
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "mbedtls_ssl_tls1_3_derive_master_secret: Unknow hash function." ) );
         return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
 #endif /* MBEDTLS_SHA512_C */
     }

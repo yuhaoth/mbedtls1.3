@@ -1218,7 +1218,7 @@ int mbedtls_ssl_key_derivation(mbedtls_ssl_context* ssl, mbedtls_ssl_key_set* tr
 int ssl_read_certificate_verify_process(mbedtls_ssl_context* ssl);
 int ssl_certificate_verify_process(mbedtls_ssl_context* ssl);
 
-int mbedtls_ssl_derive_master_secret(mbedtls_ssl_context* ssl);
+int mbedtls_ssl_tls1_3_derive_master_secret(mbedtls_ssl_context* ssl);
 int mbedtls_set_traffic_key(mbedtls_ssl_context* ssl, mbedtls_ssl_key_set* traffic_keys, mbedtls_ssl_transform* transform, int mode);
 int mbedtls_ssl_generate_application_traffic_keys(mbedtls_ssl_context* ssl, mbedtls_ssl_key_set* traffic_keys);
 int mbedtls_ssl_generate_resumption_master_secret(mbedtls_ssl_context* ssl);
