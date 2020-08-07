@@ -1069,30 +1069,34 @@ typedef void mbedtls_ssl_async_cancel_t( mbedtls_ssl_context *ssl );
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
 /**
-* \brief          mbedtls_ssl_key_set data structure holding client/server
-*                 write keys as well as the respective IVs.
+* \brief   The data structure holding the cryptographic material (key and IV)
+*          used for record protection in TLS 1.3.
 */
 typedef struct mbedtls_ssl_key_set {
-	unsigned char *clientWriteKey;
-	unsigned char *serverWriteKey;
-	unsigned char *clientWriteIV;
-	unsigned char *serverWriteIV;
-	int keyLen;
-	int ivLen;
-#if defined(MBEDTLS_SSL_PROTO_DTLS)
-	int epoch;
-#endif /* MBEDTLS_SSL_PROTO_DTLS */
-	unsigned char iv[12];
+    unsigned char *clientWriteKey; /*!< The key for client->server records. */
+    unsigned char *serverWriteKey; /*!< The key for server->client records. */
+    unsigned char *clientWriteIV;  /*!< The IV  for client->server records. */
+    unsigned char *serverWriteIV;  /*!< The IV  for server->client records. */
 
-	/* The [sender]_sn_key is indirectly used to
-	 * encrypt the sequence number in the record layer.
-	 *
-	 * The client_sn_key is used to encrypt the
-	 * sequence number for outgoing transmission.
-	 * server_sn_key is used for incoming payloads.
-	 */
-	unsigned char *server_sn_key;
-	unsigned char *client_sn_key;
+    size_t keyLen; /*!< The length of clientWriteKey and
+                    *   serverWriteKey, in Bytes. */
+    size_t ivLen;  /*!< The length of clientWriteIV and
+                    *   serverWriteIV, in Bytes. */
+
+#if defined(MBEDTLS_SSL_PROTO_DTLS)
+    int epoch;
+    unsigned char iv[12];
+
+    /* The [sender]_sn_key is indirectly used to
+     * encrypt the sequence number in the record layer.
+     *
+     * The client_sn_key is used to encrypt the
+     * sequence number for outgoing transmission.
+     * server_sn_key is used for incoming payloads.
+     */
+    unsigned char *server_sn_key;
+    unsigned char *client_sn_key;
+#endif /* MBEDTLS_SSL_PROTO_DTLS */
 } mbedtls_ssl_key_set;
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 
