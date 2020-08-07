@@ -215,7 +215,7 @@ static int ssl_calc_finished_tls_sha256(
     ret = mbedtls_ssl_tls1_3_hkdf_expand_label( MBEDTLS_MD_SHA256,
                           ssl->handshake->client_handshake_traffic_secret, 32,
                           (const unsigned char*)"finished", sizeof( "finished" ),
-                          (const unsigned char*)"", 0, 32,
+                          (const unsigned char*)"", 0,
                           ssl->handshake->client_finished_key, 32 );
 
     if( ret != 0 )
@@ -230,7 +230,7 @@ static int ssl_calc_finished_tls_sha256(
     ret = mbedtls_ssl_tls1_3_hkdf_expand_label( MBEDTLS_MD_SHA256,
                            ssl->handshake->server_handshake_traffic_secret, 32,
                            (const unsigned char*)"finished", sizeof( "finished" ),
-                           (const unsigned char*)"", 0, 32,
+                           (const unsigned char*)"", 0,
                            ssl->handshake->server_finished_key, 32 );
 
     if( ret != 0 )
@@ -339,7 +339,7 @@ static int ssl_calc_finished_tls_sha384(
     ret = mbedtls_ssl_tls1_3_hkdf_expand_label( MBEDTLS_MD_SHA384,
                       ssl->handshake->client_handshake_traffic_secret, 48,
                       (const unsigned char*) "finished", sizeof( "finished" ),
-                      (const unsigned char*)"", 0, 48,
+                      (const unsigned char*)"", 0,
                       ssl->handshake->client_finished_key, 48 );
 
     if( ret != 0 )
@@ -354,7 +354,7 @@ static int ssl_calc_finished_tls_sha384(
     ret = mbedtls_ssl_tls1_3_hkdf_expand_label( MBEDTLS_MD_SHA384,
                           ssl->handshake->server_handshake_traffic_secret, 48,
                           (const unsigned char*)"finished", sizeof( "finished" ),
-                          (const unsigned char*)"", 0, 48,
+                          (const unsigned char*)"", 0,
                           ssl->handshake->server_finished_key, 48 );
 
     if( ret != 0 )
@@ -4379,7 +4379,6 @@ int ssl_parse_new_session_ticket( mbedtls_ssl_context *ssl )
                     mbedtls_hash_size_for_ciphersuite( suite_info ),
                     (const unsigned char *)"resumption", sizeof( "resumption" ),
                     ssl->session->ticket_nonce, ssl->session->ticket_nonce_len,
-                    mbedtls_hash_size_for_ciphersuite( suite_info ),
                     ssl->session->key,
                     mbedtls_hash_size_for_ciphersuite( suite_info ) );
 

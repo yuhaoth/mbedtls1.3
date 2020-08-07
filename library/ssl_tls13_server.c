@@ -717,7 +717,7 @@ static int ssl_calc_binder( mbedtls_ssl_context *ssl, unsigned char *psk,
     ret = mbedtls_ssl_tls1_3_hkdf_expand_label( suite_info->mac,
                           binder_key, hash_length,
                           (const unsigned char*) "finished", sizeof( "finished" ),
-                          (const unsigned char*)"", 0, hash_length,
+                          NULL, 0,
                           finished_key, hash_length );
 
     if( ret != 0 )
@@ -1660,7 +1660,7 @@ static int ssl_write_new_session_ticket( mbedtls_ssl_context *ssl )
                hash_length,
                (const unsigned char *) "resumption", sizeof( "resumption" ),
                (const unsigned char *) &ssl->out_msg[13],
-               MBEDTLS_SSL_TICKET_NONCE_LENGTH, hash_length,
+               MBEDTLS_SSL_TICKET_NONCE_LENGTH,
                ticket.key, hash_length );
 
     if( ret != 0 )

@@ -869,7 +869,7 @@ int ssl_create_binder( mbedtls_ssl_context *ssl, unsigned char *psk, size_t psk_
     ret = mbedtls_ssl_tls1_3_hkdf_expand_label( suite_info->mac, binder_key,
                             hash_length,
                             (const unsigned char *)"finished", sizeof( "finished" ),
-                            (const unsigned char *)"", 0, hash_length,
+                            (const unsigned char *)"", 0,
                             finished_key, hash_length );
 
     if( ret != 0 )

@@ -1648,6 +1648,10 @@ void mbedtls_ssl_reset_retransmit_timeout( mbedtls_ssl_context *ssl );
 #define MBEDTLS_SSL_TLS1_3_KEY_SCHEDULE_MAX_CONTEXT_LEN  \
     MBEDTLS_MD_MAX_SIZE
 
+/* Maximum desired length for expanded key material generated
+ * by HKDF-Expand-Label. */
+#define MBEDTLS_SSL_TLS1_3_KEY_SCHEDULE_MAX_EXPANSION_LEN 255
+
 /**
 * \brief           mbedtls_ssl_tls1_3_make_traffic_keys generates keys/IVs
 *                  for record layer encryption.
@@ -1676,34 +1680,38 @@ int mbedtls_ssl_tls1_3_make_traffic_keys(
                      mbedtls_ssl_key_set *keys );
 
 /**
-* \brief           HKDF-Expand-Label( Secret, Label, HashValue, Length ) =
-*                       HKDF-Expand( Secret, HkdfLabel, Length ).
-*
-*                  mbedtls_ssl_tls1_3_hkdf_expand_label( ) uses mbedtls_ssl_tls1_3_hkdf_encode_label( ) to create the
-*                  HkdfLabel structure.
-*
-* \param hash_alg  Hash algorithm
-* \param secret    Secret key
-* \param slen      Secret key length
-* \param label     Label
-* \param llen      Label length
-* \param hashValue Hash value
-* \param hlen      Hash value length
-* \param length    Length ( must be <= blen )
-* \param buf       Output buffer
-* \param blen      Output buffer length
-*
-* \return          0 if successful,
-*                  or MBEDTLS_ERR_HKDF_BAD_PARAM
-*                  or MBEDTLS_ERR_MD_BAD_INPUT_DATA
-*                  or MBEDTLS_ERR_MD_ALLOC_FAILED
-*/
+ * \brief           The \c HKDF-Expand-Label function from
+ *                  the TLS 1.3 standard RFC 8446.
+ *
+ * <tt>
+ *                  HKDF-Expand-Label( Secret, Label, Context, Length ) =
+ *                       HKDF-Expand( Secret, HkdfLabel, Length )
+ * </tt>
+ *
+ * \param hash_alg  The identifier for the hash algorithm to use.
+ * \param secret    The \c Secret argument to \c HKDF-Expand-Label.
+ *                  This must be a readable buffer of length \p slen Bytes.
+ * \param slen      The length of \p secret in Bytes.
+ * \param label     The \c Label argument to \c HKDF-Expand-Label.
+ *                  This must be a readable buffer of length \p llen Bytes.
+ * \param llen      The length of \p label in Bytes.
+ * \param ctx       The \c Context argument to \c HKDF-Expand-Label.
+ *                  This must be a readable buffer of length \p clen Bytes.
+ * \param clen      The length of \p context in Bytes.
+ * \param buf       The destination buffer to hold the expanded secret.
+ *                  This must be a writable buffe of length \p blen Bytes.
+ * \param blen      The desired size of the expanded secret in Bytes.
+ *
+ * \returns         \c 0 on success.
+ * \return          A negative error code on failure.
+ */
 
 int mbedtls_ssl_tls1_3_hkdf_expand_label(
-                     mbedtls_md_type_t  hash_alg, const unsigned char *secret,
-                     int slen, const unsigned char *label, int llen,
-                     const unsigned char *hashValue, int hlen, int length,
-                     unsigned char *buf, int blen );
+                     mbedtls_md_type_t hash_alg,
+                     const unsigned char *secret, size_t slen,
+                     const unsigned char *label, size_t llen,
+                     const unsigned char *ctx, size_t clen,
+                     unsigned char *buf, size_t blen );
 
 /**
  * \brief The \c Derive-Secret function from the TLS 1.3 standard RFC 8446.
