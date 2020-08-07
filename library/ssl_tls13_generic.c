@@ -1579,26 +1579,6 @@ int mbedtls_ssl_tls1_3_derive_master_secret( mbedtls_ssl_context *ssl ) {
     /*
      * Derive-Secret( ., "derived", "" )
      */
-/*
-  if( mbedtls_hash_size_for_ciphersuite( suite_info ) == 32 ) {
-  #if defined(MBEDTLS_SHA256_C)
-  mbedtls_sha256( (const unsigned char*) "", 0, padbuf, 0 );
-  #else
-  MBEDTLS_SSL_DEBUG_MSG( 1, ( "MBEDTLS_SHA256_C not set but ciphersuite with SHA256 negotiated" ) );
-  return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
-  #endif
-  }
-
-  if( mbedtls_hash_size_for_ciphersuite( suite_info ) == 48 ) {
-  #if defined(MBEDTLS_SHA512_C)
-  mbedtls_sha512( (const unsigned char*) "", 0, padbuf, 1 );
-  #else
-  MBEDTLS_SSL_DEBUG_MSG( 1, ( "MBEDTLS_SHA512_C not set but ciphersuite with SHA384 negotiated" ) );
-  return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
-  #endif
-  }
-*/
-
     ret = mbedtls_ssl_tls1_3_derive_secret( ssl, ssl->transform_in->ciphersuite_info->mac,
                          ssl->handshake->early_secret, hash_size,
                          (const unsigned char*)"derived", sizeof( "derived" ),
