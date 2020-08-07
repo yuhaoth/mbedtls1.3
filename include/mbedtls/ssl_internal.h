@@ -1653,30 +1653,39 @@ void mbedtls_ssl_reset_retransmit_timeout( mbedtls_ssl_context *ssl );
 #define MBEDTLS_SSL_TLS1_3_KEY_SCHEDULE_MAX_EXPANSION_LEN 255
 
 /**
-* \brief           mbedtls_ssl_tls1_3_make_traffic_keys generates keys/IVs
-*                  for record layer encryption.
-*
-* \param hash_alg      Hash algorithm
-* \param client_secret Client traffic secret
-* \param server_secret Server traffic secret
-* \param slen          Length of the secrets
-* \param keyLen        Length of the key
-* \param ivLen         Length of IV
-* \param keys          mbedtls_ssl_key_set structure containing client/server
-*                      keys and IVs
-*
-* \return          0 if successful,
-*                  or MBEDTLS_ERR_HKDF_BUFFER_TOO_SMALL
-*                  or MBEDTLS_ERR_HKDF_BAD_INPUT_DATA
-*                  or MBEDTLS_ERR_HKDF_ALLOC_FAILED
-*
-*/
+ * \brief           This function is part of the TLS 1.3 key schedule.
+ *                  It extracts key and IV for the actual client/server traffic
+ *                  from the client/server traffic secrets.
+ *
+ * From RFC 8446:
+ *
+ * <tt>
+ *   [sender]_write_key = HKDF-Expand-Label(Secret, "key", "", key_length)
+ *   [sender]_write_iv  = HKDF-Expand-Label(Secret, "iv", "", iv_length)*
+ * </tt>
+ *
+ * \param hash_alg      The identifier for the hash algorithm to be used
+ *                      for the HKDF-based expansion of the secret.
+ * \param client_secret The client traffic secret.
+ *                      This must be a readable buffer of size \p slen Bytes
+ * \param server_secret The server traffic secret.
+ *                      This must be a readable buffer of size \p slen Bytes
+ * \param slen          Length of the secrets \p client_secret and
+ *                      \p server_secret in Bytes.
+ * \param keyLen        The desired length of the key to be extracted in Bytes.
+ * \param ivLen         The desired length of the IV to be extracted in Bytes.
+ * \param keys          The address of the structure holding the generated
+ *                      keys and IVs.
+ *
+ * \returns             \c 0 on success.
+ * \returns             A negative error code on failure.
+ */
 
 int mbedtls_ssl_tls1_3_make_traffic_keys(
                      mbedtls_md_type_t hash_alg,
                      const unsigned char *client_secret,
                      const unsigned char *server_secret,
-                     int slen, int keyLen, int ivLen,
+                     size_t slen, size_t keyLen, size_t ivLen,
                      mbedtls_ssl_key_set *keys );
 
 /**
@@ -1720,7 +1729,7 @@ int mbedtls_ssl_tls1_3_hkdf_expand_label(
  *   Derive-Secret( Secret, Label, Messages ) =
  *      HKDF-Expand-Label( Secret, Label,
  *                         Hash( Messages ),
-                           Hash.Length ) )
+ *                         Hash.Length ) )
  * </tt>
  *
  * Note: In this implementation of the function we assume that
@@ -1744,10 +1753,7 @@ int mbedtls_ssl_tls1_3_hkdf_expand_label(
  * \param buflen   The length of \p dstbuf in Bytes.
  *
  * \returns        \c 0 on success.
- * \returns        \c MBEDTLS_ERR_SSL_BUFFER_TOO_SMALL if the destination
- *                 buffer is too small to hold the derived secret.
- * \returns        \c MBEDTLS_ERR_SSL_BAD_INPUT_DATA ???
- * \returns        \c MBEDTLS_ERR_SSL_ALLOC_FAILED ???
+ * \returns        A negative error code on failure.
  */
 
 static inline int mbedtls_ssl_tls1_3_derive_secret(

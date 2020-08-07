@@ -132,25 +132,26 @@ static void ssl_tls1_3_hkdf_encode_label(
 }
 
 /*
-* The traffic keying material is generated from the following input values:
-*  - A secret value
+* The traffic keying material is generated from the following inputs:
+*
+*  - One secret value per sender.
 *  - A purpose value indicating the specific value being generated
-*  - The length of the key
+*  - The desired lengths of key and IV.
 *
-* The traffic keying material is generated from an input traffic
-* secret value using:
-*  [sender]_write_key = HKDF-Expand-Label( Secret, "key", "", key_length )
-*  [sender]_write_iv  = HKDF-Expand-Label( Secret, "iv" , "", iv_length )
+* The expansion itself is based on HKDF:
 *
-* [sender] denotes the sending side and the Secret value is provided by the function caller.
-* We generate server and client side keys in a single function call.
+*   [sender]_write_key = HKDF-Expand-Label( Secret, "key", "", key_length )
+*   [sender]_write_iv  = HKDF-Expand-Label( Secret, "iv" , "", iv_length )
+*
+* [sender] denotes the sending side and the Secret value is provided
+* by the function caller. Note that we generate server and client side
+* keys in a single function call.
 */
 int mbedtls_ssl_tls1_3_make_traffic_keys(
                      mbedtls_md_type_t hash_alg,
                      const unsigned char *client_secret,
                      const unsigned char *server_secret,
-                     int slen,
-                     int keyLen, int ivLen,
+                     size_t slen, size_t keyLen, size_t ivLen,
                      mbedtls_ssl_key_set *keys )
 {
     int ret = 0;
