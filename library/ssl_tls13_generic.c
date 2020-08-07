@@ -1390,21 +1390,21 @@ static int ssl_calc_verify_tls_sha384( mbedtls_ssl_context *ssl, unsigned char h
  *
  * Generates the keys based on the TLS 1.3 key hierachy:
  *
- *     0
- *     |
- *     v
+ *                    0
+ *                    |
+ *                    v
  *     PSK ->  HKDF-Extract = Early Secret
- *     |
- *     v
+ *                    |
+ *                    v
  *     Derive-Secret( ., "derived", "" )
- *     |
- *     v
- *     ( EC )DHE -> HKDF-Extract = Handshake Secret
- *     |
- *     v
+ *                    |
+ *                    v
+ *  (EC)DHE -> HKDF-Extract = Handshake Secret
+ *                    |
+ *                    v
  *     Derive-Secret( ., "derived", "" )
- *     |
- *     v
+ *                    |
+ *                    v
  *     0 -> HKDF-Extract = Master Secret
  *
  */
