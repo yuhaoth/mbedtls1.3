@@ -790,7 +790,7 @@ int ssl_create_binder( mbedtls_ssl_context *ssl, unsigned char *psk, size_t psk_
 
     if( ssl->conf->resumption_mode == 1 )
     {
-        ret = mbedtls_ssl_tls1_3_derive_secret( ssl, mbedtls_md_get_type( md ),
+        ret = mbedtls_ssl_tls1_3_derive_secret( mbedtls_md_get_type( md ),
                             ssl->handshake->early_secret, hash_length,
                             ( const unsigned char * )"res binder", sizeof( "res binder" ),
                             hash, hash_length, binder_key, hash_length );
@@ -798,7 +798,7 @@ int ssl_create_binder( mbedtls_ssl_context *ssl, unsigned char *psk, size_t psk_
     }
     else
     {
-        ret = mbedtls_ssl_tls1_3_derive_secret( ssl, mbedtls_md_get_type( md ),
+        ret = mbedtls_ssl_tls1_3_derive_secret( mbedtls_md_get_type( md ),
                             ssl->handshake->early_secret, hash_length,
                             ( const unsigned char * )"ext binder", sizeof( "ext binder" ),
                             hash, hash_length, binder_key, hash_length );

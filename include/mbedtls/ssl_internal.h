@@ -1649,40 +1649,6 @@ void mbedtls_ssl_reset_retransmit_timeout( mbedtls_ssl_context *ssl );
     MBEDTLS_MD_MAX_SIZE
 
 /**
- * \brief   mbedtls_ssl_tls1_3_derive_secret( ) implements the TLS 1.3 Derive-Secret( ) function.
- *
- * Derive-Secret( Secret, Label, Messages ) =
- *   HKDF-Expand-Label( Secret, Label,
- *    Hash( Messages ), Hash.Length ))
- *
- * Note: In this implementation of the function we assume that
- * the parameter message contains the already hashed value and
- * the Derive-Secret function does not need to hash it again.
- *
- * \param ssl     mbedtls_ssl_context
- * \param secret  Secret key
- * \param slen    Length of secret
- * \param label   Label
- * \param llen    Length of label
- * \param message TLS messages to hash
- * \param mlen    Length of message
- * \param dstbuf  Buffer to write to
- * \param buflen  Buffer length
- *
- * \return          0 if successful,
- *                  or MBEDTLS_ERR_HKDF_BUFFER_TOO_SMALL
- *                  or MBEDTLS_ERR_HKDF_BAD_INPUT_DATA
- *                  or MBEDTLS_ERR_HKDF_ALLOC_FAILED
- */
-
-int mbedtls_ssl_tls1_3_derive_secret(
-                   mbedtls_ssl_context *ssl, mbedtls_md_type_t hash_alg,
-                   const unsigned char *secret, int slen,
-                   const unsigned char *label, int llen,
-                   const unsigned char *message, int mlen,
-                   unsigned char *dstbuf, int buflen );
-
-/**
 * \brief           mbedtls_ssl_tls1_3_make_traffic_keys generates keys/IVs
 *                  for record layer encryption.
 *
@@ -1738,6 +1704,57 @@ int mbedtls_ssl_tls1_3_hkdf_expand_label(
                      int slen, const unsigned char *label, int llen,
                      const unsigned char *hashValue, int hlen, int length,
                      unsigned char *buf, int blen );
+
+/**
+ * \brief The \c Derive-Secret function from the TLS 1.3 standard RFC 8446.
+ *
+ * <tt>
+ *   Derive-Secret( Secret, Label, Messages ) =
+ *      HKDF-Expand-Label( Secret, Label,
+ *                         Hash( Messages ),
+                           Hash.Length ) )
+ * </tt>
+ *
+ * Note: In this implementation of the function we assume that
+ * the parameter message contains the already hashed value and
+ * the Derive-Secret function does not need to hash it again.
+ *
+ * \param hash_alg The identifier for the hash function used for the
+ *                 applications of HKDF.
+ * \param secret   The \c Secret argument to the \c Derive-Secret function.
+ *                 This must be a readable buffer of length \p slen Bytes.
+ * \param slen     The length of \p secret in Bytes.
+ * \param label    The \c Label argument to the \c Derive-Secret function.
+ *                 This must be a readable buffer of length \p llen Bytes.
+ * \param llen     The length of \p label in Bytes.
+ * \param hash     The hash of the \c Messages argument to the \c Derive-Secret
+ *                 function. This must be a readable buffer of length \p mlen
+ *                 hlen Bytes.
+ * \param hlen     The length of \p hash.
+ * \param dstbuf   The target buffer to write the output of \c Derive-Secret to.
+ *                 This must be a writable buffer of size \p buflen Bytes.
+ * \param buflen   The length of \p dstbuf in Bytes.
+ *
+ * \returns        \c 0 on success.
+ * \returns        \c MBEDTLS_ERR_SSL_BUFFER_TOO_SMALL if the destination
+ *                 buffer is too small to hold the derived secret.
+ * \returns        \c MBEDTLS_ERR_SSL_BAD_INPUT_DATA ???
+ * \returns        \c MBEDTLS_ERR_SSL_ALLOC_FAILED ???
+ */
+
+static inline int mbedtls_ssl_tls1_3_derive_secret(
+                   mbedtls_md_type_t hash_alg,
+                   const unsigned char *secret, size_t slen,
+                   const unsigned char *label, size_t llen,
+                   const unsigned char *hash, size_t hlen,
+                   unsigned char *dstbuf, size_t buflen )
+{
+    return( mbedtls_ssl_tls1_3_hkdf_expand_label( hash_alg,
+                                                  secret, slen,
+                                                  label, llen,
+                                                  hash, hlen,
+                                                  dstbuf, buflen ) );
+}
 
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) */
 
