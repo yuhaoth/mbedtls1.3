@@ -874,15 +874,12 @@ struct mbedtls_ssl_transform
     mbedtls_ssl_key_set traffic_keys;
     mbedtls_ssl_key_set traffic_keys_previous;
 
-    unsigned char* iv_enc;           /*!<  IV (encryption)         */
-    unsigned char* iv_dec;           /*!<  IV (decryption)         */
     unsigned char sequence_number_dec[12]; /* sequence number for incoming (decrypting) traffic */
     unsigned char sequence_number_enc[12]; /* sequence number for outgoing (encrypting) traffic */
-#else
-    unsigned char iv_enc[16];           /*!<  IV (encryption)         */
-    unsigned char iv_dec[16];           /*!<  IV (decryption)         */
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 
+    unsigned char iv_enc[ MBEDTLS_MAX_IV_LENGTH ];           /*!<  IV (encryption)         */
+    unsigned char iv_dec[ MBEDTLS_MAX_IV_LENGTH ];           /*!<  IV (decryption)         */
 #if defined(MBEDTLS_SSL_SOME_MODES_USE_MAC)
 
 #if defined(MBEDTLS_SSL_PROTO_SSL3)

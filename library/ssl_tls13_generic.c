@@ -3286,16 +3286,17 @@ int mbedtls_ssl_generate_application_traffic_keys( mbedtls_ssl_context *ssl, mbe
  *   - Do not backup keys -- use 1
  *   - Backup keys -- use 0
  */
-int mbedtls_set_traffic_key( mbedtls_ssl_context *ssl, mbedtls_ssl_key_set *traffic_keys, mbedtls_ssl_transform *transform, int mode ) {
+int mbedtls_set_traffic_key( mbedtls_ssl_context *ssl,
+                             mbedtls_ssl_key_set *traffic_keys,
+                             mbedtls_ssl_transform *transform,
+                             int mode )
+{
     mbedtls_cipher_info_t const *cipher_info;
     int ret;
     unsigned char *key1;
     unsigned char *key2;
     size_t out_cid_len;
     size_t in_cid_len;
-#if defined(MBEDTLS_SSL_PROTO_DTLS)
-    unsigned char *temp;
-#endif /* MBEDTLS_SSL_PROTO_DTLS */
 
     if( transform == NULL )
     {
@@ -3340,56 +3341,42 @@ int mbedtls_set_traffic_key( mbedtls_ssl_context *ssl, mbedtls_ssl_key_set *traf
     if( mode == 0 )
     {
         /* Copy current traffic_key structure to previous */
-        transform->traffic_keys_previous.clientWriteIV = transform->traffic_keys.clientWriteIV;
-        transform->traffic_keys_previous.clientWriteKey = transform->traffic_keys.clientWriteKey;
-#if defined(MBEDTLS_SSL_PROTO_DTLS)
-        transform->traffic_keys_previous.epoch = transform->traffic_keys.epoch;
-#endif /* MBEDTLS_SSL_PROTO_DTLS */
-        transform->traffic_keys_previous.ivLen = transform->traffic_keys.ivLen;
-        transform->traffic_keys_previous.keyLen = transform->traffic_keys.keyLen;
-        transform->traffic_keys_previous.serverWriteIV = transform->traffic_keys.serverWriteIV;
-        transform->traffic_keys_previous.serverWriteKey = transform->traffic_keys.serverWriteKey;
-        memcpy( transform->traffic_keys_previous.iv, transform->traffic_keys.iv, transform->ivlen );
-#if defined(MBEDTLS_SSL_PROTO_DTLS)
-        transform->traffic_keys_previous.client_sn_key = transform->traffic_keys.client_sn_key;
-        transform->traffic_keys_previous.server_sn_key = transform->traffic_keys.server_sn_key;
-#endif /* MBEDTLS_SSL_PROTO_DTLS */
-
+        transform->traffic_keys_previous = transform->traffic_keys;
         /* Store current traffic_key structure */
-        transform->traffic_keys.clientWriteIV = traffic_keys->clientWriteIV;
-        transform->traffic_keys.clientWriteKey = traffic_keys->clientWriteKey;
-#if defined(MBEDTLS_SSL_PROTO_DTLS)
-        transform->traffic_keys.epoch = traffic_keys->epoch;
-#endif /* MBEDTLS_SSL_PROTO_DTLS */
-        transform->traffic_keys.ivLen = traffic_keys->ivLen;
-        transform->traffic_keys.keyLen = traffic_keys->keyLen;
-        transform->traffic_keys.serverWriteIV = traffic_keys->serverWriteIV;
-        transform->traffic_keys.serverWriteKey = traffic_keys->serverWriteKey;
-#if defined(MBEDTLS_SSL_PROTO_DTLS)
-        transform->traffic_keys.client_sn_key = traffic_keys->client_sn_key;
-        transform->traffic_keys.server_sn_key = traffic_keys->server_sn_key;
-#endif /* MBEDTLS_SSL_PROTO_DTLS */
+        transform->traffic_keys = *traffic_keys;
     }
 #if defined(MBEDTLS_SSL_SRV_C)
     if( ssl->conf->endpoint == MBEDTLS_SSL_IS_SERVER )
     {
-
         key1 = traffic_keys->serverWriteKey; /* encryption key for the server */
         key2 = traffic_keys->clientWriteKey; /* decryption key for the server */
 
-        transform->iv_enc = traffic_keys->serverWriteIV;
-        transform->iv_dec = traffic_keys->clientWriteIV;
+        memcpy( transform->iv_enc, traffic_keys->serverWriteIV,
+                traffic_keys->ivLen );
+        memcpy( transform->iv_dec, traffic_keys->clientWriteIV,
+                traffic_keys->ivLen );
         /* Restore the most recent nonce */
         if( mode == 1 )
         {
-            memcpy( transform->iv_dec, transform->traffic_keys_previous.clientWriteIV, transform->ivlen );
+            memcpy( transform->iv_dec,
+                    transform->traffic_keys_previous.clientWriteIV,
+                    transform->traffic_keys_previous.ivLen );
         }
 
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
-        /* Reverse the keys for server */
-        temp = transform->traffic_keys.client_sn_key;
-        transform->traffic_keys.client_sn_key = transform->traffic_keys.server_sn_key;
-        transform->traffic_keys.server_sn_key = temp;
+        /* TODO: Don't we want to check that we're running DTLS here? */
+        {
+            unsigned char temp[ MBEDTLS_MAX_KEY_LEN ];
+            /* Reverse the keys for server */
+            memcpy( temp, transform->traffic_keys.client_sn_key,
+                    sizeof( transform->traffic_keys.client_sn_key ) );
+            memcpy( transform->traffic_keys.client_sn_key,
+                    transform->traffic_keys.server_sn_key,
+                    sizeof( transform->transform.client_sn_key ) );
+            memcpy( transform->traffic_keys.client_sn_key,
+                    temp, sizeof( temp ) );
+
+        }
 #endif /* MBEDTLS_SSL_PROTO_DTLS */
 
     }
@@ -3401,12 +3388,15 @@ int mbedtls_set_traffic_key( mbedtls_ssl_context *ssl, mbedtls_ssl_key_set *traf
         key1 = traffic_keys->clientWriteKey; /* encryption key for the client */
         key2 = traffic_keys->serverWriteKey; /* decryption key for the client */
 
-        transform->iv_enc = traffic_keys->clientWriteIV;
-        transform->iv_dec = traffic_keys->serverWriteIV;
+        memcpy( transform->iv_enc, traffic_keys->clientWriteIV,
+                traffic_keys->ivLen );
+        memcpy( transform->iv_dec, traffic_keys->serverWriteIV,
+                traffic_keys->ivLen );
         /* Restore the most recent nonce */
         if( mode == 1 )
         {
-            memcpy( transform->iv_dec, transform->traffic_keys_previous.serverWriteIV, transform->ivlen );
+            memcpy( transform->iv_dec,
+                    transform->traffic_keys_previous.serverWriteIV, transform->ivlen );
         }
 
     }

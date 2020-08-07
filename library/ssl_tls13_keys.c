@@ -156,126 +156,62 @@ int mbedtls_ssl_tls1_3_make_traffic_keys(
 {
     int ret = 0;
 
-    keys->clientWriteKey = mbedtls_calloc( keyLen,1 );
-    if( keys->clientWriteKey == NULL )
-    {
-        mbedtls_printf( "mbedtls_ssl_tls1_3_make_traffic_keys(): Error allocating clientWriteKey.\n" );
-        return( ( MBEDTLS_ERR_SSL_BUFFER_TOO_SMALL ) );
-    }
+    ret = mbedtls_ssl_tls1_3_hkdf_expand_label( hash_alg,
+                    client_secret, slen,
+                    (const unsigned char *) "key", sizeof("key"),
+                    NULL, 0,
+                    keys->clientWriteKey, keyLen );
+    if( ret != 0 )
+        return( ret );
 
-    ret = mbedtls_ssl_tls1_3_hkdf_expand_label( hash_alg, client_secret, slen, (const unsigned char *) "key", 3,
-                          (const unsigned char *)"", 0,
-                          keys->clientWriteKey, keyLen );
+    ret = mbedtls_ssl_tls1_3_hkdf_expand_label( hash_alg,
+                    server_secret, slen,
+                    (const unsigned char *)"key", sizeof("key"),
+                    NULL, 0,
+                    keys->serverWriteKey, keyLen );
+    if( ret != 0 )
+        return( ret );
 
-    if( ret < 0 )
-    {
-        mbedtls_printf( "mbedtls_ssl_tls1_3_make_traffic_keys(): Error for clientWriteKey %d.\n", ret );
-        return( ( ret ) );
-    }
+    ret = mbedtls_ssl_tls1_3_hkdf_expand_label( hash_alg,
+                    client_secret, slen,
+                    (const unsigned char *) "iv", sizeof("iv"),
+                    NULL, 0,
+                    keys->clientWriteIV, ivLen );
+    if( ret != 0 )
+        return( ret );
 
-    keys->serverWriteKey = mbedtls_calloc( keyLen,1 );
-    if( keys->serverWriteKey == NULL )
-    {
-        mbedtls_printf( "mbedtls_ssl_tls1_3_make_traffic_keys(): Error allocating serverWriteKey.\n" );
-        return( ( ret ) );
-    }
+    ret = mbedtls_ssl_tls1_3_hkdf_expand_label( hash_alg,
+                    server_secret, slen,
+                    (const unsigned char *) "iv", sizeof("iv"),
+                    NULL, 0,
+                    keys->serverWriteIV, ivLen );
+    if( ret != 0 )
+        return( ret );
 
-    ret = mbedtls_ssl_tls1_3_hkdf_expand_label( hash_alg, server_secret, slen, (const unsigned char *)"key", 3,
-                          (const unsigned char *)"", 0,
-                          keys->serverWriteKey, keyLen );
-
-    if( ret < 0 )
-    {
-        mbedtls_printf( "mbedtls_ssl_tls1_3_make_traffic_keys(): Error for serverWriteKey %d.\n", ret );
-        return( ( ret ) );
-    }
-
-    // Compute clientWriteIV
-    keys->clientWriteIV = mbedtls_calloc( ivLen,1 );
-    if( keys->clientWriteIV == NULL )
-    {
-        mbedtls_printf( "mbedtls_ssl_tls1_3_make_traffic_keys(): Error allocating clientWriteIV.\n" );
-        return( ( ret ) );
-    }
-
-    ret = mbedtls_ssl_tls1_3_hkdf_expand_label( hash_alg, client_secret, slen, (const unsigned char *) "iv", 2,
-                          (const unsigned char *)"", 0,
-                          keys->clientWriteIV, ivLen );
-
-    if( ret < 0 )
-    {
-        mbedtls_printf( "mbedtls_ssl_tls1_3_make_traffic_keys(): Error for clientWriteIV %d.\n", ret );
-        return( ( ret ) );
-    }
-
-    // Compute serverWriteIV
-    keys->serverWriteIV = mbedtls_calloc( ivLen,1 );
-    if( keys->serverWriteIV == NULL )
-    {
-        mbedtls_printf( "mbedtls_ssl_tls1_3_make_traffic_keys(): Error allocating serverWriteIV.\n" );
-        return( ( ret ) );
-    }
-
-    ret = mbedtls_ssl_tls1_3_hkdf_expand_label( hash_alg, server_secret, slen, (const unsigned char *) "iv", 2,
-                          (const unsigned char *)"", 0,
-                          keys->serverWriteIV, ivLen );
-
-    if( ret < 0 )
-    {
-        mbedtls_printf( "mbedtls_ssl_tls1_3_make_traffic_keys(): Error for serverWriteIV %d.\n", ret );
-        return( ( ret ) );
-    }
-
-#if defined(MBEDTLS_SSL_PROTO_DTLS)
-
-    // Compute client_sn_key
-    keys->client_sn_key = mbedtls_calloc( keyLen, 1 );
-    if( keys->client_sn_key == NULL )
-    {
-        mbedtls_printf( "mbedtls_ssl_tls1_3_make_traffic_keys(): Error allocating client_sn_key.\n" );
-        return( ( ret ) );
-    }
-
-    ret = mbedtls_ssl_tls1_3_hkdf_expand_label( hash_alg, client_secret, slen, (const unsigned char *) "sn", 2,
-                          (const unsigned char *)"", 0,
-                          keys->client_sn_key, keyLen );
-
-    if( ret < 0 )
-    {
-        mbedtls_printf( "mbedtls_ssl_tls1_3_make_traffic_keys(): Error for client_sn_key %d.\n", ret );
-        return( ( ret ) );
-    }
-
-    // Compute server_sn_key
-    keys->server_sn_key = mbedtls_calloc( keyLen, 1 );
-    if( keys->server_sn_key == NULL )
-    {
-        mbedtls_printf( "mbedtls_ssl_tls1_3_make_traffic_keys(): Error allocating server_sn_key.\n" );
-        return( ( ret ) );
-    }
-
-    ret = mbedtls_ssl_tls1_3_hkdf_expand_label( hash_alg, server_secret, slen, (const unsigned char *) "sn", 2,
-                          (const unsigned char *)"", 0,
-                          keys->server_sn_key, keyLen );
-
-    if( ret < 0 )
-    {
-        mbedtls_printf( "mbedtls_ssl_tls1_3_make_traffic_keys(): Error for server_sn_key %d.\n", ret );
-        return( ( ret ) );
-    }
-
-#endif /* MBEDTLS_SSL_PROTO_DTLS */
-
-
-    // Set epoch value to "undefined"
-#if defined(MBEDTLS_SSL_PROTO_DTLS)
-    keys->epoch = -1;
-#endif /* MBEDTLS_SSL_PROTO_DTLS */
-
-    // Set key length
-    // Set IV length
     keys->keyLen = keyLen;
     keys->ivLen = ivLen;
+
+#if defined(MBEDTLS_SSL_PROTO_DTLS)
+
+    ret = mbedtls_ssl_tls1_3_hkdf_expand_label( hash_alg,
+                    client_secret, slen,
+                    (const unsigned char *) "sn", sizeof("cn"),
+                    NULL, 0,
+                    keys->client_sn_key, keyLen );
+    if( ret != 0 )
+        return( ret );
+
+    ret = mbedtls_ssl_tls1_3_hkdf_expand_label( hash_alg,
+                    server_secret, slen,
+                    (const unsigned char *) "sn", sizeof("sn"),
+                    (const unsigned char *)"", 0,
+                    keys->server_sn_key, keyLen );
+    if( ret != 0 )
+        return( ret );
+
+    keys->epoch = -1; /* TODO: What's happening here? */
+#endif /* MBEDTLS_SSL_PROTO_DTLS */
+
     return( 0 );
 }
 

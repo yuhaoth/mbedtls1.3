@@ -1073,10 +1073,14 @@ typedef void mbedtls_ssl_async_cancel_t( mbedtls_ssl_context *ssl );
 *          used for record protection in TLS 1.3.
 */
 typedef struct mbedtls_ssl_key_set {
-    unsigned char *clientWriteKey; /*!< The key for client->server records. */
-    unsigned char *serverWriteKey; /*!< The key for server->client records. */
-    unsigned char *clientWriteIV;  /*!< The IV  for client->server records. */
-    unsigned char *serverWriteIV;  /*!< The IV  for server->client records. */
+    /*! The key for client->server records. */
+    unsigned char clientWriteKey[ MBEDTLS_MAX_KEY_LENGTH ];
+    /*! The key for server->client records. */
+    unsigned char serverWriteKey[ MBEDTLS_MAX_KEY_LENGTH ];
+    /*! The IV  for client->server records. */
+    unsigned char clientWriteIV[ MBEDTLS_MAX_IV_LENGTH ];
+    /*! The IV  for server->client records. */
+    unsigned char serverWriteIV[ MBEDTLS_MAX_IV_LENGTH ];
 
     size_t keyLen; /*!< The length of clientWriteKey and
                     *   serverWriteKey, in Bytes. */
@@ -1085,7 +1089,7 @@ typedef struct mbedtls_ssl_key_set {
 
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
     int epoch;
-    unsigned char iv[12];
+    unsigned char iv[ MBEDTLS_MAX_IV_LENGTH ];
 
     /* The [sender]_sn_key is indirectly used to
      * encrypt the sequence number in the record layer.
@@ -1094,8 +1098,8 @@ typedef struct mbedtls_ssl_key_set {
      * sequence number for outgoing transmission.
      * server_sn_key is used for incoming payloads.
      */
-    unsigned char *server_sn_key;
-    unsigned char *client_sn_key;
+    unsigned char server_sn_key[ MBEDTLS_MAX_KEY_LENGTH ];
+    unsigned char client_sn_key[ MBEDTLS_MAX_KEY_LENGTH ];
 #endif /* MBEDTLS_SSL_PROTO_DTLS */
 } mbedtls_ssl_key_set;
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
