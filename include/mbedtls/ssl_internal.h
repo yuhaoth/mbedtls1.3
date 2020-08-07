@@ -1787,20 +1787,16 @@ int mbedtls_ssl_tls1_3_hkdf_expand_label(
  * \returns        A negative error code on failure.
  */
 
-static inline int mbedtls_ssl_tls1_3_derive_secret(
+#define MBEDTLS_SSL_TLS1_3_CONTEXT_UNHASHED 0
+#define MBEDTLS_SSL_TLS1_3_CONTEXT_HASHED   1
+
+int mbedtls_ssl_tls1_3_derive_secret(
                    mbedtls_md_type_t hash_alg,
                    const unsigned char *secret, size_t slen,
                    const unsigned char *label, size_t llen,
-                   const unsigned char *hash, size_t hlen,
-                   unsigned char *dstbuf, size_t buflen )
-{
-    return( mbedtls_ssl_tls1_3_hkdf_expand_label( hash_alg,
-                                                  secret, slen,
-                                                  label, llen,
-                                                  hash, hlen,
-                                                  dstbuf, buflen ) );
-}
-
+                   const unsigned char *ctx, size_t clen,
+                   int context_already_hashed,
+                   unsigned char *dstbuf, size_t buflen );
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) */
 
 #endif /* ssl_internal.h */

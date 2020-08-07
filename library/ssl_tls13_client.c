@@ -793,7 +793,8 @@ int ssl_create_binder( mbedtls_ssl_context *ssl, unsigned char *psk, size_t psk_
         ret = mbedtls_ssl_tls1_3_derive_secret( mbedtls_md_get_type( md ),
                             ssl->handshake->early_secret, hash_length,
                             MBEDTLS_SSL_TLS1_3_LBL_WITH_LEN( res_binder ),
-                            hash, hash_length, binder_key, hash_length );
+                            NULL, 0, MBEDTLS_SSL_TLS1_3_CONTEXT_UNHASHED,
+                            binder_key, hash_length );
         MBEDTLS_SSL_DEBUG_MSG( 5, ( "Derive Early Secret with 'res binder'" ) );
     }
     else
@@ -801,7 +802,8 @@ int ssl_create_binder( mbedtls_ssl_context *ssl, unsigned char *psk, size_t psk_
         ret = mbedtls_ssl_tls1_3_derive_secret( mbedtls_md_get_type( md ),
                             ssl->handshake->early_secret, hash_length,
                             MBEDTLS_SSL_TLS1_3_LBL_WITH_LEN( ext_binder ),
-                            hash, hash_length, binder_key, hash_length );
+                            NULL, 0, MBEDTLS_SSL_TLS1_3_CONTEXT_UNHASHED,
+                            binder_key, hash_length );
         MBEDTLS_SSL_DEBUG_MSG( 5, ( "Derive Early Secret with 'ext binder'" ) );
     }
 
