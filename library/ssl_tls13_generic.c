@@ -1410,17 +1410,11 @@ static int ssl_calc_verify_tls_sha384( mbedtls_ssl_context *ssl, unsigned char h
  */
 int mbedtls_ssl_tls1_3_derive_master_secret( mbedtls_ssl_context *ssl ) {
 
-#if defined(MBEDTLS_SHA256_C) && !defined(MBEDTLS_SHA512_C)
-    unsigned char salt[32];
-    unsigned char ECDHE[32];
-    unsigned char null_ikm[32];
-    unsigned char intermediary_secret[32];
-#else /* MBEDTLS_SHA512_C */
-    unsigned char salt[64];
+    unsigned char salt[MBEDTLS_MD_MAX_SIZE];
+    unsigned char null_ikm[MBEDTLS_MD_MAX_SIZE];
+    unsigned char intermediary_secret[MBEDTLS_MD_MAX_SIZE];
+
     unsigned char ECDHE[66];
-    unsigned char null_ikm[64];
-    unsigned char intermediary_secret[64];
-#endif
 
 #if defined(MBEDTLS_SHA256_C)
     /* SHA256 hash of "" string of length 0. */
