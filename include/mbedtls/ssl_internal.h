@@ -1640,6 +1640,14 @@ void mbedtls_ssl_reset_retransmit_timeout( mbedtls_ssl_context *ssl );
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
 
+/* The maximum length of HKDF labels used in the TLS 1.3 standard. */
+#define MBEDTLS_SSL_TLS1_3_KEY_SCHEDULE_MAX_LABEL_LEN    32
+/* The maximum length of HKDF contexts used in the TLS 1.3 standad.
+ * Since contexts are always hashes of message transcripts, this can
+ * be approximated from above by the maximum hash size. */
+#define MBEDTLS_SSL_TLS1_3_KEY_SCHEDULE_MAX_CONTEXT_LEN  \
+    MBEDTLS_MD_MAX_SIZE
+
 /**
  * \brief   mbedtls_ssl_tls1_3_derive_secret( ) implements the TLS 1.3 Derive-Secret( ) function.
  *
