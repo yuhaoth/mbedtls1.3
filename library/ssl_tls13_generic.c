@@ -1427,11 +1427,6 @@ int mbedtls_ssl_tls1_3_derive_master_secret( mbedtls_ssl_context *ssl ) {
     unsigned int psk_allocated = 0;
     int hash_size;
 
-#if defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
-    psk = ssl->conf->psk;
-    psk_len = ssl->conf->psk_len;
-#endif /* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED */
-
     if( ssl->transform_in == NULL )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "transform_in == NULL, mbedtls_ssl_tls1_3_derive_master_secret failed" ) );
@@ -1466,6 +1461,15 @@ int mbedtls_ssl_tls1_3_derive_master_secret( mbedtls_ssl_context *ssl ) {
         return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
     }
 
+    /*
+     * Compute PSK for first stage of secret evolution.
+     */
+
+#if defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
+    psk = ssl->conf->psk;
+    psk_len = ssl->conf->psk_len;
+#endif /* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED */
+
 #if defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
     /* If the psk callback was called, use its result */
     if( ( ssl->handshake->psk != NULL ) &&
@@ -1497,55 +1501,7 @@ int mbedtls_ssl_tls1_3_derive_master_secret( mbedtls_ssl_context *ssl ) {
 #endif /* MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED */
 
     /*
-     * Compute Early Secret with HKDF-Extract( 0, PSK )
-     */
-
-    memset( salt, 0x0, hash_size );
-    ret = mbedtls_hkdf_extract( md, salt, hash_size, psk, psk_len, ssl->handshake->early_secret );
-
-    if( ret != 0 )
-    {
-        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_hkdf_extract( ) with early_secret", ret );
-        if( psk_allocated == 1 ) mbedtls_free( psk );
-        return( ret );
-    }
-
-    /*
-     * Export client early traffic secret
-     */
-#if defined(MBEDTLS_SSL_EXPORT_KEYS)
-    if( ssl->conf->f_export_secret != NULL )
-    {
-        ssl->conf->f_export_secret( ssl->conf->p_export_secret,
-                ssl->handshake->randbytes,
-                MBEDTLS_SSL_TLS1_3_CLIENT_EARLY_TRAFFIC_SECRET,
-                ssl->handshake->early_secret, hash_size );
-    }
-#endif /* MBEDTLS_SSL_EXPORT_KEYS */
-
-    MBEDTLS_SSL_DEBUG_MSG( 5, ( "HKDF Extract -- early_secret" ) );
-    MBEDTLS_SSL_DEBUG_BUF( 5, "Salt", salt, hash_size );
-    MBEDTLS_SSL_DEBUG_BUF( 5, "Input", psk, psk_len );
-    MBEDTLS_SSL_DEBUG_BUF( 5, "Output", ssl->handshake->early_secret, hash_size );
-
-    /*
-     * Derive-Secret( ., "derived", "" )
-     */
-    ret = mbedtls_ssl_tls1_3_derive_secret( ssl->transform_in->ciphersuite_info->mac,
-                         ssl->handshake->early_secret, hash_size,
-                         MBEDTLS_SSL_TLS1_3_LBL_WITH_LEN( derived ),
-                         NULL, 0, MBEDTLS_SSL_TLS1_3_CONTEXT_UNHASHED,
-                         intermediary_secret, hash_size );
-
-    if( ret != 0 )
-    {
-        MBEDTLS_SSL_DEBUG_RET( 1, "Derive-Secret( ., 'derived', '' ): Error", ret );
-        if( psk_allocated == 1 ) mbedtls_free( psk );
-        return( ret );
-    }
-
-    /*
-     * Compute Handshake Secret with HKDF-Extract( Intermediary Secret, ECDHE )
+     * Compute ECDHE secret for second stage of secret evolution.
      */
 
 #if defined(MBEDTLS_KEY_EXCHANGE_SOME_ECDHE_ENABLED)
@@ -1581,12 +1537,39 @@ int mbedtls_ssl_tls1_3_derive_master_secret( mbedtls_ssl_context *ssl ) {
         return( MBEDTLS_ERR_SSL_BAD_HS_SERVER_HELLO );
     }
 
-    ret = mbedtls_hkdf_extract( md, intermediary_secret, hash_size,
-                                ECDHE, ECDHE_len, ssl->handshake->handshake_secret );
 
+    /*
+     * Compute EarlySecret
+     */
+
+    ret = mbedtls_ssl_tls1_3_evolve_secret( ssl->transform_in->ciphersuite_info->mac,
+                                            NULL, /* use 0 as old secret */
+                                            psk, psk_len,
+                                            ssl->handshake->early_secret );
     if( ret != 0 )
     {
-        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_hkdf_extract( ) with handshake_secret: Error", ret );
+        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_hkdf_extract( ) with early_secret", ret );
+        if( psk_allocated == 1 ) mbedtls_free( psk );
+        return( ret );
+    }
+
+    MBEDTLS_SSL_DEBUG_MSG( 5, ( "HKDF Extract -- early_secret" ) );
+    MBEDTLS_SSL_DEBUG_BUF( 5, "Salt", salt, hash_size );
+    MBEDTLS_SSL_DEBUG_BUF( 5, "Input", psk, psk_len );
+    MBEDTLS_SSL_DEBUG_BUF( 5, "Output", ssl->handshake->early_secret, hash_size );
+
+    /*
+     * Compute HandshakeSecret
+     */
+
+    ret = mbedtls_ssl_tls1_3_evolve_secret(
+                              ssl->transform_in->ciphersuite_info->mac,
+                              ssl->handshake->early_secret,
+                              ECDHE, ECDHE_len,
+                              ssl->handshake->handshake_secret );
+    if( ret != 0 )
+    {
+        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_hkdf_extract( ) with early_secret", ret );
         if( psk_allocated == 1 ) mbedtls_free( psk );
         return( ret );
     }
@@ -1597,34 +1580,17 @@ int mbedtls_ssl_tls1_3_derive_master_secret( mbedtls_ssl_context *ssl ) {
     MBEDTLS_SSL_DEBUG_BUF( 5, "Output", ssl->handshake->handshake_secret, hash_size );
 
     /*
-     * Derive-Secret( ., "derived", "" )
+     * Compute MasterSecret
      */
 
-    ret = mbedtls_ssl_tls1_3_derive_secret( ssl->transform_in->ciphersuite_info->mac,
-                         ssl->handshake->handshake_secret, hash_size,
-                         MBEDTLS_SSL_TLS1_3_LBL_WITH_LEN( derived ),
-                         NULL, 0, MBEDTLS_SSL_TLS1_3_CONTEXT_UNHASHED,
-                         intermediary_secret, hash_size );
-
+    ret = mbedtls_ssl_tls1_3_evolve_secret(
+                              ssl->transform_in->ciphersuite_info->mac,
+                              ssl->handshake->handshake_secret,
+                              NULL, 0,
+                              ssl->handshake->master_secret );
     if( ret != 0 )
     {
-        MBEDTLS_SSL_DEBUG_RET( 1, "Derive-Secret( ., 'derived', '' ): Error", ret );
-        if( psk_allocated == 1 ) mbedtls_free( psk );
-        return( ret );
-    }
-
-    /*
-     * Compute Master Secret with HKDF-Extract( Intermediary Secret, 0 )
-     */
-
-    memset( null_ikm, 0x0, hash_size );
-
-    ret = mbedtls_hkdf_extract( md, intermediary_secret, hash_size,
-                                null_ikm, hash_size, ssl->handshake->master_secret );
-
-    if( ret != 0 )
-    {
-        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_hkdf_extract( ) with master_secret: Error %d.", ret );
+        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_hkdf_extract( ) with early_secret", ret );
         if( psk_allocated == 1 ) mbedtls_free( psk );
         return( ret );
     }
@@ -1635,6 +1601,21 @@ int mbedtls_ssl_tls1_3_derive_master_secret( mbedtls_ssl_context *ssl ) {
     MBEDTLS_SSL_DEBUG_BUF( 5, "Output", ssl->handshake->master_secret, hash_size );
 
     if( psk_allocated == 1 ) mbedtls_free( psk );
+
+    /*
+     * Export client early traffic secret
+     */
+#if defined(MBEDTLS_SSL_EXPORT_KEYS)
+    if( ssl->conf->f_export_secret != NULL )
+    {
+        ssl->conf->f_export_secret( ssl->conf->p_export_secret,
+                ssl->handshake->randbytes,
+                MBEDTLS_SSL_TLS1_3_CLIENT_EARLY_TRAFFIC_SECRET,
+                ssl->handshake->early_secret, hash_size );
+    }
+#endif /* MBEDTLS_SSL_EXPORT_KEYS */
+
+
     return( 0 );
 }
 
