@@ -1975,6 +1975,8 @@ void mbedtls_ssl_conf_verify( mbedtls_ssl_config *conf,
  *
  * \param conf     The SSL configuration to use.
  * \param sig_algs A list of signature algorithms with the most preferred algorithm listed first.  
+ *  
+ *                 Note: sig_algs must be terminated with MBEDTLS_SIG_NONE. 
  */
 void mbedtls_ssl_conf_signature_algorithms( mbedtls_ssl_config *conf,
                      const int* sig_algs );

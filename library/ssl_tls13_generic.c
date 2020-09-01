@@ -847,7 +847,7 @@ int ssl_write_signature_algorithms_ext( mbedtls_ssl_context *ssl,
     /*
      * Determine length of the signature scheme list
      */
-    for ( md = ssl->conf->signature_schemes; *md != MBEDTLS_SIG_NONE; md++ )
+    for( md = ssl->conf->signature_schemes; *md != MBEDTLS_SIG_NONE; md++ )
     {
         sig_alg_len += 2;
     }
@@ -862,7 +862,7 @@ int ssl_write_signature_algorithms_ext( mbedtls_ssl_context *ssl,
      * Write signature schemes
      */
 
-    for ( md = ssl->conf->signature_schemes; *md != MBEDTLS_SIG_NONE; md++ )
+    for( md = ssl->conf->signature_schemes; *md != MBEDTLS_SIG_NONE; md++ )
     {
         *sig_alg_list++ = (unsigned char)( ( *md >> 8 ) & 0xFF );
         *sig_alg_list++ = (unsigned char)( ( *md ) & 0xFF );
@@ -896,7 +896,7 @@ int ssl_parse_signature_algorithms_ext( mbedtls_ssl_context *ssl,
     const unsigned char *end = buf + len;
     const int *md_cur;
     int offered_signature_scheme;
-    int got_common_sig_alg=0; 
+    int got_common_sig_alg = 0; 
     uint32_t i;
 
     sig_alg_list_size = ( ( buf[0] << 8 ) | ( buf[1] ) );
@@ -930,7 +930,7 @@ int ssl_parse_signature_algorithms_ext( mbedtls_ssl_context *ssl,
 
         MBEDTLS_SSL_DEBUG_MSG( 4, ( "received signature algorithm: 0x%x", offered_signature_scheme ) );
 
-         for( md_cur = ssl->conf->signature_schemes; *md_cur != MBEDTLS_SIG_NONE; md_cur++ )
+        for( md_cur = ssl->conf->signature_schemes; *md_cur != MBEDTLS_SIG_NONE; md_cur++ )
         {
             if( *md_cur == offered_signature_scheme )
             {

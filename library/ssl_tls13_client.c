@@ -2908,7 +2908,7 @@ static int ssl_server_hello_parse( mbedtls_ssl_context* ssl,
     const mbedtls_ssl_ciphersuite_t* suite_info; /* pointer to ciphersuite */
     
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && defined(MBEDTLS_X509_CRT_PARSE_C)
-    const int *alg; 
+    const int *alg;  /* Used to iterate through the signature algorithm list */
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL && MBEDTLS_X509_CRT_PARSE_C */
 
     /* Check for minimal length */
@@ -3073,8 +3073,8 @@ static int ssl_server_hello_parse( mbedtls_ssl_context* ssl,
     }
 
 #if defined(MBEDTLS_X509_CRT_PARSE_C)
-    /* Configure signature algorithm. Compare the offered signature algorithm(s) 
-     * with the selected ciphersuite matches the signature algorithm.
+    /* Configure signature algorithm by comparing the 
+     * offered signature algorithm(s) with the selected ciphersuite.
      */
 
     for( alg = ssl->conf->signature_schemes; *alg != MBEDTLS_SIG_NONE; alg++ )
@@ -3100,7 +3100,7 @@ static int ssl_server_hello_parse( mbedtls_ssl_context* ssl,
     }
 
     /* Error if we are unable to configure an appropriate signature algorithm. */
-    if( ssl->conf->signature_schemes[0] == MBEDTLS_SIG_NONE)
+    if( ssl->conf->signature_schemes[0] == MBEDTLS_SIG_NONE )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "no signature algorithm for ciphersuite %04x was found", i ) );
         SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_INTERNAL_ERROR );

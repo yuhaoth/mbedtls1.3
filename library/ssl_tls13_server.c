@@ -4625,7 +4625,7 @@ int mbedtls_ssl_handshake_server_step( mbedtls_ssl_context *ssl )
             /* ----- READ CLIENT CERTIFICATE VERIFY ----*/
 
         case MBEDTLS_SSL_CLIENT_CERTIFICATE_VERIFY:
-            ret=ssl_read_certificate_verify_process( ssl );
+            ret = ssl_read_certificate_verify_process( ssl );
             break;
 
 #if defined(MBEDTLS_ZERO_RTT)

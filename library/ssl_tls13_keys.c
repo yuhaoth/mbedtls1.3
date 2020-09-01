@@ -387,7 +387,7 @@ int mbedtls_ssl_tls1_3_hkdf_expand_label(
     // ----------------------------- DEBUG ---------------------------
 
     mbedtls_printf( "Info ( %d ):", len );
-    for ( int i = 0; i < len; i++ )
+    for( int i = 0; i < len; i++ )
     {
         mbedtls_printf( "%02x", info[i] );
     }
@@ -416,7 +416,7 @@ int mbedtls_ssl_tls1_3_hkdf_expand_label(
     // ----------------------------- DEBUG ---------------------------
 
     mbedtls_printf( "Derived key ( %d ):", blen );
-    for ( int i = 0; i < blen; i++ )
+    for( int i = 0; i < blen; i++ )
     {
         mbedtls_printf( "%02x", buf[i] );
     }
