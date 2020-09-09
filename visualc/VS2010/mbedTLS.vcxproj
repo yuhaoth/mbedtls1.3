@@ -329,6 +329,7 @@
     <ClCompile Include="..\..\library\ssl_srv.c" />
     <ClCompile Include="..\..\library\ssl_ticket.c" />
     <ClCompile Include="..\..\library\ssl_tls.c" />
+    <ClCompile Include="..\..\library\ssl_tls13_keys.c" />
     <ClCompile Include="..\..\library\threading.c" />
     <ClCompile Include="..\..\library\timing.c" />
     <ClCompile Include="..\..\library\version.c" />
@@ -351,7 +352,6 @@
     <ClCompile Include="..\..\library\ssl_tls13_generic.c" />
     <ClCompile Include="..\..\library\ssl_tls13_messaging.c" />
     <ClCompile Include="..\..\library\ssl_tls13_server.c" />
-    <ClCompile Include="..\..\library\hkdf-tls.c" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
