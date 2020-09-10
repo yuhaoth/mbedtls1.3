@@ -105,8 +105,9 @@ struct mbedtls_ssl_tls1_3_labels_struct const mbedtls_ssl_tls1_3_labels =
 #define SSL_TLS1_3_KEY_SCHEDULE_MAX_HKDF_LABEL_LEN \
     (   2                  /* expansion length           */ \
       + 1                  /* label length               */ \
+      + 6                  /* pre-fix label "tls13 " (without NUL byte) */ \
       + MBEDTLS_SSL_TLS1_3_KEY_SCHEDULE_MAX_LABEL_LEN       \
-      + 1                  /* context length             */ \
+      + 1                  /* context length, i.e. length of hash algorithm  */ \
       + MBEDTLS_SSL_TLS1_3_KEY_SCHEDULE_MAX_CONTEXT_LEN )
 
 #define _JOIN(x,y) x ## y
