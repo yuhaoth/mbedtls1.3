@@ -3206,10 +3206,10 @@ int mbedtls_ssl_generate_application_traffic_keys( mbedtls_ssl_context *ssl, mbe
         return( ret );
     }
 
-    MBEDTLS_SSL_DEBUG_BUF( 3, "Record Type = Application Data, clientWriteKey:", traffic_keys->clientWriteKey, transform->keylen );
-    MBEDTLS_SSL_DEBUG_BUF( 3, "Record Type = Application Data, serverWriteKey:", traffic_keys->serverWriteKey, transform->keylen );
-    MBEDTLS_SSL_DEBUG_BUF( 3, "Record Type = Application Data, clientWriteIV:", traffic_keys->clientWriteIV, transform->ivlen );
-    MBEDTLS_SSL_DEBUG_BUF( 3, "Record Type = Application Data, serverWriteIV:", traffic_keys->serverWriteIV, transform->ivlen );
+    MBEDTLS_SSL_DEBUG_BUF( 3, "Record Type = Application Data, client_write_key:", traffic_keys->client_write_key, transform->keylen );
+    MBEDTLS_SSL_DEBUG_BUF( 3, "Record Type = Application Data, server_write_key:", traffic_keys->server_write_key, transform->keylen );
+    MBEDTLS_SSL_DEBUG_BUF( 3, "Record Type = Application Data, client_write_iv:", traffic_keys->client_write_iv, transform->ivlen );
+    MBEDTLS_SSL_DEBUG_BUF( 3, "Record Type = Application Data, server_write_iv:", traffic_keys->server_write_iv, transform->ivlen );
 
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= derive application traffic keys" ) );
 
@@ -3287,19 +3287,19 @@ int mbedtls_set_traffic_key( mbedtls_ssl_context *ssl,
 #if defined(MBEDTLS_SSL_SRV_C)
     if( ssl->conf->endpoint == MBEDTLS_SSL_IS_SERVER )
     {
-        key1 = traffic_keys->serverWriteKey; /* encryption key for the server */
-        key2 = traffic_keys->clientWriteKey; /* decryption key for the server */
+        key1 = traffic_keys->server_write_key; /* encryption key for the server */
+        key2 = traffic_keys->client_write_key; /* decryption key for the server */
 
-        memcpy( transform->iv_enc, traffic_keys->serverWriteIV,
-                traffic_keys->ivLen );
-        memcpy( transform->iv_dec, traffic_keys->clientWriteIV,
-                traffic_keys->ivLen );
+        memcpy( transform->iv_enc, traffic_keys->server_write_iv,
+                traffic_keys->iv_len );
+        memcpy( transform->iv_dec, traffic_keys->client_write_iv,
+                traffic_keys->iv_len );
         /* Restore the most recent nonce */
         if( mode == 1 )
         {
             memcpy( transform->iv_dec,
-                    transform->traffic_keys_previous.clientWriteIV,
-                    transform->traffic_keys_previous.ivLen );
+                    transform->traffic_keys_previous.client_write_iv,
+                    transform->traffic_keys_previous.iv_len );
         }
 
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
@@ -3324,18 +3324,18 @@ int mbedtls_set_traffic_key( mbedtls_ssl_context *ssl,
 #if defined(MBEDTLS_SSL_CLI_C)
     if( ssl->conf->endpoint == MBEDTLS_SSL_IS_CLIENT )
     {
-        key1 = traffic_keys->clientWriteKey; /* encryption key for the client */
-        key2 = traffic_keys->serverWriteKey; /* decryption key for the client */
+        key1 = traffic_keys->client_write_key; /* encryption key for the client */
+        key2 = traffic_keys->server_write_key; /* decryption key for the client */
 
-        memcpy( transform->iv_enc, traffic_keys->clientWriteIV,
-                traffic_keys->ivLen );
-        memcpy( transform->iv_dec, traffic_keys->serverWriteIV,
-                traffic_keys->ivLen );
+        memcpy( transform->iv_enc, traffic_keys->client_write_iv,
+                traffic_keys->iv_len );
+        memcpy( transform->iv_dec, traffic_keys->server_write_iv,
+                traffic_keys->iv_len );
         /* Restore the most recent nonce */
         if( mode == 1 )
         {
             memcpy( transform->iv_dec,
-                    transform->traffic_keys_previous.serverWriteIV, transform->ivlen );
+                    transform->traffic_keys_previous.server_write_iv, transform->ivlen );
         }
 
     }
@@ -3623,10 +3623,10 @@ int mbedtls_ssl_early_data_key_derivation( mbedtls_ssl_context *ssl, mbedtls_ssl
         return( ret );
     }
 
-    MBEDTLS_SSL_DEBUG_BUF( 3, "[TLS 1.3, ] + handshake key expansion, clientWriteKey:", traffic_keys->clientWriteKey, transform->keylen );
-    MBEDTLS_SSL_DEBUG_BUF( 3, "[TLS 1.3, ] + handshake key expansion, serverWriteKey:", traffic_keys->serverWriteKey, transform->keylen );
-    MBEDTLS_SSL_DEBUG_BUF( 3, "[TLS 1.3, ] + handshake key expansion, clientWriteIV:", traffic_keys->clientWriteIV, transform->ivlen );
-    MBEDTLS_SSL_DEBUG_BUF( 3, "[TLS 1.3, ] + handshake key expansion, serverWriteIV:", traffic_keys->serverWriteIV, transform->ivlen );
+    MBEDTLS_SSL_DEBUG_BUF( 3, "[TLS 1.3, ] + handshake key expansion, client_write_key:", traffic_keys->client_write_key, transform->keylen );
+    MBEDTLS_SSL_DEBUG_BUF( 3, "[TLS 1.3, ] + handshake key expansion, server_write_key:", traffic_keys->server_write_key, transform->keylen );
+    MBEDTLS_SSL_DEBUG_BUF( 3, "[TLS 1.3, ] + handshake key expansion, client_write_iv:", traffic_keys->client_write_iv, transform->ivlen );
+    MBEDTLS_SSL_DEBUG_BUF( 3, "[TLS 1.3, ] + handshake key expansion, server_write_iv:", traffic_keys->server_write_iv, transform->ivlen );
 
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= mbedtls_ssl_early_data_key_derivation" ) );
 

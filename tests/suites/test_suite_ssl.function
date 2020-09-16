@@ -3506,19 +3506,19 @@ void ssl_tls1_3_traffic_key_generation( int hash_alg,
                      desired_key_len, desired_iv_len,
                      &keys ) == 0 );
 
-    TEST_ASSERT( keys.keyLen == (size_t) desired_key_len );
-    TEST_ASSERT( keys.ivLen  == (size_t) desired_iv_len  );
+    TEST_ASSERT( keys.key_len == (size_t) desired_key_len );
+    TEST_ASSERT( keys.iv_len  == (size_t) desired_iv_len  );
 
-    TEST_ASSERT( memcmp( keys.clientWriteKey,
+    TEST_ASSERT( memcmp( keys.client_write_key,
                          expected_client_write_key->x,
                          desired_key_len ) == 0 );
-    TEST_ASSERT( memcmp( keys.serverWriteKey,
+    TEST_ASSERT( memcmp( keys.server_write_key,
                          expected_server_write_key->x,
                          desired_key_len ) == 0 );
-    TEST_ASSERT( memcmp( keys.clientWriteIV,
+    TEST_ASSERT( memcmp( keys.client_write_iv,
                          expected_client_write_iv->x,
                          desired_iv_len ) == 0 );
-    TEST_ASSERT( memcmp( keys.serverWriteIV,
+    TEST_ASSERT( memcmp( keys.server_write_iv,
                          expected_server_write_iv->x,
                          desired_iv_len ) == 0 );
 }

@@ -389,6 +389,27 @@ typedef int  mbedtls_ssl_tls_prf_cb( const unsigned char *secret, size_t slen,
                                      unsigned char *dstbuf, size_t dlen );
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+
+/* cipher.h exports the maximum IV, key and block length from
+ * all ciphers enabled in the config, regardless of whether those
+ * ciphers are actually usable in SSL/TLS. Notably, XTS is enabled
+ * in the default configuration and uses 64 Byte keys, but it is
+ * not used for record protection in SSL/TLS.
+ *
+ * In order to prevent unnecessary inflation of key structures,
+ * we introduce SSL-specific variants of the max-{key,block,IV}
+ * macros here which are meant to only take those ciphers into
+ * account which can be negotiated in SSL/TLS.
+ *
+ * Since the current definitions of MBEDTLS_MAX_{KEY|BLOCK|IV}_LENGTH
+ * in cipher.h are rough overapproximations of the real maxima, here
+ * we content ourselves with replicating those overapproximations
+ * for the maximum block and IV length, and excluding XTS from the
+ * computation of the maximum key length. */
+#define MBEDTLS_SSL_MAX_BLOCK_LENGTH 16
+#define MBEDTLS_SSL_MAX_IV_LENGTH    16
+#define MBEDTLS_SSL_MAX_KEY_LENGTH   32
+
 /**
  * \brief   The data structure holding the cryptographic material (key and IV)
  *          used for record protection in TLS 1.3.
@@ -396,18 +417,18 @@ typedef int  mbedtls_ssl_tls_prf_cb( const unsigned char *secret, size_t slen,
 struct mbedtls_ssl_key_set
 {
     /*! The key for client->server records. */
-    unsigned char clientWriteKey[ MBEDTLS_MAX_KEY_LENGTH ];
+    unsigned char client_write_key[ MBEDTLS_SSL_MAX_KEY_LENGTH ];
     /*! The key for server->client records. */
-    unsigned char serverWriteKey[ MBEDTLS_MAX_KEY_LENGTH ];
+    unsigned char server_write_key[ MBEDTLS_SSL_MAX_KEY_LENGTH ];
     /*! The IV  for client->server records. */
-    unsigned char clientWriteIV[ MBEDTLS_MAX_IV_LENGTH ];
+    unsigned char client_write_iv[ MBEDTLS_SSL_MAX_IV_LENGTH ];
     /*! The IV  for server->client records. */
-    unsigned char serverWriteIV[ MBEDTLS_MAX_IV_LENGTH ];
+    unsigned char server_write_iv[ MBEDTLS_SSL_MAX_IV_LENGTH ];
 
-    size_t keyLen; /*!< The length of clientWriteKey and
-                    *   serverWriteKey, in Bytes. */
-    size_t ivLen;  /*!< The length of clientWriteIV and
-                    *   serverWriteIV, in Bytes. */
+    size_t key_len; /*!< The length of client_write_key and
+                     *   server_write_key, in Bytes. */
+    size_t iv_len;  /*!< The length of client_write_iv and
+                     *   server_write_iv, in Bytes. */
 
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
     int epoch;
@@ -1745,8 +1766,8 @@ extern const struct mbedtls_ssl_tls1_3_labels_struct mbedtls_ssl_tls1_3_labels;
  *                      This must be a readable buffer of size \p slen Bytes
  * \param slen          Length of the secrets \p client_secret and
  *                      \p server_secret in Bytes.
- * \param keyLen        The desired length of the key to be extracted in Bytes.
- * \param ivLen         The desired length of the IV to be extracted in Bytes.
+ * \param key_len       The desired length of the key to be extracted in Bytes.
+ * \param iv_len        The desired length of the IV to be extracted in Bytes.
  * \param keys          The address of the structure holding the generated
  *                      keys and IVs.
  *
@@ -1758,7 +1779,7 @@ int mbedtls_ssl_tls1_3_make_traffic_keys(
                      mbedtls_md_type_t hash_alg,
                      const unsigned char *client_secret,
                      const unsigned char *server_secret,
-                     size_t slen, size_t keyLen, size_t ivLen,
+                     size_t slen, size_t key_len, size_t iv_len,
                      mbedtls_ssl_key_set *keys );
 
 /**
