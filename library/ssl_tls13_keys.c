@@ -15,59 +15,30 @@
  *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
- *
- *  This file is part of mbed TLS (https://tls.mbed.org)
-*/
+ */
 
-#if !defined(MBEDTLS_CONFIG_FILE)
-#include "mbedtls/config.h"
-#else
-#include MBEDTLS_CONFIG_FILE
-#endif
+#include "common.h"
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
 
-#include "mbedtls/debug.h"
-#include "mbedtls/ssl.h"
-#include "mbedtls/ssl_internal.h"
-
 #include "mbedtls/hkdf.h"
+#include "mbedtls/ssl_internal.h"
+#include "ssl_tls13_keys.h"
+
 #include <stdint.h>
 #include <string.h>
 
-#if defined(MBEDTLS_PLATFORM_C)
-#include "mbedtls/platform.h"
-#else
-#include <stdlib.h>
-#include <stdio.h>
-#define mbedtls_printf     printf
-#define mbedtls_calloc    calloc
-#define mbedtls_free       free
-#endif
+#define MBEDTLS_SSL_TLS1_3_LABEL( name, string )       \
+    .name = string,
 
 struct mbedtls_ssl_tls1_3_labels_struct const mbedtls_ssl_tls1_3_labels =
 {
     /* This seems to work in C, despite the string literal being one
      * character too long due to the 0-termination. */
-    .finished     = "finished",
-    .resumption   = "resumption",
-    .traffic_upd  = "traffic upd",
-    .export       = "exporter",
-    .key          = "key",
-    .iv           = "iv",
-    .sn           = "sn",
-    .c_hs_traffic = "c hs traffic",
-    .c_ap_traffic = "c ap traffic",
-    .c_e_traffic  = "c e traffic",
-    .s_hs_traffic = "s hs traffic",
-    .s_ap_traffic = "s ap traffic",
-    .s_e_traffic  = "s e traffic",
-    .exp_master   = "exp master",
-    .res_master   = "res master",
-    .ext_binder   = "ext binder",
-    .res_binder   = "res binder",
-    .derived      = "derived"
+    MBEDTLS_SSL_TLS1_3_LABEL_LIST
 };
+
+#undef MBEDTLS_SSL_TLS1_3_LABEL
 
 /*
  * This function creates a HkdfLabel structure used in the TLS 1.3 key schedule.
@@ -88,13 +59,15 @@ struct mbedtls_ssl_tls1_3_labels_struct const mbedtls_ssl_tls1_3_labels =
  *                   255. This allows us to save a few Bytes of code by
  *                   hardcoding the writing of the high bytes.
  * - (label, llen): label + label length, without "tls13 " prefix
- *                  The label length MUST be
- *                  <= MBEDTLS_SSL_TLS1_3_KEY_SCHEDULE_MAX_LABEL_LEN
- *                  It is the caller's responsiblity to ensure this.
+ *                  The label length MUST be less than or equal to
+ *                  MBEDTLS_SSL_TLS1_3_KEY_SCHEDULE_MAX_LABEL_LEN
+ *                  It is the caller's responsibility to ensure this.
+ *                  All (label, label length) pairs used in TLS 1.3
+ *                  can be obtained via MBEDTLS_SSL_TLS1_3_LBL_WITH_LEN().
  * - (ctx, clen): context + context length
- *                The context length MUST be
- *                <= MBEDTLS_SSL_TLS1_3_KEY_SCHEDULE_MAX_CONTEXT_LEN
- *                It is the caller's responsiblity to ensure this.
+ *                The context length MUST be less than or equal to
+ *                MBEDTLS_SSL_TLS1_3_KEY_SCHEDULE_MAX_CONTEXT_LEN
+ *                It is the caller's responsibility to ensure this.
  * - dst: Target buffer for HkdfLabel structure,
  *        This MUST be a writable buffer of size
  *        at least SSL_TLS1_3_KEY_SCHEDULE_MAX_HKDF_LABEL_LEN Bytes.
@@ -102,21 +75,20 @@ struct mbedtls_ssl_tls1_3_labels_struct const mbedtls_ssl_tls1_3_labels =
  *         the HkdfLabel structure on success.
  */
 
-#define SSL_TLS1_3_KEY_SCHEDULE_MAX_HKDF_LABEL_LEN \
+static const char tls1_3_label_prefix[6] = "tls13 ";
+
+#define SSL_TLS1_3_KEY_SCHEDULE_HKDF_LABEL_LEN( label_len, context_len ) \
     (   2                  /* expansion length           */ \
       + 1                  /* label length               */ \
-      + MBEDTLS_SSL_TLS1_3_KEY_SCHEDULE_MAX_LABEL_LEN       \
+      + label_len                                           \
       + 1                  /* context length             */ \
-      + MBEDTLS_SSL_TLS1_3_KEY_SCHEDULE_MAX_CONTEXT_LEN )
+      + context_len )
 
-#define _JOIN(x,y) x ## y
-#define JOIN(x,y) _JOIN( x, y )
-#define STATIC_ASSERT( const_expr )                                           \
-    struct JOIN(_static_assert_struct, __LINE__) {                            \
-        int JOIN(__static_assert_field, __LINE__) : 1 - 2 * ! ( const_expr ); \
-    }
-
-STATIC_ASSERT( SSL_TLS1_3_KEY_SCHEDULE_MAX_HKDF_LABEL_LEN < 255 );
+#define SSL_TLS1_3_KEY_SCHEDULE_MAX_HKDF_LABEL_LEN                      \
+    SSL_TLS1_3_KEY_SCHEDULE_HKDF_LABEL_LEN(                             \
+                     sizeof(tls1_3_label_prefix) +                      \
+                     MBEDTLS_SSL_TLS1_3_KEY_SCHEDULE_MAX_LABEL_LEN,     \
+                     MBEDTLS_SSL_TLS1_3_KEY_SCHEDULE_MAX_CONTEXT_LEN )
 
 static void ssl_tls1_3_hkdf_encode_label(
                             size_t desired_length,
@@ -124,119 +96,38 @@ static void ssl_tls1_3_hkdf_encode_label(
                             const unsigned char *ctx, size_t clen,
                             unsigned char *dst, size_t *dlen )
 {
-    const char label_prefix[6] = { 't', 'l', 's', '1', '3', ' ' };
-    size_t total_label_len = sizeof( label_prefix ) + llen;
+    size_t total_label_len =
+        sizeof(tls1_3_label_prefix) + llen;
     size_t total_hkdf_lbl_len =
-          2                  /* length of expanded key material */
-        + 1                  /* label length                    */
-        + total_label_len    /* actual label, incl. prefix      */
-        + 1                  /* context length                  */
-        + clen;              /* actual context                  */
+        SSL_TLS1_3_KEY_SCHEDULE_HKDF_LABEL_LEN( total_label_len, clen );
 
     unsigned char *p = dst;
 
-    /* Add total length. */
+    /* Add the size of the expanded key material.
+     * We're hardcoding the high byte to 0 here assuming that we never use
+     * TLS 1.3 HKDF key expansion to more than 255 Bytes. */
+#if MBEDTLS_SSL_TLS1_3_KEY_SCHEDULE_MAX_EXPANSION_LEN > 255
+#error "The implementation of ssl_tls1_3_hkdf_encode_label() is not fit for the \
+        value of MBEDTLS_SSL_TLS1_3_KEY_SCHEDULE_MAX_EXPANSION_LEN"
+#endif
+
     *p++ = 0;
     *p++ = (unsigned char)( ( desired_length >> 0 ) & 0xFF );
 
     /* Add label incl. prefix */
     *p++ = (unsigned char)( total_label_len & 0xFF );
-    memcpy( p, label_prefix, sizeof(label_prefix) );
-    p += sizeof(label_prefix);
+    memcpy( p, tls1_3_label_prefix, sizeof(tls1_3_label_prefix) );
+    p += sizeof(tls1_3_label_prefix);
     memcpy( p, label, llen );
     p += llen;
 
     /* Add context value */
     *p++ = (unsigned char)( clen & 0xFF );
-    if( ctx != NULL )
+    if( clen != 0 )
         memcpy( p, ctx, clen );
 
     /* Return total length to the caller.  */
     *dlen = total_hkdf_lbl_len;
-}
-
-/*
-* The traffic keying material is generated from the following inputs:
-*
-*  - One secret value per sender.
-*  - A purpose value indicating the specific value being generated
-*  - The desired lengths of key and IV.
-*
-* The expansion itself is based on HKDF:
-*
-*   [sender]_write_key = HKDF-Expand-Label( Secret, "key", "", key_length )
-*   [sender]_write_iv  = HKDF-Expand-Label( Secret, "iv" , "", iv_length )
-*
-* [sender] denotes the sending side and the Secret value is provided
-* by the function caller. Note that we generate server and client side
-* keys in a single function call.
-*/
-int mbedtls_ssl_tls1_3_make_traffic_keys(
-                     mbedtls_md_type_t hash_alg,
-                     const unsigned char *client_secret,
-                     const unsigned char *server_secret,
-                     size_t slen, size_t key_len, size_t iv_len,
-                     mbedtls_ssl_key_set *keys )
-{
-    int ret = 0;
-
-    ret = mbedtls_ssl_tls1_3_hkdf_expand_label( hash_alg,
-                    client_secret, slen,
-                    MBEDTLS_SSL_TLS1_3_LBL_WITH_LEN( key ),
-                    NULL, 0,
-                    keys->client_write_key, key_len );
-    if( ret != 0 )
-        return( ret );
-
-    ret = mbedtls_ssl_tls1_3_hkdf_expand_label( hash_alg,
-                    server_secret, slen,
-                    MBEDTLS_SSL_TLS1_3_LBL_WITH_LEN( key ),
-                    NULL, 0,
-                    keys->server_write_key, key_len );
-    if( ret != 0 )
-        return( ret );
-
-    ret = mbedtls_ssl_tls1_3_hkdf_expand_label( hash_alg,
-                    client_secret, slen,
-                    MBEDTLS_SSL_TLS1_3_LBL_WITH_LEN( iv ),
-                    NULL, 0,
-                    keys->client_write_iv, iv_len );
-    if( ret != 0 )
-        return( ret );
-
-    ret = mbedtls_ssl_tls1_3_hkdf_expand_label( hash_alg,
-                    server_secret, slen,
-                    MBEDTLS_SSL_TLS1_3_LBL_WITH_LEN( iv ),
-                    NULL, 0,
-                    keys->server_write_iv, iv_len );
-    if( ret != 0 )
-        return( ret );
-
-    keys->key_len = key_len;
-    keys->iv_len = iv_len;
-
-#if defined(MBEDTLS_SSL_PROTO_DTLS)
-
-    ret = mbedtls_ssl_tls1_3_hkdf_expand_label( hash_alg,
-                    client_secret, slen,
-                    MBEDTLS_SSL_TLS1_3_LBL_WITH_LEN( sn ),
-                    NULL, 0,
-                    keys->client_sn_key, key_len );
-    if( ret != 0 )
-        return( ret );
-
-    ret = mbedtls_ssl_tls1_3_hkdf_expand_label( hash_alg,
-                    server_secret, slen,
-                    MBEDTLS_SSL_TLS1_3_LBL_WITH_LEN( sn ),
-                    (const unsigned char *)"", 0,
-                    keys->server_sn_key, key_len );
-    if( ret != 0 )
-        return( ret );
-
-    keys->epoch = -1; /* TODO: What's happening here? */
-#endif /* MBEDTLS_SSL_PROTO_DTLS */
-
-    return( 0 );
 }
 
 int mbedtls_ssl_tls1_3_hkdf_expand_label(
@@ -286,12 +177,75 @@ int mbedtls_ssl_tls1_3_hkdf_expand_label(
                                  buf, blen ) );
 }
 
+/*
+ * The traffic keying material is generated from the following inputs:
+ *
+ *  - One secret value per sender.
+ *  - A purpose value indicating the specific value being generated
+ *  - The desired lengths of key and IV.
+ *
+ * The expansion itself is based on HKDF:
+ *
+ *   [sender]_write_key = HKDF-Expand-Label( Secret, "key", "", key_length )
+ *   [sender]_write_iv  = HKDF-Expand-Label( Secret, "iv" , "", iv_length )
+ *
+ * [sender] denotes the sending side and the Secret value is provided
+ * by the function caller. Note that we generate server and client side
+ * keys in a single function call.
+ */
+int mbedtls_ssl_tls1_3_make_traffic_keys(
+                     mbedtls_md_type_t hash_alg,
+                     const unsigned char *client_secret,
+                     const unsigned char *server_secret,
+                     size_t slen, size_t key_len, size_t iv_len,
+                     mbedtls_ssl_key_set *keys )
+{
+    int ret = 0;
+
+    ret = mbedtls_ssl_tls1_3_hkdf_expand_label( hash_alg,
+                    client_secret, slen,
+                    MBEDTLS_SSL_TLS1_3_LBL_WITH_LEN( key ),
+                    NULL, 0,
+                    keys->client_write_key, key_len );
+    if( ret != 0 )
+        return( ret );
+
+    ret = mbedtls_ssl_tls1_3_hkdf_expand_label( hash_alg,
+                    server_secret, slen,
+                    MBEDTLS_SSL_TLS1_3_LBL_WITH_LEN( key ),
+                    NULL, 0,
+                    keys->server_write_key, key_len );
+    if( ret != 0 )
+        return( ret );
+
+    ret = mbedtls_ssl_tls1_3_hkdf_expand_label( hash_alg,
+                    client_secret, slen,
+                    MBEDTLS_SSL_TLS1_3_LBL_WITH_LEN( iv ),
+                    NULL, 0,
+                    keys->client_write_iv, iv_len );
+    if( ret != 0 )
+        return( ret );
+
+    ret = mbedtls_ssl_tls1_3_hkdf_expand_label( hash_alg,
+                    server_secret, slen,
+                    MBEDTLS_SSL_TLS1_3_LBL_WITH_LEN( iv ),
+                    NULL, 0,
+                    keys->server_write_iv, iv_len );
+    if( ret != 0 )
+        return( ret );
+
+    keys->key_len = key_len;
+    keys->iv_len = iv_len;
+
+    return( 0 );
+}
+
 int mbedtls_ssl_tls1_3_derive_secret(
                    mbedtls_md_type_t hash_alg,
                    const unsigned char *secret, size_t slen,
                    const unsigned char *label, size_t llen,
                    const unsigned char *ctx, size_t clen,
-                   int context_already_hashed,
+                   int ctx_hashed,
                    unsigned char *dstbuf, size_t buflen )
 {
     int ret;
@@ -302,7 +256,7 @@ int mbedtls_ssl_tls1_3_derive_secret(
     if( md == NULL )
         return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
 
-    if( context_already_hashed == MBEDTLS_SSL_TLS1_3_CONTEXT_UNHASHED )
+    if( ctx_hashed == MBEDTLS_SSL_TLS1_3_CONTEXT_UNHASHED )
     {
         ret = mbedtls_md( md, ctx, clen, hashed_context );
         if( ret != 0 )
@@ -311,12 +265,14 @@ int mbedtls_ssl_tls1_3_derive_secret(
     }
     else
     {
-        /* This should never happen since this function is internal
-         * and the code sets `context_already_hashed` correctly.
-         * Let's double-check nonetheless to not run at the risk
-         * of getting a stack overflow. */
         if( clen > sizeof(hashed_context) )
+        {
+            /* This should never happen since this function is internal
+             * and the code sets `ctx_hashed` correctly.
+             * Let's double-check nonetheless to not run at the risk
+             * of getting a stack overflow. */
             return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
+        }
 
         memcpy( hashed_context, ctx, clen );
     }
@@ -336,8 +292,8 @@ int mbedtls_ssl_tls1_3_evolve_secret(
 {
     int ret = MBEDTLS_ERR_SSL_INTERNAL_ERROR;
     size_t hlen, ilen;
-    unsigned char _secret[ MBEDTLS_MD_MAX_SIZE ] = { 0 };
-    unsigned char _input [ MBEDTLS_MD_MAX_SIZE ] = { 0 };
+    unsigned char tmp_secret[ MBEDTLS_MD_MAX_SIZE ] = { 0 };
+    unsigned char tmp_input [ MBEDTLS_MD_MAX_SIZE ] = { 0 };
 
     const mbedtls_md_info_t *md;
     md = mbedtls_md_info_from_type( hash_alg );
@@ -347,7 +303,7 @@ int mbedtls_ssl_tls1_3_evolve_secret(
     hlen = mbedtls_md_get_size( md );
 
     /* For non-initial runs, call Derive-Secret( ., "derived", "")
-     * on the old secreet. */
+     * on the old secret. */
     if( secret_old != NULL )
     {
         ret = mbedtls_ssl_tls1_3_derive_secret(
@@ -356,14 +312,14 @@ int mbedtls_ssl_tls1_3_evolve_secret(
                    MBEDTLS_SSL_TLS1_3_LBL_WITH_LEN( derived ),
                    NULL, 0, /* context */
                    MBEDTLS_SSL_TLS1_3_CONTEXT_UNHASHED,
-                   _secret, hlen );
+                   tmp_secret, hlen );
         if( ret != 0 )
             goto cleanup;
     }
 
     if( input != NULL )
     {
-        memcpy( _input, input, input_len );
+        memcpy( tmp_input, input, input_len );
         ilen = input_len;
     }
     else
@@ -375,8 +331,8 @@ int mbedtls_ssl_tls1_3_evolve_secret(
      * The salt is the old secret, and the input key material
      * is the input secret (PSK / ECDHE). */
     ret = mbedtls_hkdf_extract( md,
-                    _secret, hlen,
-                    _input, ilen,
+                    tmp_secret, hlen,
+                    tmp_input, ilen,
                     secret_new );
     if( ret != 0 )
         goto cleanup;
@@ -385,8 +341,8 @@ int mbedtls_ssl_tls1_3_evolve_secret(
 
  cleanup:
 
-    mbedtls_platform_zeroize( _secret, sizeof(_secret) );
-    mbedtls_platform_zeroize( _input,  sizeof(_input)  );
+    mbedtls_platform_zeroize( tmp_secret, sizeof(tmp_secret) );
+    mbedtls_platform_zeroize( tmp_input,  sizeof(tmp_input)  );
     return( ret );
 }
 

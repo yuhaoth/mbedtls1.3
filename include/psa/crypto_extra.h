@@ -9,7 +9,7 @@
  * This file is reserved for vendor-specific definitions.
  */
 /*
- *  Copyright (C) 2018, ARM Limited, All Rights Reserved
+ *  Copyright The Mbed TLS Contributors
  *  SPDX-License-Identifier: Apache-2.0
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -23,8 +23,6 @@
  *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
- *
- *  This file is part of mbed TLS (https://tls.mbed.org)
  */
 
 #ifndef PSA_CRYPTO_EXTRA_H
@@ -234,9 +232,9 @@ typedef struct mbedtls_psa_stats_s
     /** Number of slots that are not used for anything. */
     size_t empty_slots;
     /** Largest key id value among open keys in internal persistent storage. */
-    psa_app_key_id_t max_open_internal_key_id;
+    psa_key_id_t max_open_internal_key_id;
     /** Largest key id value among open keys in secure elements. */
-    psa_app_key_id_t max_open_external_key_id;
+    psa_key_id_t max_open_external_key_id;
 } mbedtls_psa_stats_t;
 
 /** \brief Get statistics about
