@@ -277,26 +277,16 @@ int main( void )
 #endif /* MBEDTLS_SSL_DTLS_CONNECTION_ID */
 
 #if defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) 
 #define USAGE_PSK_RAW                                               \
-    "    psk=%%s              default: \"\" (disabled)\n"     \
-    "                          The PSK values are in hex, without 0x.\n" \
-    "    psk_list=%%s         default: \"\"\n"                          \
-    "                          A list of (PSK identity, PSK value) pairs.\n" \
-    "                          The PSK values are in hex, without 0x.\n" \
-    "                          id1,psk1[,id2,psk2[,...]]\n"             \
-    "    psk_identity=%%s     default: \"Client_identity\"\n"           \
+    "    psk=%%s                  default: \"\" (disabled)\n"       \
+    "                             The PSK values are in hex, without 0x.\n" \
+    "    psk_identity=%%s         default: \"Client_identity\"\n"
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+#define USAGE_KEX_MODES \
     "    key_exchange_modes=%%s   default: all\n"     \
     "                             options: psk, psk_dhe, ecdhe_ecdsa, psk_all, all\n" 
 #else 
-#define USAGE_PSK_RAW                                               \
-    "    psk=%%s              default: \"\" (disabled)\n"     \
-    "                          The PSK values are in hex, without 0x.\n" \
-    "    psk_list=%%s         default: \"\"\n"                          \
-    "                          A list of (PSK identity, PSK value) pairs.\n" \
-    "                          The PSK values are in hex, without 0x.\n" \
-    "                          id1,psk1[,id2,psk2[,...]]\n"             \
-    "    psk_identity=%%s     default: \"Client_identity\"\n"
+#define USAGE_KEX_MODES 
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
 #define USAGE_PSK_SLOT                          \
@@ -324,6 +314,9 @@ int main( void )
 #define USAGE_PSK USAGE_PSK_RAW USAGE_PSK_SLOT
 #else
 #define USAGE_PSK ""
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+#define USAGE_KEX_MODES
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 #endif /* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED */
 #if defined(MBEDTLS_X509_TRUSTED_CERTIFICATE_CALLBACK)
 #define USAGE_CA_CALLBACK                       \
@@ -480,8 +473,8 @@ int main( void )
 
 #if defined(MBEDTLS_ZERO_RTT)
 #define USAGE_EARLY_DATA \
-    "    early_data=%%s        default: (library default: disabled)\n"      \
-    "                        options: disabled, enabled\n"
+    "    early_data=%%d        default: 0 (disabled)\n"      \
+    "                        options: 0 (disabled), 1 (enabled)\n"
 #else
 #define USAGE_EARLY_DATA ""
 #endif /* MBEDTLS_ZERO_RTT */
@@ -571,6 +564,7 @@ int main( void )
     USAGE_EMS                                               \
     USAGE_ETM                                               \
     USAGE_EARLY_DATA                                        \
+    USAGE_KEX_MODES                                         \
     USAGE_NAMED_GROUP                                       \
     USAGE_CURVES                                            \
     "\n"
@@ -1885,7 +1879,7 @@ int main( int argc, char *argv[] )
 #if defined(SNI_OPTION)
     sni_entry *sni_info = NULL;
 #endif
-#if defined(MBEDTLS_ECP_C) && !defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+#if defined(MBEDTLS_ECP_C) 
     mbedtls_ecp_group_id curve_list[CURVE_LIST_SIZE];
     const mbedtls_ecp_curve_info * curve_cur;
 #endif
@@ -2302,11 +2296,16 @@ int main( int argc, char *argv[] )
 #if defined(MBEDTLS_ZERO_RTT)
         else if( strcmp( p, "early_data" ) == 0 )
         {
-            if( strcmp( q, "disabled" ) == 0 )
-                opt.early_data = MBEDTLS_SSL_EARLY_DATA_DISABLED;
-            else if( strcmp( q, "enabled" ) == 0 )
-                opt.early_data = MBEDTLS_SSL_EARLY_DATA_ENABLED;
-            else goto usage;
+            switch( atoi( q ) )
+            {
+                case 0:
+                    opt.early_data = MBEDTLS_SSL_EARLY_DATA_DISABLED;
+                    break;
+                case 1:
+                    opt.early_data = MBEDTLS_SSL_EARLY_DATA_ENABLED;
+                    break;
+                default: goto usage;
+            }
         }
 #endif /* MBEDTLS_ZERO_RTT */
 
@@ -2845,7 +2844,7 @@ int main( int argc, char *argv[] )
     }
 #endif /* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED */
 
-#if defined(MBEDTLS_ECP_C) && !defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+#if defined(MBEDTLS_ECP_C) 
     if( opt.curves != NULL )
     {
         p = (char *) opt.curves;
@@ -2899,7 +2898,7 @@ int main( int argc, char *argv[] )
             curve_list[i] = MBEDTLS_ECP_DP_NONE;
         }
     }
-#endif /* MBEDTLS_ECP_C && !MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+#endif /* MBEDTLS_ECP_C */
 
 
 #if defined(MBEDTLS_SSL_ALPN)
@@ -3648,13 +3647,12 @@ int main( int argc, char *argv[] )
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
     if (named_groups_list[0] != MBEDTLS_ECP_DP_NONE)
         mbedtls_ssl_conf_curves( &conf, named_groups_list );
-#else 
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
     if( opt.curves != NULL &&
         strcmp( opt.curves, "default" ) != 0 )
     {
         mbedtls_ssl_conf_curves( &conf, curve_list );
     }
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 #endif /* MBEDTLS_ECP_C */
 
 #if defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)

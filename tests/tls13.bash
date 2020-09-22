@@ -977,8 +977,8 @@ echo ""
 # - the PSK-based ciphersuite exchange is executed
 # - AES-256-GCM with SHA384 is negotiated 
 run_test    "TLS_AES_256_GCM_SHA384 with external PSK (+early data)" \
-            "$P_SRV $MBEDTLS_DEBUG_LEVEL force_version=tls1_3 early_data=enabled key_exchange_modes=psk psk=010203 psk_identity=0a0b0c" \
-            "$P_CLI $MBEDTLS_DEBUG_LEVEL force_version=tls1_3 force_ciphersuite=TLS_AES_256_GCM_SHA384 key_exchange_modes=psk early_data=enabled psk=010203 psk_identity=0a0b0c" \
+            "$P_SRV $MBEDTLS_DEBUG_LEVEL force_version=tls1_3 early_data=1 key_exchange_modes=psk psk=010203 psk_identity=0a0b0c" \
+            "$P_CLI $MBEDTLS_DEBUG_LEVEL force_version=tls1_3 force_ciphersuite=TLS_AES_256_GCM_SHA384 key_exchange_modes=psk early_data=1 psk=010203 psk_identity=0a0b0c" \
             0 \
 			-s "found early_data extension" \
 			-s "Derive Early Secret with 'ext binder'" \
@@ -993,8 +993,8 @@ run_test    "TLS_AES_256_GCM_SHA384 with external PSK (+early data)" \
 # - the PSK-based ciphersuite exchange is executed
 # - AES-128-CCM with SHA256 is negotiated 
 run_test    "TLS_AES_128_CCM_SHA256 with external PSK (+early data)" \
-            "$P_SRV $MBEDTLS_DEBUG_LEVEL force_version=tls1_3 early_data=enabled key_exchange_modes=psk psk=010203 psk_identity=0a0b0c" \
-            "$P_CLI $MBEDTLS_DEBUG_LEVEL force_version=tls1_3 force_ciphersuite=TLS_AES_128_CCM_SHA256 key_exchange_modes=psk early_data=enabled psk=010203 psk_identity=0a0b0c" \
+            "$P_SRV $MBEDTLS_DEBUG_LEVEL force_version=tls1_3 early_data=1 key_exchange_modes=psk psk=010203 psk_identity=0a0b0c" \
+            "$P_CLI $MBEDTLS_DEBUG_LEVEL force_version=tls1_3 force_ciphersuite=TLS_AES_128_CCM_SHA256 key_exchange_modes=psk early_data=1 psk=010203 psk_identity=0a0b0c" \
             0 \
 			-s "found early_data extension" \
 			-s "Derive Early Secret with 'ext binder'" \
@@ -1010,8 +1010,8 @@ run_test    "TLS_AES_128_CCM_SHA256 with external PSK (+early data)" \
 # - the PSK-based ciphersuite exchange is executed
 # - AES-128-GCM with SHA256 is negotiated 
 run_test    "TLS_AES_128_GCM_SHA256 with external PSK (+early data)" \
-            "$P_SRV $MBEDTLS_DEBUG_LEVEL force_version=tls1_3 early_data=enabled key_exchange_modes=psk psk=010203 psk_identity=0a0b0c" \
-            "$P_CLI $MBEDTLS_DEBUG_LEVEL force_version=tls1_3 force_ciphersuite=TLS_AES_128_GCM_SHA256 key_exchange_modes=psk early_data=enabled psk=010203 psk_identity=0a0b0c" \
+            "$P_SRV $MBEDTLS_DEBUG_LEVEL force_version=tls1_3 early_data=1 key_exchange_modes=psk psk=010203 psk_identity=0a0b0c" \
+            "$P_CLI $MBEDTLS_DEBUG_LEVEL force_version=tls1_3 force_ciphersuite=TLS_AES_128_GCM_SHA256 key_exchange_modes=psk early_data=1 psk=010203 psk_identity=0a0b0c" \
             0 \
 			-s "found early_data extension" \
 			-s "Derive Early Secret with 'ext binder'" \
@@ -1026,8 +1026,8 @@ run_test    "TLS_AES_128_GCM_SHA256 with external PSK (+early data)" \
 # - the PSK-based ciphersuite exchange is executed
 # - AES-128-CCM-8 with SHA256 is negotiated 
 run_test    "TLS_AES_128_CCM_8_SHA256 with external PSK (+early data)" \
-            "$P_SRV $MBEDTLS_DEBUG_LEVEL force_version=tls1_3 early_data=enabled key_exchange_modes=psk psk=010203 psk_identity=0a0b0c" \
-            "$P_CLI $MBEDTLS_DEBUG_LEVEL force_version=tls1_3 force_ciphersuite=TLS_AES_128_CCM_8_SHA256 key_exchange_modes=psk early_data=enabled psk=010203 psk_identity=0a0b0c" \
+            "$P_SRV $MBEDTLS_DEBUG_LEVEL force_version=tls1_3 early_data=1 key_exchange_modes=psk psk=010203 psk_identity=0a0b0c" \
+            "$P_CLI $MBEDTLS_DEBUG_LEVEL force_version=tls1_3 force_ciphersuite=TLS_AES_128_CCM_8_SHA256 key_exchange_modes=psk early_data=1 psk=010203 psk_identity=0a0b0c" \
             0 \
 			-s "found early_data extension" \
 			-s "Derive Early Secret with 'ext binder'" \
