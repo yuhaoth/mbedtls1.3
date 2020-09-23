@@ -184,14 +184,12 @@ int main( void )
 #define DFL_NSS_KEYLOG          0
 #define DFL_NSS_KEYLOG_FILE     NULL
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
 #define DFL_KEY_EXCHANGE_MODES  MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_ALL
 #define DFL_EARLY_DATA          MBEDTLS_SSL_EARLY_DATA_DISABLED
 #define MAX_NAMED_GROUPS        4
 #define DFL_TICKET_FLAGS        7 /* allow everything */
 #define DFL_TICKET_LIFETIME     MBEDTLS_SSL_DEFAULT_TICKET_LIFETIME
 #define DFL_RETURN_ROUTABILITY  MBEDTLS_SSL_RETURN_ROUTABILITY_DISABLED
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 
 #define LONG_RESPONSE "<p>01-blah-blah-blah-blah-blah-blah-blah-blah-blah\r\n" \
     "02-blah-blah-blah-blah-blah-blah-blah-blah-blah-blah-blah-blah-blah\r\n"  \
@@ -708,11 +706,9 @@ struct options
     const char *cid_val_renego; /* the CID to use for incoming messages
                                  * after renegotiation                      */
     int reproducible;           /* make communication reproducible          */
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
     unsigned char key_exchange_modes; /* key exchange modes                 */
     int early_data;                   /* support for early data             */
     const char *named_groups_string;  /* list of named groups               */
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 } opt;
 
 int query_config( const char *config );
@@ -2032,15 +2028,9 @@ int main( int argc, char *argv[] )
     opt.async_private_delay2 = DFL_ASYNC_PRIVATE_DELAY2;
     opt.async_private_error = DFL_ASYNC_PRIVATE_ERROR;
     opt.psk                 = DFL_PSK;
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
     opt.key_exchange_modes = DFL_KEY_EXCHANGE_MODES;
-#if defined(MBEDTLS_SSL_NEW_SESSION_TICKET)
     opt.ticket_flags        = DFL_TICKET_FLAGS;
-#endif /* MBEDTLS_SSL_NEW_SESSION_TICKET */
-#if defined(MBEDTLS_ZERO_RTT)
     opt.early_data          = DFL_EARLY_DATA;
-#endif /* MBEDTLS_ZERO_RTT */
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
     opt.psk_opaque          = DFL_PSK_OPAQUE;
     opt.psk_list_opaque     = DFL_PSK_LIST_OPAQUE;
@@ -3240,6 +3230,8 @@ int main( int argc, char *argv[] )
     {
         crt_profile_for_test.allowed_mds |= MBEDTLS_X509_ID_FLAG( MBEDTLS_MD_SHA1 );
         mbedtls_ssl_conf_cert_profile( &conf, &crt_profile_for_test );
+
+        /* TODO: Check if/why this guard is needed. */
 #if !defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
         mbedtls_ssl_conf_sig_hashes( &conf, ssl_sig_hashes_for_test );
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
@@ -4239,7 +4231,6 @@ data_exchange:
                 idle( &client_fd, MBEDTLS_ERR_SSL_WANT_READ );
 #endif
             }
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 
             ret = mbedtls_ssl_read( &ssl, buf, len );
 
