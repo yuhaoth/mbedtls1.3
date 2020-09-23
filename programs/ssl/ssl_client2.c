@@ -2873,15 +2873,22 @@ int main( int argc, char *argv[] )
     }
 #endif
 
-    /* TODO: Currently, this is incompatible with TLS 1.3. We might want to
-     *       fail if the user asked for TLS 1.3 on the command line and also
-     *       requested a reconnect. Since none of the ssl-opt.sh tests actually
-     *       do this, though, we can leave the code for now. */
     if( opt.reconnect != 0 )
     {
         mbedtls_printf("  . Saving session for reuse..." );
         fflush( stdout );
 
+        /* For TLS <= 1.2, serialize the session and restore later,
+         * triggering either session ID or session ticket based
+         * resumption in the next handshake. */
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+        if( ssl.minor_ver == MBEDTLS_SSL_MINOR_VERSION_4 )
+        {
+            /* TODO: Implement TLS 1.3 tickt logic. */
+        }
+        else
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+        {
         if( opt.reco_mode == 1 )
         {
             /* free any previously saved data */
@@ -2930,6 +2937,7 @@ int main( int argc, char *argv[] )
         {
             mbedtls_printf( "    [ Saved %u bytes of session data]\n",
                             (unsigned) session_data_len );
+        }
         }
     }
 
