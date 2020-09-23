@@ -1105,6 +1105,537 @@ SKIP_NEXT="NO"
 
 trap cleanup INT TERM HUP
 
+# TLS 1.3 specific tests
+
+# ----------------------------------- Default Ciphersuite ----------------------------------
+
+echo ""
+echo "*** Default Ciphersuite (PSK)  *** "
+echo ""
+
+run_test    "PSK" \
+            "$P_SRV debug_level=5 force_version=tls1_3 psk=010203 psk_identity=0a0b0c key_exchange_modes=psk" \
+            "$P_CLI debug_level=5 force_version=tls1_3 psk=010203 psk_identity=0a0b0c key_exchange_modes=psk" \
+            0 \
+            -s "Protocol is TLSv1.3"
+
+echo ""
+echo "*** Default Ciphersuite (Public Key)  *** "
+echo ""
+
+run_test    "ECDHE-ECDSA (server auth only)" \
+            "$P_SRV debug_level=5 force_version=tls1_3  key_exchange_modes=ecdhe_ecdsa" \
+            "$P_CLI debug_level=5 force_version=tls1_3 server_name=localhost key_exchange_modes=ecdhe_ecdsa" \
+            0 \
+			-s "Certificate verification was skipped" \
+			-c "subject name      : C=NL, O=PolarSSL, CN=localhost" \
+            -c "Protocol is TLSv1.3" \
+			-c "Verifying peer X.509 certificate... ok"
+
+# ----------------------------------- Plain PSK ----------------------------------
+
+echo ""
+echo "*** PSK *** "
+echo ""
+
+# - the PSK-based ciphersuite exchange is executed
+# - AES-128-CCM is negotiated
+run_test    "TLS_AES_128_CCM_SHA256 with PSK" \
+            "$P_SRV debug_level=5 force_version=tls1_3 psk=010203 psk_identity=0a0b0c key_exchange_modes=psk" \
+            "$P_CLI debug_level=5 force_version=tls1_3 force_ciphersuite=TLS_AES_128_CCM_SHA256 psk=010203 psk_identity=0a0b0c key_exchange_modes=psk" \
+            0 \
+            -s "Protocol is TLSv1.3" \
+            -s "Ciphersuite is TLS_AES_128_CCM_SHA256"
+
+# - the PSK-based ciphersuite exchange is executed
+# - AES-128-GCM is negotiated
+run_test    "TLS_AES_128_GCM_SHA256 with PSK" \
+            "$P_SRV debug_level=5 force_version=tls1_3 psk=010203 psk_identity=0a0b0c key_exchange_modes=psk" \
+            "$P_CLI debug_level=5 force_version=tls1_3 force_ciphersuite=TLS_AES_128_GCM_SHA256 psk=010203 psk_identity=0a0b0c key_exchange_modes=psk" \
+            0 \
+            -s "Protocol is TLSv1.3" \
+            -s "Ciphersuite is TLS_AES_128_GCM_SHA256"
+
+
+# - the PSK-based ciphersuite exchange is executed
+# - AES-128-CCM-8 is negotiated
+run_test    "TLS_AES_128_CCM_8_SHA256 with PSK" \
+            "$P_SRV debug_level=5 force_version=tls1_3 psk=010203 psk_identity=0a0b0c key_exchange_modes=psk" \
+            "$P_CLI debug_level=5 force_version=tls1_3 force_ciphersuite=TLS_AES_128_CCM_8_SHA256 psk=010203 psk_identity=0a0b0c key_exchange_modes=psk" \
+            0 \
+            -s "Protocol is TLSv1.3" \
+            -s "Ciphersuite is TLS_AES_128_CCM_8_SHA256"
+
+
+# - the PSK-based ciphersuite exchange is executed
+# - AES-256-GCM is negotiated
+run_test    "TLS_AES_256_GCM_SHA384 with PSK" \
+            "$P_SRV debug_level=5 force_version=tls1_3 psk=010203 psk_identity=0a0b0c key_exchange_modes=psk" \
+            "$P_CLI debug_level=5 force_version=tls1_3 force_ciphersuite=TLS_AES_256_GCM_SHA384 psk=010203 psk_identity=0a0b0c key_exchange_modes=psk" \
+            0 \
+            -s "Protocol is TLSv1.3" \
+            -s "Ciphersuite is TLS_AES_256_GCM_SHA384"
+
+# ----------------------------------- PSK-ECDHE ----------------------------------
+echo ""
+echo "*** PSK-ECDHE *** "
+echo ""
+
+# - the PSK-ECDHE-based ciphersuite exchange is executed
+# - AES-128-CCM is negotiated
+run_test    "TLS_AES_128_CCM_SHA256 with PSK-ECDHE" \
+            "$P_SRV debug_level=5 force_version=tls1_3 psk=010203 psk_identity=0a0b0c key_exchange_modes=psk_dhe" \
+            "$P_CLI debug_level=5 force_version=tls1_3 force_ciphersuite=TLS_AES_128_CCM_SHA256 psk=010203 psk_identity=0a0b0c key_exchange_modes=psk_dhe" \
+            0 \
+            -s "Protocol is TLSv1.3" \
+            -s "Ciphersuite is TLS_AES_128_CCM_SHA256"
+
+# - the PSK-ECDHE-based ciphersuite exchange is executed
+# - AES-128-GCM is negotiated
+run_test    "TLS_AES_128_GCM_SHA256 with PSK-ECDHE" \
+            "$P_SRV debug_level=5 force_version=tls1_3 psk=010203 psk_identity=0a0b0c key_exchange_modes=psk_dhe" \
+            "$P_CLI debug_level=5 force_version=tls1_3 force_ciphersuite=TLS_AES_128_GCM_SHA256 psk=010203 psk_identity=0a0b0c key_exchange_modes=psk_dhe" \
+            0 \
+            -s "Protocol is TLSv1.3" \
+            -s "Ciphersuite is TLS_AES_128_GCM_SHA256"
+
+# - the PSK-ECDHE-based ciphersuite exchange is executed
+# - AES-128-CCM-8 is negotiated
+run_test    "TLS_AES_128_CCM_8_SHA256 with PSK-ECDHE" \
+            "$P_SRV debug_level=5 force_version=tls1_3 psk=010203 psk_identity=0a0b0c key_exchange_modes=psk_dhe" \
+            "$P_CLI debug_level=5 force_version=tls1_3 force_ciphersuite=TLS_AES_128_CCM_8_SHA256 psk=010203 psk_identity=0a0b0c key_exchange_modes=psk_dhe" \
+            0 \
+            -s "Protocol is TLSv1.3" \
+            -s "Ciphersuite is TLS_AES_128_CCM_8_SHA256"
+
+# - the PSK-ECDHE-based ciphersuite exchange is executed
+# - AES-256-GCM is negotiated
+run_test    "TLS_AES_256_GCM_SHA384 with PSK-ECDHE" \
+            "$P_SRV debug_level=5 force_version=tls1_3 psk=010203 psk_identity=0a0b0c key_exchange_modes=psk_dhe" \
+            "$P_CLI debug_level=5 force_version=tls1_3 force_ciphersuite=TLS_AES_256_GCM_SHA384 psk=010203 psk_identity=0a0b0c key_exchange_modes=psk_dhe" \
+            0 \
+            -s "Protocol is TLSv1.3" \
+            -s "Ciphersuite is TLS_AES_256_GCM_SHA384"
+
+
+# ----------------------------------- ECDHE-ECDSA ----------------------------------
+# + with built-in test certificates
+# + server-to-client authentication only
+# + server_name extension
+
+echo ""
+echo "*** ECDHE-ECDSA, server auth only with built-in test certificates ***"
+echo ""
+
+# - the ECDHE-ECDSA-based ciphersuite exchange is executed
+# - AES-128-CCM is negotiated
+run_test    "TLS_AES_128_CCM_SHA256 with ECDHE-ECDSA (server auth only)" \
+            "$P_SRV debug_level=5 force_version=tls1_3  key_exchange_modes=ecdhe_ecdsa" \
+            "$P_CLI debug_level=5 force_version=tls1_3 server_name=localhost force_ciphersuite=TLS_AES_128_CCM_SHA256 key_exchange_modes=ecdhe_ecdsa" \
+            0 \
+			-s "Certificate verification was skipped" \
+			-c "subject name      : C=NL, O=PolarSSL, CN=localhost" \
+            -c "Protocol is TLSv1.3" \
+            -c "Ciphersuite is TLS_AES_128_CCM_SHA256" \
+			-c "Verifying peer X.509 certificate... ok"
+
+# - the ECDHE-ECDSA-based ciphersuite exchange is executed
+# - AES-128-GCM is negotiated
+run_test    "TLS_AES_128_GCM_SHA256 with ECDHE-ECDSA (server auth only)" \
+            "$P_SRV debug_level=5 force_version=tls1_3 key_exchange_modes=ecdhe_ecdsa" \
+            "$P_CLI debug_level=5 force_version=tls1_3 server_name=localhost force_ciphersuite=TLS_AES_128_GCM_SHA256 key_exchange_modes=ecdhe_ecdsa" \
+            0 \
+			-s "Certificate verification was skipped" \
+			-c "subject name      : C=NL, O=PolarSSL, CN=localhost" \
+            -c "Protocol is TLSv1.3" \
+            -c "Ciphersuite is TLS_AES_128_GCM_SHA256" \
+			-c "Verifying peer X.509 certificate... ok"
+
+# - the ECDHE-ECDSA-based ciphersuite exchange is executed
+# - AES-128-CCM-8 is negotiated
+run_test    "TLS_AES_128_CCM_8_SHA256 with ECDHE-ECDSA (server auth only)" \
+            "$P_SRV debug_level=5 force_version=tls1_3  key_exchange_modes=ecdhe_ecdsa" \
+            "$P_CLI debug_level=5 force_version=tls1_3 server_name=localhost force_ciphersuite=TLS_AES_128_CCM_8_SHA256 key_exchange_modes=ecdhe_ecdsa" \
+            0 \
+			-s "Certificate verification was skipped" \
+			-c "subject name      : C=NL, O=PolarSSL, CN=localhost" \
+            -c "Protocol is TLSv1.3" \
+            -c "Ciphersuite is TLS_AES_128_CCM_8_SHA256" \
+			-c "Verifying peer X.509 certificate... ok"
+
+# - the ECDHE-ECDSA-based ciphersuite exchange is executed
+# - AES-256-GCM is negotiated
+run_test    "TLS_AES_256_GCM_SHA384 with ECDHE-ECDSA (server auth only)" \
+            "$P_SRV debug_level=5 force_version=tls1_3 key_exchange_modes=ecdhe_ecdsa" \
+            "$P_CLI debug_level=5 force_version=tls1_3 server_name=localhost force_ciphersuite=TLS_AES_256_GCM_SHA384 key_exchange_modes=ecdhe_ecdsa" \
+            0 \
+			-s "Certificate verification was skipped" \
+			-c "subject name      : C=NL, O=PolarSSL, CN=localhost" \
+            -c "Protocol is TLSv1.3" \
+            -c "Ciphersuite is TLS_AES_256_GCM_SHA384" \
+			-c "Verifying peer X.509 certificate... ok"
+
+# ----------------------------------- ECDHE-ECDSA ----------------------------------
+# + with built-in test certificates
+# + mutual authentication
+# + server_name extension
+
+
+echo ""
+echo "*** ECDHE-ECDSA, mutual authentication with built-in test certificates *** "
+echo ""
+
+# - the ECDHE-ECDSA-based ciphersuite exchange is executed
+# - AES-128-CCM is negotiated
+run_test    "TLS_AES_128_CCM_SHA256 with ECDHE-ECDSA (mutual auth)" \
+            "$P_SRV debug_level=5 force_version=tls1_3 auth_mode=required key_exchange_modes=ecdhe_ecdsa" \
+            "$P_CLI debug_level=5 force_version=tls1_3 server_name=localhost force_ciphersuite=TLS_AES_128_CCM_SHA256 key_exchange_modes=ecdhe_ecdsa" \
+            0 \
+			-s "Verifying peer X.509 certificate... ok" \
+			-s "subject name      : C=NL, O=PolarSSL, CN=PolarSSL Test Client 2" \
+			-c "subject name      : C=NL, O=PolarSSL, CN=localhost" \
+            -c "Protocol is TLSv1.3" \
+            -c "Ciphersuite is TLS_AES_128_CCM_SHA256" \
+			-c "Verifying peer X.509 certificate... ok"
+
+# - the ECDHE-ECDSA-based ciphersuite exchange is executed
+# - AES-128-GCM is negotiated
+run_test    "TLS_AES_128_GCM_SHA256 with ECDHE-ECDSA (mutual auth)" \
+            "$P_SRV debug_level=5 force_version=tls1_3 auth_mode=required key_exchange_modes=ecdhe_ecdsa" \
+            "$P_CLI debug_level=5 force_version=tls1_3 server_name=localhost force_ciphersuite=TLS_AES_128_GCM_SHA256 key_exchange_modes=ecdhe_ecdsa" \
+            0 \
+			-s "Verifying peer X.509 certificate... ok" \
+			-s "subject name      : C=NL, O=PolarSSL, CN=PolarSSL Test Client 2" \
+			-c "subject name      : C=NL, O=PolarSSL, CN=localhost" \
+            -c "Protocol is TLSv1.3" \
+            -c "Ciphersuite is TLS_AES_128_GCM_SHA256" \
+			-c "Verifying peer X.509 certificate... ok"
+
+# - the ECDHE-ECDSA-based ciphersuite exchange is executed
+# - AES-128-CCM-8 is negotiated
+run_test    "TLS_AES_128_CCM_8_SHA256 with ECDHE-ECDSA (mutual auth)" \
+            "$P_SRV debug_level=5 force_version=tls1_3 auth_mode=required key_exchange_modes=ecdhe_ecdsa" \
+            "$P_CLI debug_level=5 force_version=tls1_3 server_name=localhost force_ciphersuite=TLS_AES_128_CCM_8_SHA256 key_exchange_modes=ecdhe_ecdsa" \
+            0 \
+			-s "Verifying peer X.509 certificate... ok" \
+			-s "subject name      : C=NL, O=PolarSSL, CN=PolarSSL Test Client 2" \
+			-c "subject name      : C=NL, O=PolarSSL, CN=localhost" \
+            -c "Protocol is TLSv1.3" \
+            -c "Ciphersuite is TLS_AES_128_CCM_8_SHA256" \
+			-c "Verifying peer X.509 certificate... ok"
+
+# - the ECDHE-ECDSA-based ciphersuite exchange is executed
+# - AES-256-GCM is negotiated
+run_test    "TLS_AES_256_GCM_SHA384 with ECDHE-ECDSA (mutual auth)" \
+            "$P_SRV debug_level=5 force_version=tls1_3 auth_mode=required key_exchange_modes=ecdhe_ecdsa" \
+            "$P_CLI debug_level=5 force_version=tls1_3 server_name=localhost force_ciphersuite=TLS_AES_256_GCM_SHA384 key_exchange_modes=ecdhe_ecdsa" \
+            0 \
+			-s "Verifying peer X.509 certificate... ok" \
+			-s "subject name      : C=NL, O=PolarSSL, CN=PolarSSL Test Client 2" \
+			-c "subject name      : C=NL, O=PolarSSL, CN=localhost" \
+            -c "Protocol is TLSv1.3" \
+            -c "Ciphersuite is TLS_AES_256_GCM_SHA384" \
+			-c "Verifying peer X.509 certificate... ok"
+
+
+echo ""
+echo "*** ECDHE-ECDSA, server-only auth. with client sending empty cert *** "
+echo ""
+
+# ----------------------------------- ECDHE-ECDSA ----------------------------------
+# + server asks client for authentication with certificate request message
+# + client responds with empty certificate
+
+# - the ECDHE-ECDSA-based ciphersuite exchange is executed
+# - AES-128-GCM is negotiated
+# - Client responds to certificate request with an empty certificate
+# - Server accepts the lack of client authentication
+
+run_test    "TLS_AES_128_GCM_SHA256 with ECDHE-ECDSA (empty client certificate)" \
+            "$P_SRV debug_level=5 force_version=tls1_3 auth_mode=optional key_exchange_modes=ecdhe_ecdsa" \
+            "$P_CLI debug_level=5 force_version=tls1_3 server_name=localhost force_ciphersuite=TLS_AES_128_GCM_SHA256 key_exchange_modes=ecdhe_ecdsa auth_mode=none" \
+            0 \
+			-s "client has no certificate" \
+			-c "subject name      : C=NL, O=PolarSSL, CN=localhost" \
+            -c "Protocol is TLSv1.3" \
+            -c "Ciphersuite is TLS_AES_128_GCM_SHA256" \
+			-c "Verifying peer X.509 certificate... ok" \
+			-c "write empty client certificate"
+
+# - the ECDHE-ECDSA-based ciphersuite exchange is executed
+# - AES-128-CCM is negotiated
+# - Client responds to certificate request with an empty certificate
+# - Server does NOT accept the lack of client authentication
+
+run_test    "TLS_AES_128_CCM_SHA256 with ECDHE-ECDSA (empty client certificate)" \
+            "$P_SRV debug_level=5 force_version=tls1_3 auth_mode=required key_exchange_modes=ecdhe_ecdsa" \
+            "$P_CLI debug_level=5 force_version=tls1_3 server_name=localhost force_ciphersuite=TLS_AES_128_CCM_SHA256 key_exchange_modes=ecdhe_ecdsa auth_mode=none" \
+            1 \
+			-s "empty certificate message received" \
+			-s "client has no certificate" \
+			-c "subject name      : C=NL, O=PolarSSL, CN=localhost" \
+            -c "Protocol is TLSv1.3" \
+            -c "Ciphersuite is TLS_AES_128_CCM_SHA256" \
+			-c "Verifying peer X.509 certificate... ok" \
+			-c "write empty client certificate"
+
+# ----------------------------------- ECDHE-ECDSA ----------------------------------
+# + with external SHA384 certificates
+# + server-only authentication
+# + server_name extension
+
+
+echo ""
+echo "*** ECDHE-ECDSA, server auth only with SHA384 certificates *** "
+echo ""
+
+# - the ECDHE-ECDSA-based ciphersuite exchange is executed
+# - AES-256-GCM is negotiated
+run_test    "TLS_AES_256_GCM_SHA384 with ECDHE-ECDSA (server auth only)" \
+            "$P_SRV debug_level=5 force_version=tls1_3 key_exchange_modes=ecdhe_ecdsa ca_file=certs/ca.crt crt_file=certs/server.crt key_file=certs/server.key" \
+            "$P_CLI debug_level=5 force_version=tls1_3 server_name=localhost force_ciphersuite=TLS_AES_256_GCM_SHA384 key_exchange_modes=ecdhe_ecdsa ca_file=certs/ca.crt crt_file=none key_file=none" \
+            0 \
+			-s "Verifying peer X.509 certificate... failed" \
+			-s "Certificate verification was skipped" \
+            -c "Protocol is TLSv1.3" \
+            -c "Ciphersuite is TLS_AES_256_GCM_SHA384" \
+			-c "Verifying peer X.509 certificate... ok" \
+			-c "subject name      : C=AU, ST=Some-State, O=Internet Widgits Pty Ltd, CN=localhost" \
+			-c "signed using      : ECDSA with SHA384" \
+			-c "EC key size       : 384 bits"
+
+
+
+
+# ----------------------------------- Ticket Exchange ----------------------------------
+#
+echo ""
+echo "*** Ticket Exchange (combination of ECDHE-ECDSA and PSK auth) *** "
+echo ""
+
+# - the ECDHE-ECDSA-based ciphersuite exchange is executed
+# - AES-128-CCM is negotiated
+run_test    "TLS_AES_128_CCM_SHA256 with ECDHE-ECDSA (mutual auth) with ticket" \
+            "$P_SRV debug_level=5 force_version=tls1_3 auth_mode=required key_exchange_modes=all tickets=1" \
+            "$P_CLI debug_level=5 force_version=tls1_3 server_name=localhost force_ciphersuite=TLS_AES_128_CCM_SHA256 key_exchange_modes=ecdhe_ecdsa reconnect=1 tickets=1" \
+            0 \
+			-s "Verifying peer X.509 certificate... ok" \
+			-s "subject name      : C=NL, O=PolarSSL, CN=PolarSSL Test Client 2" \
+			-c "subject name      : C=NL, O=PolarSSL, CN=localhost" \
+            -c "Protocol is TLSv1.3" \
+            -c "Ciphersuite is TLS_AES_128_CCM_SHA256" \
+			-c "Verifying peer X.509 certificate... ok" \
+			-c "got ticket" \
+			-c "client hello, adding psk_key_exchange_modes extension" \
+			-c "client hello, adding pre_shared_key extension" \
+			-c "found pre_shared_key extension" \
+			-s "<= write new session ticket"
+
+# - the ECDHE-ECDSA-based ciphersuite exchange is executed
+# - AES-128-GCM is negotiated
+run_test    "TLS_AES_128_GCM_SHA256 with ECDHE-ECDSA (mutual auth) with ticket" \
+            "$P_SRV debug_level=5 force_version=tls1_3 auth_mode=required key_exchange_modes=all tickets=1" \
+            "$P_CLI debug_level=5 force_version=tls1_3 server_name=localhost force_ciphersuite=TLS_AES_128_GCM_SHA256 key_exchange_modes=ecdhe_ecdsa reconnect=1 tickets=1" \
+            0 \
+			-s "Verifying peer X.509 certificate... ok" \
+			-s "subject name      : C=NL, O=PolarSSL, CN=PolarSSL Test Client 2" \
+			-c "subject name      : C=NL, O=PolarSSL, CN=localhost" \
+            -c "Protocol is TLSv1.3" \
+            -c "Ciphersuite is TLS_AES_128_GCM_SHA256" \
+			-c "Verifying peer X.509 certificate... ok" \
+			-c "got ticket" \
+			-c "client hello, adding psk_key_exchange_modes extension" \
+			-c "client hello, adding pre_shared_key extension" \
+			-c "found pre_shared_key extension" \
+			-s "<= write new session ticket"
+
+# - the ECDHE-ECDSA-based ciphersuite exchange is executed
+# - AES-128-CCM-8 is negotiated
+run_test    "TLS_AES_128_CCM_8_SHA256 with ECDHE-ECDSA (mutual auth) with ticket" \
+            "$P_SRV debug_level=5 force_version=tls1_3 auth_mode=required key_exchange_modes=all tickets=1" \
+            "$P_CLI debug_level=5 force_version=tls1_3 server_name=localhost force_ciphersuite=TLS_AES_128_CCM_8_SHA256 key_exchange_modes=ecdhe_ecdsa reconnect=1 tickets=1" \
+            0 \
+			-s "Verifying peer X.509 certificate... ok" \
+			-s "subject name      : C=NL, O=PolarSSL, CN=PolarSSL Test Client 2" \
+			-c "subject name      : C=NL, O=PolarSSL, CN=localhost" \
+            -c "Protocol is TLSv1.3" \
+            -c "Ciphersuite is TLS_AES_128_CCM_8_SHA256" \
+			-c "Verifying peer X.509 certificate... ok" \
+			-c "got ticket" \
+			-c "client hello, adding psk_key_exchange_modes extension" \
+			-c "client hello, adding pre_shared_key extension" \
+			-c "found pre_shared_key extension" \
+			-s "<= write new session ticket"
+
+# - the ECDHE-ECDSA-based ciphersuite exchange is executed
+# - AES-256-GCM is negotiated
+run_test    "TLS_AES_256_GCM_SHA384 with ECDHE-ECDSA (mutual auth) with ticket" \
+            "$P_SRV debug_level=5 force_version=tls1_3 auth_mode=required key_exchange_modes=all tickets=1" \
+            "$P_CLI debug_level=5 force_version=tls1_3 server_name=localhost force_ciphersuite=TLS_AES_256_GCM_SHA384 key_exchange_modes=ecdhe_ecdsa reconnect=1 tickets=1" \
+            0 \
+			-s "Verifying peer X.509 certificate... ok" \
+			-s "subject name      : C=NL, O=PolarSSL, CN=PolarSSL Test Client 2" \
+			-c "subject name      : C=NL, O=PolarSSL, CN=localhost" \
+            -c "Protocol is TLSv1.3" \
+            -c "Ciphersuite is TLS_AES_256_GCM_SHA384" \
+			-c "Verifying peer X.509 certificate... ok" \
+			-c "got ticket" \
+			-c "client hello, adding psk_key_exchange_modes extension" \
+			-c "client hello, adding pre_shared_key extension" \
+			-c "found pre_shared_key extension" \
+			-s "<= write new session ticket"
+
+
+
+echo ""
+echo "*** ECDHE-ECDSA, server auth only with SHA384 certificates with ticket *** "
+echo ""
+
+# - the ECDHE-ECDSA-based ciphersuite exchange is executed
+# - AES-256-GCM is negotiated
+run_test    "TLS_AES_256_GCM_SHA384 with ECDHE-ECDSA (server auth only) with ticket" \
+            "$P_SRV debug_level=5 force_version=tls1_3 key_exchange_modes=all tickets=1 ca_file=certs/ca.crt crt_file=certs/server.crt key_file=certs/server.key" \
+            "$P_CLI debug_level=5 force_version=tls1_3 server_name=localhost force_ciphersuite=TLS_AES_256_GCM_SHA384 key_exchange_modes=ecdhe_ecdsa ca_file=certs/ca.crt crt_file=none key_file=none reconnect=1 tickets=1" \
+            0 \
+			-s "Verifying peer X.509 certificate... failed" \
+			-s "Certificate verification was skipped" \
+            -c "Protocol is TLSv1.3" \
+            -c "Ciphersuite is TLS_AES_256_GCM_SHA384" \
+			-c "Verifying peer X.509 certificate... ok" \
+			-c "subject name      : C=AU, ST=Some-State, O=Internet Widgits Pty Ltd, CN=localhost" \
+			-c "signed using      : ECDSA with SHA384" \
+			-c "EC key size       : 384 bits" \
+			-c "got ticket" \
+			-c "client hello, adding psk_key_exchange_modes extension" \
+			-c "client hello, adding pre_shared_key extension" \
+			-c "found pre_shared_key extension" \
+			-s "<= write new session ticket"
+
+
+
+# ----------------------------------- Early Data ----------------------------------
+#
+echo ""
+echo "*** Early Data *** "
+echo ""
+
+# - the PSK-based ciphersuite exchange is executed
+# - AES-256-GCM with SHA384 is negotiated
+run_test    "TLS_AES_256_GCM_SHA384 with external PSK (+early data)" \
+            "$P_SRV debug_level=5 force_version=tls1_3 early_data=1 key_exchange_modes=psk psk=010203 psk_identity=0a0b0c" \
+            "$P_CLI debug_level=5 force_version=tls1_3 force_ciphersuite=TLS_AES_256_GCM_SHA384 key_exchange_modes=psk early_data=1 psk=010203 psk_identity=0a0b0c" \
+            0 \
+			-s "found early_data extension" \
+			-s "Derive Early Secret with 'ext binder'" \
+			-c "client hello, adding early_data extension" \
+            -c "Protocol is TLSv1.3" \
+            -c "Ciphersuite is TLS_AES_256_GCM_SHA384" \
+			-c "Derive Early Secret with 'ext binder'" \
+			-c "<= write EndOfEarlyData" \
+			-s "<= parse early data" \
+			-s "<= parse end_of_early_data" \
+
+# - the PSK-based ciphersuite exchange is executed
+# - AES-128-CCM with SHA256 is negotiated
+run_test    "TLS_AES_128_CCM_SHA256 with external PSK (+early data)" \
+            "$P_SRV debug_level=5 force_version=tls1_3 early_data=1 key_exchange_modes=psk psk=010203 psk_identity=0a0b0c" \
+            "$P_CLI debug_level=5 force_version=tls1_3 force_ciphersuite=TLS_AES_128_CCM_SHA256 key_exchange_modes=psk early_data=1 psk=010203 psk_identity=0a0b0c" \
+            0 \
+			-s "found early_data extension" \
+			-s "Derive Early Secret with 'ext binder'" \
+			-c "client hello, adding early_data extension" \
+            -c "Protocol is TLSv1.3" \
+            -c "Ciphersuite is TLS_AES_128_CCM_SHA256" \
+			-c "Derive Early Secret with 'ext binder'" \
+			-c "<= write EndOfEarlyData" \
+			-s "<= parse early data" \
+			-s "<= parse end_of_early_data" \
+
+
+# - the PSK-based ciphersuite exchange is executed
+# - AES-128-GCM with SHA256 is negotiated
+run_test    "TLS_AES_128_GCM_SHA256 with external PSK (+early data)" \
+            "$P_SRV debug_level=5 force_version=tls1_3 early_data=1 key_exchange_modes=psk psk=010203 psk_identity=0a0b0c" \
+            "$P_CLI debug_level=5 force_version=tls1_3 force_ciphersuite=TLS_AES_128_GCM_SHA256 key_exchange_modes=psk early_data=1 psk=010203 psk_identity=0a0b0c" \
+            0 \
+			-s "found early_data extension" \
+			-s "Derive Early Secret with 'ext binder'" \
+			-c "client hello, adding early_data extension" \
+            -c "Protocol is TLSv1.3" \
+            -c "Ciphersuite is TLS_AES_128_GCM_SHA256" \
+			-c "Derive Early Secret with 'ext binder'" \
+			-c "<= write EndOfEarlyData" \
+			-s "<= parse early data" \
+			-s "<= parse end_of_early_data" \
+
+# - the PSK-based ciphersuite exchange is executed
+# - AES-128-CCM-8 with SHA256 is negotiated
+run_test    "TLS_AES_128_CCM_8_SHA256 with external PSK (+early data)" \
+            "$P_SRV debug_level=5 force_version=tls1_3 early_data=1 key_exchange_modes=psk psk=010203 psk_identity=0a0b0c" \
+            "$P_CLI debug_level=5 force_version=tls1_3 force_ciphersuite=TLS_AES_128_CCM_8_SHA256 key_exchange_modes=psk early_data=1 psk=010203 psk_identity=0a0b0c" \
+            0 \
+			-s "found early_data extension" \
+			-s "Derive Early Secret with 'ext binder'" \
+			-c "client hello, adding early_data extension" \
+            -c "Protocol is TLSv1.3" \
+            -c "Ciphersuite is TLS_AES_128_CCM_8_SHA256" \
+			-c "Derive Early Secret with 'ext binder'" \
+			-c "<= write EndOfEarlyData" \
+			-s "<= parse early data" \
+			-s "<= parse end_of_early_data" \
+
+
+# ----------------------------------- Cookie / HRR  ----------------------------------
+#
+echo ""
+echo "*** Cookie / HRR *** "
+echo ""
+
+# - the ECDHE-ECDSA-based ciphersuite exchange is executed
+# - AES-128-CCM-8 is negotiated
+# - HRR is initiated
+run_test    "TLS_AES_128_CCM_8_SHA256 with ECDHE-ECDSA (mutual auth)" \
+            "$P_SRV debug_level=5 force_version=tls1_3 auth_mode=required key_exchange_modes=ecdhe_ecdsa tickets=0 cookies=2" \
+            "$P_CLI debug_level=5 force_version=tls1_3 server_name=localhost force_ciphersuite=TLS_AES_128_CCM_8_SHA256 key_exchange_modes=ecdhe_ecdsa" \
+            0 \
+			-s "Cookie extension missing. Need to send a HRR." \
+			-s "write hello retry request" \
+			-c "received HelloRetryRequest message" \
+			-s "Verifying peer X.509 certificate... ok" \
+			-s "subject name      : C=NL, O=PolarSSL, CN=PolarSSL Test Client 2" \
+			-c "subject name      : C=NL, O=PolarSSL, CN=localhost" \
+            -c "Protocol is TLSv1.3" \
+            -c "Ciphersuite is TLS_AES_128_CCM_8_SHA256" \
+			-c "Verifying peer X.509 certificate... ok"
+
+
+# ----------------------------------- ECDHE-ECDSA with HRR ----------------------------------
+# + with built-in test certificates
+# + server-to-client authentication only
+# + server_name extension
+# + configure client to initially sent incorrect group, which will be corrected with HRR from the server
+
+echo ""
+echo "*** ECDHE-ECDSA, HRR - inacceptable key share ***"
+echo ""
+
+# - the ECDHE-ECDSA-based ciphersuite exchange is executed
+# - AES-128-CCM is negotiated but HRR is used
+run_test    "TLS_AES_128_CCM_SHA256 with ECDHE-ECDSA (server auth only) with HRR" \
+            "$P_SRV debug_level=5 force_version=tls1_3 key_exchange_modes=ecdhe_ecdsa named_groups=secp256r1 cookies=1 tickets=0" \
+            "$P_CLI debug_level=5 force_version=tls1_3 server_name=localhost force_ciphersuite=TLS_AES_128_CCM_SHA256 key_exchange_modes=ecdhe_ecdsa named_groups=secp256r1,secp384r1 key_share_named_groups=secp384r1" \
+            0 \
+			-s "no matching curve for ECDHE" \
+			-s "write hello retry request" \
+			-s "NamedGroup in HRR: secp256r1" \
+			-s "ECDH curve: secp256r1" \
+			-c "received HelloRetryRequest message" \
+            -c "Protocol is TLSv1.3" \
+            -c "Ciphersuite is TLS_AES_128_CCM_SHA256" \
+			-c "Verifying peer X.509 certificate... ok" \
+			-c "Key Exchange Mode is ECDHE-ECDSA"
+
+
 # Basic test
 
 # Checks that:
