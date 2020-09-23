@@ -1273,7 +1273,9 @@ int main( int argc, char *argv[] )
 
 #if defined(MBEDTLS_ECP_C)
     memset( (void *) named_groups_list, MBEDTLS_ECP_DP_NONE, sizeof( named_groups_list ) );
-    memset( (void *) key_share_named_groups_list, MBEDTLS_ECP_DP_NONE, sizeof( key_share_named_groups_list ) );
+    memset( (void *) key_share_named_groups_list,
+            MBEDTLS_ECP_DP_NONE,
+            sizeof( key_share_named_groups_list ) );
 #endif /* MBEDTLS_ECP_C */
 
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
