@@ -2873,95 +2873,6 @@ int main( int argc, char *argv[] )
     }
 #endif
 
-    if( opt.reconnect != 0 )
-    {
-        mbedtls_printf("  . Saving session for reuse..." );
-        fflush( stdout );
-
-        /* For TLS <= 1.2, serialize the session and restore later,
-         * triggering either session ID or session ticket based
-         * resumption in the next handshake. */
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
-        if( ssl.minor_ver == MBEDTLS_SSL_MINOR_VERSION_4 )
-        {
-            /*
-             * Store ticket sent by the server after the handshake is completed.
-             */
-
-#if defined(MBEDTLS_SSL_NEW_SESSION_TICKET)
-            ret = mbedtls_ssl_get_client_ticket( &ssl, &ticket );
-            if( ret < 0 )
-            {
-                mbedtls_printf( " failed\n  ! mbedtls_ssl_get_ticket returned -0x%x\n\n",
-                                (unsigned) -ret );
-                goto exit;
-            }
-            else if( ret == 0 )
-            {
-                mbedtls_printf( "got ticket\n" );
-            }
-            else
-#endif /* MBEDTLS_SSL_NEW_SESSION_TICKET */
-            {
-                opt.reconnect = 0;
-                mbedtls_printf( " failed\n  ! no ticket available\n" );
-            }
-        }
-        else
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
-        {
-            if( opt.reco_mode == 1 )
-            {
-                /* free any previously saved data */
-                if( session_data != NULL )
-                {
-                    mbedtls_platform_zeroize( session_data, session_data_len );
-                    mbedtls_free( session_data );
-                    session_data = NULL;
-                }
-
-                /* get size of the buffer needed */
-                mbedtls_ssl_session_save( mbedtls_ssl_get_session_pointer( &ssl ),
-                                          NULL, 0, &session_data_len );
-                session_data = mbedtls_calloc( 1, session_data_len );
-                if( session_data == NULL )
-                {
-                    mbedtls_printf( " failed\n  ! alloc %u bytes for session data\n",
-                                    (unsigned) session_data_len );
-                    ret = MBEDTLS_ERR_SSL_ALLOC_FAILED;
-                    goto exit;
-                }
-
-                /* actually save session data */
-                if( ( ret = mbedtls_ssl_session_save( mbedtls_ssl_get_session_pointer( &ssl ),
-                                                      session_data, session_data_len,
-                                                      &session_data_len ) ) != 0 )
-                {
-                    mbedtls_printf( " failed\n  ! mbedtls_ssl_session_saved returned -0x%04x\n\n",
-                                    (unsigned int) -ret );
-                    goto exit;
-                }
-            }
-            else
-            {
-                if( ( ret = mbedtls_ssl_get_session( &ssl, &saved_session ) ) != 0 )
-                {
-                    mbedtls_printf( " failed\n  ! mbedtls_ssl_get_session returned -0x%x\n\n",
-                                    (unsigned int) -ret );
-                    goto exit;
-                }
-            }
-
-            mbedtls_printf( " ok\n" );
-
-            if( opt.reco_mode == 1 )
-            {
-                mbedtls_printf( "    [ Saved %u bytes of session data]\n",
-                                (unsigned) session_data_len );
-            }
-        }
-    }
-
 #if defined(MBEDTLS_X509_CRT_PARSE_C)
     /*
      * 5. Verify the server certificate
@@ -3316,6 +3227,95 @@ send_request:
         buf[len] = '\0';
         mbedtls_printf( " %d bytes read\n\n%s", len, (char *) buf );
         ret = 0;
+    }
+
+    if( opt.reconnect != 0 )
+    {
+        mbedtls_printf("  . Saving session for reuse..." );
+        fflush( stdout );
+
+        /* For TLS <= 1.2, serialize the session and restore later,
+         * triggering either session ID or session ticket based
+         * resumption in the next handshake. */
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+        if( ssl.minor_ver == MBEDTLS_SSL_MINOR_VERSION_4 )
+        {
+            /*
+             * Store ticket sent by the server after the handshake is completed.
+             */
+
+#if defined(MBEDTLS_SSL_NEW_SESSION_TICKET)
+            ret = mbedtls_ssl_get_client_ticket( &ssl, &ticket );
+            if( ret < 0 )
+            {
+                mbedtls_printf( " failed\n  ! mbedtls_ssl_get_ticket returned -0x%x\n\n",
+                                (unsigned) -ret );
+                goto exit;
+            }
+            else if( ret == 0 )
+            {
+                mbedtls_printf( "got ticket\n" );
+            }
+            else
+#endif /* MBEDTLS_SSL_NEW_SESSION_TICKET */
+            {
+                opt.reconnect = 0;
+                mbedtls_printf( " failed\n  ! no ticket available\n" );
+            }
+        }
+        else
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+        {
+            if( opt.reco_mode == 1 )
+            {
+                /* free any previously saved data */
+                if( session_data != NULL )
+                {
+                    mbedtls_platform_zeroize( session_data, session_data_len );
+                    mbedtls_free( session_data );
+                    session_data = NULL;
+                }
+
+                /* get size of the buffer needed */
+                mbedtls_ssl_session_save( mbedtls_ssl_get_session_pointer( &ssl ),
+                                          NULL, 0, &session_data_len );
+                session_data = mbedtls_calloc( 1, session_data_len );
+                if( session_data == NULL )
+                {
+                    mbedtls_printf( " failed\n  ! alloc %u bytes for session data\n",
+                                    (unsigned) session_data_len );
+                    ret = MBEDTLS_ERR_SSL_ALLOC_FAILED;
+                    goto exit;
+                }
+
+                /* actually save session data */
+                if( ( ret = mbedtls_ssl_session_save( mbedtls_ssl_get_session_pointer( &ssl ),
+                                                      session_data, session_data_len,
+                                                      &session_data_len ) ) != 0 )
+                {
+                    mbedtls_printf( " failed\n  ! mbedtls_ssl_session_saved returned -0x%04x\n\n",
+                                    (unsigned int) -ret );
+                    goto exit;
+                }
+            }
+            else
+            {
+                if( ( ret = mbedtls_ssl_get_session( &ssl, &saved_session ) ) != 0 )
+                {
+                    mbedtls_printf( " failed\n  ! mbedtls_ssl_get_session returned -0x%x\n\n",
+                                    (unsigned int) -ret );
+                    goto exit;
+                }
+            }
+
+            mbedtls_printf( " ok\n" );
+
+            if( opt.reco_mode == 1 )
+            {
+                mbedtls_printf( "    [ Saved %u bytes of session data]\n",
+                                (unsigned) session_data_len );
+            }
+        }
     }
 
     /*
