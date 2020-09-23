@@ -185,14 +185,13 @@ int main( void )
 #define DFL_NSS_KEYLOG_FILE     NULL
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
-#define DFL_KEY_EXCHANGE_MODES MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_ALL
-#define DFL_EARLY_DATA      MBEDTLS_SSL_EARLY_DATA_DISABLED
+#define DFL_KEY_EXCHANGE_MODES  MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_ALL
+#define DFL_EARLY_DATA          MBEDTLS_SSL_EARLY_DATA_DISABLED
 #define MAX_NAMED_GROUPS        4
-#define DFL_TICKET_FLAGS        7 // allow everything
-#define DFL_TICKET_LIFETIME      MBEDTLS_SSL_DEFAULT_TICKET_LIFETIME
+#define DFL_TICKET_FLAGS        7 /* allow everything */
+#define DFL_TICKET_LIFETIME     MBEDTLS_SSL_DEFAULT_TICKET_LIFETIME
 #define DFL_RETURN_ROUTABILITY  MBEDTLS_SSL_RETURN_ROUTABILITY_DISABLED
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
-
 
 #define LONG_RESPONSE "<p>01-blah-blah-blah-blah-blah-blah-blah-blah-blah\r\n" \
     "02-blah-blah-blah-blah-blah-blah-blah-blah-blah-blah-blah-blah-blah\r\n"  \
@@ -712,9 +711,9 @@ struct options
                                  * after renegotiation                      */
     int reproducible;           /* make communication reproducible          */
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
-    unsigned char key_exchange_modes; /* key exchange modes  */
-    int early_data;             /* support for early data */
-    const char *named_groups_string;    /* list of named groups             */
+    unsigned char key_exchange_modes; /* key exchange modes                 */
+    int early_data;                   /* support for early data             */
+    const char *named_groups_string;  /* list of named groups               */
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 } opt;
 
@@ -3346,7 +3345,6 @@ int main( int argc, char *argv[] )
         mbedtls_ssl_conf_curves( &conf, named_groups_list );
 #endif
 
-
     if (opt.reproducible)
     {
 #if defined(MBEDTLS_HAVE_TIME)
@@ -3720,7 +3718,7 @@ int main( int argc, char *argv[] )
 #endif
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
-    // Configure key exchange mode
+    /* Configure supported TLS 1.3 key exchange modes. */
     mbedtls_ssl_conf_ke(&conf, opt.key_exchange_modes);
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 
@@ -3858,7 +3856,7 @@ reset:
             goto exit;
         }
 #endif /* MBEDTLS_SSL_COOKIE_C */
-#else
+#else /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 #if defined(MBEDTLS_SSL_DTLS_HELLO_VERIFY)
     if( opt.transport == MBEDTLS_SSL_TRANSPORT_DATAGRAM )
     {
@@ -4233,10 +4231,9 @@ data_exchange:
              * in tests/ssl-opt.sh.
              */
 
-#if !defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
             /* For event-driven IO, wait for socket to become available */
-            if( mbedtls_ssl_check_pending( &ssl ) == 0 &&
-                opt.event == 1 /* level triggered IO */ )
+            if( opt.event == 1 /* level triggered IO */ &&
+                mbedtls_ssl_check_pending( &ssl ) == 0 )
             {
 #if defined(MBEDTLS_TIMING_C)
                 idle( &client_fd, &timer, MBEDTLS_ERR_SSL_WANT_READ );
