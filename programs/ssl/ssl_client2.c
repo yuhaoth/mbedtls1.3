@@ -2822,7 +2822,7 @@ int main( int argc, char *argv[] )
 #endif
 
 #if defined(MBEDTLS_SSL_EXPORT_KEYS)
-    if( opt.eap_tls != 0  )
+    if( opt.eap_tls != 0 )
     {
         size_t j = 0;
 
