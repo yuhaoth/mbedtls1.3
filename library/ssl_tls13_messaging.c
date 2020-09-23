@@ -59,6 +59,19 @@
 #endif /* MBEDTLS_PLATFORM_C */
 
 /*
+ * TODO
+ */
+int mbedtls_ssl_check_pending( const mbedtls_ssl_context *ssl )
+{
+    /* This is part of the public API and thus needs to be implemented
+     * by any implementation of the messaging layer. Since it's currently
+     * not used from TLS 1.3 specific code or example programs, it's OK
+     * to use a dummy implementation. */
+    ((void) ssl);
+    return( -1 );
+}
+
+/*
  * Encryption/decryption functions
  */
 static int ssl_encrypt_buf( mbedtls_ssl_context *ssl )
