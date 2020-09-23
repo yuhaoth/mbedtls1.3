@@ -2884,7 +2884,28 @@ int main( int argc, char *argv[] )
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
         if( ssl.minor_ver == MBEDTLS_SSL_MINOR_VERSION_4 )
         {
-            /* TODO: Implement TLS 1.3 tickt logic. */
+            /*
+             * Store ticket sent by the server after the handshake is completed.
+             */
+
+#if defined(MBEDTLS_SSL_NEW_SESSION_TICKET)
+            ret = mbedtls_ssl_get_client_ticket( &ssl, &ticket );
+            if( ret < 0 )
+            {
+                mbedtls_printf( " failed\n  ! mbedtls_ssl_get_ticket returned -0x%x\n\n",
+                                (unsigned) -ret );
+                goto exit;
+            }
+            else if( ret == 0 )
+            {
+                mbedtls_printf( "got ticket\n" );
+            }
+            else
+#endif /* MBEDTLS_SSL_NEW_SESSION_TICKET */
+            {
+                opt.reconnect = 0;
+                mbedtls_printf( " failed\n  ! no ticket available\n" );
+            }
         }
         else
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
@@ -3240,39 +3261,6 @@ send_request:
             }
         }
         while( 1 );
-#if defined(MBEDTLS_SSL_NEW_SESSION_TICKET)
-
-    /*
-    * Store ticket, which is sent by the server after the handshake is completed.
-    */
-
-    if( opt.reconnect != 0 )
-    {
-        mbedtls_printf( "  . Saving ticket...\n" );
-        fflush( stdout );
-
-        ret = mbedtls_ssl_get_client_ticket( &ssl, &ticket );
-
-        if( ret < 0 )
-        {
-            mbedtls_printf( " failed\n  ! mbedtls_ssl_get_ticket returned -0x%x\n\n",
-                                       (unsigned) -ret );
-            goto exit;
-        }
-        else if( ret == 1 )
-        {
-            // no ticket available - we cannot re-connect
-            opt.reconnect = 0;
-            mbedtls_printf( "no ticket available\n" );
-
-        }
-        else if( ret == 0 )
-        {
-            mbedtls_printf( "got ticket\n" );
-        }
-    }
-
-#endif /* MBEDTLS_SSL_NEW_SESSION_TICKET */
     }
     else /* Not stream, so datagram */
     {
