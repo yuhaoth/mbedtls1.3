@@ -275,18 +275,19 @@ int main( void )
 #define USAGE_CID ""
 #endif /* MBEDTLS_SSL_DTLS_CONNECTION_ID */
 
-#if defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
-#define USAGE_PSK_RAW                                               \
-    "    psk=%%s                  default: \"\" (disabled)\n"       \
-    "                             The PSK values are in hex, without 0x.\n" \
-    "    psk_identity=%%s         default: \"Client_identity\"\n"
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
 #define USAGE_KEX_MODES \
     "    key_exchange_modes=%%s   default: all\n"     \
     "                             options: psk, psk_dhe, ecdhe_ecdsa, psk_all, all\n"
 #else
-#define USAGE_KEX_MODES
+#define USAGE_KEX_MODES ""
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+
+#if defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
+#define USAGE_PSK_RAW                                               \
+    "    psk=%%s                  default: \"\" (disabled)\n"       \
+    "                             The PSK values are in hex, without 0x.\n" \
+    "    psk_identity=%%s         default: \"Client_identity\"\n"
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
 #define USAGE_PSK_SLOT                          \
     "    psk_opaque=%%d       default: 0 (don't use opaque static PSK)\n"     \
@@ -313,9 +314,6 @@ int main( void )
 #define USAGE_PSK USAGE_PSK_RAW USAGE_PSK_SLOT
 #else
 #define USAGE_PSK ""
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
-#define USAGE_KEX_MODES
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 #endif /* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED */
 #if defined(MBEDTLS_X509_TRUSTED_CERTIFICATE_CALLBACK)
 #define USAGE_CA_CALLBACK                       \
