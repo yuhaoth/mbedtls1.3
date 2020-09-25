@@ -264,6 +264,7 @@ int main( void )
 
 #if defined(MBEDTLS_SSL_EXPORT_KEYS)
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+/* Support for EAP-TLS 1.3 has not been implemented yet. */
 #define USAGE_EAP_TLS ""
 #else
 #define USAGE_EAP_TLS                                       \
