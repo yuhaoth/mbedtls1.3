@@ -263,8 +263,12 @@ int main( void )
 #endif /* MBEDTLS_SSL_SESSION_TICKETS */
 
 #if defined(MBEDTLS_SSL_EXPORT_KEYS)
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+#define USAGE_EAP_TLS ""
+#else
 #define USAGE_EAP_TLS                                       \
     "    eap_tls=%%d          default: 0 (disabled)\n"
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 #define USAGE_NSS_KEYLOG                                    \
     "    nss_keylog=%%d          default: 0 (disabled)\n"               \
     "                             This cannot be used with eap_tls=1\n"
@@ -637,7 +641,7 @@ static int eap_tls_key_derivation ( void *p_expkey,
     }
     return( 0 );
 }
-#endif
+#endif /* !MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
 static int nss_keylog_export( void *p_expsecret,
@@ -1955,9 +1959,14 @@ int main( int argc, char *argv[] )
         }
         else if( strcmp( p, "eap_tls" ) == 0 )
         {
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+            mbedtls_printf( "Error: eap_tls is not supported in TLS 1.3.\n" );
+            goto usage;
+#else
             opt.eap_tls = atoi( q );
             if( opt.eap_tls < 0 || opt.eap_tls > 1 )
                 goto usage;
+#endif
         }
         else if( strcmp( p, "reproducible" ) == 0 )
         {
@@ -2592,14 +2601,15 @@ int main( int argc, char *argv[] )
 #endif
 
 #if defined(MBEDTLS_SSL_EXPORT_KEYS)
+#if !defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
     if( opt.eap_tls != 0 )
     {
-#if !defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
         mbedtls_ssl_conf_export_keys_ext_cb( &conf, eap_tls_key_derivation,
                                              &eap_tls_keying );
-#endif
     }
-    else if( opt.nss_keylog != 0 )
+    else
+#endif
+    if( opt.nss_keylog != 0 )
     {
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
         mbedtls_ssl_conf_export_secrets_cb( &conf,
@@ -2611,7 +2621,7 @@ int main( int argc, char *argv[] )
                                              NULL );
 #endif
     }
-#endif
+#endif /* MBEDTLS_SSL_EXPORT_KEYS */
 
 #if defined(MBEDTLS_SSL_CBC_RECORD_SPLITTING)
     if( opt.recsplit != DFL_RECSPLIT )
@@ -2973,8 +2983,8 @@ int main( int argc, char *argv[] )
         }
         mbedtls_printf("\n");
     }
-#endif
-#endif
+#endif /* !MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+#endif /* MBEDTLS_SSL_EXPORT_KEYS */
 
 #if defined(MBEDTLS_X509_CRT_PARSE_C)
     /*
