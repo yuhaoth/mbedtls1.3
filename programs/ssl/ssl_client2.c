@@ -608,7 +608,9 @@ struct options
 int query_config( const char *config );
 
 #if defined(MBEDTLS_SSL_EXPORT_KEYS)
-#if !defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+
+#if defined(MBEDTLS_SSL_PROTO_TLS1) || defined(MBEDTLS_SSL_PROTO_TLS1_1) || \
+    defined(MBEDTLS_SSL_PROTO_TLS1_2)
 typedef struct eap_tls_keys
 {
     unsigned char master_secret[48];
@@ -642,7 +644,8 @@ static int eap_tls_key_derivation ( void *p_expkey,
     }
     return( 0 );
 }
-#endif /* !MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+#endif /* MBEDTLS_SSL_PROTO_TLS1 || MBEDTLS_SSL_PROTO_TLS1_1 || \
+          MBEDTLS_SSL_PROTO_TLS1_2 */
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
 static int nss_keylog_export( void *p_expsecret,
@@ -731,7 +734,10 @@ exit:
                               sizeof( nss_keylog_line ) );
     return( ret );
 }
-#else
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+
+#if defined(MBEDTLS_SSL_PROTO_TLS1) || defined(MBEDTLS_SSL_PROTO_TLS1_1) || \
+    defined(MBEDTLS_SSL_PROTO_TLS1_2)
 static int nss_keylog_export( void *p_expkey,
                               const unsigned char *ms,
                               const unsigned char *kb,
@@ -807,7 +813,8 @@ exit:
                               sizeof( nss_keylog_line ) );
     return( ret );
 }
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+#endif /* MBEDTLS_SSL_PROTO_TLS1 || MBEDTLS_SSL_PROTO_TLS1_1 || \
+          MBEDTLS_SSL_PROTO_TLS1_2 */
 #endif /* MBEDTLS_SSL_EXPORT_KEYS */
 
 static void my_debug( void *ctx, int level,
@@ -1344,13 +1351,16 @@ int main( int argc, char *argv[] )
     size_t context_buf_len;
 #endif
 #if defined(MBEDTLS_SSL_EXPORT_KEYS)
-#if !defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+
+#if defined(MBEDTLS_SSL_PROTO_TLS1) || defined(MBEDTLS_SSL_PROTO_TLS1_1) || \
+    defined(MBEDTLS_SSL_PROTO_TLS1_2)
     unsigned char eap_tls_keymaterial[16];
     unsigned char eap_tls_iv[8];
     const char* eap_tls_label = "client EAP encryption";
     eap_tls_keys eap_tls_keying;
-#endif
-#endif
+#endif /* MBEDTLS_SSL_PROTO_TLS1 || MBEDTLS_SSL_PROTO_TLS1_1 || \
+          MBEDTLS_SSL_PROTO_TLS1_2 */
+#endif /* MBEDTLS_SSL_EXPORT_KEYS */
 
 #if defined(MBEDTLS_MEMORY_BUFFER_ALLOC_C)
     mbedtls_memory_buffer_alloc_init( alloc_buf, sizeof( alloc_buf ) );
@@ -2602,27 +2612,36 @@ int main( int argc, char *argv[] )
 #endif
 
 #if defined(MBEDTLS_SSL_EXPORT_KEYS)
-#if !defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+
+#if defined(MBEDTLS_SSL_PROTO_TLS1) || defined(MBEDTLS_SSL_PROTO_TLS1_1) || \
+    defined(MBEDTLS_SSL_PROTO_TLS1_2)
     if( opt.eap_tls != 0 )
     {
         mbedtls_ssl_conf_export_keys_ext_cb( &conf, eap_tls_key_derivation,
                                              &eap_tls_keying );
     }
     else
-#endif
-    if( opt.nss_keylog != 0 )
+#endif /* MBEDTLS_SSL_PROTO_TLS1 || MBEDTLS_SSL_PROTO_TLS1_1 || \
+          MBEDTLS_SSL_PROTO_TLS1_2 */
     {
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
-        mbedtls_ssl_conf_export_secrets_cb( &conf,
-                                            nss_keylog_export,
-                                            NULL );
-#else
-        mbedtls_ssl_conf_export_keys_ext_cb( &conf,
-                                             nss_keylog_export,
-                                             NULL );
-#endif
-    }
+        if( opt.nss_keylog != 0 )
+        {
+    #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+            mbedtls_ssl_conf_export_secrets_cb( &conf,
+                                                nss_keylog_export,
+                                                NULL );
+    #endif /* */
+
+    #if defined(MBEDTLS_SSL_PROTO_TLS1) || defined(MBEDTLS_SSL_PROTO_TLS1_1) || \
+        defined(MBEDTLS_SSL_PROTO_TLS1_2)
+            mbedtls_ssl_conf_export_keys_ext_cb( &conf,
+                                                 nss_keylog_export,
+                                                 NULL );
+    #endif /* MBEDTLS_SSL_PROTO_TLS1 || MBEDTLS_SSL_PROTO_TLS1_1 || \
+          MBEDTLS_SSL_PROTO_TLS1_2 */
+        }
 #endif /* MBEDTLS_SSL_EXPORT_KEYS */
+    }
 
 #if defined(MBEDTLS_SSL_CBC_RECORD_SPLITTING)
     if( opt.recsplit != DFL_RECSPLIT )
@@ -2934,7 +2953,8 @@ int main( int argc, char *argv[] )
 #endif
 
 #if defined(MBEDTLS_SSL_EXPORT_KEYS)
-#if !defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+#if defined(MBEDTLS_SSL_PROTO_TLS1) || defined(MBEDTLS_SSL_PROTO_TLS1_1) || \
+    defined(MBEDTLS_SSL_PROTO_TLS1_2)
     if( opt.eap_tls != 0 )
     {
         size_t j = 0;
@@ -2984,7 +3004,8 @@ int main( int argc, char *argv[] )
         }
         mbedtls_printf("\n");
     }
-#endif /* !MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+#endif /* MBEDTLS_SSL_PROTO_TLS1 || MBEDTLS_SSL_PROTO_TLS1_1 || \
+          MBEDTLS_SSL_PROTO_TLS1_2 */
 #endif /* MBEDTLS_SSL_EXPORT_KEYS */
 
 #if defined(MBEDTLS_X509_CRT_PARSE_C)
