@@ -1275,16 +1275,15 @@ struct mbedtls_ssl_config
                 const unsigned char *, size_t, size_t, size_t,
                 const unsigned char[32], const unsigned char[32],
                 mbedtls_tls_prf_types );
-    void *p_export_keys;            /*!< context for key export callback    */
 #endif /* MBEDTLS_SSL_PROTO_TLS1 || MBEDTLS_SSL_PROTO_TLS1_1 || \
           MBEDTLS_SSL_PROTO_TLS1_2 */
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
     /** Callback to export TLS 1.3 secret                                   */
-    int (*f_export_secret)( void *, const unsigned char[32],
+    int (*f_export_secret_tls13)( void *, const unsigned char[32],
             mbedtls_ssl_tls1_3_secret_type type,
             const unsigned char *, size_t );
-    void *p_export_secret; /*!< context for key export callback             */
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+    void *p_export_secret; /*!< context for key export callback             */
 #endif
 
 #if defined(MBEDTLS_SSL_DTLS_CONNECTION_ID)
