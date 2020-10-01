@@ -3413,6 +3413,7 @@ int main( int argc, char *argv[] )
 #endif
 
 #if defined(MBEDTLS_SSL_EXPORT_KEYS)
+
 #if defined(MBEDTLS_SSL_PROTO_TLS1) || defined(MBEDTLS_SSL_PROTO_TLS1_1) || \
     defined(MBEDTLS_SSL_PROTO_TLS1_2)
     if( opt.eap_tls != 0 )
@@ -3426,19 +3427,19 @@ int main( int argc, char *argv[] )
     {
         if( opt.nss_keylog != 0 )
         {
-    #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
             mbedtls_ssl_conf_export_secrets_cb( &conf,
                                                 nss_keylog_export,
                                                 NULL );
-    #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 
-    #if defined(MBEDTLS_SSL_PROTO_TLS1) || defined(MBEDTLS_SSL_PROTO_TLS1_1) || \
-        defined(MBEDTLS_SSL_PROTO_TLS1_2)
+#if defined(MBEDTLS_SSL_PROTO_TLS1) || defined(MBEDTLS_SSL_PROTO_TLS1_1) || \
+    defined(MBEDTLS_SSL_PROTO_TLS1_2)
             mbedtls_ssl_conf_export_keys_ext_cb( &conf,
                                                  nss_keylog_export,
                                                  NULL );
-    #endif /* MBEDTLS_SSL_PROTO_TLS1 || MBEDTLS_SSL_PROTO_TLS1_1 || \
-              MBEDTLS_SSL_PROTO_TLS1_2 */
+#endif /* MBEDTLS_SSL_PROTO_TLS1 || MBEDTLS_SSL_PROTO_TLS1_1 || \
+          MBEDTLS_SSL_PROTO_TLS1_2 */
         }
     }
 #endif /* MBEDTLS_SSL_EXPORT_KEYS */
