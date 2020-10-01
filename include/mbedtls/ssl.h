@@ -1275,6 +1275,7 @@ struct mbedtls_ssl_config
                 const unsigned char *, size_t, size_t, size_t,
                 const unsigned char[32], const unsigned char[32],
                 mbedtls_tls_prf_types );
+     void *p_export_keys;            /*!< context for key export callback    */ 
 #endif /* MBEDTLS_SSL_PROTO_TLS1 || MBEDTLS_SSL_PROTO_TLS1_1 || \
           MBEDTLS_SSL_PROTO_TLS1_2 */
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
@@ -1282,8 +1283,8 @@ struct mbedtls_ssl_config
     int (*f_export_secret)( void *, const unsigned char[32],
             mbedtls_ssl_tls1_3_secret_type type,
             const unsigned char *, size_t );
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
     void *p_export_secret; /*!< context for key export callback             */
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 #endif
 
 #if defined(MBEDTLS_SSL_DTLS_CONNECTION_ID)
