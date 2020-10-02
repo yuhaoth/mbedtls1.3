@@ -1232,10 +1232,10 @@ int incrementSequenceNumber( unsigned char *sequenceNumber, unsigned char *nonce
      *
      * The structure computed in this function is: 
      *   - 64 bytes of octet 32,
-     *   - The context string ( which is either "TLS 1.3, client CertificateVerify"
-     *     or "TLS 1.3, server CertificateVerify" ), i.e. 33 bytes,
-     *   - A single byte of octet 0, which servers as a separator,
-     *   - 32 bytes of the Transcript-Hash(Handshake Context, Certificate)
+     *   - 33 bytes for the context string ( which is either "TLS 1.3, client CertificateVerify"
+     *     or "TLS 1.3, server CertificateVerify" ),
+     *   - 1 byte for the octet 0x0, which servers as a separator,
+     *   - 32 bytes for the Transcript-Hash(Handshake Context, Certificate)
      *
      * The hash of the structure is returned in the variable output_hash. 
      */
@@ -1294,11 +1294,10 @@ static int ssl_calc_verify_tls_sha256( mbedtls_ssl_context *ssl, unsigned char o
      *
      * The structure computed in this function is: 
      *   - 64 bytes of octet 32,
-     *   - The context string ( which is either "TLS 1.3, client CertificateVerify"
-     *     or "TLS 1.3, server CertificateVerify" ), i.e. 33 bytes,
-     *   - A single byte of octet 0, which servers as a separator,
-     *   - The Hash( Handshake Context + Certificate ) + Hash( resumption_context 
-     *     (which is 2 x 48 bytes long).
+     *   - 33 bytes for the context string ( which is either "TLS 1.3, client CertificateVerify"
+     *     or "TLS 1.3, server CertificateVerify" ),
+     *   - 1 byte for the octet 0x0, which servers as a separator,
+     *   - 48 bytes for the Transcript-Hash(Handshake Context, Certificate)
      *
      * The hash of the structure is returned in the variable hash. 
      */
@@ -1312,7 +1311,7 @@ static int ssl_calc_verify_tls_sha384( mbedtls_ssl_context *ssl, unsigned char o
     const unsigned char context_string_server[] = "TLS 1.3, server CertificateVerify";
     mbedtls_sha512_context sha384;
     unsigned char handshake_hash[ 48 ];
-    unsigned char verify_buffer[ 64 + 33 + 1 + 48 + 48 ];
+    unsigned char verify_buffer[ 64 + 33 + 1 + 48 ];
 
     mbedtls_sha512_init( &sha384 );
     mbedtls_sha512_starts( &sha384, 1 /* = use SHA384 */ );
