@@ -1226,13 +1226,30 @@ int incrementSequenceNumber( unsigned char *sequenceNumber, unsigned char *nonce
 }
 
 #if defined(MBEDTLS_SHA256_C)
-static int ssl_calc_verify_tls_sha256( mbedtls_ssl_context *ssl, unsigned char hash[32], int from )
+    /*
+     * ssl_calc_verify_tls_sha256() computes hash over a structure, 
+     * which is later digitally signed and placed into the CertificateVerify message. 
+     *
+     * The structure computed in this function is: 
+     *   - 64 bytes of octet 32,
+     *   - 33 bytes for the context string (which is either "TLS 1.3, client CertificateVerify"
+     *     or "TLS 1.3, server CertificateVerify"),
+     *   - 1 byte for the octet 0x0, which servers as a separator,
+     *   - 32 bytes for the Transcript-Hash(Handshake Context, Certificate)
+     *
+     * The hash of the structure is returned in the variable output_hash. 
+     */
+static int ssl_calc_verify_tls_sha256( mbedtls_ssl_context *ssl, unsigned char output_hash[32], int from )
 {
+    /* The length of context_string_[client|server] is 
+     * sizeof( "TLS 1.3, xxxxxx CertificateVerify" ) - 1, i.e. 33 bytes.
+     */
+    const unsigned int content_string_len = sizeof( "TLS 1.3, xxxxxx CertificateVerify" ) - 1; 
+    const unsigned char context_string_client[] = "TLS 1.3, client CertificateVerify";
+    const unsigned char context_string_server[] = "TLS 1.3, server CertificateVerify";
     mbedtls_sha256_context sha256;
-    unsigned char handshake_hash[32];
-    unsigned char *verify_buffer;
-    unsigned char *context_string;
-    size_t context_string_len;
+    unsigned char handshake_hash[ 32 ];
+    unsigned char verify_buffer[ 64 + 33 + 1 + 32 ];
 
     mbedtls_sha256_init( &sha256 );
 
@@ -1243,77 +1260,58 @@ static int ssl_calc_verify_tls_sha256( mbedtls_ssl_context *ssl, unsigned char h
 
     MBEDTLS_SSL_DEBUG_BUF( 3, "handshake hash", handshake_hash, 32 );
 
-    /*
-     * The digital signature is then computed using the signing key over the concatenation of:
-     *    - 64 bytes of octet 32
-     *    - The context string ( which is either "TLS 1.3, client CertificateVerify" or "TLS 1.3, server CertificateVerify" )
-     *    - A single 0 byte which servers as the separator
-     *    - The content to be signed, which is Hash( Handshake Context + Certificate ) + Hash( resumption_context )
-     *
-     */
+    memset( verify_buffer, 32, 64 );
 
     if( from == MBEDTLS_SSL_IS_CLIENT )
     {
-        context_string_len = sizeof( "TLS 1.3, client CertificateVerify" );
-        context_string = mbedtls_calloc( context_string_len,1 );
-
-        if( context_string == NULL )
-        {
-            MBEDTLS_SSL_DEBUG_MSG( 1, ( "malloc failed in ssl_calc_verify_tls_sha256( )" ) );
-            return( MBEDTLS_ERR_SSL_ALLOC_FAILED );
-        }
-        memcpy( context_string, "TLS 1.3, client CertificateVerify", context_string_len );
+        memcpy( verify_buffer + 64, context_string_client, content_string_len );
     }
     else /* from == MBEDTLS_SSL_IS_SERVER */
     {
-        context_string_len = sizeof( "TLS 1.3, server CertificateVerify" );
-        context_string = mbedtls_calloc( context_string_len,1 );
-        if( context_string == NULL )
-        {
-            MBEDTLS_SSL_DEBUG_MSG( 1, ( "malloc failed in ssl_calc_verify_tls_sha256( )" ) );
-            return( MBEDTLS_ERR_SSL_ALLOC_FAILED );
-        }
-        memcpy( context_string, "TLS 1.3, server CertificateVerify", context_string_len );
+        memcpy( verify_buffer + 64, context_string_server, content_string_len );
     }
 
-    verify_buffer = mbedtls_calloc( 64 + context_string_len + 1 + 32 + 32,1 );
+    verify_buffer[64 + content_string_len] = 0x0;
+    memcpy( verify_buffer + 64 + content_string_len + 1, handshake_hash, 32 );
 
-    if( verify_buffer == NULL )
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "malloc failed in ssl_calc_verify_tls_sha256( )" ) );
-        mbedtls_free( context_string );
-        return( MBEDTLS_ERR_SSL_ALLOC_FAILED );
-    }
+    MBEDTLS_SSL_DEBUG_BUF( 3, "verify buffer", verify_buffer, 64 + content_string_len + 1 + 32 );
 
-    memset( verify_buffer, 32, 64 );
-    memcpy( verify_buffer + 64, context_string, context_string_len );
-    verify_buffer[64 + context_string_len] = 0x0;
-    memcpy( verify_buffer + 64 + context_string_len + 1, handshake_hash, 32 );
+    mbedtls_sha256( verify_buffer, 64 + content_string_len + 1 + 32, output_hash, 0 /* 0 for SHA-256 instead of SHA-224 */ );
 
-    MBEDTLS_SSL_DEBUG_BUF( 3, "verify buffer", verify_buffer, 64 + context_string_len + 1 + 32 );
-
-    mbedtls_sha256( verify_buffer, 64 + context_string_len + 1 + 32, hash, 0 /* for SHA-256 instead of SHA-224 */ );
-
-    MBEDTLS_SSL_DEBUG_BUF( 3, "verify hash", hash, 32 );
+    MBEDTLS_SSL_DEBUG_BUF( 3, "verify hash", output_hash, 32 );
 
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= calc verify" ) );
 
     mbedtls_sha256_free( &sha256 );
-    mbedtls_free( verify_buffer );
-    mbedtls_free( context_string );
-
     return( 0 );
 }
 #endif /* MBEDTLS_SHA256_C */
 
 #if defined(MBEDTLS_SHA512_C)
-static int ssl_calc_verify_tls_sha384( mbedtls_ssl_context *ssl, unsigned char hash[48], int from )
+    /*
+     * ssl_calc_verify_tls_sha384() computes hash over a structure, 
+     * which is later digitally signed and placed into the CertificateVerify message. 
+     *
+     * The structure computed in this function is: 
+     *   - 64 bytes of octet 32,
+     *   - 33 bytes for the context string (which is either "TLS 1.3, client CertificateVerify"
+     *     or "TLS 1.3, server CertificateVerify"),
+     *   - 1 byte for the octet 0x0, which servers as a separator,
+     *   - 48 bytes for the Transcript-Hash(Handshake Context, Certificate)
+     *
+     * The hash of the structure is returned in the variable hash. 
+     */
+static int ssl_calc_verify_tls_sha384( mbedtls_ssl_context *ssl, unsigned char output_hash[48], int from )
 {
+    /* The length of context_string_[client|server] is 
+     * sizeof( "TLS 1.3, xxxxxx CertificateVerify" ) - 1, i.e. 33 bytes.
+     */
+    const unsigned int content_string_len = sizeof( "TLS 1.3, xxxxxx CertificateVerify" ) - 1; 
+    const unsigned char context_string_client[] = "TLS 1.3, client CertificateVerify";
+    const unsigned char context_string_server[] = "TLS 1.3, server CertificateVerify";
     mbedtls_sha512_context sha384;
-    unsigned char handshake_hash[48];
-    unsigned char *verify_buffer;
-    unsigned char *context_string;
-    size_t context_string_len;
+    unsigned char handshake_hash[ 48 ];
+    unsigned char verify_buffer[ 64 + 33 + 1 + 48 ];
 
     mbedtls_sha512_init( &sha384 );
     mbedtls_sha512_starts( &sha384, 1 /* = use SHA384 */ );
@@ -1325,65 +1323,29 @@ static int ssl_calc_verify_tls_sha384( mbedtls_ssl_context *ssl, unsigned char h
 
     MBEDTLS_SSL_DEBUG_BUF( 3, "handshake hash", handshake_hash, 48 );
 
-    /*
-     * The digital signature is then computed using the signing key over the concatenation of:
-     *    - 64 bytes of octet 32
-     *    - The context string ( which is either "TLS 1.3, client CertificateVerify" or "TLS 1.3, server CertificateVerify" )
-     *    - A single 0 byte which servers as the separator
-     *    - The content to be signed, which is Hash( Handshake Context + Certificate ) + Hash( resumption_context )
-     *
-     */
+    memset( verify_buffer, 32, 64 );
 
     if( from == MBEDTLS_SSL_IS_CLIENT )
     {
-        context_string_len = sizeof( "TLS 1.3, client CertificateVerify" );
-        context_string = mbedtls_calloc( context_string_len, 1 );
-
-        if( context_string == NULL )
-        {
-            MBEDTLS_SSL_DEBUG_MSG( 1, ( "malloc failed in ssl_calc_verify_tls_sha384( )" ) );
-            return( MBEDTLS_ERR_SSL_ALLOC_FAILED );
-        }
-        memcpy( context_string, "TLS 1.3, client CertificateVerify", context_string_len );
+        memcpy( verify_buffer + 64, context_string_client, content_string_len );
     }
     else
     { /* from == MBEDTLS_SSL_IS_SERVER */
-        context_string_len = sizeof( "TLS 1.3, server CertificateVerify" );
-        context_string = mbedtls_calloc( context_string_len, 1 );
-        if( context_string == NULL )
-        {
-            MBEDTLS_SSL_DEBUG_MSG( 1, ( "malloc failed in ssl_calc_verify_tls_sha384( )" ) );
-            return( MBEDTLS_ERR_SSL_ALLOC_FAILED );
-        }
-        memcpy( context_string, "TLS 1.3, server CertificateVerify", context_string_len );
+        memcpy( verify_buffer + 64, context_string_server, content_string_len );
     }
 
-    verify_buffer = mbedtls_calloc( 64 + context_string_len + 1 + 48 + 48, 1 );
+    verify_buffer[64 + content_string_len] = 0x0;
+    memcpy( verify_buffer + 64 + content_string_len + 1, handshake_hash, 48 );
 
-    if( verify_buffer == NULL )
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "malloc failed in ssl_calc_verify_tls_sha384( )" ) );
-        mbedtls_free( context_string );
-        return( MBEDTLS_ERR_SSL_ALLOC_FAILED );
-    }
+    MBEDTLS_SSL_DEBUG_BUF( 3, "verify buffer", verify_buffer, 64 + content_string_len + 1 + 48 );
 
-    memset( verify_buffer, 32, 64 );
-    memcpy( verify_buffer + 64, context_string, context_string_len );
-    verify_buffer[64 + context_string_len] = 0x0;
-    memcpy( verify_buffer + 64 + context_string_len + 1, handshake_hash, 48 );
+    mbedtls_sha512( verify_buffer, 64 + content_string_len + 1 + 48, output_hash, 1 /* 1 for SHA-384 */ );
 
-    MBEDTLS_SSL_DEBUG_BUF( 3, "verify buffer", verify_buffer, 64 + context_string_len + 1 + 48 );
-
-    mbedtls_sha512( verify_buffer, 64 + context_string_len + 1 + 48, hash, 1 /* for SHA-384 */ );
-
-    MBEDTLS_SSL_DEBUG_BUF( 3, "verify hash", hash, 48 );
+    MBEDTLS_SSL_DEBUG_BUF( 3, "verify hash", output_hash, 48 );
 
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= calc verify" ) );
 
     mbedtls_sha512_free( &sha384 );
-    mbedtls_free( verify_buffer );
-    mbedtls_free( context_string );
-
     return( 0 );
 }
 #endif /* MBEDTLS_SHA512_C */
