@@ -1232,8 +1232,8 @@ int incrementSequenceNumber( unsigned char *sequenceNumber, unsigned char *nonce
      *
      * The structure computed in this function is: 
      *   - 64 bytes of octet 32,
-     *   - 33 bytes for the context string ( which is either "TLS 1.3, client CertificateVerify"
-     *     or "TLS 1.3, server CertificateVerify" ),
+     *   - 33 bytes for the context string (which is either "TLS 1.3, client CertificateVerify"
+     *     or "TLS 1.3, server CertificateVerify"),
      *   - 1 byte for the octet 0x0, which servers as a separator,
      *   - 32 bytes for the Transcript-Hash(Handshake Context, Certificate)
      *
@@ -1242,9 +1242,9 @@ int incrementSequenceNumber( unsigned char *sequenceNumber, unsigned char *nonce
 static int ssl_calc_verify_tls_sha256( mbedtls_ssl_context *ssl, unsigned char output_hash[32], int from )
 {
     /* The length of context_string_[client|server] is 
-     * sizeof( "TLS 1.3, xxxxxx CertificateVerify" ) -1, i.e. 33 bytes.
+     * sizeof( "TLS 1.3, xxxxxx CertificateVerify" ) - 1, i.e. 33 bytes.
      */
-    const unsigned int content_string_len = sizeof( "TLS 1.3, xxxxxx CertificateVerify" ) -1; 
+    const unsigned int content_string_len = sizeof( "TLS 1.3, xxxxxx CertificateVerify" ) - 1; 
     const unsigned char context_string_client[] = "TLS 1.3, client CertificateVerify";
     const unsigned char context_string_server[] = "TLS 1.3, server CertificateVerify";
     mbedtls_sha256_context sha256;
@@ -1294,8 +1294,8 @@ static int ssl_calc_verify_tls_sha256( mbedtls_ssl_context *ssl, unsigned char o
      *
      * The structure computed in this function is: 
      *   - 64 bytes of octet 32,
-     *   - 33 bytes for the context string ( which is either "TLS 1.3, client CertificateVerify"
-     *     or "TLS 1.3, server CertificateVerify" ),
+     *   - 33 bytes for the context string (which is either "TLS 1.3, client CertificateVerify"
+     *     or "TLS 1.3, server CertificateVerify"),
      *   - 1 byte for the octet 0x0, which servers as a separator,
      *   - 48 bytes for the Transcript-Hash(Handshake Context, Certificate)
      *
@@ -1304,9 +1304,9 @@ static int ssl_calc_verify_tls_sha256( mbedtls_ssl_context *ssl, unsigned char o
 static int ssl_calc_verify_tls_sha384( mbedtls_ssl_context *ssl, unsigned char output_hash[48], int from )
 {
     /* The length of context_string_[client|server] is 
-     * sizeof( "TLS 1.3, xxxxxx CertificateVerify" ) -1, i.e. 33 bytes.
+     * sizeof( "TLS 1.3, xxxxxx CertificateVerify" ) - 1, i.e. 33 bytes.
      */
-    const unsigned int content_string_len = sizeof( "TLS 1.3, xxxxxx CertificateVerify" ) -1; 
+    const unsigned int content_string_len = sizeof( "TLS 1.3, xxxxxx CertificateVerify" ) - 1; 
     const unsigned char context_string_client[] = "TLS 1.3, client CertificateVerify";
     const unsigned char context_string_server[] = "TLS 1.3, server CertificateVerify";
     mbedtls_sha512_context sha384;
