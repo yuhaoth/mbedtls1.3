@@ -4874,12 +4874,7 @@ void mbedtls_ssl_conf_dhm_min_bitlen( mbedtls_ssl_config *conf,
 void mbedtls_ssl_conf_sig_hashes( mbedtls_ssl_config *conf,
                                   const int *hashes )
 {
-#if !defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
     conf->sig_hashes = hashes;
-#else
-    conf->signature_schemes = hashes;
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
-
 }
 #endif /* MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED */
 
