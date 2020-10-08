@@ -848,9 +848,15 @@ int ssl_write_signature_algorithms_ext( mbedtls_ssl_context *ssl,
     /*
      * Determine length of the signature scheme list
      */
-    for ( md = ssl->conf->signature_schemes; *md != SIGNATURE_NONE; md++ )
+    for ( md = ssl->conf->sig_hashes; *md != SIGNATURE_NONE; md++ )
     {
         sig_alg_len += 2;
+    }
+
+    if( sig_alg_len == 0 )
+    {
+            MBEDTLS_SSL_DEBUG_MSG( 1, ( "No signature algorithms defined." ) );
+            return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
     }
 
     if( end < p || (size_t)( end - p ) < sig_alg_len + 6 )
@@ -863,7 +869,7 @@ int ssl_write_signature_algorithms_ext( mbedtls_ssl_context *ssl,
      * Write signature schemes
      */
 
-    for ( md = ssl->conf->signature_schemes; *md != SIGNATURE_NONE; md++ )
+    for ( md = ssl->conf->sig_hashes; *md != SIGNATURE_NONE; md++ )
     {
         *sig_alg_list++ = (unsigned char)( ( *md >> 8 ) & 0xFF );
         *sig_alg_list++ = (unsigned char)( ( *md ) & 0xFF );
