@@ -1842,17 +1842,6 @@
 */
 #define MBEDTLS_ZERO_RTT
 
-/*
-* \def HKDF_DEBUG
-*
-* Enables debug functions for the HKDF functions
-*
-* Requires:
-*
-* Uncomment this macro to include HKDF debug information
-*/
-//#define HKDF_DEBUG
-
 /**
 * \def MBEDTLS_SSL_DEBUG_HANDSHAKE_HASHES
 *
@@ -1862,6 +1851,7 @@
 *
 * Uncomment this macro to print handshake hash information
 */
+//#define MBEDTLS_SSL_DEBUG_HANDSHAKE_HASHES
 
 /*
 * \def MBEDTLS_SSL_TICKET_NONCE_LENGTH
