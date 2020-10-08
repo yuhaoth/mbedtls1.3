@@ -658,6 +658,11 @@ struct mbedtls_ssl_handshake_params
 
     mbedtls_ssl_tls_prf_cb *tls_prf;
 
+   /* Buffer holding the digest up to, and including, 
+     * the Finished message sent by the server. 
+     */
+    unsigned char server_finished_digest[MBEDTLS_MD_MAX_SIZE];
+
     /*
      * State-local variables used during the processing
      * of a specific handshake state.
