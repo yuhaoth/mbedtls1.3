@@ -7697,27 +7697,6 @@ int mbedtls_ssl_check_sig_hash( const mbedtls_ssl_context *ssl,
 }
 #endif /* MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED */
 
-#if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED) && defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
-/*
-* Check if a signature scheme proposed by the peer is in our list.
-* Return 0 if we're willing to use it, -1 otherwise.
-*/
-int mbedtls_ssl_check_signature_scheme( const mbedtls_ssl_context* ssl,
-    int signature_scheme )
-{
-    const int* cur;
-
-    if( ssl->conf->signature_schemes == NULL )
-        return( -1 );
-
-    for ( cur = ssl->conf->signature_schemes; *cur != SIGNATURE_NONE; cur++ )
-        if( *cur == signature_scheme )
-            return( 0 );
-
-    return( -1 );
-}
-#endif /* MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED && MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
-
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
 void mbedtls_ssl_write_version( int major, int minor, int transport,
     unsigned char ver[2] )
