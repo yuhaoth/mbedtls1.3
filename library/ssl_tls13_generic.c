@@ -898,11 +898,13 @@ int ssl_parse_signature_algorithms_ext( mbedtls_ssl_context *ssl,
                                         const unsigned char *buf,
                                         size_t len )
 {
-    size_t sig_alg_list_size;
-    const unsigned char *p;
-    const unsigned char *end = buf + len;
-    const int *md_cur;
-    int offered_signature_scheme;
+    size_t sig_alg_list_size; /* size of receive signature algorithms list */
+    const unsigned char *p; /* pointer to individual signature algorithm */
+    const unsigned char *end = buf + len; /* end of buffer */
+    const int *md_cur; /* iterate through configured signature schemes */
+    int signature_scheme; /* store received signature algorithm scheme */
+    int got_common_sig_alg = 0;  /* record whether there is a match between configured and received signature algorithms */
+    uint32_t i; /* iterature through received_signature_schemes_list and signature_schemes */
 
     sig_alg_list_size = ( ( buf[0] << 8 ) | ( buf[1] ) );
     if( sig_alg_list_size + 2 != len ||
@@ -912,27 +914,48 @@ int ssl_parse_signature_algorithms_ext( mbedtls_ssl_context *ssl,
         return( MBEDTLS_ERR_SSL_BAD_HS_CLIENT_HELLO );
     }
 
-    for( p = buf + 2; p < end; p += 2 )
+    /* Determine the number of signature algorithms we support. */
+    if( ssl->conf->sig_hashes != NULL ) 
     {
-        offered_signature_scheme = ( p[0] << 8 ) | p[1];
-
-        MBEDTLS_SSL_DEBUG_MSG( 4, ( "received signature algorithm: 0x%x", offered_signature_scheme ) );
-
-        for( md_cur = ssl->conf->signature_schemes; *md_cur != SIGNATURE_NONE; md_cur++ )
-        {
-            if( *md_cur == offered_signature_scheme )
-            {
-                ssl->handshake->signature_scheme = offered_signature_scheme;
-                goto have_sig_alg;
-            }
-        }
+        for( i = 0, md_cur = ssl->conf->sig_hashes; *md_cur != SIGNATURE_NONE; md_cur++, i++ ); 
     }
 
-    MBEDTLS_SSL_DEBUG_MSG( 3, ( "no signature_algorithm in common" ) );
-    return( 0 );
+    /* Store the received and compatible signature algorithms for later use. */
+    ssl->handshake->received_signature_schemes_list = mbedtls_calloc( i + 1, sizeof(uint32_t) ); 
 
-have_sig_alg:
-    MBEDTLS_SSL_DEBUG_MSG( 3, ( "signature_algorithm ext: %d", ssl->handshake->signature_scheme ) );
+    if( ssl->handshake->received_signature_schemes_list == NULL )
+    {
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "malloc failed in ssl_parse_signature_algorithms_ext( )" ) );
+        return( MBEDTLS_ERR_SSL_ALLOC_FAILED );
+    }
+
+    i = 0; 
+    for( p = buf + 2; p < end; p += 2 )
+    {
+        signature_scheme = ( p[0] << 8 ) | p[1];
+
+        MBEDTLS_SSL_DEBUG_MSG( 4, ( "received signature algorithm: 0x%x", signature_scheme ) );
+
+        for( md_cur = ssl->conf->sig_hashes; *md_cur != SIGNATURE_NONE; md_cur++ )
+        {
+            if( *md_cur == signature_scheme )
+            {
+                ssl->handshake->received_signature_schemes_list[i] = signature_scheme;
+                i++; 
+                got_common_sig_alg = 1;
+            }
+        }
+       
+    }
+
+    if( got_common_sig_alg == 0 )
+    {
+        MBEDTLS_SSL_DEBUG_MSG( 3, ( "no signature algorithm in common" ) );
+        mbedtls_free( ssl->handshake->received_signature_schemes_list ); 
+        return( MBEDTLS_ERR_SSL_NO_USABLE_CIPHERSUITE );
+    } 
+
+    ssl->handshake->received_signature_schemes_list[i] = SIGNATURE_NONE; 
 
     return( 0 );
 }
