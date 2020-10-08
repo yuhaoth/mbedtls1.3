@@ -3686,6 +3686,11 @@ void mbedtls_ssl_handshake_wrapup( mbedtls_ssl_context *ssl )
     ssl->session = ssl->session_negotiate;
     ssl->session_negotiate = NULL;
 
+#if defined(MBEDTLS_X509_CRT_PARSE_C) && defined(MBEDTLS_SSL_SRV_C)
+    /* Free signature_schemes_list allocated during handshake */
+    if( ssl->handshake->received_signature_schemes_list != NULL )
+        mbedtls_free(ssl->handshake->received_signature_schemes_list);
+#endif /* MBEDTLS_X509_CRT_PARSE_C && MBEDTLS_SSL_SRV_C */
 
     /* With DTLS 1.3 we keep the handshake and transform structures alive. */
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
