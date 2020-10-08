@@ -7671,27 +7671,22 @@ int mbedtls_ssl_check_curve( const mbedtls_ssl_context *ssl, mbedtls_ecp_group_i
 /*
  * Check if a hash proposed by the peer is in our list.
  * Return 0 if we're willing to use it, -1 otherwise.
+ * 
+ * Assumption: sig_hashes is terminated either with 
+ * SIGNATURE_NONE or with MBEDTLS_MD_NONE and both 
+ * equal 0x0. 
  */
 int mbedtls_ssl_check_sig_hash( const mbedtls_ssl_context *ssl,
                                 mbedtls_md_type_t md )
 {
     const int *cur;
 
-#if !defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
     if( ssl->conf->sig_hashes == NULL )
         return( -1 );
 
-    for ( cur = ssl->conf->sig_hashes; *cur != MBEDTLS_MD_NONE; cur++ )
+    for( cur = ssl->conf->sig_hashes; *cur != SIGNATURE_NONE; cur++ )
         if( *cur == ( int )md )
             return( 0 );
-#else
-    if( ssl->conf->signature_schemes == NULL )
-        return( -1 );
-
-    for ( cur = ssl->conf->signature_schemes; *cur != SIGNATURE_NONE; cur++ )
-        if( *cur == ( int )md )
-            return( 0 );
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 
     return( -1 );
 }

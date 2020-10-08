@@ -1312,9 +1312,9 @@ struct mbedtls_ssl_config
     void *p_async_config_data; /*!< Configuration data set by mbedtls_ssl_conf_async_private_cb(). */
 #endif /* MBEDTLS_SSL_ASYNC_PRIVATE */
 
-#if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)  && !defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+#if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
     const int* sig_hashes; /*!< allowed signature hashes in TLS 1.2 and signature algorithms in TLS 1.3 */
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL && MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED */
+#endif /* MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED */
 
 #if defined(MBEDTLS_ECP_C)
     /* In TLS 1.3 we are re-purposing this curve_list to mean NamedGroup */
