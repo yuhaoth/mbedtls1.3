@@ -229,7 +229,7 @@ static int ssl_encrypt_buf( mbedtls_ssl_context *ssl )
         }
 #endif /* MBEDTLS_SSL_PROTO_DTLS   */
 
-        if( ( ret = incrementSequenceNumber( &ssl->transform_out->sequence_number_enc[0], ssl->transform_out->iv_enc, ssl->transform_out->ivlen ) ) != 0 )
+        if( ( ret = mbedtls_increment_sequence_number( &ssl->transform_out->sequence_number_enc[0], ssl->transform_out->iv_enc, ssl->transform_out->ivlen ) ) != 0 )
         {
 
             MBEDTLS_SSL_DEBUG_RET( 1, "Error in sequence number processing", ret );
@@ -427,7 +427,7 @@ static int ssl_decrypt_buf( mbedtls_ssl_context *ssl )
         }
         auth_done++;
 
-        if( ( ret = incrementSequenceNumber( &ssl->transform_in->sequence_number_dec[0], ssl->transform_in->iv_dec, ssl->transform_in->ivlen ) ) != 0 )
+        if( ( ret = mbedtls_increment_sequence_number( &ssl->transform_in->sequence_number_dec[0], ssl->transform_in->iv_dec, ssl->transform_in->ivlen ) ) != 0 )
         {
 
             MBEDTLS_SSL_DEBUG_RET( 1, "Error in sequence number processing", ret );
@@ -1147,7 +1147,7 @@ int mbedtls_ssl_write_record( mbedtls_ssl_context *ssl )
                   ssl->conf->key_exchange_modes == MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_KE ||
                   ssl->conf->key_exchange_modes == MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_DHE_KE ) ) {
 
-                ssl_write_pre_shared_key_ext( ssl, ssl->handshake->ptr_to_psk_ext, &ssl->out_msg[len], &dummy_length, 1 );
+                mbedtls_ssl_write_pre_shared_key_ext( ssl, ssl->handshake->ptr_to_psk_ext, &ssl->out_msg[len], &dummy_length, 1 );
             }
 #endif /* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED */
 
@@ -2931,9 +2931,9 @@ int mbedtls_ssl_read( mbedtls_ssl_context *ssl, unsigned char *buf, size_t len )
                 ( ssl->in_msg[0] == MBEDTLS_SSL_HS_NEW_SESSION_TICKET ) ) {
                 MBEDTLS_SSL_DEBUG_MSG( 3, ( "NewSessionTicket received" ) );
 
-                if( ( ret = ssl_parse_new_session_ticket( ssl ) ) != 0 )
+                if( ( ret = mbedtls_ssl_parse_new_session_ticket( ssl ) ) != 0 )
                 {
-                    MBEDTLS_SSL_DEBUG_RET( 1, "ssl_parse_new_session_ticket", ret );
+                    MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_parse_new_session_ticket", ret );
                     return( ret );
                 }
             }
