@@ -468,6 +468,9 @@ struct mbedtls_ssl_handshake_params
      */
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
     int signature_scheme;                        /*!<  Signature scheme  */
+#if defined(MBEDTLS_X509_CRT_PARSE_C) && defined(MBEDTLS_SSL_SRV_C)
+    int *received_signature_schemes_list;              /*!<  Received signature algorithms */
+#endif /* MBEDTLS_X509_CRT_PARSE_C && MBEDTLS_SSL_SRV_C */
     mbedtls_ecp_curve_info server_preferred_curve; /*!<  Preferred curve requested by server (obtained in HelloRetryRequest  */
 #if defined(MBEDTLS_SSL_CLI_C)
     int hello_retry_requests_received; /*!<  Number of Hello Retry Request messages received from the server.  */
@@ -657,6 +660,11 @@ struct mbedtls_ssl_handshake_params
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 
     mbedtls_ssl_tls_prf_cb *tls_prf;
+
+   /* Buffer holding the digest up to, and including, 
+     * the Finished message sent by the server. 
+     */
+    unsigned char server_finished_digest[MBEDTLS_MD_MAX_SIZE];
 
     /*
      * State-local variables used during the processing
@@ -1131,6 +1139,8 @@ void mbedtls_ssl_handshake_free( mbedtls_ssl_context *ssl );
 int mbedtls_ssl_handshake_client_step( mbedtls_ssl_context *ssl );
 int mbedtls_ssl_handshake_server_step( mbedtls_ssl_context *ssl );
 void mbedtls_ssl_handshake_wrapup( mbedtls_ssl_context *ssl );
+
+int mbedtls_ssl_handle_pending_alert( mbedtls_ssl_context *ssl );
 
 int mbedtls_ssl_send_fatal_handshake_failure( mbedtls_ssl_context *ssl );
 
