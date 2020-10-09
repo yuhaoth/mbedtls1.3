@@ -183,6 +183,7 @@ int main( void )
 #define DFL_REPRODUCIBLE        0
 #define DFL_NSS_KEYLOG          0
 #define DFL_NSS_KEYLOG_FILE     NULL
+#define DFL_SIG_ALGS            NULL
 
 #define DFL_KEY_EXCHANGE_MODES  MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_ALL
 #define DFL_EARLY_DATA          MBEDTLS_SSL_EARLY_DATA_DISABLED
@@ -486,7 +487,7 @@ int main( void )
 #define USAGE_NAMED_GROUP ""
 #endif
 
-#if defined(MBEDTLS_ECP_C) && !defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+#if defined(MBEDTLS_ECP_C)
 #define USAGE_CURVES \
     "    curves=a,b,c,d      default: \"default\" (library default)\n"  \
     "                        example: \"secp521r1,brainpoolP512r1\"\n"  \
@@ -495,6 +496,14 @@ int main( void )
     "                          for acceptable curve names\n"
 #else
 #define USAGE_CURVES ""
+#endif
+
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && defined(MBEDTLS_ECP_C)
+#define USAGE_SIG_ALGS \
+    "    sig_algs=a,b,c,d      default: \"default\" (library default: ecdsa_secp256r1_sha256)\n"  \
+    "                        example: \"ecdsa_secp256r1_sha256,ecdsa_secp384r1_sha384\"\n"  
+#else
+#define USAGE_SIG_ALGS ""
 #endif
 
 #if defined(MBEDTLS_SSL_CONTEXT_SERIALIZATION)
@@ -566,6 +575,7 @@ int main( void )
     USAGE_KEX_MODES                                         \
     USAGE_NAMED_GROUP                                       \
     USAGE_CURVES                                            \
+    USAGE_SIG_ALGS                                          \
     "\n"
 #define USAGE4 \
     USAGE_SSL_ASYNC                                         \
@@ -609,6 +619,8 @@ int main( void )
 
 #define ALPN_LIST_SIZE  10
 #define CURVE_LIST_SIZE 20
+#define SIG_ALG_LIST_SIZE 5
+#define NAMED_GROUPS_LIST_SIZE 5
 
 #define PUT_UINT64_BE(out_be,in_le,i)                                   \
 {                                                                       \
@@ -713,6 +725,7 @@ struct options
     unsigned char key_exchange_modes; /* key exchange modes                 */
     int early_data;                   /* support for early data             */
     const char *named_groups_string;  /* list of named groups               */
+    const char *sig_algs;             /* supported signature algorithms     */
 } opt;
 
 int query_config( const char *config );
@@ -1925,9 +1938,11 @@ int main( int argc, char *argv[] )
     mbedtls_ssl_cookie_ctx cookie_ctx;
 #endif
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && defined(MBEDTLS_ECP_C)
-    mbedtls_ecp_group_id named_groups_list[MAX_NAMED_GROUPS]; /* list of named groups */
+   /* list of named groups */
+    mbedtls_ecp_group_id named_groups_list[NAMED_GROUPS_LIST_SIZE];
+    /* list of signature algorithms */
+    int sig_alg_list[SIG_ALG_LIST_SIZE];
     char *start;
-
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL && MBEDTLS_ECP_C */
 
 
@@ -2131,6 +2146,7 @@ int main( int argc, char *argv[] )
     opt.key_exchange_modes = DFL_KEY_EXCHANGE_MODES;
     opt.ticket_flags        = DFL_TICKET_FLAGS;
     opt.early_data          = DFL_EARLY_DATA;
+    opt.sig_algs            = DFL_SIG_ALGS;
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
     opt.psk_opaque          = DFL_PSK_OPAQUE;
     opt.psk_list_opaque     = DFL_PSK_LIST_OPAQUE;
@@ -2399,6 +2415,8 @@ int main( int argc, char *argv[] )
 #if defined(MBEDTLS_ECP_C)
         else if( strcmp( p, "named_groups" ) == 0 )
             opt.named_groups_string = q;
+        else if( strcmp( p, "sig_algs" ) == 0 )
+            opt.sig_algs = q;
 #endif /* MBEDTLS_ECP_C */
 
         else if( strcmp( p, "key_exchange_modes" ) == 0 )
@@ -2992,6 +3010,70 @@ int main( int argc, char *argv[] )
     }
 #endif /* MBEDTLS_ECP_C */
 
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && defined(MBEDTLS_ECP_C)
+    if( opt.sig_algs != NULL )
+    {
+        p = (char *) opt.sig_algs;
+        i = 0;
+
+        /* Leave room for a final NULL in signature algorithm list */
+        while( i < SIG_ALG_LIST_SIZE - 1 && *p != '\0' )
+        {
+            q = p;
+
+            /* Terminate the current string */
+            while( *p != ',' && *p != '\0' )
+                p++;
+            if( *p == ',' )
+                *p++ = '\0';
+
+            if( strcmp( q, "ecdsa_secp256r1_sha256" ) == 0 )
+            {
+                sig_alg_list[i++] = SIGNATURE_ECDSA_SECP256r1_SHA256;
+            }
+            else if( strcmp( q, "ecdsa_secp384r1_sha384" ) == 0 )
+            {
+                sig_alg_list[i++] = SIGNATURE_ECDSA_SECP384r1_SHA384;
+            }
+            else if( strcmp( q, "ecdsa_secp521r1_sha512" ) == 0 )
+            {
+                sig_alg_list[i++] = SIGNATURE_ECDSA_SECP521r1_SHA512;
+            }
+            else
+            {
+                mbedtls_printf( "unknown signature algorithm %s\n", q );
+                mbedtls_printf( "supported signature algorithms: " );
+#if defined(MBEDTLS_SHA256_C) && defined(MBEDTLS_ECDSA_C) && defined(MBEDTLS_ECP_DP_SECP256R1_ENABLED)
+                mbedtls_printf( "ecdsa_secp256r1_sha256 " );
+#endif
+#if defined(MBEDTLS_SHA512_C) && defined(MBEDTLS_ECDSA_C) && defined(MBEDTLS_ECP_DP_SECP384R1_ENABLED)
+                mbedtls_printf( "ecdsa_secp384r1_sha384 " );
+#endif
+#if defined(MBEDTLS_SHA512_C) && defined(MBEDTLS_ECDSA_C) && defined(MBEDTLS_ECP_DP_SECP521R1_ENABLED)
+                mbedtls_printf( "ecdsa_secp521r1_sha512 " );
+#endif
+                mbedtls_printf( "\n" );
+                goto exit;
+            }
+        }
+
+        if( i == ( SIG_ALG_LIST_SIZE - 1 ) && *p != '\0' )
+        {
+            mbedtls_printf( "signature algorithm list too long, maximum %d",
+                            SIG_ALG_LIST_SIZE - 1 );
+            goto exit;
+        }
+
+        sig_alg_list[i] = SIGNATURE_NONE;
+    } else 
+    {
+        /* Configure default signature algorithm */
+        sig_alg_list[i++] = SIGNATURE_ECDSA_SECP256r1_SHA256;
+        sig_alg_list[i] = SIGNATURE_NONE;
+    }
+        
+    mbedtls_printf( "Number of signature algorithms: %d\n", i );
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL && MBEDTLS_ECP_C */
 
 #if defined(MBEDTLS_SSL_ALPN)
     if( opt.alpn_string != NULL )
@@ -3019,13 +3101,17 @@ int main( int argc, char *argv[] )
         p = (char *)opt.named_groups_string;
         i = 0;
         start = p;
-
         /* Leave room for a final NULL in named_groups_list */
-        while( i < (int) sizeof named_groups_list - 1 && *p != '\0' )
+        while( i < (int) ( sizeof( named_groups_list ) - 1 ) && *p != '\0' )
         {
+            q = p;
 
+            /* Terminate the current string */
             while( *p != ',' && *p != '\0' )
                 p++;
+                
+            if( *p == ',' )
+                *p++ = '\0';
 
             if( *p == ',' || *p == '\0' )
             {
@@ -3049,6 +3135,7 @@ int main( int argc, char *argv[] )
                 else goto usage;
                 start = p;
             }
+            else goto usage;
         }
 
         if( i == 0 ) goto usage;
@@ -3756,14 +3843,23 @@ int main( int argc, char *argv[] )
 
 #if defined(MBEDTLS_ECP_C)
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+    /* Configure default name groups */
     if (named_groups_list[0] != MBEDTLS_ECP_DP_NONE)
         mbedtls_ssl_conf_curves( &conf, named_groups_list );
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+    /* Configure default curves */
     if( opt.curves != NULL &&
         strcmp( opt.curves, "default" ) != 0 )
     {
         mbedtls_ssl_conf_curves( &conf, curve_list );
     }
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+    /* Configure default signature algorithms */
+    if( opt.sig_algs != NULL && strcmp( opt.sig_algs, "default" ) != 0 )
+    {
+        mbedtls_ssl_conf_signature_algorithms( &conf, sig_alg_list );
+    }
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 #endif /* MBEDTLS_ECP_C */
 
 #if defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
