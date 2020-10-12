@@ -904,7 +904,8 @@ int mbedtls_ssl_parse_signature_algorithms_ext( mbedtls_ssl_context *ssl,
     const int *md_cur; /* iterate through configured signature schemes */
     int signature_scheme; /* store received signature algorithm scheme */
     int got_common_sig_alg = 0;  /* record whether there is a match between configured and received signature algorithms */
-    uint32_t i; /* iterature through received_signature_schemes_list and signature_schemes */
+    size_t num_supported_hashes;
+    uint32_t i; /* iterature through received_signature_schemes_list */
 
     sig_alg_list_size = ( ( buf[0] << 8 ) | ( buf[1] ) );
     if( sig_alg_list_size + 2 != len ||
@@ -915,14 +916,17 @@ int mbedtls_ssl_parse_signature_algorithms_ext( mbedtls_ssl_context *ssl,
     }
 
     /* Determine the number of signature algorithms we support. */
-    if( ssl->conf->sig_hashes != NULL ) 
+    num_supported_hashes = 0;
+    if( ssl->conf->sig_hashes != NULL )
     {
-        for( i = 0, md_cur = ssl->conf->sig_hashes; *md_cur != SIGNATURE_NONE; md_cur++, i++ ); 
+        for( md_cur = ssl->conf->sig_hashes; *md_cur != SIGNATURE_NONE; md_cur++ )
+            num_supported_hashes++;
     }
 
     /* Store the received and compatible signature algorithms for later use. */
-    ssl->handshake->received_signature_schemes_list = mbedtls_calloc( i + 1, sizeof(uint32_t) ); 
-
+    ssl->handshake->received_signature_schemes_list =
+        mbedtls_calloc( num_supported_hashes + 1, sizeof(uint32_t) );
+    /* TODO: Remove heap buffer here */
     if( ssl->handshake->received_signature_schemes_list == NULL )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "malloc failed in ssl_parse_signature_algorithms_ext( )" ) );
