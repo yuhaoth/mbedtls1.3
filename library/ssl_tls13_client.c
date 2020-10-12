@@ -1975,6 +1975,7 @@ static int ssl_parse_supported_version_ext( mbedtls_ssl_context* ssl,
                                             const unsigned char* buf,
                                             size_t len )
 {
+    ((void) ssl);
 
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
     if( ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_DATAGRAM )
