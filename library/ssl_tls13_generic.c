@@ -3826,6 +3826,7 @@ static int ssl_finished_out_prepare( mbedtls_ssl_context* ssl )
             traffic_keys.epoch = 2;
 #endif /* MBEDTLS_SSL_PROTO_DTLS */
 
+            mbedtls_ssl_transform_free( ssl->transform_out );
             ret = mbedtls_set_traffic_key( ssl, traffic_keys, ssl->transform_out, 0 );
             if( ret != 0 )
             {
