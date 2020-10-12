@@ -644,10 +644,12 @@ static int ssl_write_change_cipher_spec_coordinate( mbedtls_ssl_context* ssl )
 }
 
 static int ssl_write_change_cipher_spec_write( mbedtls_ssl_context* ssl,
-    unsigned char* buf,
-    size_t buflen,
-    size_t* olen )
+                                               unsigned char* buf,
+                                               size_t buflen,
+                                               size_t* olen )
 {
+    ((void) ssl);
+
     if( buflen < 1 )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "buffer too small" ) );
@@ -655,9 +657,7 @@ static int ssl_write_change_cipher_spec_write( mbedtls_ssl_context* ssl,
     }
 
     buf[0] = 1;
-
     *olen = 1;
-
     return( 0 );
 }
 
