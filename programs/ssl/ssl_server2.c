@@ -501,7 +501,7 @@ int main( void )
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && defined(MBEDTLS_ECP_C)
 #define USAGE_SIG_ALGS \
     "    sig_algs=a,b,c,d      default: \"default\" (library default: ecdsa_secp256r1_sha256)\n"  \
-    "                        example: \"ecdsa_secp256r1_sha256,ecdsa_secp384r1_sha384\"\n"  
+    "                        example: \"ecdsa_secp256r1_sha256,ecdsa_secp384r1_sha384\"\n"
 #else
 #define USAGE_SIG_ALGS ""
 #endif
@@ -3065,13 +3065,14 @@ int main( int argc, char *argv[] )
         }
 
         sig_alg_list[i] = SIGNATURE_NONE;
-    } else 
+    }
+    else
     {
         /* Configure default signature algorithm */
         sig_alg_list[0] = SIGNATURE_ECDSA_SECP256r1_SHA256;
         sig_alg_list[1] = SIGNATURE_NONE;
     }
-        
+
     mbedtls_printf( "Number of signature algorithms: %d\n", i );
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL && MBEDTLS_ECP_C */
 
@@ -3109,7 +3110,7 @@ int main( int argc, char *argv[] )
             /* Terminate the current string */
             while( *p != ',' && *p != '\0' )
                 p++;
-                
+
             if( *p == ',' )
                 *p++ = '\0';
 
