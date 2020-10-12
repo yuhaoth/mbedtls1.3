@@ -661,8 +661,8 @@ struct mbedtls_ssl_handshake_params
 
     mbedtls_ssl_tls_prf_cb *tls_prf;
 
-   /* Buffer holding the digest up to, and including, 
-     * the Finished message sent by the server. 
+   /* Buffer holding the digest up to, and including,
+     * the Finished message sent by the server.
      */
     unsigned char server_finished_digest[MBEDTLS_MD_MAX_SIZE];
 
@@ -950,7 +950,9 @@ struct mbedtls_ssl_transform
     unsigned int keylen;                /*!<  symmetric key length (bytes)  */
 
     mbedtls_ssl_key_set traffic_keys;
+#if defined(MBEDTLS_SSL_PROTO_DTLS)
     mbedtls_ssl_key_set traffic_keys_previous;
+#endif /* MBEDTL_SSL_PROTO_DTLS */
 
     unsigned char sequence_number_dec[12]; /* sequence number for incoming (decrypting) traffic */
     unsigned char sequence_number_enc[12]; /* sequence number for outgoing (encrypting) traffic */

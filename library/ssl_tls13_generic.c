@@ -3265,8 +3265,11 @@ int mbedtls_set_traffic_key( mbedtls_ssl_context *ssl,
 
     if( mode == 0 )
     {
+#if defined(MBEDTLS_SSL_PROTO_DTLS)
         /* Copy current traffic_key structure to previous */
         transform->traffic_keys_previous = transform->traffic_keys;
+#endif /* MBEDTLS_SSL_PROTO_DTLS */
+
         /* Store current traffic_key structure */
         transform->traffic_keys = *traffic_keys;
     }
@@ -3280,6 +3283,8 @@ int mbedtls_set_traffic_key( mbedtls_ssl_context *ssl,
                 traffic_keys->iv_len );
         memcpy( transform->iv_dec, traffic_keys->client_write_iv,
                 traffic_keys->iv_len );
+
+#if defined(MBEDTLS_SSL_PROTO_DTLS)
         /* Restore the most recent nonce */
         if( mode == 1 )
         {
@@ -3288,7 +3293,6 @@ int mbedtls_set_traffic_key( mbedtls_ssl_context *ssl,
                     transform->traffic_keys_previous.iv_len );
         }
 
-#if defined(MBEDTLS_SSL_PROTO_DTLS)
         /* TODO: Don't we want to check that we're running DTLS here? */
         {
             unsigned char temp[ MBEDTLS_MAX_KEY_LEN ];
@@ -3317,6 +3321,8 @@ int mbedtls_set_traffic_key( mbedtls_ssl_context *ssl,
                 traffic_keys->iv_len );
         memcpy( transform->iv_dec, traffic_keys->server_write_iv,
                 traffic_keys->iv_len );
+
+#if defined(MBEDTLS_SSL_PROTO_DTLS)
         /* Restore the most recent nonce */
         if( mode == 1 )
         {
@@ -3324,7 +3330,7 @@ int mbedtls_set_traffic_key( mbedtls_ssl_context *ssl,
                     transform->traffic_keys_previous.server_write_iv,
                     transform->ivlen );
         }
-
+#endif /* MBEDTLS_SSL_PROTO_DTLS */
     }
 #endif /* MBEDTLS_SSL_CLI_C */
 
