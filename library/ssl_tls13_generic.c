@@ -3279,6 +3279,8 @@ int mbedtls_set_traffic_key( mbedtls_ssl_context *ssl,
         key1 = traffic_keys->server_write_key; /* encryption key for the server */
         key2 = traffic_keys->client_write_key; /* decryption key for the server */
 
+        transform->ivlen = traffic_keys->iv_len;
+
         memcpy( transform->iv_enc, traffic_keys->server_write_iv,
                 traffic_keys->iv_len );
         memcpy( transform->iv_dec, traffic_keys->client_write_iv,
@@ -3316,6 +3318,8 @@ int mbedtls_set_traffic_key( mbedtls_ssl_context *ssl,
     {
         key1 = traffic_keys->client_write_key; /* encryption key for the client */
         key2 = traffic_keys->server_write_key; /* decryption key for the client */
+
+        transform->ivlen = traffic_keys->iv_len;
 
         memcpy( transform->iv_enc, traffic_keys->client_write_iv,
                 traffic_keys->iv_len );
