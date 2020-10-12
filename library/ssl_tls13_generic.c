@@ -4660,9 +4660,14 @@ int mbedtls_ssl_write_early_data_ext( mbedtls_ssl_context *ssl,
     unsigned char *p = buf;
     const unsigned char* end = buf + buflen;
 
+    *olen = 0;
+
 #if defined(MBEDTLS_SSL_SRV_C)
     if( ssl->conf->endpoint == MBEDTLS_SSL_IS_SERVER )
     {
+        if( ( ssl->handshake->extensions_present & EARLY_DATA_EXTENSION ) == 0 )
+            return( 0 );
+
         if( ssl->conf->key_exchange_modes != MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_KE ||
             ssl->conf->early_data == MBEDTLS_SSL_EARLY_DATA_DISABLED ) {
 

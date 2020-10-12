@@ -69,6 +69,12 @@ static int ssl_write_sni_server_ext(
     size_t *olen )
 {
     unsigned char *p = buf;
+    *olen = 0;
+
+    if( ( ssl->handshake->extensions_present & SERVERNAME_EXTENSION ) == 0 )
+    {
+        return( 0 );
+    }
 
     MBEDTLS_SSL_DEBUG_MSG( 3, ( "adding server_name extension" ) );
 
@@ -3172,10 +3178,16 @@ static void ssl_write_max_fragment_length_ext( mbedtls_ssl_context *ssl,
 {
     unsigned char *p = buf;
 
+    *olen = 0;
+    if( ( ssl->handshake->extensions_present & MAX_FRAGMENT_LENGTH_EXTENSION )
+        == 0 )
+    {
+        return( 0 );
+    }
+
     if( ssl->session_negotiate->mfl_code == MBEDTLS_SSL_MAX_FRAG_LEN_NONE )
     {
-        *olen = 0;
-        return;
+        return( 0 );
     }
 
     MBEDTLS_SSL_DEBUG_MSG( 3, ( "server hello, max_fragment_length extension" ) );
@@ -3198,10 +3210,12 @@ static void ssl_write_max_fragment_length_ext( mbedtls_ssl_context *ssl,
 static void ssl_write_alpn_ext( mbedtls_ssl_context *ssl,
                                 unsigned char *buf, size_t *olen )
 {
-    if( ssl->alpn_chosen == NULL )
+    *olen = 0;
+
+    if( ( ssl->handshake->extensions_present & ALPN_EXTENSION ) == 0 ||
+        ssl->alpn_chosen == NULL )
     {
-        *olen = 0;
-        return;
+        return( 0 );
     }
 
     MBEDTLS_SSL_DEBUG_MSG( 3, ( "server hello, adding alpn extension" ) );
@@ -3432,45 +3446,31 @@ static int ssl_encrypted_extensions_write( mbedtls_ssl_context* ssl,
     p += 2;
 
 #if defined(MBEDTLS_SSL_SERVER_NAME_INDICATION)
-    if( ssl->handshake->extensions_present & SERVERNAME_EXTENSION )
-    {
-        ret=ssl_write_sni_server_ext( ssl, p, end - p, &n );
-        if( ret != 0 )
-            return( ret );
-
-        p += n;
-    }
+    ret = ssl_write_sni_server_ext( ssl, p, end - p, &n );
+    if( ret != 0 )
+        return( ret );
+    p += n;
 #endif /* MBEDTLS_SSL_SERVER_NAME_INDICATION */
 
 #if defined(MBEDTLS_SSL_ALPN)
-    if( ssl->handshake->extensions_present & ALPN_EXTENSION )
-    {
-        ret = ssl_write_alpn_ext( ssl, p, end - p, &n );
-        p += n;
-    }
+    ret = ssl_write_alpn_ext( ssl, p, end - p, &n );
+    if( ret != 0 )
+        return( ret );
+    p  += n;
 #endif /* MBEDTLS_SSL_ALPN */
 
 #if defined(MBEDTLS_SSL_MAX_FRAGMENT_LENGTH)
-    if( ssl->handshake->extensions_present & MAX_FRAGMENT_LENGTH_EXTENSION )
-    {
-        ret=ssl_write_max_fragment_length_ext( ssl, p, end - p, &n );
-        if( ret != 0 )
-            return( ret );
-
-        p += n;
-    }
+    ret = ssl_write_max_fragment_length_ext( ssl, p, end - p, &n );
+    if( ret != 0 )
+        return( ret );
+    p += n;
 #endif /* MBEDTLS_SSL_MAX_FRAGMENT_LENGTH */
 
 #if defined(MBEDTLS_ZERO_RTT)
-    if( ssl->handshake->extensions_present & EARLY_DATA_EXTENSION )
-    {
-        ret = mbedtls_ssl_write_early_data_ext( ssl, p, (size_t)( end - p ),
-                &n );
-        if( ret != 0 )
-            return( ret );
-
-        p += n;
-    }
+    ret = mbedtls_ssl_write_early_data_ext( ssl, p, (size_t)( end - p ), &n );
+    if( ret != 0 )
+        return( ret );
+    p += n;
 #endif /* MBEDTLS_ZERO_RTT */
 
     *olen = p - buf;
