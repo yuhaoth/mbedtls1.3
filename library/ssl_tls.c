@@ -6228,6 +6228,10 @@ void mbedtls_ssl_handshake_free( mbedtls_ssl_context *ssl )
     if( handshake == NULL )
         return;
 
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+    mbedtls_free( handshake->key_shares_curve_list );
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+
 #if defined(MBEDTLS_SSL_ASYNC_PRIVATE)
     if( ssl->conf->f_async_cancel != NULL && handshake->async_in_progress != 0 )
     {
@@ -7155,7 +7159,10 @@ void mbedtls_ssl_free( mbedtls_ssl_context *ssl )
     }
 #endif
 
-#if defined(MBEDTLS_SSL_DTLS_HELLO_VERIFY) && defined(MBEDTLS_SSL_SRV_C)
+#if ( defined(MBEDTLS_SSL_DTLS_HELLO_VERIFY) ||                         \
+      ( defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) &&               \
+        defined(MBEDTLS_SSL_COOKIE_C) ) )                               \
+    && defined(MBEDTLS_SSL_SRV_C)
     mbedtls_free( ssl->cli_id );
 #endif
 

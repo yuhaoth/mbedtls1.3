@@ -164,6 +164,7 @@ static int ssl_write_early_data_prepare( mbedtls_ssl_context* ssl )
     traffic_keys.epoch = 1;
 #endif /* MBEDTLS_SSL_PROTO_DTLS */
 
+    mbedtls_ssl_transform_free( ssl->transform_negotiate );
     ret = mbedtls_set_traffic_key( ssl, &traffic_keys, ssl->transform_negotiate, 0 );
     if( ret != 0 )
     {
@@ -302,6 +303,7 @@ static int ssl_write_end_of_early_data_prepare( mbedtls_ssl_context* ssl )
     traffic_keys.epoch = 1;
 #endif /* MBEDTLS_SSL_PROTO_DTLS */
 
+    mbedtls_ssl_transform_free( ssl->transform_negotiate );
     ret = mbedtls_set_traffic_key( ssl, &traffic_keys, ssl->transform_negotiate, 0 );
     if( ret != 0 )
     {
@@ -3899,7 +3901,8 @@ int mbedtls_ssl_handshake_client_step( mbedtls_ssl_context *ssl )
             if( ssl->handshake->key_shares_curve_list == NULL )
             {
                 /* We need to allocate one additional key share for the delimiter. */
-                ssl->handshake->key_shares_curve_list = mbedtls_calloc( 1, sizeof( mbedtls_ecp_group_id* ) * ( MBEDTLS_SSL_MAX_KEY_SHARES+1 ) );
+                ssl->handshake->key_shares_curve_list =
+                    mbedtls_calloc( 1, sizeof( mbedtls_ecp_group_id* ) * ( MBEDTLS_SSL_MAX_KEY_SHARES+1 ) );
                 if( ssl->conf->key_shares_curve_list == NULL )
                 {
                     MBEDTLS_SSL_DEBUG_MSG( 1, ( "should never happen" ) );

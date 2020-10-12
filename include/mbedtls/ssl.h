@@ -1683,7 +1683,10 @@ struct mbedtls_ssl_context
     /*
      * Information for DTLS hello verify
      */
-#if (defined(MBEDTLS_SSL_DTLS_HELLO_VERIFY) || ( defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && defined(MBEDTLS_SSL_COOKIE_C)) ) && defined(MBEDTLS_SSL_SRV_C)
+#if ( defined(MBEDTLS_SSL_DTLS_HELLO_VERIFY) ||                         \
+      ( defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) &&               \
+        defined(MBEDTLS_SSL_COOKIE_C) ) )                               \
+    && defined(MBEDTLS_SSL_SRV_C)
     unsigned char  *cli_id;         /*!<  transport-level ID of the client  */
     size_t          cli_id_len;     /*!<  length of cli_id                  */
 #endif /* MBEDTLS_SSL_DTLS_HELLO_VERIFY && MBEDTLS_SSL_SRV_C */

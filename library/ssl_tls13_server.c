@@ -1810,6 +1810,7 @@ static int ssl_read_end_of_early_data_preprocess( mbedtls_ssl_context* ssl )
         return( ret );
     }
 
+    mbedtls_ssl_transform_free( ssl->transform_negotiate );
     ret = mbedtls_set_traffic_key( ssl, &traffic_keys, ssl->transform_negotiate, 0 );
     if( ret != 0 )
     {
@@ -1910,6 +1911,7 @@ static int ssl_read_early_data_preprocess( mbedtls_ssl_context* ssl )
         return( ret );
     }
 
+    mbedtls_ssl_transform_free( ssl->transform_negotiate );
     ret = mbedtls_set_traffic_key( ssl, &traffic_keys, ssl->transform_negotiate, 0 );
     if( ret != 0 )
     {
@@ -3337,6 +3339,7 @@ static int ssl_encrypted_extensions_prepare( mbedtls_ssl_context* ssl )
     ssl->transform_out = ssl->transform_negotiate;
     ssl->session_out = ssl->session_negotiate;
 
+    mbedtls_ssl_transform_free( ssl->transform_negotiate );
     ret = mbedtls_set_traffic_key( ssl, &traffic_keys, ssl->transform_negotiate, 0 );
 
     if( ret != 0 )
@@ -4601,6 +4604,7 @@ int mbedtls_ssl_handshake_server_step( mbedtls_ssl_context *ssl )
                     return( ret );
                 }
 
+                mbedtls_ssl_transform_free( ssl->transform_negotiate );
                 ret = mbedtls_set_traffic_key( ssl, &traffic_keys, ssl->transform_negotiate,0 );
 
                 if( ret != 0 )
@@ -4636,6 +4640,7 @@ int mbedtls_ssl_handshake_server_step( mbedtls_ssl_context *ssl )
                 return( ret );
             }
 
+            mbedtls_ssl_transform_free( ssl->transform_negotiate );
             ret = mbedtls_set_traffic_key( ssl, &traffic_keys, ssl->transform_negotiate, 0 );
 
             if( ret != 0 )
