@@ -4287,8 +4287,10 @@ int mbedtls_ssl_parse_new_session_ticket( mbedtls_ssl_context *ssl )
     MBEDTLS_SSL_DEBUG_MSG( 3, ( "ticket->lifetime: %d", lifetime ) );
 
     /* Ticket Age Add */
-    ticket_age_add = ( msg[4] << 24 ) | ( msg[5] << 16 ) |
-        ( msg[6] << 8 ) | ( msg[7] );
+    ticket_age_add = ( (unsigned) msg[4] << 24 ) |
+                     ( (unsigned) msg[5] << 16 ) |
+                     ( (unsigned) msg[6] << 8  ) |
+                     ( (unsigned) msg[7] << 0  );
 
     ssl->session->ticket_age_add = ticket_age_add;
 
