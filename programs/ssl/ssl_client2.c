@@ -3420,38 +3420,6 @@ send_request:
             }
         }
         while( 1 );
-#if defined(MBEDTLS_SSL_NEW_SESSION_TICKET)
-
-    /*
-    * Store ticket, which is sent by the server after the handshake is completed.
-    */
-    if( opt.reconnect != 0 )
-    {
-        mbedtls_printf( "  . Saving ticket...\n" );
-        fflush( stdout );
-
-        ret = mbedtls_ssl_get_client_ticket( &ssl, &ticket );
-
-        if( ret < 0 )
-        {
-            mbedtls_printf( " failed\n  ! mbedtls_ssl_get_ticket returned -0x%x\n\n",
-                                       (unsigned) -ret );
-            goto exit;
-        }
-        else if( ret == 1 )
-        {
-            // no ticket available - we cannot re-connect
-            opt.reconnect = 0;
-            mbedtls_printf( "no ticket available\n" );
-
-        }
-        else if( ret == 0 )
-        {
-            mbedtls_printf( "got ticket\n" );
-        }
-    }
-
-#endif /* MBEDTLS_SSL_NEW_SESSION_TICKET */
     }
     else /* Not stream, so datagram */
     {
