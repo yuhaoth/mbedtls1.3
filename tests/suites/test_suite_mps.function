@@ -14,6 +14,8 @@
 #include "../include/mbedtls/mps/layer3.h"
 #include "../include/mbedtls/mps/mps.h"
 
+#include "../include/mbedtls/ssl_internal.h"
+
 #include "../include/mbedtls/timing.h"
 
 /*
