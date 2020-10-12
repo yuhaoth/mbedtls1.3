@@ -3102,7 +3102,7 @@ int main( int argc, char *argv[] )
         i = 0;
         start = p;
         /* Leave room for a final NULL in named_groups_list */
-        while( i < (int) ( sizeof( named_groups_list ) - 1 ) && *p != '\0' )
+        while( i < NAMED_GROUPS_LIST_SIZE - 1 && *p != '\0' )
         {
             q = p;
 
