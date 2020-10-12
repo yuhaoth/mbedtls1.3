@@ -933,7 +933,7 @@ int mbedtls_ssl_parse_signature_algorithms_ext( mbedtls_ssl_context *ssl,
         return( MBEDTLS_ERR_SSL_ALLOC_FAILED );
     }
 
-    i = 0; 
+    i = 0;
     for( p = buf + 2; p < end; p += 2 )
     {
         signature_scheme = ( p[0] << 8 ) | p[1];
@@ -945,21 +945,21 @@ int mbedtls_ssl_parse_signature_algorithms_ext( mbedtls_ssl_context *ssl,
             if( *md_cur == signature_scheme )
             {
                 ssl->handshake->received_signature_schemes_list[i] = signature_scheme;
-                i++; 
+                i++;
                 got_common_sig_alg = 1;
             }
         }
-       
+
     }
 
     if( got_common_sig_alg == 0 )
     {
         MBEDTLS_SSL_DEBUG_MSG( 3, ( "no signature algorithm in common" ) );
-        mbedtls_free( ssl->handshake->received_signature_schemes_list ); 
+        mbedtls_free( ssl->handshake->received_signature_schemes_list );
         return( MBEDTLS_ERR_SSL_NO_USABLE_CIPHERSUITE );
-    } 
+    }
 
-    ssl->handshake->received_signature_schemes_list[i] = SIGNATURE_NONE; 
+    ssl->handshake->received_signature_schemes_list[i] = SIGNATURE_NONE;
 
     return( 0 );
 }
@@ -1260,24 +1260,24 @@ int mbedtls_increment_sequence_number( unsigned char *sequenceNumber, unsigned c
 
 #if defined(MBEDTLS_SHA256_C)
     /*
-     * ssl_calc_verify_tls_sha256() computes hash over a structure, 
-     * which is later digitally signed and placed into the CertificateVerify message. 
+     * ssl_calc_verify_tls_sha256() computes hash over a structure,
+     * which is later digitally signed and placed into the CertificateVerify message.
      *
-     * The structure computed in this function is: 
+     * The structure computed in this function is:
      *   - 64 bytes of octet 32,
      *   - 33 bytes for the context string (which is either "TLS 1.3, client CertificateVerify"
      *     or "TLS 1.3, server CertificateVerify"),
      *   - 1 byte for the octet 0x0, which servers as a separator,
      *   - 32 bytes for the Transcript-Hash(Handshake Context, Certificate)
      *
-     * The hash of the structure is returned in the variable output_hash. 
+     * The hash of the structure is returned in the variable output_hash.
      */
 static int ssl_calc_verify_tls_sha256( mbedtls_ssl_context *ssl, unsigned char output_hash[32], int from )
 {
-    /* The length of context_string_[client|server] is 
+    /* The length of context_string_[client|server] is
      * sizeof( "TLS 1.3, xxxxxx CertificateVerify" ) - 1, i.e. 33 bytes.
      */
-    const unsigned int content_string_len = sizeof( "TLS 1.3, xxxxxx CertificateVerify" ) - 1; 
+    const unsigned int content_string_len = sizeof( "TLS 1.3, xxxxxx CertificateVerify" ) - 1;
     const unsigned char context_string_client[] = "TLS 1.3, client CertificateVerify";
     const unsigned char context_string_server[] = "TLS 1.3, server CertificateVerify";
     mbedtls_sha256_context sha256;
@@ -1322,24 +1322,24 @@ static int ssl_calc_verify_tls_sha256( mbedtls_ssl_context *ssl, unsigned char o
 
 #if defined(MBEDTLS_SHA512_C)
     /*
-     * ssl_calc_verify_tls_sha384() computes hash over a structure, 
-     * which is later digitally signed and placed into the CertificateVerify message. 
+     * ssl_calc_verify_tls_sha384() computes hash over a structure,
+     * which is later digitally signed and placed into the CertificateVerify message.
      *
-     * The structure computed in this function is: 
+     * The structure computed in this function is:
      *   - 64 bytes of octet 32,
      *   - 33 bytes for the context string (which is either "TLS 1.3, client CertificateVerify"
      *     or "TLS 1.3, server CertificateVerify"),
      *   - 1 byte for the octet 0x0, which servers as a separator,
      *   - 48 bytes for the Transcript-Hash(Handshake Context, Certificate)
      *
-     * The hash of the structure is returned in the variable hash. 
+     * The hash of the structure is returned in the variable hash.
      */
 static int ssl_calc_verify_tls_sha384( mbedtls_ssl_context *ssl, unsigned char output_hash[48], int from )
 {
-    /* The length of context_string_[client|server] is 
+    /* The length of context_string_[client|server] is
      * sizeof( "TLS 1.3, xxxxxx CertificateVerify" ) - 1, i.e. 33 bytes.
      */
-    const unsigned int content_string_len = sizeof( "TLS 1.3, xxxxxx CertificateVerify" ) - 1; 
+    const unsigned int content_string_len = sizeof( "TLS 1.3, xxxxxx CertificateVerify" ) - 1;
     const unsigned char context_string_client[] = "TLS 1.3, client CertificateVerify";
     const unsigned char context_string_server[] = "TLS 1.3, server CertificateVerify";
     mbedtls_sha512_context sha384;
@@ -3076,7 +3076,7 @@ int mbedtls_ssl_generate_application_traffic_keys( mbedtls_ssl_context *ssl, mbe
     transform->minlen += 1;
 
     MBEDTLS_SSL_DEBUG_BUF( 5, "Transcript hash (including Server.Finished):",
-                              ssl->handshake->server_finished_digest, 
+                              ssl->handshake->server_finished_digest,
                               mbedtls_hash_size_for_ciphersuite( suite_info ) );
 
     /* Generate client_application_traffic_secret_0
@@ -3091,7 +3091,7 @@ int mbedtls_ssl_generate_application_traffic_keys( mbedtls_ssl_context *ssl, mbe
     ret = mbedtls_ssl_tls1_3_derive_secret( mbedtls_md_get_type( md_info ),
                          ssl->handshake->master_secret, mbedtls_hash_size_for_ciphersuite( suite_info ),
                          MBEDTLS_SSL_TLS1_3_LBL_WITH_LEN( c_ap_traffic ),
-                         ssl->handshake->server_finished_digest, mbedtls_hash_size_for_ciphersuite( suite_info ), 
+                         ssl->handshake->server_finished_digest, mbedtls_hash_size_for_ciphersuite( suite_info ),
                          MBEDTLS_SSL_TLS1_3_CONTEXT_HASHED,
                          ssl->handshake->client_traffic_secret, mbedtls_hash_size_for_ciphersuite( suite_info ) );
 
@@ -3127,7 +3127,7 @@ int mbedtls_ssl_generate_application_traffic_keys( mbedtls_ssl_context *ssl, mbe
     ret = mbedtls_ssl_tls1_3_derive_secret( mbedtls_md_get_type( md_info ),
                          ssl->handshake->master_secret, mbedtls_hash_size_for_ciphersuite( suite_info ),
                          MBEDTLS_SSL_TLS1_3_LBL_WITH_LEN( s_ap_traffic ),
-                         ssl->handshake->server_finished_digest, mbedtls_hash_size_for_ciphersuite( suite_info ), 
+                         ssl->handshake->server_finished_digest, mbedtls_hash_size_for_ciphersuite( suite_info ),
                          MBEDTLS_SSL_TLS1_3_CONTEXT_HASHED,
                          ssl->handshake->server_traffic_secret, mbedtls_hash_size_for_ciphersuite( suite_info ) );
 
@@ -3157,7 +3157,7 @@ int mbedtls_ssl_generate_application_traffic_keys( mbedtls_ssl_context *ssl, mbe
 
     MBEDTLS_SSL_DEBUG_MSG( 5, ( "-->> Calling mbedtls_ssl_tls1_3_make_traffic_keys( ):" ) );
     MBEDTLS_SSL_DEBUG_MSG( 5, ( "-- Hash Algorithm: %s", mbedtls_md_get_name( md_info ) ) );
-    MBEDTLS_SSL_DEBUG_MSG( 5, ( "-- Handshake Traffic Secret Length: %d bytes", 
+    MBEDTLS_SSL_DEBUG_MSG( 5, ( "-- Handshake Traffic Secret Length: %d bytes",
                               mbedtls_hash_size_for_ciphersuite( suite_info ) ) );
     MBEDTLS_SSL_DEBUG_BUF( 5, "-- Client_traffic_secret:",
                               ssl->handshake->client_traffic_secret,
@@ -3937,9 +3937,9 @@ static int ssl_finished_out_postprocess( mbedtls_ssl_context* ssl )
             mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_CLIENT_CERTIFICATE );
         }
 
-        /* Compute hash over transcript of all messages sent up to the Finished message 
-         * sent by the server and store it in the digest variable of the handshake state. 
-         * This digest will be needed later when computing the application traffic secrets. 
+        /* Compute hash over transcript of all messages sent up to the Finished message
+         * sent by the server and store it in the digest variable of the handshake state.
+         * This digest will be needed later when computing the application traffic secrets.
          */
         cipher_info = mbedtls_cipher_info_from_type(ssl->transform_negotiate->ciphersuite_info->cipher );
         if( cipher_info == NULL )
@@ -4164,9 +4164,9 @@ static int ssl_finished_in_postprocess( mbedtls_ssl_context* ssl )
 
     if( ssl->conf->endpoint == MBEDTLS_SSL_IS_CLIENT )
     {
-        /* Compute hash over transcript of all messages sent up to the Finished message 
-         * sent by the server and store it in the digest variable of the handshake state. 
-         * This digest will be needed later when computing the application traffic secrets. 
+        /* Compute hash over transcript of all messages sent up to the Finished message
+         * sent by the server and store it in the digest variable of the handshake state.
+         * This digest will be needed later when computing the application traffic secrets.
          */
         cipher_info = mbedtls_cipher_info_from_type(ssl->transform_negotiate->ciphersuite_info->cipher );
         if( cipher_info == NULL )
@@ -4454,7 +4454,7 @@ int mbedtls_ssl_conf_ticket_meta( mbedtls_ssl_config *conf,
 void mbedtls_ssl_conf_signature_algorithms( mbedtls_ssl_config *conf,
                      const int* sig_algs )
 {
-    conf->sig_hashes = sig_algs; 
+    conf->sig_hashes = sig_algs;
 }
 #endif /* MBEDTLS_X509_CRT_PARSE_C */
 
