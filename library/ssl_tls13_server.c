@@ -1048,7 +1048,7 @@ psk_parsing_successful:
         {
             /* Case 1: We are using the PSK from a ticket */
             ret = ssl_calc_binder( ssl, ssl->handshake->psk, ssl->handshake->psk_len,
-                                  mbedtls_md_info_from_type( ssl->transform_negotiate->ciphersuite_info->mac ), ssl->transform_negotiate->ciphersuite_info,
+                                  mbedtls_md_info_from_type( ssl->handshake->ciphersuite_info->mac ), ssl->handshake->ciphersuite_info,
                                   truncated_clienthello_start, truncated_clienthello_end - truncated_clienthello_start, server_computed_binder );
         }
         else {
@@ -1057,7 +1057,7 @@ psk_parsing_successful:
                 return( ret );
 
             ret = ssl_calc_binder( ssl, (unsigned char *) psk, psk_len,
-                                  mbedtls_md_info_from_type( ssl->transform_negotiate->ciphersuite_info->mac ), ssl->transform_negotiate->ciphersuite_info,
+                                  mbedtls_md_info_from_type( ssl->handshake->ciphersuite_info->mac ), ssl->handshake->ciphersuite_info,
                                   truncated_clienthello_start, truncated_clienthello_end - truncated_clienthello_start, server_computed_binder );
         }
 
@@ -1623,7 +1623,7 @@ static int ssl_write_new_session_ticket( mbedtls_ssl_context *ssl )
         return( ret );
     }
 
-    suite_info = ( mbedtls_ssl_ciphersuite_t * ) ssl->transform_negotiate->ciphersuite_info;
+    suite_info = ( mbedtls_ssl_ciphersuite_t * ) ssl->handshake->ciphersuite_info;
     hash_length = mbedtls_hash_size_for_ciphersuite( suite_info );
 
     if( hash_length == -1 )
@@ -1641,7 +1641,7 @@ static int ssl_write_new_session_ticket( mbedtls_ssl_context *ssl )
     ticket.ticket_lifetime = ctx->ticket_lifetime;
     /* In this code the psk key length equals the length of the hash */
     ticket.key_len = hash_length;
-    ticket.ciphersuite = ssl->transform_negotiate->ciphersuite_info->id;
+    ticket.ciphersuite = ssl->handshake->ciphersuite_info->id;
 
 #if defined(MBEDTLS_X509_CRT_PARSE_C)
     /* Check whether the client provided a certificate during the exchange */
@@ -2826,7 +2826,7 @@ static int ssl_client_hello_parse( mbedtls_ssl_context* ssl,
                                 ciphersuite_info->name ) );
 
     ssl->session_negotiate->ciphersuite = ciphersuites[i];
-    ssl->transform_negotiate->ciphersuite_info = ciphersuite_info;
+    ssl->handshake->ciphersuite_info = ciphersuite_info;
 
     /* List all the extensions we have received */
 
@@ -3099,7 +3099,7 @@ static int ssl_client_hello_parse( mbedtls_ssl_context* ssl,
         transcript[1] = 0;
         transcript[2] = 0;
 
-        hash_length = mbedtls_hash_size_for_ciphersuite( ssl->transform_negotiate->ciphersuite_info );
+        hash_length = mbedtls_hash_size_for_ciphersuite( ssl->handshake->ciphersuite_info );
 
         if( hash_length == -1 )
         {
@@ -3110,7 +3110,7 @@ static int ssl_client_hello_parse( mbedtls_ssl_context* ssl,
         transcript[3] = ( uint8_t )hash_length;
 
 
-        if( ssl->transform_negotiate->ciphersuite_info->mac == MBEDTLS_MD_SHA256 )
+        if( ssl->handshake->ciphersuite_info->mac == MBEDTLS_MD_SHA256 )
         {
 #if defined(MBEDTLS_SHA256_C)
             mbedtls_sha256_init( &sha256 );
@@ -3123,7 +3123,7 @@ static int ssl_client_hello_parse( mbedtls_ssl_context* ssl,
             return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
 #endif /* MBEDTLS_SHA256_C */
         }
-        else if( ssl->transform_negotiate->ciphersuite_info->mac == MBEDTLS_MD_SHA384 )
+        else if( ssl->handshake->ciphersuite_info->mac == MBEDTLS_MD_SHA384 )
         {
 #if defined(MBEDTLS_SHA512_C)
             mbedtls_sha512_init( &sha512 );
@@ -3136,7 +3136,7 @@ static int ssl_client_hello_parse( mbedtls_ssl_context* ssl,
             return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
 #endif /* MBEDTLS_SHA512_C */
         }
-        else if( ssl->transform_negotiate->ciphersuite_info->mac == MBEDTLS_MD_SHA512 )
+        else if( ssl->handshake->ciphersuite_info->mac == MBEDTLS_MD_SHA512 )
         {
 #if defined(MBEDTLS_SHA512_C)
             mbedtls_sha512_init( &sha512 );
@@ -3158,7 +3158,7 @@ static int ssl_client_hello_parse( mbedtls_ssl_context* ssl,
         MBEDTLS_SSL_DEBUG_MSG( 5, ( "--- Checksum ( ssl_parse_client_hello, normal transcript hash )" ) );
         ssl->handshake->update_checksum( ssl, orig_buf, orig_msg_len );
     }
-    mbedtls_ssl_optimize_checksum( ssl, ssl->transform_negotiate->ciphersuite_info );
+    mbedtls_ssl_optimize_checksum( ssl, ssl->handshake->ciphersuite_info );
 
     return( final_ret );
 }

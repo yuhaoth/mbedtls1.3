@@ -107,7 +107,7 @@ static int ssl_encrypt_buf( mbedtls_ssl_context *ssl )
         unsigned char taglen;
 
         /* Currently there is only one cipher with a short authentication tag defined */
-        if( ssl->transform_out->ciphersuite_info->cipher == MBEDTLS_CIPHER_AES_128_CCM_8 )
+        if( ssl->handshake->ciphersuite_info->cipher == MBEDTLS_CIPHER_AES_128_CCM_8 )
             taglen = 8;
         else taglen = 16;
 
@@ -300,7 +300,7 @@ static int ssl_decrypt_buf( mbedtls_ssl_context *ssl )
         size_t add_data_len;
 
         /* Currently there is only one cipher with a short authentication tag defined */
-        if( ssl->transform_in->ciphersuite_info->cipher == MBEDTLS_CIPHER_AES_128_CCM_8 )
+        if( ssl->handshake->ciphersuite_info->cipher == MBEDTLS_CIPHER_AES_128_CCM_8 )
             taglen = 8;
         else taglen = 16;
 
