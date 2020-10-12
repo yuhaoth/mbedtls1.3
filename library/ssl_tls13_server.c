@@ -1399,13 +1399,17 @@ static int ssl_parse_key_exchange_modes_ext( mbedtls_ssl_context *ssl,
  */
 
 static int ssl_write_supported_version_ext( mbedtls_ssl_context *ssl,
-                                           unsigned char* buf,
-                                           unsigned char* end,
-                                           size_t* olen )
+                                            unsigned char* buf,
+                                            unsigned char* end,
+                                            size_t* olen )
 {
     unsigned char *p = buf;
-
     *olen = 0;
+
+    if( ssl->handshake->extensions_present & SUPPORTED_VERSION_EXTENSION )
+    {
+        return( 0 );
+    }
 
     MBEDTLS_SSL_DEBUG_MSG( 3, ( "adding supported version extension" ) );
 
@@ -3999,17 +4003,14 @@ static int ssl_server_hello_write( mbedtls_ssl_context* ssl,
 #endif /* ( MBEDTLS_ECDH_C || MBEDTLS_ECDSA_C */
 
     /* Add supported_version extension */
-    if( ssl->handshake->extensions_present & SUPPORTED_VERSION_EXTENSION )
+    if( ( ret = ssl_write_supported_version_ext( ssl, buf, end, &cur_ext_len ) ) != 0 )
     {
-        if( ( ret = ssl_write_supported_version_ext( ssl, buf, end, &cur_ext_len ) ) != 0 )
-        {
-            MBEDTLS_SSL_DEBUG_RET( 1, "ssl_write_supported_version_ext", ret );
-            return( ret );
-        }
-
-        total_ext_len += cur_ext_len;
-        buf += cur_ext_len;
+        MBEDTLS_SSL_DEBUG_RET( 1, "ssl_write_supported_version_ext", ret );
+        return( ret );
     }
+
+    total_ext_len += cur_ext_len;
+    buf += cur_ext_len;
 
 #if defined(MBEDTLS_CID)
     if( ssl->handshake->extensions_present & CID_EXTENSION )
