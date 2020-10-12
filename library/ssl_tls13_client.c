@@ -1975,10 +1975,12 @@ static int ssl_parse_supported_version_ext( mbedtls_ssl_context* ssl,
                                             const unsigned char* buf,
                                             size_t len )
 {
+    ((void) ssl);
 
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
     if( ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_DATAGRAM )
     {
+        /* TODO: Remove magic numbers */
         if( len != 2 && buf[0] != 254 && buf[1] != 253 )
         {
             MBEDTLS_SSL_DEBUG_MSG( 1, ( "unexpected version" ) );
@@ -1988,13 +1990,13 @@ static int ssl_parse_supported_version_ext( mbedtls_ssl_context* ssl,
     else
 #endif /* MBEDTLS_SSL_PROTO_DTLS */
     {
+        /* TODO: Remove magic numbers */
         if( len != 2 && buf[0] != 0x3 && buf[1] != 0x3 )
         {
             MBEDTLS_SSL_DEBUG_MSG( 1, ( "unexpected version" ) );
             return( MBEDTLS_ERR_SSL_BAD_HS_SERVER_HELLO );
         }
     }
-
 
     return( 0 );
 }
