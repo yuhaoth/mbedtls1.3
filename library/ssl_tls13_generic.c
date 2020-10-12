@@ -1411,12 +1411,8 @@ static int ssl_calc_verify_tls_sha384( mbedtls_ssl_context *ssl, unsigned char o
  *     0 -> HKDF-Extract = Master Secret
  *
  */
-int mbedtls_ssl_tls1_3_derive_master_secret( mbedtls_ssl_context *ssl ) {
-
-    unsigned char salt[MBEDTLS_MD_MAX_SIZE];
-    unsigned char null_ikm[MBEDTLS_MD_MAX_SIZE];
-    unsigned char intermediary_secret[MBEDTLS_MD_MAX_SIZE];
-
+int mbedtls_ssl_tls1_3_derive_master_secret( mbedtls_ssl_context *ssl )
+{
     unsigned char ECDHE[66];
 
     size_t ECDHE_len;
@@ -1554,10 +1550,7 @@ int mbedtls_ssl_tls1_3_derive_master_secret( mbedtls_ssl_context *ssl ) {
         return( ret );
     }
 
-    MBEDTLS_SSL_DEBUG_MSG( 5, ( "HKDF Extract -- early_secret" ) );
-    MBEDTLS_SSL_DEBUG_BUF( 5, "Salt", salt, hash_size );
-    MBEDTLS_SSL_DEBUG_BUF( 5, "Input", psk, psk_len );
-    MBEDTLS_SSL_DEBUG_BUF( 5, "Output", ssl->handshake->early_secret, hash_size );
+    MBEDTLS_SSL_DEBUG_BUF( 4, "Early secret", ssl->handshake->early_secret, hash_size );
 
     /*
      * Compute HandshakeSecret
@@ -1575,10 +1568,7 @@ int mbedtls_ssl_tls1_3_derive_master_secret( mbedtls_ssl_context *ssl ) {
         return( ret );
     }
 
-    MBEDTLS_SSL_DEBUG_MSG( 5, ( "HKDF Extract -- handshake_secret" ) );
-    MBEDTLS_SSL_DEBUG_BUF( 5, "Salt", intermediary_secret, hash_size );
-    MBEDTLS_SSL_DEBUG_BUF( 5, "Input ( ECDHE )", ECDHE, hash_size );
-    MBEDTLS_SSL_DEBUG_BUF( 5, "Output", ssl->handshake->handshake_secret, hash_size );
+    MBEDTLS_SSL_DEBUG_BUF( 4, "Handshake secret", ssl->handshake->handshake_secret, hash_size );
 
     /*
      * Compute MasterSecret
@@ -1596,10 +1586,7 @@ int mbedtls_ssl_tls1_3_derive_master_secret( mbedtls_ssl_context *ssl ) {
         return( ret );
     }
 
-    MBEDTLS_SSL_DEBUG_MSG( 5, ( "HKDF Extract -- master_secret" ) );
-    MBEDTLS_SSL_DEBUG_BUF( 5, "Salt", intermediary_secret, hash_size );
-    MBEDTLS_SSL_DEBUG_BUF( 5, "Input", null_ikm, hash_size );
-    MBEDTLS_SSL_DEBUG_BUF( 5, "Output", ssl->handshake->master_secret, hash_size );
+    MBEDTLS_SSL_DEBUG_BUF( 4, "Master secret", ssl->handshake->master_secret, hash_size );
 
     if( psk_allocated == 1 ) mbedtls_free( psk );
 
@@ -4285,7 +4272,7 @@ int mbedtls_ssl_parse_new_session_ticket( mbedtls_ssl_context *ssl )
     uint8_t ticket_nonce_len;
     size_t ticket_len, ext_len;
     unsigned char *ticket;
-    const unsigned char *msg, *extensions;
+    const unsigned char *msg;
     const mbedtls_ssl_ciphersuite_t *suite_info;
     unsigned int msg_len;
 
@@ -4398,11 +4385,9 @@ int mbedtls_ssl_parse_new_session_ticket( mbedtls_ssl_context *ssl )
     MBEDTLS_SSL_DEBUG_MSG( 3, ( "ticket->extension length: %d", ext_len ) );
 
     /* We are not storing any extensions at the moment */
-    if( ext_len > 0 )
-    {
-        extensions = &msg[13 + ticket_nonce_len + ticket_len];
-        MBEDTLS_SSL_DEBUG_BUF( 3, "ticket->extension", extensions, ext_len );
-    }
+    MBEDTLS_SSL_DEBUG_BUF( 3, "ticket->extension",
+                           &msg[13 + ticket_nonce_len + ticket_len],
+                           ext_len );
 
     /* Compute PSK based on received nonce and resumption_master_secret
      * in the following style:
