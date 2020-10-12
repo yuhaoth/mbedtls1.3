@@ -90,7 +90,6 @@ int main( void )
 
 #define MAX_REQUEST_SIZE      20000
 #define MAX_REQUEST_SIZE_STR "20000"
-#define MAX_NAMED_GROUPS        4
 
 #define DFL_SERVER_NAME         "localhost"
 #define DFL_SERVER_ADDR         NULL
@@ -528,9 +527,10 @@ int main( void )
     " acceptable ciphersuite names:\n"
 
 
-#define ALPN_LIST_SIZE  10
-#define CURVE_LIST_SIZE 20
-#define SIG_ALG_LIST_SIZE 5
+#define ALPN_LIST_SIZE         10
+#define CURVE_LIST_SIZE        20
+#define SIG_ALG_LIST_SIZE      5
+#define NAMED_GROUPS_LIST_SIZE 4
 
 /*
  * global options
@@ -1344,9 +1344,9 @@ int main( int argc, char *argv[] )
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && \
     defined(MBEDTLS_ECP_C)
     /* list of named groups */
-    mbedtls_ecp_group_id named_groups_list[MAX_NAMED_GROUPS];
+    mbedtls_ecp_group_id named_groups_list[NAMED_GROUPS_LIST_SIZE];
     /* list of named groups for key share*/
-    mbedtls_ecp_group_id key_share_named_groups_list[MAX_NAMED_GROUPS];
+    mbedtls_ecp_group_id key_share_named_groups_list[NAMED_GROUPS_LIST_SIZE];
     char *start;
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL && MBEDTLS_ECP_C */
 
@@ -2273,7 +2273,7 @@ int main( int argc, char *argv[] )
         start = p;
 
         /* Leave room for a final NULL in named_groups_list */
-        while( i < (int) ( sizeof( named_groups_list ) - 1 ) && *p != '\0' )
+        while( i < NAMED_GROUPS_LIST_SIZE - 1 && *p != '\0' )
         {
             while( *p != ',' && *p != '\0' )
                 p++;
@@ -2312,7 +2312,7 @@ int main( int argc, char *argv[] )
         start = p;
 
         /* Leave room for a final NULL in named_groups_list */
-        while( i < (int) ( sizeof( key_share_named_groups_list ) - 1 ) && *p != '\0')
+        while( i < NAMED_GROUPS_LIST_SIZE - 1 && *p != '\0')
         {
             while( *p != ',' && *p != '\0' )
                 p++;
