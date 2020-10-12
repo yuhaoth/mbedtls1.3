@@ -3068,8 +3068,8 @@ int main( int argc, char *argv[] )
     } else 
     {
         /* Configure default signature algorithm */
-        sig_alg_list[i++] = SIGNATURE_ECDSA_SECP256r1_SHA256;
-        sig_alg_list[i] = SIGNATURE_NONE;
+        sig_alg_list[0] = SIGNATURE_ECDSA_SECP256r1_SHA256;
+        sig_alg_list[1] = SIGNATURE_NONE;
     }
         
     mbedtls_printf( "Number of signature algorithms: %d\n", i );
