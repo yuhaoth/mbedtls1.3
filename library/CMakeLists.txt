@@ -109,6 +109,14 @@ set(src_tls
     ssl_tls13_keys.c
     ssl_tls13_messaging.c
     ssl_tls13_server.c
+    mps/allocator.c
+    mps/trace.c
+    mps/layer1.c
+    mps/layer2.c
+    mps/layer3.c
+    mps/mps.c
+    mps/reader.c
+    mps/writer.c
 )
 
 if(CMAKE_COMPILER_IS_GNUCC)
