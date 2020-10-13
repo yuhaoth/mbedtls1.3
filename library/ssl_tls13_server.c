@@ -3269,15 +3269,15 @@ static int ssl_client_hello_parse( mbedtls_ssl_context* ssl,
 
 cleanup:
 #if defined(MBEDTLS_SHA256_C)
-    if( ssl->transform_negotiate->ciphersuite_info->mac == MBEDTLS_MD_SHA256 )
+    if( ssl->handshake->ciphersuite_info->mac == MBEDTLS_MD_SHA256 )
     {
         mbedtls_sha256_free( &sha256 );
     }
     else
 #endif
 #if defined(MBEDTLS_SHA512_C)
-    if( ssl->transform_negotiate->ciphersuite_info->mac == MBEDTLS_MD_SHA384 ||
-        ssl->transform_negotiate->ciphersuite_info->mac == MBEDTLS_MD_SHA512 )
+    if( ssl->handshake->ciphersuite_info->mac == MBEDTLS_MD_SHA384 ||
+        ssl->handshake->ciphersuite_info->mac == MBEDTLS_MD_SHA512 )
     {
         mbedtls_sha512_free( &sha512 );
     }
@@ -3691,7 +3691,7 @@ static int ssl_write_hello_retry_request( mbedtls_ssl_context *ssl )
         return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
     }
 
-    /*ciphersuite_info = ssl->transform_negotiate->ciphersuite_info; */
+    /*ciphersuite_info = ssl->handshake->ciphersuite_info; */
 
     /* write magic string ( as a replacement for the random value ) */
     memcpy( p, &magic_hrr_string[0], 32 );

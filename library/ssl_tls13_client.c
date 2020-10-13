@@ -3884,15 +3884,15 @@ static int ssl_hrr_postprocess( mbedtls_ssl_context* ssl,
 
 exit:
 #if defined(MBEDTLS_SHA256_C)
-    if( ssl->transform_negotiate->ciphersuite_info->mac == MBEDTLS_MD_SHA256 )
+    if( ssl->handshake->ciphersuite_info->mac == MBEDTLS_MD_SHA256 )
     {
         mbedtls_sha256_free( &ssl->handshake->fin_sha256 );
     }
     else
 #endif
 #if defined(MBEDTLS_SHA512_C)
-    if( ssl->transform_negotiate->ciphersuite_info->mac == MBEDTLS_MD_SHA384 ||
-        ssl->transform_negotiate->ciphersuite_info->mac == MBEDTLS_MD_SHA512 )
+    if( ssl->handshake->ciphersuite_info->mac == MBEDTLS_MD_SHA384 ||
+        ssl->handshake->ciphersuite_info->mac == MBEDTLS_MD_SHA512 )
     {
         mbedtls_sha512_free( &ssl->handshake->fin_sha512 );
     }

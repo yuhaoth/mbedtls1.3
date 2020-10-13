@@ -1895,7 +1895,7 @@ static int ssl_certificate_verify_write( mbedtls_ssl_context* ssl,
     buf[4] = (unsigned char)( ( ssl->handshake->signature_scheme >> 8 ) & 0xFF );
     buf[5] = (unsigned char)( ( ssl->handshake->signature_scheme ) & 0xFF );
 
-    /* Info from ssl->transform_negotiate->ciphersuite_info->mac will be used instead */
+    /* Info from ssl->handshake->ciphersuite_info->mac will be used instead */
     hashlen = 0;
     offset = 2;
 
@@ -3534,7 +3534,7 @@ int mbedtls_ssl_early_data_key_derivation( mbedtls_ssl_context *ssl, mbedtls_ssl
 
     if( ssl->handshake->ciphersuite_info == NULL )
     {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "transform_negotiate->ciphersuite_info == NULL, mbedtls_ssl_early_data_key_derivation failed" ) );
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "handshake->ciphersuite_info == NULL, mbedtls_ssl_early_data_key_derivation failed" ) );
         return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
     }
 
@@ -4033,7 +4033,8 @@ static int ssl_finished_out_postprocess( mbedtls_ssl_context* ssl )
     int ret;
     mbedtls_ssl_key_set* traffic_keys = ssl->handshake->state_local.finished_out.traffic_keys;
 #if defined(MBEDTLS_SSL_SRV_C)
-    const mbedtls_ssl_ciphersuite_t *suite_info;
+    const mbedtls_ssl_ciphersuite_t *suite_info =
+        mbedtls_ssl_ciphersuite_from_id( ssl->session_negotiate->ciphersuite );
     const mbedtls_cipher_info_t *cipher_info;
 
 #if defined(MBEDTLS_SHA256_C)
@@ -4116,7 +4117,6 @@ static int ssl_finished_out_postprocess( mbedtls_ssl_context* ssl )
             return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
         }
 
-        suite_info = mbedtls_ssl_ciphersuite_from_id( ssl->session_negotiate->ciphersuite );
         if( suite_info == NULL )
         {
             MBEDTLS_SSL_DEBUG_MSG( 1, ( "mbedtls_ssl_ciphersuite_from_id in mbedtls_ssl_derive_traffic_keys failed" ) );
@@ -4173,7 +4173,6 @@ static int ssl_finished_out_postprocess( mbedtls_ssl_context* ssl )
 #endif /* MBEDTLS_SHA512_C */
         }
     }
-#endif /* MBEDTLS_SSL_SRV_C */
 
 exit:
 #if defined(MBEDTLS_SHA256_C)
@@ -4194,6 +4193,7 @@ exit:
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "mbedtls_ssl_tls1_3_derive_master_secret: Unknow hash function." ) );
         return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
     }
+#endif /* MBEDTLS_SSL_SRV_C */
 
     return( ret );
 }
@@ -4362,7 +4362,8 @@ static int ssl_finished_in_postprocess( mbedtls_ssl_context* ssl )
 	int ret = 0;
 
 #if defined(MBEDTLS_SSL_CLI_C)
-    const mbedtls_ssl_ciphersuite_t *suite_info;
+    const mbedtls_ssl_ciphersuite_t *suite_info =
+        mbedtls_ssl_ciphersuite_from_id( ssl->session_negotiate->ciphersuite );
     const mbedtls_cipher_info_t *cipher_info;
 
 #if defined(MBEDTLS_SHA256_C)
@@ -4387,7 +4388,6 @@ static int ssl_finished_in_postprocess( mbedtls_ssl_context* ssl )
             return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
         }
 
-        suite_info = mbedtls_ssl_ciphersuite_from_id( ssl->session_negotiate->ciphersuite );
         if( suite_info == NULL )
         {
             MBEDTLS_SSL_DEBUG_MSG( 1, ( "mbedtls_ssl_ciphersuite_from_id in mbedtls_ssl_derive_traffic_keys failed" ) );
@@ -4447,7 +4447,6 @@ static int ssl_finished_in_postprocess( mbedtls_ssl_context* ssl )
         }
 
     }
-#endif /* MBEDTLS_SSL_CLI_C */
 
 exit:
 #if defined(MBEDTLS_SHA256_C)
@@ -4468,6 +4467,7 @@ exit:
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "mbedtls_ssl_tls1_3_derive_master_secret: Unknow hash function." ) );
         return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
     }
+#endif /* MBEDTLS_SSL_CLI_C */
 
     return( ret );
 }
