@@ -19,6 +19,18 @@
 #if !defined(MBEDTLS_SSL_TLS1_3_KEYS_H)
 #define MBEDTLS_SSL_TLS1_3_KEYS_H
 
+/* The maximum size of the intermediate key material.
+ * The IKM can be a
+ * - 0-string of length corresponding to the size of the
+ *   underlying hash function, and hence can be bounded
+ *   in size by MBEDTLS_MD_MAX_SIZE.
+ * - the PSK, which is bounded in size by MBEDTLS_PREMASTER_SIZE
+ * - the (EC)DHE, which is bounded in size by MBEDTLS_PREMASTER_SIZE
+ */
+#define MBEDTLS_SSL_TLS1_3_MAX_IKM_SIZE \
+    ( MBEDTLS_PREMASTER_SIZE > MBEDTLS_MD_MAX_SIZE ? \
+      MBEDTLS_PREMASTER_SIZE : MBEDTLS_MD_MAX_SIZE )
+
 /* This requires MBEDTLS_SSL_TLS1_3_LABEL( idx, name, string ) to be defined at
  * the point of use. See e.g. the definition of mbedtls_ssl_tls1_3_labels_union
  * below. */
@@ -254,7 +266,8 @@ int mbedtls_ssl_tls1_3_derive_secret(
  *                    ephemeral (EC)DH secret). If not \c NULL, this must be
  *                    a readable buffer whose size \p input_len Bytes.
  *                    If \c NULL, an all \c 0 array will be used instead.
- * \param input_len   The length of \p input in Bytes.
+ * \param input_len   The length of \p input in Bytes. This must not be
+ *                    larger than MBEDTLS_SSL_TLS1_3_MAX_IKM_SIZE.
  * \param secret_new  The address of the buffer holding the new secret
  *                    on function exit. This must be a writable buffer
  *                    whose size matches the output size of the hash

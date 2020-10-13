@@ -1048,7 +1048,7 @@ psk_parsing_successful:
         {
             /* Case 1: We are using the PSK from a ticket */
             ret = ssl_calc_binder( ssl, ssl->handshake->psk, ssl->handshake->psk_len,
-                                  mbedtls_md_info_from_type( ssl->transform_negotiate->ciphersuite_info->mac ), ssl->transform_negotiate->ciphersuite_info,
+                                  mbedtls_md_info_from_type( ssl->handshake->ciphersuite_info->mac ), ssl->handshake->ciphersuite_info,
                                   truncated_clienthello_start, truncated_clienthello_end - truncated_clienthello_start, server_computed_binder );
         }
         else {
@@ -1057,7 +1057,7 @@ psk_parsing_successful:
                 return( ret );
 
             ret = ssl_calc_binder( ssl, (unsigned char *) psk, psk_len,
-                                  mbedtls_md_info_from_type( ssl->transform_negotiate->ciphersuite_info->mac ), ssl->transform_negotiate->ciphersuite_info,
+                                  mbedtls_md_info_from_type( ssl->handshake->ciphersuite_info->mac ), ssl->handshake->ciphersuite_info,
                                   truncated_clienthello_start, truncated_clienthello_end - truncated_clienthello_start, server_computed_binder );
         }
 
@@ -1399,13 +1399,17 @@ static int ssl_parse_key_exchange_modes_ext( mbedtls_ssl_context *ssl,
  */
 
 static int ssl_write_supported_version_ext( mbedtls_ssl_context *ssl,
-                                           unsigned char* buf,
-                                           unsigned char* end,
-                                           size_t* olen )
+                                            unsigned char* buf,
+                                            unsigned char* end,
+                                            size_t* olen )
 {
     unsigned char *p = buf;
-
     *olen = 0;
+
+    if( ssl->handshake->extensions_present & SUPPORTED_VERSION_EXTENSION )
+    {
+        return( 0 );
+    }
 
     MBEDTLS_SSL_DEBUG_MSG( 3, ( "adding supported version extension" ) );
 
@@ -1623,7 +1627,7 @@ static int ssl_write_new_session_ticket( mbedtls_ssl_context *ssl )
         return( ret );
     }
 
-    suite_info = ( mbedtls_ssl_ciphersuite_t * ) ssl->transform_negotiate->ciphersuite_info;
+    suite_info = ( mbedtls_ssl_ciphersuite_t * ) ssl->handshake->ciphersuite_info;
     hash_length = mbedtls_hash_size_for_ciphersuite( suite_info );
 
     if( hash_length == -1 )
@@ -1641,7 +1645,7 @@ static int ssl_write_new_session_ticket( mbedtls_ssl_context *ssl )
     ticket.ticket_lifetime = ctx->ticket_lifetime;
     /* In this code the psk key length equals the length of the hash */
     ticket.key_len = hash_length;
-    ticket.ciphersuite = ssl->transform_negotiate->ciphersuite_info->id;
+    ticket.ciphersuite = ssl->handshake->ciphersuite_info->id;
 
 #if defined(MBEDTLS_X509_CRT_PARSE_C)
     /* Check whether the client provided a certificate during the exchange */
@@ -1810,6 +1814,7 @@ static int ssl_read_end_of_early_data_preprocess( mbedtls_ssl_context* ssl )
         return( ret );
     }
 
+    mbedtls_ssl_transform_free( ssl->transform_negotiate );
     ret = mbedtls_set_traffic_key( ssl, &traffic_keys, ssl->transform_negotiate, 0 );
     if( ret != 0 )
     {
@@ -1910,6 +1915,7 @@ static int ssl_read_early_data_preprocess( mbedtls_ssl_context* ssl )
         return( ret );
     }
 
+    mbedtls_ssl_transform_free( ssl->transform_negotiate );
     ret = mbedtls_set_traffic_key( ssl, &traffic_keys, ssl->transform_negotiate, 0 );
     if( ret != 0 )
     {
@@ -2826,7 +2832,7 @@ static int ssl_client_hello_parse( mbedtls_ssl_context* ssl,
                                 ciphersuite_info->name ) );
 
     ssl->session_negotiate->ciphersuite = ciphersuites[i];
-    ssl->transform_negotiate->ciphersuite_info = ciphersuite_info;
+    ssl->handshake->ciphersuite_info = ciphersuite_info;
 
     /* List all the extensions we have received */
 
@@ -3099,7 +3105,7 @@ static int ssl_client_hello_parse( mbedtls_ssl_context* ssl,
         transcript[1] = 0;
         transcript[2] = 0;
 
-        hash_length = mbedtls_hash_size_for_ciphersuite( ssl->transform_negotiate->ciphersuite_info );
+        hash_length = mbedtls_hash_size_for_ciphersuite( ssl->handshake->ciphersuite_info );
 
         if( hash_length == -1 )
         {
@@ -3110,7 +3116,7 @@ static int ssl_client_hello_parse( mbedtls_ssl_context* ssl,
         transcript[3] = ( uint8_t )hash_length;
 
 
-        if( ssl->transform_negotiate->ciphersuite_info->mac == MBEDTLS_MD_SHA256 )
+        if( ssl->handshake->ciphersuite_info->mac == MBEDTLS_MD_SHA256 )
         {
 #if defined(MBEDTLS_SHA256_C)
             mbedtls_sha256_init( &sha256 );
@@ -3123,7 +3129,7 @@ static int ssl_client_hello_parse( mbedtls_ssl_context* ssl,
             return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
 #endif /* MBEDTLS_SHA256_C */
         }
-        else if( ssl->transform_negotiate->ciphersuite_info->mac == MBEDTLS_MD_SHA384 )
+        else if( ssl->handshake->ciphersuite_info->mac == MBEDTLS_MD_SHA384 )
         {
 #if defined(MBEDTLS_SHA512_C)
             mbedtls_sha512_init( &sha512 );
@@ -3136,7 +3142,7 @@ static int ssl_client_hello_parse( mbedtls_ssl_context* ssl,
             return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
 #endif /* MBEDTLS_SHA512_C */
         }
-        else if( ssl->transform_negotiate->ciphersuite_info->mac == MBEDTLS_MD_SHA512 )
+        else if( ssl->handshake->ciphersuite_info->mac == MBEDTLS_MD_SHA512 )
         {
 #if defined(MBEDTLS_SHA512_C)
             mbedtls_sha512_init( &sha512 );
@@ -3158,7 +3164,7 @@ static int ssl_client_hello_parse( mbedtls_ssl_context* ssl,
         MBEDTLS_SSL_DEBUG_MSG( 5, ( "--- Checksum ( ssl_parse_client_hello, normal transcript hash )" ) );
         ssl->handshake->update_checksum( ssl, orig_buf, orig_msg_len );
     }
-    mbedtls_ssl_optimize_checksum( ssl, ssl->transform_negotiate->ciphersuite_info );
+    mbedtls_ssl_optimize_checksum( ssl, ssl->handshake->ciphersuite_info );
 
     return( final_ret );
 }
@@ -3337,6 +3343,7 @@ static int ssl_encrypted_extensions_prepare( mbedtls_ssl_context* ssl )
     ssl->transform_out = ssl->transform_negotiate;
     ssl->session_out = ssl->session_negotiate;
 
+    mbedtls_ssl_transform_free( ssl->transform_negotiate );
     ret = mbedtls_set_traffic_key( ssl, &traffic_keys, ssl->transform_negotiate, 0 );
 
     if( ret != 0 )
@@ -3996,17 +4003,14 @@ static int ssl_server_hello_write( mbedtls_ssl_context* ssl,
 #endif /* ( MBEDTLS_ECDH_C || MBEDTLS_ECDSA_C */
 
     /* Add supported_version extension */
-    if( ssl->handshake->extensions_present & SUPPORTED_VERSION_EXTENSION )
+    if( ( ret = ssl_write_supported_version_ext( ssl, buf, end, &cur_ext_len ) ) != 0 )
     {
-        if( ( ret = ssl_write_supported_version_ext( ssl, buf, end, &cur_ext_len ) ) != 0 )
-        {
-            MBEDTLS_SSL_DEBUG_RET( 1, "ssl_write_supported_version_ext", ret );
-            return( ret );
-        }
-
-        total_ext_len += cur_ext_len;
-        buf += cur_ext_len;
+        MBEDTLS_SSL_DEBUG_RET( 1, "ssl_write_supported_version_ext", ret );
+        return( ret );
     }
+
+    total_ext_len += cur_ext_len;
+    buf += cur_ext_len;
 
 #if defined(MBEDTLS_CID)
     if( ssl->handshake->extensions_present & CID_EXTENSION )
@@ -4601,6 +4605,7 @@ int mbedtls_ssl_handshake_server_step( mbedtls_ssl_context *ssl )
                     return( ret );
                 }
 
+                mbedtls_ssl_transform_free( ssl->transform_negotiate );
                 ret = mbedtls_set_traffic_key( ssl, &traffic_keys, ssl->transform_negotiate,0 );
 
                 if( ret != 0 )
@@ -4636,6 +4641,7 @@ int mbedtls_ssl_handshake_server_step( mbedtls_ssl_context *ssl )
                 return( ret );
             }
 
+            mbedtls_ssl_transform_free( ssl->transform_negotiate );
             ret = mbedtls_set_traffic_key( ssl, &traffic_keys, ssl->transform_negotiate, 0 );
 
             if( ret != 0 )

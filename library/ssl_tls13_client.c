@@ -164,6 +164,7 @@ static int ssl_write_early_data_prepare( mbedtls_ssl_context* ssl )
     traffic_keys.epoch = 1;
 #endif /* MBEDTLS_SSL_PROTO_DTLS */
 
+    mbedtls_ssl_transform_free( ssl->transform_negotiate );
     ret = mbedtls_set_traffic_key( ssl, &traffic_keys, ssl->transform_negotiate, 0 );
     if( ret != 0 )
     {
@@ -302,6 +303,7 @@ static int ssl_write_end_of_early_data_prepare( mbedtls_ssl_context* ssl )
     traffic_keys.epoch = 1;
 #endif /* MBEDTLS_SSL_PROTO_DTLS */
 
+    mbedtls_ssl_transform_free( ssl->transform_negotiate );
     ret = mbedtls_set_traffic_key( ssl, &traffic_keys, ssl->transform_negotiate, 0 );
     if( ret != 0 )
     {
@@ -975,7 +977,7 @@ int mbedtls_ssl_write_pre_shared_key_ext( mbedtls_ssl_context *ssl,
 
         /* In this implementation we only add one pre-shared-key extension. */
         ssl->session_negotiate->ciphersuite = ciphersuites[i];
-        ssl->transform_negotiate->ciphersuite_info = suite_info;
+        ssl->handshake->ciphersuite_info = suite_info;
 #if defined(MBEDTLS_ZERO_RTT)
         /* Even if we include a key_share extension in the ClientHello
          * message it will not be used at this stage for the key derivation.
@@ -2588,6 +2590,7 @@ static int ssl_encrypted_extensions_prepare( mbedtls_ssl_context* ssl ) {
         traffic_keys.epoch = 2;
 #endif /* MBEDTLS_SSL_PROTO_DTLS */
 
+        mbedtls_ssl_transform_free( ssl->transform_negotiate );
         ret = mbedtls_set_traffic_key( ssl, &traffic_keys, ssl->transform_negotiate, 0 );
         if( ret != 0 )
         {
@@ -3065,16 +3068,16 @@ static int ssl_server_hello_parse( mbedtls_ssl_context* ssl,
     /* to use a difference ciphersuite. */
 
     /* Configure ciphersuites */
-    ssl->transform_negotiate->ciphersuite_info = mbedtls_ssl_ciphersuite_from_id( i );
+    ssl->handshake->ciphersuite_info = mbedtls_ssl_ciphersuite_from_id( i );
 
-    if( ssl->transform_negotiate->ciphersuite_info == NULL )
+    if( ssl->handshake->ciphersuite_info == NULL )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "ciphersuite info for %04x not found", i ) );
         SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_INTERNAL_ERROR );
         return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
     }
 
-    mbedtls_ssl_optimize_checksum( ssl, ssl->transform_negotiate->ciphersuite_info );
+    mbedtls_ssl_optimize_checksum( ssl, ssl->handshake->ciphersuite_info );
 
     ssl->session_negotiate->ciphersuite = i;
 
@@ -3445,16 +3448,16 @@ static int ssl_hrr_parse( mbedtls_ssl_context* ssl,
     /* to use a difference ciphersuite. */
 
     /* Configure ciphersuites */
-    ssl->transform_negotiate->ciphersuite_info = mbedtls_ssl_ciphersuite_from_id( i );
+    ssl->handshake->ciphersuite_info = mbedtls_ssl_ciphersuite_from_id( i );
 
-    if( ssl->transform_negotiate->ciphersuite_info == NULL )
+    if( ssl->handshake->ciphersuite_info == NULL )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "ciphersuite info for %04x not found", i ) );
         SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_INTERNAL_ERROR );
         return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
     }
 
-    mbedtls_ssl_optimize_checksum( ssl, ssl->transform_negotiate->ciphersuite_info );
+    mbedtls_ssl_optimize_checksum( ssl, ssl->handshake->ciphersuite_info );
 
     ssl->session_negotiate->ciphersuite = i;
 
@@ -3719,7 +3722,7 @@ static int ssl_hrr_postprocess( mbedtls_ssl_context* ssl,
     transcript[1] = 0;
     transcript[2] = 0;
 
-    hash_length = mbedtls_hash_size_for_ciphersuite( ssl->transform_negotiate->ciphersuite_info );
+    hash_length = mbedtls_hash_size_for_ciphersuite( ssl->handshake->ciphersuite_info );
 
     if( hash_length == -1 )
     {
@@ -3737,7 +3740,7 @@ static int ssl_hrr_postprocess( mbedtls_ssl_context* ssl,
        mbedtls_sha512_context sha512;
        #endif
     */
-    if( ssl->transform_negotiate->ciphersuite_info->mac == MBEDTLS_MD_SHA256 )
+    if( ssl->handshake->ciphersuite_info->mac == MBEDTLS_MD_SHA256 )
     {
 #if defined(MBEDTLS_SHA256_C)
         mbedtls_sha256_finish( &ssl->handshake->fin_sha256, &transcript[4] );
@@ -3752,7 +3755,7 @@ static int ssl_hrr_postprocess( mbedtls_ssl_context* ssl,
         return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
 #endif /* MBEDTLS_SHA256_C */
     }
-    else if( ssl->transform_negotiate->ciphersuite_info->mac == MBEDTLS_MD_SHA384 )
+    else if( ssl->handshake->ciphersuite_info->mac == MBEDTLS_MD_SHA384 )
     {
 #if defined(MBEDTLS_SHA512_C)
         mbedtls_sha512_finish( &ssl->handshake->fin_sha512, &transcript[4] );
@@ -3767,7 +3770,7 @@ static int ssl_hrr_postprocess( mbedtls_ssl_context* ssl,
         return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
 #endif /* MBEDTLS_SHA512_C */
     }
-    else if( ssl->transform_negotiate->ciphersuite_info->mac == MBEDTLS_MD_SHA512 )
+    else if( ssl->handshake->ciphersuite_info->mac == MBEDTLS_MD_SHA512 )
     {
 #if defined(MBEDTLS_SHA512_C)
         mbedtls_sha512_finish( &ssl->handshake->fin_sha512, &transcript[4] );
@@ -3899,7 +3902,8 @@ int mbedtls_ssl_handshake_client_step( mbedtls_ssl_context *ssl )
             if( ssl->handshake->key_shares_curve_list == NULL )
             {
                 /* We need to allocate one additional key share for the delimiter. */
-                ssl->handshake->key_shares_curve_list = mbedtls_calloc( 1, sizeof( mbedtls_ecp_group_id* ) * ( MBEDTLS_SSL_MAX_KEY_SHARES+1 ) );
+                ssl->handshake->key_shares_curve_list =
+                    mbedtls_calloc( 1, sizeof( mbedtls_ecp_group_id* ) * ( MBEDTLS_SSL_MAX_KEY_SHARES+1 ) );
                 if( ssl->conf->key_shares_curve_list == NULL )
                 {
                     MBEDTLS_SSL_DEBUG_MSG( 1, ( "should never happen" ) );
