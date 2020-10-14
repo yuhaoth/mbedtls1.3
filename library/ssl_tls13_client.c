@@ -3883,26 +3883,6 @@ static int ssl_hrr_postprocess( mbedtls_ssl_context* ssl,
 #endif /* MBEDTLS_SSL_PROTO_DTLS */
 
 exit:
-#if defined(MBEDTLS_SHA256_C)
-    if( ssl->handshake->ciphersuite_info->mac == MBEDTLS_MD_SHA256 )
-    {
-        mbedtls_sha256_free( &ssl->handshake->fin_sha256 );
-    }
-    else
-#endif
-#if defined(MBEDTLS_SHA512_C)
-    if( ssl->handshake->ciphersuite_info->mac == MBEDTLS_MD_SHA384 ||
-        ssl->handshake->ciphersuite_info->mac == MBEDTLS_MD_SHA512 )
-    {
-        mbedtls_sha512_free( &ssl->handshake->fin_sha512 );
-    }
-    else
-#endif
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "mbedtls_ssl_tls1_3_derive_master_secret: Unknow hash function." ) );
-        return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
-    }
-
     return( ret );
 }
 
