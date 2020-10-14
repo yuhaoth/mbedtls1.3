@@ -304,7 +304,7 @@ void mbedtls_ssl_reset_retransmit_timeout( mbedtls_ssl_context *ssl )
 }
 #endif /* MBEDTLS_SSL_PROTO_DTLS */
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_2)
+//#if defined(MBEDTLS_SSL_PROTO_TLS1_2)
 
 #if defined(MBEDTLS_SSL_HW_RECORD_ACCEL)
 int (*mbedtls_ssl_hw_record_init)( mbedtls_ssl_context *ssl,
@@ -1771,6 +1771,8 @@ int mbedtls_ssl_decrypt_buf( mbedtls_ssl_context const *ssl,
 
     return( 0 );
 }
+
+#if defined(MBEDTLS_SSL_PROTO_TLS1_2)
 
 #undef MAC_NONE
 #undef MAC_PLAINTEXT
@@ -5956,6 +5958,6 @@ void mbedtls_ssl_read_version( int *major, int *minor, int transport,
     }
 }
 
-#endif /* MBEDTLS_SSL_TLS_C */
-
 #endif /* MBEDTLS_SSL_PROTO_TLS1_2 */
+
+#endif /* MBEDTLS_SSL_TLS_C */
