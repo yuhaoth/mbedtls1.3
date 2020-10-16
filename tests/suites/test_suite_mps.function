@@ -8714,7 +8714,7 @@ void mbedtls_mps_l3_handshake_alert_interleaved( int allocator_buffer_sz,
                 TEST_ASSERT( mps_l3_read_alert( &srv, &alert_in ) == 0 );
 
                 TEST_ASSERT( alert_in.level ==
-                             msgs_remaining % 2 ? 1 : 2 );
+                             ( msgs_remaining % 2 ? 1 : 2 ) );
                 TEST_ASSERT( alert_in.type == msgs_remaining );
 
                 /* Signal that message has been processed. */
