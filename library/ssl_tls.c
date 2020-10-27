@@ -7380,7 +7380,8 @@ static int ssl_preset_suiteb_signature_algorithms_tls13[] = {
     SIGNATURE_ECDSA_SECP384r1_SHA384,
 #endif /* MBEDTLS_SHA512_C && MBEDTLS_ECP_DP_SECP384R1_ENABLED */
 #if defined(MBEDTLS_SHA512_C) && defined(MBEDTLS_ECP_DP_SECP521R1_ENABLED)
-    SIGNATURE_ECDSA_SECP521r1_SHA512,
+/* TBD: This signature algorithm is not yet fully implemented. */
+//    SIGNATURE_ECDSA_SECP521r1_SHA512,
 #endif /* MBEDTLS_SHA512_C && MBEDTLS_ECP_DP_SECP521R1_ENABLED */
     SIGNATURE_NONE
 }; 

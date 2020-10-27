@@ -59,12 +59,10 @@
 #endif /* MBEDTLS_PLATFORM_C */
 
 #if defined(MBEDTLS_SHA256_C)
-static int ssl_calc_verify_tls_sha256( mbedtls_ssl_context*, unsigned char*, int );
 static int ssl_calc_finished_tls_sha256( mbedtls_ssl_context*, unsigned char*, int );
 #endif /* MBEDTLS_SHA256_C */
 
 #if defined(MBEDTLS_SHA512_C)
-static int ssl_calc_verify_tls_sha384( mbedtls_ssl_context*, unsigned char*, int );
 static int ssl_calc_finished_tls_sha384( mbedtls_ssl_context*, unsigned char*, int );
 #endif /* MBEDTLS_SHA512_C */
 
@@ -1030,7 +1028,6 @@ int mbedtls_ssl_derive_traffic_keys( mbedtls_ssl_context *ssl, mbedtls_ssl_key_s
     if( mbedtls_hash_size_for_ciphersuite( suite_info ) == 32 )
     {
 #if defined(MBEDTLS_SHA256_C)
-        handshake->calc_verify = ssl_calc_verify_tls_sha256;
         handshake->calc_finished = ssl_calc_finished_tls_sha256;
 #else
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "MBEDTLS_SHA256_C not set but ciphersuite with SHA256 negotiated" ) );
@@ -1041,7 +1038,6 @@ int mbedtls_ssl_derive_traffic_keys( mbedtls_ssl_context *ssl, mbedtls_ssl_key_s
     if( mbedtls_hash_size_for_ciphersuite( suite_info ) == 48 )
     {
 #if defined(MBEDTLS_SHA512_C)
-        handshake->calc_verify = ssl_calc_verify_tls_sha384;
         handshake->calc_finished = ssl_calc_finished_tls_sha384;
 #else
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "MBEDTLS_SHA512_C not set but ciphersuite with SHA384 negotiated" ) );
@@ -1308,123 +1304,37 @@ int mbedtls_increment_sequence_number( unsigned char *sequenceNumber, unsigned c
     return( MBEDTLS_ERR_SSL_COUNTER_WRAPPING );
 }
 
-#if defined(MBEDTLS_SHA256_C)
     /*
-     * ssl_calc_verify_tls_sha256() computes hash over a structure,
-     * which is later digitally signed and placed into the CertificateVerify message.
+     * ssl_create_verify_structure() creates the verify structure. As input, it requires
+     * the transcript hash. Subsequently, the structure has to be digitally signed.
      *
-     * The structure computed in this function is:
+     * The structure is computed as:
      *   - 64 bytes of octet 32,
      *   - 33 bytes for the context string (which is either "TLS 1.3, client CertificateVerify"
      *     or "TLS 1.3, server CertificateVerify"),
      *   - 1 byte for the octet 0x0, which servers as a separator,
-     *   - 32 bytes for the Transcript-Hash(Handshake Context, Certificate)
+     *   - 32 or 48 bytes for the Transcript-Hash(Handshake Context, Certificate)
+     *     (depending on the size of the transcript_hash)
      *
-     * The hash of the structure is returned in the variable output_hash.
+     * The size of the verify_structure is assumed to be either
+     * - 130 bytes for a SHA256-based transcript hash, or
+     * - 146 bytes for a SHA384-based transcript hash.
+     *
+     * The caller has to ensure that the buffer has this size.
      */
-static int ssl_calc_verify_tls_sha256( mbedtls_ssl_context *ssl, unsigned char output_hash[32], int from )
+static void ssl_create_verify_structure( mbedtls_ssl_context *ssl, 
+                                        unsigned char *transcript_hash, 
+                                        size_t transcript_hash_len, 
+                                        unsigned char *verify_buffer,
+                                        size_t *verify_buffer_len,
+                                        int from )
 {
-    int ret = 0;
-
     /* The length of context_string_[client|server] is
      * sizeof( "TLS 1.3, xxxxxx CertificateVerify" ) - 1, i.e. 33 bytes.
      */
     const unsigned int content_string_len = sizeof( "TLS 1.3, xxxxxx CertificateVerify" ) - 1;
     const unsigned char context_string_client[] = "TLS 1.3, client CertificateVerify";
     const unsigned char context_string_server[] = "TLS 1.3, server CertificateVerify";
-    mbedtls_sha256_context sha256;
-    unsigned char handshake_hash[ 32 ];
-    unsigned char verify_buffer[ 64 + 33 + 1 + 32 ];
-
-    mbedtls_sha256_init( &sha256 );
-
-    MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> calc verify sha256" ) );
-
-    mbedtls_sha256_clone( &sha256, &ssl->handshake->fin_sha256 );
-
-    if( ( ret = mbedtls_sha256_finish_ret( &sha256, handshake_hash ) ) != 0 )
-    {
-        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_sha256_finish_ret", ret );
-        goto exit;
-    }
-
-    MBEDTLS_SSL_DEBUG_BUF( 3, "handshake hash", handshake_hash, 32 );
-
-    memset( verify_buffer, 32, 64 );
-
-    if( from == MBEDTLS_SSL_IS_CLIENT )
-    {
-        memcpy( verify_buffer + 64, context_string_client, content_string_len );
-    }
-    else /* from == MBEDTLS_SSL_IS_SERVER */
-    {
-        memcpy( verify_buffer + 64, context_string_server, content_string_len );
-    }
-
-    verify_buffer[64 + content_string_len] = 0x0;
-    memcpy( verify_buffer + 64 + content_string_len + 1, handshake_hash, 32 );
-
-    MBEDTLS_SSL_DEBUG_BUF( 3, "verify buffer", verify_buffer, 64 + content_string_len + 1 + 32 );
-
-    mbedtls_sha256( verify_buffer, 64 + content_string_len + 1 + 32, output_hash, 0 /* 0 for SHA-256 instead of SHA-224 */ );
-
-    MBEDTLS_SSL_DEBUG_BUF( 3, "verify hash", output_hash, 32 );
-
-    MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= calc verify" ) );
-
-exit:
-    mbedtls_sha256_free( &sha256 );
-    return( ret );
-}
-#endif /* MBEDTLS_SHA256_C */
-
-#if defined(MBEDTLS_SHA512_C)
-    /*
-     * ssl_calc_verify_tls_sha384() computes hash over a structure,
-     * which is later digitally signed and placed into the CertificateVerify message.
-     *
-     * The structure computed in this function is:
-     *   - 64 bytes of octet 32,
-     *   - 33 bytes for the context string (which is either "TLS 1.3, client CertificateVerify"
-     *     or "TLS 1.3, server CertificateVerify"),
-     *   - 1 byte for the octet 0x0, which servers as a separator,
-     *   - 48 bytes for the Transcript-Hash(Handshake Context, Certificate)
-     *
-     * The hash of the structure is returned in the variable hash.
-     */
-static int ssl_calc_verify_tls_sha384( mbedtls_ssl_context *ssl, unsigned char output_hash[48], int from )
-{
-    int ret = 0;
-
-    /* The length of context_string_[client|server] is
-     * sizeof( "TLS 1.3, xxxxxx CertificateVerify" ) - 1, i.e. 33 bytes.
-     */
-    const unsigned int content_string_len = sizeof( "TLS 1.3, xxxxxx CertificateVerify" ) - 1;
-    const unsigned char context_string_client[] = "TLS 1.3, client CertificateVerify";
-    const unsigned char context_string_server[] = "TLS 1.3, server CertificateVerify";
-    mbedtls_sha512_context sha384;
-    unsigned char handshake_hash[ 48 ];
-    unsigned char verify_buffer[ 64 + 33 + 1 + 48 ];
-
-    mbedtls_sha512_init( &sha384 );
-
-    if( ( ret = mbedtls_sha512_starts_ret( &sha384, 1 ) ) != 0 )
-    {
-        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_sha512_starts_ret", ret );
-        goto exit;
-    }
-
-    MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> calc verify sha384" ) );
-
-    mbedtls_sha512_clone( &sha384, &ssl->handshake->fin_sha512 );
-
-    if( ( ret = mbedtls_sha512_finish_ret( &sha384, handshake_hash ) ) != 0 )
-    {
-        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_sha512_finish_ret", ret );
-        goto exit;
-    }
-
-    MBEDTLS_SSL_DEBUG_BUF( 3, "handshake hash", handshake_hash, 48 );
 
     memset( verify_buffer, 32, 64 );
 
@@ -1438,28 +1348,11 @@ static int ssl_calc_verify_tls_sha384( mbedtls_ssl_context *ssl, unsigned char o
     }
 
     verify_buffer[64 + content_string_len] = 0x0;
-    memcpy( verify_buffer + 64 + content_string_len + 1, handshake_hash, 48 );
+    memcpy( verify_buffer + 64 + content_string_len + 1, transcript_hash, transcript_hash_len );
 
-    MBEDTLS_SSL_DEBUG_BUF( 3, "verify buffer", verify_buffer, 64 + content_string_len + 1 + 48 );
-
-    if( ( ret = mbedtls_sha512_ret( verify_buffer,
-                                    64 + content_string_len + 1 + 48,
-                                    output_hash,
-                                    1 ) ) != 0 )
-    {
-        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_sha512_ret", ret );
-        goto exit;
-    }
-
-    MBEDTLS_SSL_DEBUG_BUF( 3, "verify hash", output_hash, 48 );
-
-    MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= calc verify" ) );
-
-exit:
-    mbedtls_sha512_free( &sha384 );
-    return( ret );
+    MBEDTLS_SSL_DEBUG_BUF( 3, "verify buffer construct", verify_buffer, 64 + content_string_len + 1 + transcript_hash_len );
+    *verify_buffer_len = 64 + content_string_len + 1 + transcript_hash_len; 
 }
-#endif /* MBEDTLS_SHA512_C */
 
 
 /* mbedtls_ssl_tls1_3_derive_master_secret( )
@@ -1781,6 +1674,15 @@ cleanup:
 static int ssl_certificate_verify_coordinate( mbedtls_ssl_context* ssl )
 {
     int have_own_cert = 1;
+#if defined(MBEDTLS_SHA256_C) || defined(MBEDTLS_SHA512_C)
+    int ret;
+#endif /* MBEDTLS_SHA256_C || MBEDTLS_SHA512_C */
+#if defined(MBEDTLS_SHA256_C)
+    mbedtls_sha256_context sha256;
+#endif /* MBEDTLS_SHA256_C */
+#if defined(MBEDTLS_SHA512_C)
+    mbedtls_sha512_context sha384;
+#endif /* MBEDTLS_SHA512_C */
 
     if( ssl->session_negotiate->key_exchange != MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA )
     {
@@ -1818,23 +1720,58 @@ static int ssl_certificate_verify_coordinate( mbedtls_ssl_context* ssl )
         return( MBEDTLS_ERR_SSL_BAD_HS_CERTIFICATE_VERIFY );
     }
 
-    /*
-     * Check whether the signature scheme corresponds to the hash algorithm of the negotiated ciphersuite
-     * TBD: Double-check whether this is really a good approach.
+    /* Calculate the transcript hash */
+#if defined(MBEDTLS_SHA256_C)
+    if( ssl->handshake->ciphersuite_info->mac == MBEDTLS_MD_SHA256 )
+    {
+        mbedtls_sha256_init( &sha256 );
 
-     if( ( ssl->handshake->signature_scheme == SIGNATURE_ECDSA_SECP256r1_SHA256 ) && ( ciphersuite_info->hash != MBEDTLS_MD_SHA256 ) ) {
-     MBEDTLS_SSL_DEBUG_MSG( 1, ( "Certificate Verify: SIGNATURE_ECDSA_SECP256r1_SHA256 only matches with MBEDTLS_MD_SHA256." ) );
-     return( MBEDTLS_ERR_SSL_BAD_HS_CERTIFICATE_VERIFY );
-     }
-     else if( ( ssl->handshake->signature_scheme == SIGNATURE_ECDSA_SECP384r1_SHA384 ) && ( ciphersuite_info->hash != MBEDTLS_MD_SHA384 ) ) {
-     MBEDTLS_SSL_DEBUG_MSG( 1, ( "Certificate Verify: SIGNATURE_ECDSA_SECP384r1_SHA384 only matches with MBEDTLS_MD_SHA384." ) );
-     return( MBEDTLS_ERR_SSL_BAD_HS_CERTIFICATE_VERIFY );
-     }
-     else if( ( ssl->handshake->signature_scheme == SIGNATURE_ECDSA_SECP521r1_SHA512 ) && ( ciphersuite_info->hash != MBEDTLS_MD_SHA512 ) ) {
-     MBEDTLS_SSL_DEBUG_MSG( 1, ( "Certificate Verify: SIGNATURE_ECDSA_SECP521r1_SHA512 only matches with MBEDTLS_MD_SHA512." ) );
-     return( MBEDTLS_ERR_SSL_BAD_HS_CERTIFICATE_VERIFY );
-     }
-    */
+        mbedtls_sha256_clone( &sha256, &ssl->handshake->fin_sha256 );
+
+        if( ( ret = mbedtls_sha256_finish_ret( &sha256, ssl->handshake->state_local.certificate_verify_out.handshake_hash ) ) != 0 )
+        {
+            MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_sha256_finish_ret", ret );
+            return( ret );
+        }
+
+        ssl->handshake->state_local.certificate_verify_out.handshake_hash_len = 32;
+        mbedtls_sha256_free( &sha256 );
+    }
+    else
+#endif /* MBEDTLS_SHA256_C */
+
+#if defined(MBEDTLS_SHA512_C)
+    if( ssl->handshake->ciphersuite_info->mac == MBEDTLS_MD_SHA384 )
+    {        
+        mbedtls_sha512_init( &sha384 );
+
+        if( ( ret = mbedtls_sha512_starts_ret( &sha384, 1 ) ) != 0 )
+        {
+            MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_sha512_starts_ret", ret );
+            return( ret );
+        }
+
+        mbedtls_sha512_clone( &sha384, &ssl->handshake->fin_sha512 );
+
+        if( ( ret = mbedtls_sha512_finish_ret( &sha384, ssl->handshake->state_local.certificate_verify_out.handshake_hash ) ) != 0 )
+        {
+            MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_sha512_finish_ret", ret );
+            return( ret );
+        }
+
+        ssl->handshake->state_local.certificate_verify_out.handshake_hash_len = 48;
+        mbedtls_sha512_free( &sha384 );
+    }
+    else
+#endif /* MBEDTLS_SHA512_C */
+    {
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "should never happen" ) );
+        return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
+    }
+
+    MBEDTLS_SSL_DEBUG_BUF( 3, "handshake hash",
+        ssl->handshake->state_local.certificate_verify_out.handshake_hash,
+        ssl->handshake->state_local.certificate_verify_out.handshake_hash_len);
 
     return( SSL_CERTIFICATE_VERIFY_SEND );
 #endif /* MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED */
@@ -1848,27 +1785,32 @@ static int ssl_certificate_verify_write( mbedtls_ssl_context* ssl,
                                          size_t* olen )
 {
     int ret;
-    const mbedtls_ssl_ciphersuite_t* ciphersuite_info = ssl->handshake->ciphersuite_info;
     size_t n = 0, offset = 0;
+    unsigned char verify_buffer[ 64 + 33 + 1 + MBEDTLS_MD_MAX_SIZE ];
+    const int *sig_scheme; /* iterate through configured signature schemes */
+    size_t verify_buffer_len;
+    mbedtls_pk_context *own_key;
+    size_t own_key_size;
+    unsigned int md_alg;
+    int sig_alg;
+    unsigned char verify_hash[ MBEDTLS_MD_MAX_SIZE ];
+    size_t verify_hash_len;
 
-    unsigned char hash[MBEDTLS_MD_MAX_SIZE];
-    unsigned char* hash_start = hash;
-    unsigned int hashlen;
-
-    /* TODO: Add bounds checks! Only then remove the next line. */
-    ( (void ) buflen );
-
-    /*
-     * Make a signature of the handshake transcript
-     */
-    ret = ssl->handshake->calc_verify( ssl, hash, ssl->conf->endpoint );
-
-    if( ret != 0 )
+    /* TBD: Check whether the signature fits into the buffer. */
+    if( buflen < ( mbedtls_ssl_hs_hdr_len( ssl ) + 2 + MBEDTLS_MD_MAX_SIZE ) )
     {
-        MBEDTLS_SSL_DEBUG_RET( 1, "calc_verify", ret );
-        return( ret );
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "buffer too short" ) );
+        return( MBEDTLS_ERR_SSL_BUFFER_TOO_SMALL );
     }
 
+    /* Create verify structure */
+    ssl_create_verify_structure(ssl,
+                                ssl->handshake->state_local.certificate_verify_out.handshake_hash,
+                                ssl->handshake->state_local.certificate_verify_out.handshake_hash_len,
+                                verify_buffer,
+                                &verify_buffer_len,
+                                ssl->conf->endpoint );
+ 
     /*
      *  struct {
      *    SignatureScheme algorithm;
@@ -1876,30 +1818,97 @@ static int ssl_certificate_verify_write( mbedtls_ssl_context* ssl,
      *  } CertificateVerify;
      */
 
-    /* The algorithm used for computing the hash above must
-     * correspond to the algorithm indicated in the signature_scheme below.
-     *
-     * TBD: ssl->handshake->signature_scheme should already contain the correct value
-     *      based on the parsing of the ClientHello / transmission of the ServerHello
-     *      message.
-     */
+    /* Determine size of key */
+    own_key = mbedtls_ssl_own_key( ssl );
+    if( own_key != NULL)
+    {
+        own_key_size = mbedtls_pk_get_bitlen( own_key );
+        switch( own_key_size)
+        {
+            case 256:
+                md_alg = MBEDTLS_MD_SHA256;
+                sig_alg = SIGNATURE_ECDSA_SECP256r1_SHA256;
+                break;
+            case 384:
+                md_alg =  MBEDTLS_MD_SHA384;
+                sig_alg = SIGNATURE_ECDSA_SECP384r1_SHA384;
+                break;
+            default:
+                MBEDTLS_SSL_DEBUG_MSG( 3, ( "unknown key size: %d bits",
+                               own_key_size ) );
+                return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
+        }
+    }
+    else
+    {
+            MBEDTLS_SSL_DEBUG_MSG( 1, ( "should never happen" ) );
+            return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
+    }
+    
+    /* Verify whether we can use signature algorithm */
+    ssl->handshake->signature_scheme_client = SIGNATURE_NONE;
 
-    switch ( ciphersuite_info->mac ) {
-	case MBEDTLS_MD_SHA256: ssl->handshake->signature_scheme = SIGNATURE_ECDSA_SECP256r1_SHA256; break;
-	case MBEDTLS_MD_SHA384: ssl->handshake->signature_scheme = SIGNATURE_ECDSA_SECP384r1_SHA384;  break;
-	case MBEDTLS_MD_SHA512: ssl->handshake->signature_scheme = SIGNATURE_ECDSA_SECP521r1_SHA512;  break;
-	default: MBEDTLS_SSL_DEBUG_MSG( 1, ( "Certificate Verify: Unknown hash algorithm." ) );
-            return( MBEDTLS_ERR_SSL_BAD_HS_CERTIFICATE_VERIFY );
+    if( ssl->handshake->received_signature_schemes_list != NULL )
+    {
+        for( sig_scheme = ssl->handshake->received_signature_schemes_list; *sig_scheme != SIGNATURE_NONE; sig_scheme++ )
+        {
+            if( *sig_scheme == sig_alg )
+            {
+                ssl->handshake->signature_scheme_client = *sig_scheme;
+                break;
+            }
+        }
     }
 
-    buf[4] = (unsigned char)( ( ssl->handshake->signature_scheme >> 8 ) & 0xFF );
-    buf[5] = (unsigned char)( ( ssl->handshake->signature_scheme ) & 0xFF );
-
-    /* Info from ssl->handshake->ciphersuite_info->mac will be used instead */
-    hashlen = 0;
+    if( ssl->handshake->signature_scheme_client == SIGNATURE_NONE )
+    {
+            MBEDTLS_SSL_DEBUG_MSG( 1, ( "should never happen" ) );
+            return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
+    }
+ 
+    buf[4] = (unsigned char)( ( ssl->handshake->signature_scheme_client >> 8 ) & 0xFF );
+    buf[5] = (unsigned char)( ( ssl->handshake->signature_scheme_client ) & 0xFF );
     offset = 2;
 
-    if( ( ret = mbedtls_pk_sign( mbedtls_ssl_own_key( ssl ), ciphersuite_info->mac, hash_start, hashlen,
+    /* Hash verify buffer with indicated hash function */
+#if defined(MBEDTLS_SHA256_C)
+    if( md_alg == MBEDTLS_MD_SHA256 )
+    {
+        verify_hash_len = 32;
+        if( ( ret = mbedtls_sha256_ret( verify_buffer,
+            verify_buffer_len, verify_hash, 0 /* 0 for SHA-256 instead of SHA-224 */ )  ) != 0 )
+        {
+            MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_sha256_ret", ret );
+            return( MBEDTLS_ERR_SSL_BAD_HS_CERTIFICATE_VERIFY );
+        }
+    }
+    else
+#endif /* MBEDTLS_SHA256_C */
+#if defined(MBEDTLS_SHA512_C)
+    if( md_alg == MBEDTLS_MD_SHA384 )
+    {
+        verify_hash_len = 48;
+        if( ( ret = mbedtls_sha512_ret( verify_buffer,
+                                    verify_buffer_len,
+                                    verify_hash,
+                                    1 ) ) != 0 )
+        {
+            MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_sha512_ret", ret );
+            return( MBEDTLS_ERR_SSL_BAD_HS_CERTIFICATE_VERIFY );
+        }
+    }
+    else
+#endif /* MBEDTLS_SHA512_C */
+    {
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "should never happen" ) );
+        return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
+    }
+
+    MBEDTLS_SSL_DEBUG_BUF( 3, "verify hash", verify_hash, verify_hash_len );
+
+    if( ( ret = mbedtls_pk_sign( mbedtls_ssl_own_key( ssl ),
+                                 md_alg,
+                                 verify_hash, verify_hash_len,
                                  buf + 6 + offset, &n,
                                  ssl->conf->f_rng, ssl->conf->p_rng ) ) != 0 )
     {
@@ -1982,24 +1991,86 @@ static int ssl_read_certificate_verify_postprocess( mbedtls_ssl_context* ssl );
 int mbedtls_ssl_read_certificate_verify_process( mbedtls_ssl_context* ssl )
 {
     int ret;
-    unsigned char hash[MBEDTLS_MD_MAX_SIZE];
-    MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> parse certificate verify" ) );
+    unsigned char verify_buffer[ 64 + 33 + 1 + MBEDTLS_MD_MAX_SIZE ];
+    size_t verify_buffer_len; 
+    unsigned char transcript[MBEDTLS_MD_MAX_SIZE]; 
+    unsigned int transcript_len;
+#if defined(MBEDTLS_SHA256_C)
+    mbedtls_sha256_context sha256;
+#endif
+#if defined(MBEDTLS_SHA512_C)
+    mbedtls_sha512_context sha384;
+#endif
 
     /* Coordination step */
+    MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> parse certificate verify" ) );
 
     MBEDTLS_SSL_PROC_CHK( ssl_read_certificate_verify_coordinate( ssl ) );
 
-#if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
+#if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED) // TBD: double-check 
     if( ret == SSL_CERTIFICATE_VERIFY_READ )
     {
         /* Need to calculate the hash of the transcript first
          * before reading the message since otherwise it gets
          *included in the transcript
          */
-        if( ssl->conf->endpoint == MBEDTLS_SSL_IS_SERVER )
-            ssl->handshake->calc_verify( ssl, hash, MBEDTLS_SSL_IS_CLIENT );
+#if defined(MBEDTLS_SHA256_C)
+        if( ssl->handshake->ciphersuite_info->mac == MBEDTLS_MD_SHA256 )
+        {
+            transcript_len=32; 
+            mbedtls_sha256_init( &sha256 );
+
+            mbedtls_sha256_clone( &sha256, &ssl->handshake->fin_sha256 );
+
+            if( ( ret = mbedtls_sha256_finish_ret( &sha256, transcript ) ) != 0 )
+            {
+                MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_sha256_finish_ret", ret );
+                return( ret );
+            }
+
+            mbedtls_sha256_free( &sha256 );
+        }
         else
-            ssl->handshake->calc_verify( ssl, hash, MBEDTLS_SSL_IS_SERVER );
+#endif /* MBEDTLS_SHA256_C */
+
+#if defined(MBEDTLS_SHA512_C)
+        if( ssl->handshake->ciphersuite_info->mac == MBEDTLS_MD_SHA384 )
+        {
+            transcript_len=48;
+            mbedtls_sha512_init( &sha384 );
+
+            if( ( ret = mbedtls_sha512_starts_ret( &sha384, 1 ) ) != 0 )
+            {
+                MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_sha512_starts_ret", ret );
+                return( ret );
+            }
+
+            mbedtls_sha512_clone( &sha384, &ssl->handshake->fin_sha512 );
+
+            if( ( ret = mbedtls_sha512_finish_ret( &sha384, transcript ) ) != 0 )
+            {
+                MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_sha512_finish_ret", ret );
+                return( ret );
+            }
+
+            mbedtls_sha512_free( &sha384 );
+        }
+        else
+#endif /* MBEDTLS_SHA512_C */
+        {
+            MBEDTLS_SSL_DEBUG_MSG( 1, ( "should never happen" ) );
+            return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
+        }
+
+        MBEDTLS_SSL_DEBUG_BUF( 3, "handshake hash", transcript, transcript_len );
+
+        /* Create verify structure */
+        ssl_create_verify_structure(ssl,
+                                    transcript,
+                                    transcript_len,
+                                    verify_buffer,
+                                    &verify_buffer_len,
+                                    !ssl->conf->endpoint );
 
         /* Read message */
         if( ( ret = mbedtls_ssl_read_record( ssl ) ) != 0 )
@@ -2016,9 +2087,10 @@ int mbedtls_ssl_read_certificate_verify_process( mbedtls_ssl_context* ssl )
         }
 
         /* Process the message contents */
-
         MBEDTLS_SSL_PROC_CHK( ssl_read_certificate_verify_parse( ssl, ssl->in_msg,
-                                                                 ssl->in_hslen, ( unsigned char const* ) &hash, MBEDTLS_MD_MAX_SIZE ) );
+                                                                 ssl->in_hslen,
+                                                                 verify_buffer,
+                                                                 verify_buffer_len ) );
     }
     else
 #endif /* MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED */
@@ -2067,20 +2139,20 @@ static int ssl_read_certificate_verify_coordinate( mbedtls_ssl_context* ssl )
 
 
 #if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
+
 static int ssl_read_certificate_verify_parse( mbedtls_ssl_context* ssl,
                                               unsigned char const* buf,
                                               size_t buflen,
-                                              unsigned char const* hash,
-                                              size_t hashlen )
+                                              unsigned char const* verify_buffer,
+                                              size_t verify_buffer_len )
 {
     int ret;
     int signature_scheme;
     size_t sig_len;
-    mbedtls_pk_type_t pk_alg;
+    mbedtls_pk_type_t sig_alg;
     mbedtls_md_type_t md_alg;
-
-    /* TODO: Why don't we use `hashlen` here? Look at this. */
-    ( (void ) hashlen );
+    unsigned char verify_hash[ MBEDTLS_MD_MAX_SIZE ];
+    size_t verify_hash_len;
 
     if( buflen < mbedtls_ssl_hs_hdr_len( ssl ) )
     {
@@ -2111,15 +2183,15 @@ static int ssl_read_certificate_verify_parse( mbedtls_ssl_context* ssl,
     switch ( signature_scheme ) {
         case SIGNATURE_ECDSA_SECP256r1_SHA256:
             md_alg = MBEDTLS_MD_SHA256;
-            pk_alg = MBEDTLS_PK_ECDSA;
+            sig_alg = MBEDTLS_PK_ECDSA;
             break;
         case SIGNATURE_ECDSA_SECP384r1_SHA384:
             md_alg = MBEDTLS_MD_SHA384;
-            pk_alg = MBEDTLS_PK_ECDSA;
+            sig_alg = MBEDTLS_PK_ECDSA;
             break;
         case SIGNATURE_ECDSA_SECP521r1_SHA512:
             md_alg = MBEDTLS_MD_SHA512;
-            pk_alg = MBEDTLS_PK_ECDSA;
+            sig_alg = MBEDTLS_PK_ECDSA;
             break;
         default:
             MBEDTLS_SSL_DEBUG_MSG( 1, ( "Certificate Verify: Unknown signature algorithm." ) );
@@ -2138,9 +2210,9 @@ static int ssl_read_certificate_verify_parse( mbedtls_ssl_context* ssl,
     /*
      * Check the certificate's key type matches the signature alg
      */
-    if( !mbedtls_pk_can_do( &ssl->session_negotiate->peer_cert->pk, pk_alg ) )
+    if( !mbedtls_pk_can_do( &ssl->session_negotiate->peer_cert->pk, sig_alg ) )
     {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "sig_alg doesn't match cert key" ) );
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "signature algorithm doesn't match cert key" ) );
         return( MBEDTLS_ERR_SSL_BAD_HS_CERTIFICATE_VERIFY );
     }
 
@@ -2159,11 +2231,49 @@ static int ssl_read_certificate_verify_parse( mbedtls_ssl_context* ssl,
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad certificate verify message" ) );
         return( MBEDTLS_ERR_SSL_BAD_HS_CERTIFICATE_VERIFY );
     }
+    
+    /* Hash verify buffer with indicated hash function */
+#if defined(MBEDTLS_SHA256_C)
+    if( md_alg == MBEDTLS_MD_SHA256 )
+    {
+        verify_hash_len = 32;
+        if( ( ret = mbedtls_sha256_ret( verify_buffer, 
+            verify_buffer_len, verify_hash, 0 /* 0 for SHA-256 instead of SHA-224 */ )  ) != 0 )
+        {
+            MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_sha256_ret", ret );
+            return( MBEDTLS_ERR_SSL_BAD_HS_CERTIFICATE_VERIFY );
+        }
+    }
+    else
+#endif /* MBEDTLS_SHA256_C */
+#if defined(MBEDTLS_SHA512_C)
+    if( md_alg == MBEDTLS_MD_SHA384 )
+    {
+        verify_hash_len = 48;
+        if( ( ret = mbedtls_sha512_ret( verify_buffer,
+                                    verify_buffer_len,
+                                    verify_hash,
+                                    1 ) ) != 0 )
+        {
+            MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_sha512_ret", ret );
+            return( MBEDTLS_ERR_SSL_BAD_HS_CERTIFICATE_VERIFY );
+        }
+    }
+    else
+#endif /* MBEDTLS_SHA512_C */
+    {
+       MBEDTLS_SSL_DEBUG_MSG( 1, ( "Certificate Verify: Unknown signature algorithm." ) );
+       return( MBEDTLS_ERR_SSL_BAD_HS_CERTIFICATE_VERIFY );
+    }
 
-    /* hashlen set to 0 so that hash len is used from md_alg */
-    if( ( ret = mbedtls_pk_verify( &ssl->session_negotiate->peer_cert->pk,
-                                   md_alg, hash, 0,
-                                   buf, sig_len ) ) != 0 )
+    MBEDTLS_SSL_DEBUG_BUF( 3, "verify hash", verify_hash, verify_hash_len );
+
+    ret = mbedtls_pk_verify( &ssl->session_negotiate->peer_cert->pk,
+                             md_alg,
+                             verify_hash, verify_hash_len,
+                             buf, sig_len );
+
+    if( ret != 0 )
     {
         MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_pk_verify", ret );
         return( ret );
