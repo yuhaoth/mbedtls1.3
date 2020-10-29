@@ -87,6 +87,7 @@
 void mbedtls_gcm_init( mbedtls_gcm_context *ctx )
 {
     GCM_VALIDATE( ctx != NULL );
+    printf("pule: mbedtls_gcm_init(%p)\n", ctx);
     memset( ctx, 0, sizeof( mbedtls_gcm_context ) );
 }
 
@@ -170,6 +171,7 @@ int mbedtls_gcm_setkey( mbedtls_gcm_context *ctx,
     GCM_VALIDATE_RET( key != NULL );
     GCM_VALIDATE_RET( keybits == 128 || keybits == 192 || keybits == 256 );
 
+    printf("pule: mbedtls_gcm_setkey(%p)\n", ctx);
     cipher_info = mbedtls_cipher_info_from_values( cipher, keybits,
                                                    MBEDTLS_MODE_ECB );
     if( cipher_info == NULL )
@@ -285,6 +287,7 @@ int mbedtls_gcm_starts( mbedtls_gcm_context *ctx,
     GCM_VALIDATE_RET( iv != NULL );
     GCM_VALIDATE_RET( add_len == 0 || add != NULL );
 
+    printf("pule: mbedtls_gcm_starts(%p):add_len = %ld\n", ctx, add_len);
     /* IV and AD are limited to 2^64 bits, so 2^61 bytes */
     /* IV is not allowed to be zero length */
     if( iv_len == 0 ||
@@ -371,6 +374,7 @@ int mbedtls_gcm_update( mbedtls_gcm_context *ctx,
     GCM_VALIDATE_RET( length == 0 || input != NULL );
     GCM_VALIDATE_RET( length == 0 || output != NULL );
 
+    printf("pule: mbedtls_gcm_update(%p):length = %ld\n", ctx, length);
     if( output > input && (size_t) ( output - input ) < length )
         return( MBEDTLS_ERR_GCM_BAD_INPUT );
 
@@ -429,7 +433,8 @@ int mbedtls_gcm_finish( mbedtls_gcm_context *ctx,
 
     GCM_VALIDATE_RET( ctx != NULL );
     GCM_VALIDATE_RET( tag != NULL );
-
+    printf("pule: mbedtls_gcm_finish(%p)\n", ctx);
+    
     orig_len = ctx->len * 8;
     orig_add_len = ctx->add_len * 8;
 
@@ -480,6 +485,8 @@ int mbedtls_gcm_crypt_and_tag( mbedtls_gcm_context *ctx,
     GCM_VALIDATE_RET( length == 0 || output != NULL );
     GCM_VALIDATE_RET( tag != NULL );
 
+    printf("pule: mbedtls_gcm_crypt_and_tag(%p):length = %ld add_len = %ld tag_len=%ld\n", ctx, length, add_len, tag_len);
+
     if( ( ret = mbedtls_gcm_starts( ctx, mode, iv, iv_len, add, add_len ) ) != 0 )
         return( ret );
 
@@ -515,6 +522,8 @@ int mbedtls_gcm_auth_decrypt( mbedtls_gcm_context *ctx,
     GCM_VALIDATE_RET( length == 0 || input != NULL );
     GCM_VALIDATE_RET( length == 0 || output != NULL );
 
+    printf("pule: mbedtls_gcm_auth_decrypt(%p):length = %ld add_len = %ld tag_len=%ld\n", ctx, length, add_len, tag_len);
+
     if( ( ret = mbedtls_gcm_crypt_and_tag( ctx, MBEDTLS_GCM_DECRYPT, length,
                                    iv, iv_len, add, add_len,
                                    input, output, tag_len, check_tag ) ) != 0 )
@@ -539,6 +548,8 @@ void mbedtls_gcm_free( mbedtls_gcm_context *ctx )
 {
     if( ctx == NULL )
         return;
+    
+    printf("pule: mbedtls_gcm_free(%p)\n", ctx);
     mbedtls_cipher_free( &ctx->cipher_ctx );
     mbedtls_platform_zeroize( ctx, sizeof( mbedtls_gcm_context ) );
 }

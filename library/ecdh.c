@@ -175,6 +175,7 @@ void mbedtls_ecdh_init( mbedtls_ecdh_context *ctx )
 {
     ECDH_VALIDATE( ctx != NULL );
 
+    printf("pule: mbedtls_ecdh_init(%p)\n", ctx);
 #if defined(MBEDTLS_ECDH_LEGACY_CONTEXT)
     ecdh_init_internal( ctx );
     mbedtls_ecp_point_init( &ctx->Vi  );
@@ -266,7 +267,7 @@ void mbedtls_ecdh_free( mbedtls_ecdh_context *ctx )
 {
     if( ctx == NULL )
         return;
-
+    printf("pule: mbedtls_ecdh_free(%p)\n", ctx);
 #if defined(MBEDTLS_ECDH_LEGACY_CONTEXT)
     mbedtls_ecp_point_free( &ctx->Vi );
     mbedtls_ecp_point_free( &ctx->Vf );
@@ -362,6 +363,7 @@ int mbedtls_ecdh_make_params( mbedtls_ecdh_context *ctx, size_t *olen,
     ECDH_VALIDATE_RET( buf != NULL );
     ECDH_VALIDATE_RET( f_rng != NULL );
 
+    printf("pule: mbedtls_ecdh_make_params(%p):olen = %ld blen = %ld\n", ctx, *olen, blen);
 #if defined(MBEDTLS_ECP_RESTARTABLE)
     restart_enabled = ctx->restart_enabled;
 #else
@@ -416,6 +418,7 @@ int mbedtls_ecdh_read_params( mbedtls_ecdh_context *ctx,
     ECDH_VALIDATE_RET( *buf != NULL );
     ECDH_VALIDATE_RET( end != NULL );
 
+    printf("pule: mbedtls_ecdh_read_params(%p)\n", ctx);
     if( ( ret = mbedtls_ecp_tls_read_group_id( &grp_id, buf, end - *buf ) )
             != 0 )
         return( ret );
@@ -475,7 +478,9 @@ int mbedtls_ecdh_get_params( mbedtls_ecdh_context *ctx,
     ECDH_VALIDATE_RET( key != NULL );
     ECDH_VALIDATE_RET( side == MBEDTLS_ECDH_OURS ||
                        side == MBEDTLS_ECDH_THEIRS );
-
+    
+    printf("pule: mbedtls_ecdh_get_params(%p)\n", ctx);
+    
     if( mbedtls_ecdh_grp_id( ctx ) == MBEDTLS_ECP_DP_NONE )
     {
         /* This is the first call to get_params(). Set up the context
@@ -567,7 +572,8 @@ int mbedtls_ecdh_make_public( mbedtls_ecdh_context *ctx, size_t *olen,
     ECDH_VALIDATE_RET( olen != NULL );
     ECDH_VALIDATE_RET( buf != NULL );
     ECDH_VALIDATE_RET( f_rng != NULL );
-
+    
+    printf("pule: mbedtls_ecdh_make_public(%p):olen = %ld blen = %ld\n", ctx, *olen, blen);
 #if defined(MBEDTLS_ECP_RESTARTABLE)
     restart_enabled = ctx->restart_enabled;
 #endif
@@ -618,7 +624,8 @@ int mbedtls_ecdh_read_public( mbedtls_ecdh_context *ctx,
 {
     ECDH_VALIDATE_RET( ctx != NULL );
     ECDH_VALIDATE_RET( buf != NULL );
-
+    printf("pule: mbedtls_ecdh_read_public(%p):blen = %ld\n", ctx, blen);
+    
 #if defined(MBEDTLS_ECDH_LEGACY_CONTEXT)
     return( ecdh_read_public_internal( ctx, buf, blen ) );
 #else
@@ -701,6 +708,7 @@ int mbedtls_ecdh_calc_secret( mbedtls_ecdh_context *ctx, size_t *olen,
     ECDH_VALIDATE_RET( olen != NULL );
     ECDH_VALIDATE_RET( buf != NULL );
 
+    printf("pule: mbedtls_ecdh_calc_secret(%p):olen = %ld blen = %ld\n", ctx, *olen, blen);
 #if defined(MBEDTLS_ECP_RESTARTABLE)
     restart_enabled = ctx->restart_enabled;
 #endif
