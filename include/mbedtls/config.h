@@ -1528,7 +1528,7 @@
  * a timing side-channel.
  *
  */
-//#define MBEDTLS_SSL_DEBUG_ALL
+#define MBEDTLS_SSL_DEBUG_ALL
 
 /** \def MBEDTLS_SSL_ENCRYPT_THEN_MAC
  *
@@ -1774,7 +1774,7 @@
  * Requires: MBEDTLS_SSL_PROTO_TLS1_3
  *
  */
-#define MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE
+//#define MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE
 
  /**
  * \def MBEDTLS_SSL_TLS13_CTLS_RANDOM_MAX_LENGTH
@@ -2659,7 +2659,7 @@
  *
  * This module provides debugging functions.
  */
-//#define MBEDTLS_DEBUG_C
+#define MBEDTLS_DEBUG_C
 
 /**
  * \def MBEDTLS_DES_C
@@ -3317,7 +3317,7 @@
  *
  * This module adds support for SHA-384 and SHA-512.
  */
-#define MBEDTLS_SHA512_C
+//#define MBEDTLS_SHA512_C
 
 /**
  * \def MBEDTLS_SSL_CACHE_C
