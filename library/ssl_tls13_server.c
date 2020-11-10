@@ -1231,23 +1231,39 @@ void mbedtls_ssl_conf_cookies( mbedtls_ssl_config *conf,
 }
 #endif /* MBEDTLS_SSL_COOKIE_C */
 
-#if defined(MBEDTLS_SSL_COOKIE_C) && defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+#if defined(MBEDTLS_SSL_COOKIE_C)
 static int ssl_parse_cookie_ext( mbedtls_ssl_context *ssl,
                                  const unsigned char *buf,
                                  size_t len )
 {
     int ret = 0;
-    /*	size_t servername_list_size , hostname_len; */
-    /*	const unsigned char *p; */
+    size_t cookie_len;
 
     MBEDTLS_SSL_DEBUG_MSG( 3, ( "parse cookie extension" ) );
 
     if( ssl->conf->f_cookie_check != NULL )
     {
-        MBEDTLS_SSL_DEBUG_BUF( 3, "Received cookie", buf, len );
+        if( len >= 2 )
+        {
+            cookie_len = ( buf[0] << 8 ) | buf[1];
+            buf += 2;
+        }
+        else
+        {
+            MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad client hello message - cookie length mismatch" ) );
+            return( MBEDTLS_ERR_SSL_BAD_HS_CLIENT_HELLO );
+        }
+
+        if( cookie_len + 2 != len )
+        {
+            MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad client hello message - cookie length mismatch" ) );
+            return( MBEDTLS_ERR_SSL_BAD_HS_CLIENT_HELLO );
+        }
+
+        MBEDTLS_SSL_DEBUG_BUF( 3, "Received cookie", buf, cookie_len );
 
         if( ssl->conf->f_cookie_check( ssl->conf->p_cookie,
-                                      buf, len, ssl->cli_id, ssl->cli_id_len ) != 0 )
+                                      buf, cookie_len, ssl->cli_id, ssl->cli_id_len ) != 0 )
         {
             MBEDTLS_SSL_DEBUG_MSG( 2, ( "cookie verification failed" ) );
             ssl->handshake->verify_cookie_len = 1;
@@ -1266,7 +1282,7 @@ static int ssl_parse_cookie_ext( mbedtls_ssl_context *ssl,
 
     return( ret );
 }
-#endif /* MBEDTLS_SSL_COOKIE_C && MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+#endif /* MBEDTLS_SSL_COOKIE_C */
 
 
 
@@ -3732,11 +3748,9 @@ static int ssl_write_hello_retry_request( mbedtls_ssl_context *ssl )
     *p++ = (unsigned char)( ( MBEDTLS_TLS_EXT_COOKIE >> 8 ) & 0xFF );
     *p++ = (unsigned char)( ( MBEDTLS_TLS_EXT_COOKIE ) & 0xFF );
 
-    /* Write total extension length
-     * ( Skip it for now till we know the length )
-     */
+    /* Skip writing the extension and the cookie length */
     ext_len_byte = p;
-    p = p + 2;
+    p = p + 4;
 
     /* If we get here, f_cookie_check is not null */
     if( ssl->conf->f_cookie_write == NULL )
@@ -3753,15 +3767,20 @@ static int ssl_write_hello_retry_request( mbedtls_ssl_context *ssl )
         return( ret );
     }
 
-    ext_length = ( p - ( ext_len_byte + 2 ) );
+    ext_length = ( p - ( ext_len_byte + 4 ) );
 
-    MBEDTLS_SSL_DEBUG_BUF( 3, "Cookie", ext_len_byte + 2, ext_length );
+    MBEDTLS_SSL_DEBUG_BUF( 3, "Cookie", ext_len_byte + 4, ext_length );
 
-    /* Write length */
+    /* Write extension length */
+    *ext_len_byte++ = (unsigned char)( ( ( ext_length + 2 ) >> 8 ) & 0xFF );
+    *ext_len_byte++ = (unsigned char)( ( ext_length + 2 ) & 0xFF );
+
+    /* Write cookie length */
     *ext_len_byte++ = (unsigned char)( ( ext_length >> 8 ) & 0xFF );
     *ext_len_byte = (unsigned char)( ext_length & 0xFF );
 
-    total_ext_len += ext_length + 4  /* 2 bytes for extension_type and 2 bytes for length field */;
+    /* 2 bytes for extension type, 2 bytes for extension length field and 2 bytes for cookie length */
+    total_ext_len += ext_length + 6;
 #endif /* MBEDTLS_SSL_COOKIE_C */
 
 #if defined(MBEDTLS_ECDH_C)

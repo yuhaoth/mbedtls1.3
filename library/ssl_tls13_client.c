@@ -1190,13 +1190,17 @@ static int ssl_write_cookie_ext( mbedtls_ssl_context *ssl,
     *p++ = (unsigned char)( ( MBEDTLS_TLS_EXT_COOKIE ) & 0xFF );
 
     /* Extension Length */
+    *p++ = (unsigned char)( ( ( ssl->handshake->verify_cookie_len + 2 ) >> 8 ) & 0xFF );
+    *p++ = (unsigned char)( ( ssl->handshake->verify_cookie_len + 2 ) & 0xFF );
+
+    /* Cookie Length */
     *p++ = (unsigned char)( ( ssl->handshake->verify_cookie_len >> 8 ) & 0xFF );
     *p++ = (unsigned char)( ssl->handshake->verify_cookie_len & 0xFF );
 
-    /* Copy Cookie */
+    /* Cookie */
     memcpy( p, ssl->handshake->verify_cookie, ssl->handshake->verify_cookie_len );
 
-    *olen = ssl->handshake->verify_cookie_len + 4;
+    *olen = ssl->handshake->verify_cookie_len + 6;
 
     return( 0 );
 }
@@ -3348,6 +3352,11 @@ static int ssl_hrr_parse( mbedtls_ssl_context* ssl,
     int tls_id;
 #endif /* MBEDTLS_ECDH_C */
 
+#if defined(MBEDTLS_SSL_COOKIE_C)
+    size_t cookie_len;
+    unsigned char *cookie;
+#endif /* MBEDTLS_SSL_COOKIE_C */
+
     /* Check for minimal length */
 #if defined(MBEDTLS_SSL_TLS13_CTLS)
     if( ssl->handshake->ctls == MBEDTLS_SSL_TLS13_CTLS_USE )
@@ -3603,19 +3612,38 @@ static int ssl_hrr_parse( mbedtls_ssl_context* ssl,
 #if defined(MBEDTLS_SSL_COOKIE_C)
             case MBEDTLS_TLS_EXT_COOKIE:
 
-                MBEDTLS_SSL_DEBUG_BUF( 3, "cookie extension", ext + 4, ext_size );
+                /* Retrieve length field of cookie */
+                if( ext_size >= 2 )
+                {
+                    cookie = (unsigned char *) ( ext + 4 );
+                    cookie_len = ( cookie[0] << 8 ) | cookie[1];
+                    cookie += 2;
+                }
+                else
+                {
+                    MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad HRR message - cookie length mismatch" ) );
+                    return( MBEDTLS_ERR_SSL_BAD_HS_HELLO_RETRY_REQUEST );
+                }
+
+                if( ( cookie_len + 2 ) != ext_size )
+                {
+                    MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad HRR message - cookie length mismatch" ) );
+                    return( MBEDTLS_ERR_SSL_BAD_HS_HELLO_RETRY_REQUEST );
+                }
+
+                MBEDTLS_SSL_DEBUG_BUF( 3, "cookie extension", cookie, cookie_len );
 
                 mbedtls_free( ssl->handshake->verify_cookie );
 
-                ssl->handshake->verify_cookie = mbedtls_calloc( 1, ext_size );
+                ssl->handshake->verify_cookie = mbedtls_calloc( 1, cookie_len );
                 if( ssl->handshake->verify_cookie == NULL )
                 {
-                    MBEDTLS_SSL_DEBUG_MSG( 1, ( "alloc failed ( %d bytes )", ext_size ) );
+                    MBEDTLS_SSL_DEBUG_MSG( 1, ( "alloc failed ( %d bytes )", cookie_len ) );
                     return( MBEDTLS_ERR_SSL_ALLOC_FAILED );
                 }
 
-                memcpy( ssl->handshake->verify_cookie, ext + 4, ext_size );
-                ssl->handshake->verify_cookie_len = (unsigned char)ext_size;
+                memcpy( ssl->handshake->verify_cookie, cookie, cookie_len );
+                ssl->handshake->verify_cookie_len = (unsigned char) cookie_len;
                 break;
 #endif /* MBEDTLS_SSL_COOKIE_C */
 
