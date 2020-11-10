@@ -3627,9 +3627,14 @@ static int ssl_write_hello_retry_request( mbedtls_ssl_context *ssl )
     int ret;
     unsigned char *p = ssl->out_msg + 4;
     unsigned char *ext_len_byte;
-    int ext_length, total_ext_len = 0;
+    size_t ext_length;
+    size_t total_ext_len = 0;
     unsigned char *extension_start;
-    const char magic_hrr_string[32] = { 0xCF, 0x21, 0xAD, 0x74, 0xE5, 0x9A, 0x61, 0x11, 0xBE, 0x1D, 0x8C, 0x02, 0x1E, 0x65, 0xB8, 0x91, 0xC2, 0xA2, 0x11, 0x16, 0x7A, 0xBB, 0x8C, 0x5E, 0x07, 0x9E, 0x09, 0xE2, 0xC8, 0xA8, 0x33 ,0x9C };
+    const char magic_hrr_string[32] =
+               { 0xCF, 0x21, 0xAD, 0x74, 0xE5, 0x9A, 0x61, 0x11, 0xBE,
+                 0x1D, 0x8C, 0x02, 0x1E, 0x65, 0xB8, 0x91, 0xC2, 0xA2,
+                 0x11, 0x16, 0x7A, 0xBB, 0x8C, 0x5E, 0x07, 0x9E, 0x09,
+                 0xE2, 0xC8, 0xA8, 0x33 ,0x9C };
 
 #if defined(MBEDTLS_ECDH_C)
     const mbedtls_ecp_group_id *gid;
@@ -3763,7 +3768,7 @@ static int ssl_write_hello_retry_request( mbedtls_ssl_context *ssl )
     if( ( ret = ssl_write_supported_version_ext( ssl,
                                                  p,
                                                  ssl->out_buf + MBEDTLS_SSL_OUT_BUFFER_LEN,
-                                                 (size_t *) &ext_length )
+                                                 &ext_length )
                                                 ) != 0 )
     {
         MBEDTLS_SSL_DEBUG_RET( 1, "ssl_write_supported_version_ext", ret );
