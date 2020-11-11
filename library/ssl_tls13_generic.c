@@ -1817,6 +1817,8 @@ static int ssl_certificate_verify_write( mbedtls_ssl_context* ssl,
             &verify_buffer_len,
             ssl->conf->endpoint );
  
+    MBEDTLS_SSL_DEBUG_BUF( 5, "verify buffer structure", verify_buffer, verify_buffer_len );
+	
     /*
      *  struct {
      *    SignatureScheme algorithm;
@@ -2076,6 +2078,8 @@ int mbedtls_ssl_read_certificate_verify_process( mbedtls_ssl_context* ssl )
                                      verify_buffer,
                                      &verify_buffer_len,
                                      !ssl->conf->endpoint );
+
+        MBEDTLS_SSL_DEBUG_BUF( 5, "verify buffer structure", verify_buffer, verify_buffer_len );
 
         /* Read message */
         if( ( ret = mbedtls_ssl_read_record( ssl ) ) != 0 )
