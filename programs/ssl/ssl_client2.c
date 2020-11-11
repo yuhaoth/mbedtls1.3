@@ -331,8 +331,8 @@ int main( void )
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && defined(MBEDTLS_ECP_C)
 #define USAGE_SIG_ALGS \
-    "    sig_algs=a,b,c,d      default: \"default\" (library default: ecdsa_secp256r1_sha256)\n"  \
-    "                        example: \"ecdsa_secp256r1_sha256,ecdsa_secp384r1_sha384\"\n"
+    "    sig_algs=a,b,c,d      default: \"default\" (library default)\n"  \
+    "                          example: \"ecdsa_secp256r1_sha256,ecdsa_secp384r1_sha384\"\n"
 #else
 #define USAGE_SIG_ALGS ""
 #endif
@@ -1151,7 +1151,7 @@ static int ssl_sig_hashes_for_test_tls13[] = {
     SIGNATURE_ECDSA_SECP384r1_SHA384,
 #endif
 #if defined(MBEDTLS_SHA512_C) && defined(MBEDTLS_ECDSA_C) && defined(MBEDTLS_ECP_DP_SECP521R1_ENABLED)
-    SIGNATURE_ECDSA_SECP521r1_SHA512,
+//    SIGNATURE_ECDSA_SECP521r1_SHA512,
 #endif
     SIGNATURE_NONE
 };
@@ -2404,14 +2404,6 @@ int main( int argc, char *argv[] )
 
         sig_alg_list[i] = SIGNATURE_NONE;
     }
-    else
-    {
-        /* Configure default signature algorithm */
-        sig_alg_list[0] = SIGNATURE_ECDSA_SECP256r1_SHA256;
-        sig_alg_list[1] = SIGNATURE_NONE;
-    }
-
-    mbedtls_printf( "Number of signature algorithms: %d\n", i );
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL && MBEDTLS_ECP_C */
 
     /*
@@ -2848,7 +2840,7 @@ int main( int argc, char *argv[] )
 #endif /* MBEDTLS_ECP_C */
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && defined(MBEDTLS_ECP_C)
-    if( opt.sig_algs != NULL && strcmp( opt.sig_algs, "default" ) != 0 )
+    if( opt.sig_algs != NULL )
     {
         mbedtls_ssl_conf_signature_algorithms( &conf, sig_alg_list );
     }

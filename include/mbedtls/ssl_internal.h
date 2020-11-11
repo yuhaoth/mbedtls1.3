@@ -468,6 +468,7 @@ struct mbedtls_ssl_handshake_params
      */
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
     int signature_scheme;                        /*!<  Signature scheme  */
+    int signature_scheme_client;  /*!<  Signature scheme to use by client-initiated CertificateVerify */
 #if defined(MBEDTLS_X509_CRT_PARSE_C) && defined(MBEDTLS_SSL_SRV_C)
     int *received_signature_schemes_list;              /*!<  Received signature algorithms */
 #endif /* MBEDTLS_X509_CRT_PARSE_C && MBEDTLS_SSL_SRV_C */
@@ -740,6 +741,20 @@ struct mbedtls_ssl_handshake_params
         } cli_key_exch_in;
 
 #endif /* MBEDTLS_SSL_SRV_C */
+
+        /* Incoming CertificateVerify */
+        struct
+        {
+            unsigned char verify_buffer[ 64 + 33 + 1 + MBEDTLS_MD_MAX_SIZE ];
+            size_t verify_buffer_len;
+        } certificate_verify_in;
+
+        /* Outgoing CertificateVerify */
+        struct
+        {
+            unsigned char handshake_hash[ MBEDTLS_MD_MAX_SIZE ];
+            size_t handshake_hash_len;
+        } certificate_verify_out;
 
     } state_local;
 
