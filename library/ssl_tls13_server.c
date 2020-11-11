@@ -1458,11 +1458,6 @@ static int ssl_write_supported_version_ext( mbedtls_ssl_context *ssl,
     unsigned char *p = buf;
     *olen = 0;
 
-    if( ssl->handshake->extensions_present & SUPPORTED_VERSION_EXTENSION )
-    {
-        return( 0 );
-    }
-
     MBEDTLS_SSL_DEBUG_MSG( 3, ( "adding supported version extension" ) );
 
     if( end < p || (size_t)( end - p ) < 6 )
@@ -3648,9 +3643,14 @@ static int ssl_write_hello_retry_request( mbedtls_ssl_context *ssl )
     int ret;
     unsigned char *p = ssl->out_msg + 4;
     unsigned char *ext_len_byte;
-    int ext_length, total_ext_len = 0;
+    size_t ext_length;
+    size_t total_ext_len = 0;
     unsigned char *extension_start;
-    const char magic_hrr_string[32] = { 0xCF, 0x21, 0xAD, 0x74, 0xE5, 0x9A, 0x61, 0x11, 0xBE, 0x1D, 0x8C, 0x02, 0x1E, 0x65, 0xB8, 0x91, 0xC2, 0xA2, 0x11, 0x16, 0x7A, 0xBB, 0x8C, 0x5E, 0x07, 0x9E, 0x09, 0xE2, 0xC8, 0xA8, 0x33 ,0x9C };
+    const char magic_hrr_string[32] =
+               { 0xCF, 0x21, 0xAD, 0x74, 0xE5, 0x9A, 0x61, 0x11, 0xBE,
+                 0x1D, 0x8C, 0x02, 0x1E, 0x65, 0xB8, 0x91, 0xC2, 0xA2,
+                 0x11, 0x16, 0x7A, 0xBB, 0x8C, 0x5E, 0x07, 0x9E, 0x09,
+                 0xE2, 0xC8, 0xA8, 0x33 ,0x9C };
 
 #if defined(MBEDTLS_ECDH_C)
     const mbedtls_ecp_group_id *gid;
@@ -3782,6 +3782,20 @@ static int ssl_write_hello_retry_request( mbedtls_ssl_context *ssl )
     /* 2 bytes for extension type, 2 bytes for extension length field and 2 bytes for cookie length */
     total_ext_len += ext_length + 6;
 #endif /* MBEDTLS_SSL_COOKIE_C */
+
+    /* Add supported_version extension */
+    if( ( ret = ssl_write_supported_version_ext( ssl,
+                                                 p,
+                                                 ssl->out_buf + MBEDTLS_SSL_OUT_BUFFER_LEN,
+                                                 &ext_length )
+                                                ) != 0 )
+    {
+        MBEDTLS_SSL_DEBUG_RET( 1, "ssl_write_supported_version_ext", ret );
+        return( ret );
+    }
+
+    total_ext_len += ext_length;
+    p += ext_length;
 
 #if defined(MBEDTLS_ECDH_C)
 
