@@ -1308,23 +1308,26 @@ int mbedtls_increment_sequence_number( unsigned char *sequenceNumber, unsigned c
      * ssl_create_verify_structure() creates the verify structure. As input, it requires
      * the transcript hash. Subsequently, the structure has to be digitally signed.
      *
-     * The structure is computed as:
+     * The structure is computed per TLS 1.3 specification as:
      *   - 64 bytes of octet 32,
-     *   - 33 bytes for the context string (which is either "TLS 1.3, client CertificateVerify"
-     *     or "TLS 1.3, server CertificateVerify"),
+     *   - 33 bytes for the context string 
+     *        (which is either "TLS 1.3, client CertificateVerify"
+     *         or "TLS 1.3, server CertificateVerify"),
      *   - 1 byte for the octet 0x0, which servers as a separator,
      *   - 32 or 48 bytes for the Transcript-Hash(Handshake Context, Certificate)
      *     (depending on the size of the transcript_hash)
      *
-     * The size of the verify_structure is assumed to be either
+     * This results in a total size of 
      * - 130 bytes for a SHA256-based transcript hash, or
+     *   (64 + 33 + 1 + 32 bytes)
      * - 146 bytes for a SHA384-based transcript hash.
+     *   (64 + 33 + 1 + 48 bytes)
      *
      * The caller has to ensure that the buffer has this size.
      */
-static void ssl_create_verify_structure( mbedtls_ssl_context *ssl, 
-                                        unsigned char *transcript_hash, 
-                                        size_t transcript_hash_len, 
+static void ssl_create_verify_structure( mbedtls_ssl_context *ssl,
+                                        unsigned char *transcript_hash,
+                                        size_t transcript_hash_len,
                                         unsigned char *verify_buffer,
                                         size_t *verify_buffer_len,
                                         int from )
@@ -1728,7 +1731,9 @@ static int ssl_certificate_verify_coordinate( mbedtls_ssl_context* ssl )
 
         mbedtls_sha256_clone( &sha256, &ssl->handshake->fin_sha256 );
 
-        if( ( ret = mbedtls_sha256_finish_ret( &sha256, ssl->handshake->state_local.certificate_verify_out.handshake_hash ) ) != 0 )
+        if( ( ret = mbedtls_sha256_finish_ret(
+                         &sha256,
+                          ssl->handshake->state_local.certificate_verify_out.handshake_hash ) ) != 0 )
         {
             MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_sha256_finish_ret", ret );
             return( ret );
@@ -1753,7 +1758,9 @@ static int ssl_certificate_verify_coordinate( mbedtls_ssl_context* ssl )
 
         mbedtls_sha512_clone( &sha384, &ssl->handshake->fin_sha512 );
 
-        if( ( ret = mbedtls_sha512_finish_ret( &sha384, ssl->handshake->state_local.certificate_verify_out.handshake_hash ) ) != 0 )
+        if( ( ret = mbedtls_sha512_finish_ret(
+                         &sha384,
+                         ssl->handshake->state_local.certificate_verify_out.handshake_hash ) ) != 0 )
         {
             MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_sha512_finish_ret", ret );
             return( ret );
@@ -1786,7 +1793,7 @@ static int ssl_certificate_verify_write( mbedtls_ssl_context* ssl,
 {
     int ret;
     size_t n = 0, offset = 0;
-    unsigned char verify_buffer[ 64 + 33 + 1 + MBEDTLS_MD_MAX_SIZE ];
+    unsigned char verify_buffer[ MBEDTLS_SSL_VERIFY_STRUCT_MAX_SIZE ];
     const int *sig_scheme; /* iterate through configured signature schemes */
     size_t verify_buffer_len;
     mbedtls_pk_context *own_key;
@@ -1804,12 +1811,12 @@ static int ssl_certificate_verify_write( mbedtls_ssl_context* ssl,
     }
 
     /* Create verify structure */
-    ssl_create_verify_structure(ssl,
-                                ssl->handshake->state_local.certificate_verify_out.handshake_hash,
-                                ssl->handshake->state_local.certificate_verify_out.handshake_hash_len,
-                                verify_buffer,
-                                &verify_buffer_len,
-                                ssl->conf->endpoint );
+    ssl_create_verify_structure( ssl,
+                                 ssl->handshake->state_local.certificate_verify_out.handshake_hash,
+                                 ssl->handshake->state_local.certificate_verify_out.handshake_hash_len,
+                                 verify_buffer,
+                                 &verify_buffer_len,
+                                 ssl->conf->endpoint );
  
     /*
      *  struct {
@@ -1991,9 +1998,9 @@ static int ssl_read_certificate_verify_postprocess( mbedtls_ssl_context* ssl );
 int mbedtls_ssl_read_certificate_verify_process( mbedtls_ssl_context* ssl )
 {
     int ret;
-    unsigned char verify_buffer[ 64 + 33 + 1 + MBEDTLS_MD_MAX_SIZE ];
+    unsigned char verify_buffer[ MBEDTLS_SSL_VERIFY_STRUCT_MAX_SIZE ];
     size_t verify_buffer_len; 
-    unsigned char transcript[MBEDTLS_MD_MAX_SIZE]; 
+    unsigned char transcript[ MBEDTLS_MD_MAX_SIZE ];
     unsigned int transcript_len;
 #if defined(MBEDTLS_SHA256_C)
     mbedtls_sha256_context sha256;

@@ -91,6 +91,23 @@ extern const struct mbedtls_ssl_tls1_3_labels_struct mbedtls_ssl_tls1_3_labels;
  * is never used with more than 255 Bytes of output. */
 #define MBEDTLS_SSL_TLS1_3_KEY_SCHEDULE_MAX_EXPANSION_LEN 255
 
+/* Macro to express the length of the verify structure length.
+ *
+ * The structure is computed per TLS 1.3 specification as:
+ *   - 64 bytes of octet 32,
+ *   - 33 bytes for the context string 
+ *        (which is either "TLS 1.3, client CertificateVerify"
+ *         or "TLS 1.3, server CertificateVerify"),
+ *   - 1 byte for the octet 0x0, which servers as a separator,
+ *   - 32 or 48 bytes for the Transcript-Hash(Handshake Context, Certificate)
+ *     (depending on the size of the transcript_hash)
+ */
+#define MBEDTLS_SSL_VERIFY_STRUCT_MAX_SIZE  ( 64 +                 \
+                                              33 +                 \
+                                               1 +                 \
+                                              MBEDTLS_MD_MAX_SIZE  \
+                                            )
+
 /**
  * \brief           The \c HKDF-Expand-Label function from
  *                  the TLS 1.3 standard RFC 8446.
