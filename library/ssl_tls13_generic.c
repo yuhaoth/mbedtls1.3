@@ -1231,7 +1231,7 @@ int mbedtls_ssl_derive_traffic_keys( mbedtls_ssl_context *ssl, mbedtls_ssl_key_s
      *  - Handshake header
      *  - 1 byte for content type appended to the message
      *  - Authentication tag ( which depends on the mode of operation )
-     * 
+     *
      * Application data messages do, however, not use a handshake header.
      */
     transform->minlen = transform->taglen + 1;
@@ -1822,8 +1822,6 @@ static int ssl_certificate_verify_write( mbedtls_ssl_context* ssl,
             &verify_buffer_len,
             ssl->conf->endpoint );
 
-    MBEDTLS_SSL_DEBUG_BUF( 5, "verify buffer structure", verify_buffer, verify_buffer_len );
-
     /*
      *  struct {
      *    SignatureScheme algorithm;
@@ -2083,8 +2081,6 @@ int mbedtls_ssl_read_certificate_verify_process( mbedtls_ssl_context* ssl )
                                      verify_buffer,
                                      &verify_buffer_len,
                                      !ssl->conf->endpoint );
-
-        MBEDTLS_SSL_DEBUG_BUF( 5, "verify buffer structure", verify_buffer, verify_buffer_len );
 
         /* Read message */
         if( ( ret = mbedtls_ssl_read_record( ssl ) ) != 0 )
@@ -3293,7 +3289,7 @@ int mbedtls_ssl_generate_application_traffic_keys(
      *  - Handshake header
      *  - 1 byte for content type appended to the message
      *  - Authentication tag ( which depends on the mode of operation )
-     * 
+     *
      * Application data messages do, however, not use a handshake header.
      */
     transform->minlen = transform->taglen + 1;
@@ -3854,7 +3850,7 @@ int mbedtls_ssl_early_data_key_derivation( mbedtls_ssl_context *ssl, mbedtls_ssl
      *  - Handshake header
      *  - 1 byte for content type appended to the message
      *  - Authentication tag ( which depends on the mode of operation )
-     * 
+     *
      * Application data messages do, however, not use a handshake header.
      */
     transform->minlen = transform->taglen + 1;
@@ -4631,7 +4627,7 @@ void mbedtls_ssl_conf_early_data( mbedtls_ssl_config *conf, int early_data, char
             conf->early_data_buf = buffer;
             conf->early_data_len = len;
 #if defined(MBEDTLS_SSL_SRV_C)
-            /* Only the server uses the early data callback. 
+            /* Only the server uses the early data callback.
              * For the client this parameter is not used.
              */
             conf->early_data_callback = early_data_callback;
