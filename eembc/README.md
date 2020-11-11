@@ -20,6 +20,5 @@
 % ./launch_client.bash > l1.txt
 % fg
 % <ctl-c> // kill server
-% ./contextualize.bash l1.txt > c1.txt
-% ./analyze.pl c1.txt > a1.txt
+% ./post-process-log.pl l1.txt > c1.txt
 ```
