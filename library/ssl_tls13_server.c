@@ -1458,6 +1458,9 @@ static int ssl_write_supported_version_ext( mbedtls_ssl_context *ssl,
     unsigned char *p = buf;
     *olen = 0;
 
+    /* With only a single supported version we do not need the ssl structure. */
+    ( (void ) ssl );
+
     MBEDTLS_SSL_DEBUG_MSG( 3, ( "adding supported version extension" ) );
 
     if( end < p || (size_t)( end - p ) < 6 )

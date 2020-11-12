@@ -1305,8 +1305,8 @@ int mbedtls_increment_sequence_number( unsigned char *sequenceNumber, unsigned c
 }
 
     /*
-     * ssl_create_verify_structure() creates the verify structure. As input, it requires
-     * the transcript hash. Subsequently, the structure has to be digitally signed.
+     * The mbedtls_ssl_create_verify_structure() creates the verify structure.
+     * As input, it requires the transcript hash.
      *
      * The structure is computed per TLS 1.3 specification as:
      *   - 64 bytes of octet 32,
@@ -1325,7 +1325,7 @@ int mbedtls_increment_sequence_number( unsigned char *sequenceNumber, unsigned c
      *
      * The caller has to ensure that the buffer has this size.
      */
-static void ssl_create_verify_structure( mbedtls_ssl_context *ssl,
+static void mbedtls_ssl_create_verify_structure(
                                         unsigned char *transcript_hash,
                                         size_t transcript_hash_len,
                                         unsigned char *verify_buffer,
@@ -1353,7 +1353,6 @@ static void ssl_create_verify_structure( mbedtls_ssl_context *ssl,
     verify_buffer[64 + content_string_len] = 0x0;
     memcpy( verify_buffer + 64 + content_string_len + 1, transcript_hash, transcript_hash_len );
 
-    MBEDTLS_SSL_DEBUG_BUF( 3, "verify buffer construct", verify_buffer, 64 + content_string_len + 1 + transcript_hash_len );
     *verify_buffer_len = 64 + content_string_len + 1 + transcript_hash_len; 
 }
 
@@ -1811,13 +1810,15 @@ static int ssl_certificate_verify_write( mbedtls_ssl_context* ssl,
     }
 
     /* Create verify structure */
-    ssl_create_verify_structure( ssl,
-                                 ssl->handshake->state_local.certificate_verify_out.handshake_hash,
-                                 ssl->handshake->state_local.certificate_verify_out.handshake_hash_len,
-                                 verify_buffer,
-                                 &verify_buffer_len,
-                                 ssl->conf->endpoint );
+    mbedtls_ssl_create_verify_structure(
+            ssl->handshake->state_local.certificate_verify_out.handshake_hash,
+            ssl->handshake->state_local.certificate_verify_out.handshake_hash_len,
+            verify_buffer,
+            &verify_buffer_len,
+            ssl->conf->endpoint );
  
+    MBEDTLS_SSL_DEBUG_BUF( 5, "verify buffer structure", verify_buffer, verify_buffer_len );
+	
     /*
      *  struct {
      *    SignatureScheme algorithm;
@@ -2072,12 +2073,13 @@ int mbedtls_ssl_read_certificate_verify_process( mbedtls_ssl_context* ssl )
         MBEDTLS_SSL_DEBUG_BUF( 3, "handshake hash", transcript, transcript_len );
 
         /* Create verify structure */
-        ssl_create_verify_structure(ssl,
-                                    transcript,
-                                    transcript_len,
-                                    verify_buffer,
-                                    &verify_buffer_len,
-                                    !ssl->conf->endpoint );
+        mbedtls_ssl_create_verify_structure( transcript,
+                                     transcript_len,
+                                     verify_buffer,
+                                     &verify_buffer_len,
+                                     !ssl->conf->endpoint );
+
+        MBEDTLS_SSL_DEBUG_BUF( 5, "verify buffer structure", verify_buffer, verify_buffer_len );
 
         /* Read message */
         if( ( ret = mbedtls_ssl_read_record( ssl ) ) != 0 )
