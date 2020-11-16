@@ -1261,17 +1261,22 @@ int mbedtls_ssl_derive_traffic_keys( mbedtls_ssl_context *ssl, mbedtls_ssl_key_s
         goto exit;
     }
 
-    /* TEST
-       if( ( ret = mbedtls_ssl_tls1_3_make_traffic_keys( mbedtls_md_get_type( md_info ),
-       ssl->handshake->server_handshake_traffic_secret,
-       ssl->handshake->client_handshake_traffic_secret,
-       mbedtls_hash_size_for_ciphersuite( suite_info ),
-       transform->keylen, transform->ivlen, traffic_keys ) ) != 0 )
-       {
-       MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_tls1_3_make_traffic_keys failed", ret );
-       return( ret );
-       }
-    */
+    MBEDTLS_SSL_DEBUG_BUF( 5, "client_write_key",
+                           traffic_keys->client_write_key,
+                           traffic_keys->key_len);
+
+    MBEDTLS_SSL_DEBUG_BUF( 5, "server_write_key",
+                           traffic_keys->server_write_key,
+                           traffic_keys->key_len);
+
+    MBEDTLS_SSL_DEBUG_BUF( 5, "client_write_iv",
+                           traffic_keys->client_write_iv,
+                           traffic_keys->iv_len);
+
+    MBEDTLS_SSL_DEBUG_BUF( 5, "server_write_iv",
+                           traffic_keys->server_write_iv,
+                           traffic_keys->iv_len);
+
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= derive traffic keys" ) );
 
 exit:
