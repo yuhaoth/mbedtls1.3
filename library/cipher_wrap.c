@@ -631,12 +631,12 @@ static const mbedtls_cipher_info_t aes_128_ccm_8_info = {
     MBEDTLS_MODE_CCM_8,
     128,
     "AES-128-CCM_8",
-    8,
+    12,
     MBEDTLS_CIPHER_VARIABLE_IV_LEN,
     16,
     &ccm_aes_info
 };
-#endif /* !MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 
 static const mbedtls_cipher_info_t aes_192_ccm_info = {
     MBEDTLS_CIPHER_AES_192_CCM,
