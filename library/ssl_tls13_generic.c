@@ -4632,6 +4632,10 @@ void mbedtls_ssl_conf_cid( mbedtls_ssl_config *conf, unsigned int cid )
 void mbedtls_ssl_conf_early_data( mbedtls_ssl_config *conf, int early_data, char *buffer, unsigned int len, int( *early_data_callback )( mbedtls_ssl_context *,
                                                                                                                                          unsigned char *, size_t ) )
 {
+#if !defined(MBEDTLS_SSL_SRV_C)
+    ( (void ) early_data_callback );
+#endif /* !MBEDTLS_SSL_SRV_C */
+
     if( conf != NULL )
     {
         conf->early_data = early_data;
@@ -4639,7 +4643,12 @@ void mbedtls_ssl_conf_early_data( mbedtls_ssl_config *conf, int early_data, char
         {
             conf->early_data_buf = buffer;
             conf->early_data_len = len;
+#if defined(MBEDTLS_SSL_SRV_C)
+            /* Only the server uses the early data callback. 
+             * For the client this parameter is not used.
+             */
             conf->early_data_callback = early_data_callback;
+#endif /* MBEDTLS_SSL_SRV_C */
         }
     }
 }
