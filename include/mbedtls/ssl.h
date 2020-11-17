@@ -1184,7 +1184,7 @@ struct mbedtls_ssl_config
     const int* ciphersuite_list[5]; /*!< allowed ciphersuites per version   */
 #else
     const int* ciphersuite_list[4]; /*!< allowed ciphersuites per version   */
-#endif /* MBEDTLS_SSL_EXPORT_KEYS */
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 
     /** Callback for printing debug output                                  */
     void (*f_dbg)(void *, int, const char *, int, const char *);
