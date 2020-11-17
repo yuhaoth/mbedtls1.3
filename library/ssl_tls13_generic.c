@@ -4078,7 +4078,7 @@ static int ssl_finished_out_prepare( mbedtls_ssl_context* ssl )
     int ret;
 
 #if defined(MBEDTLS_SSL_CLI_C)
-    mbedtls_ssl_key_set* traffic_keys=ssl->handshake->state_local.finished_out.traffic_keys;
+    mbedtls_ssl_key_set* traffic_keys = ssl->handshake->state_local.finished_out.traffic_keys;
 
     if( ssl->conf->endpoint == MBEDTLS_SSL_IS_CLIENT )
     {
