@@ -4140,7 +4140,7 @@ static int ssl_finished_out_prepare( mbedtls_ssl_context* ssl )
 
     if( ret != 0 )
     {
-            MBEDTLS_SSL_DEBUG_RET( 1, "calc_finished failed", ret );
+         MBEDTLS_SSL_DEBUG_RET( 1, "calc_finished failed", ret );
         return( ret );
     }
 
