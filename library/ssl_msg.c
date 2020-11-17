@@ -2126,8 +2126,6 @@ int mbedtls_ssl_fetch_input( mbedtls_ssl_context *ssl, size_t nb_want )
     return( 0 );
 }
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_2)
-
 /*
  * Flush any data not yet written
  */
@@ -2192,6 +2190,8 @@ int mbedtls_ssl_flush_output( mbedtls_ssl_context *ssl )
 
     return( 0 );
 }
+
+#if defined(MBEDTLS_SSL_PROTO_TLS1_2)
 
 /*
  * Functions to handle the DTLS retransmission state machine

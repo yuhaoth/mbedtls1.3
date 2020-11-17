@@ -516,70 +516,6 @@ static int ssl_decrypt_buf( mbedtls_ssl_context *ssl )
 }
 
 /*
- * Flush any data not yet written
- */
-int mbedtls_ssl_flush_output( mbedtls_ssl_context *ssl )
-{
-    int ret;
-    unsigned char *buf, i;
-
-    MBEDTLS_SSL_DEBUG_MSG( 5, ( "=> flush output" ) );
-
-    if( ssl->f_send == NULL )
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "Bad usage of mbedtls_ssl_set_bio( ) "
-                                    "or mbedtls_ssl_set_bio( )" ) );
-        return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
-    }
-
-    /* Avoid incrementing counter if data is flushed */
-    if( ssl->out_left == 0 )
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 5, ( "<= flush output" ) );
-        return( 0 );
-    }
-
-    while( ssl->out_left > 0 )
-    {
-
-        buf = ssl->out_hdr + mbedtls_ssl_hdr_len( ssl, MBEDTLS_SSL_DIRECTION_OUT, ssl->transform_out ) +
-            ssl->out_msglen - ssl->out_left;
-        ret = ssl->f_send( ssl->p_bio, buf, ssl->out_left );
-
-        if( ret <= 0 )
-            return( ret );
-        else
-        {
-            MBEDTLS_SSL_DEBUG_BUF( 4, "SENT TO THE NETWORK",
-                                   ssl->out_hdr, mbedtls_ssl_hdr_len( ssl, MBEDTLS_SSL_DIRECTION_OUT, ssl->transform_out ) + ssl->out_msglen );
-
-            MBEDTLS_SSL_DEBUG_MSG( 2, ( "message length: %d, out_left: %d",
-                                        mbedtls_ssl_hdr_len( ssl, MBEDTLS_SSL_DIRECTION_OUT, ssl->transform_out ) + ssl->out_msglen, ssl->out_left ) );
-
-            MBEDTLS_SSL_DEBUG_RET( 2, "ssl->f_send", ret );
-        }
-
-        ssl->out_left -= ret;
-    }
-
-    /* Increment record layer sequence number */
-    for ( i = 8; i > mbedtls_ssl_ep_len( ssl ); i-- )
-        if( ++ssl->out_ctr[i - 1] != 0 )
-            break;
-
-    /* The loop goes to its end iff the sequence number is wrapping */
-    if( i == mbedtls_ssl_ep_len( ssl ) )
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "outgoing message counter / sequence number would wrap" ) );
-        return( MBEDTLS_ERR_SSL_COUNTER_WRAPPING );
-    }
-
-    MBEDTLS_SSL_DEBUG_MSG( 5, ( "<= flush output" ) );
-
-    return( 0 );
-}
-
-/*
  * Functions to handle the DTLS retransmission state machine
  */
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
@@ -647,54 +583,6 @@ static void ssl_flight_free( mbedtls_ssl_flight_item *flight )
 #if defined(MBEDTLS_SSL_DTLS_ANTI_REPLAY)
 static void ssl_dtls_replay_reset( mbedtls_ssl_context *ssl );
 #endif
-
-/*
- * Swap transform_out and out_ctr with the alternative ones
- */
-static void ssl_swap_epochs( mbedtls_ssl_context *ssl )
-{
-    mbedtls_ssl_transform *tmp_transform;
-    unsigned char tmp_out_ctr[8];
-
-    if( ssl->transform_out == ssl->handshake->alt_transform_out )
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 3, ( "skip swap epochs" ) );
-        return;
-    }
-
-    MBEDTLS_SSL_DEBUG_MSG( 3, ( "swap epochs" ) );
-
-    /* Swap transforms */
-    tmp_transform                     = ssl->transform_out;
-    ssl->transform_out                = ssl->handshake->alt_transform_out;
-    ssl->handshake->alt_transform_out = tmp_transform;
-
-    /* Swap epoch + sequence_number */
-    memcpy( tmp_out_ctr,                 ssl->out_ctr,                8 );
-    memcpy( ssl->out_ctr,                ssl->handshake->alt_out_ctr, 8 );
-    memcpy( ssl->handshake->alt_out_ctr, tmp_out_ctr,                 8 );
-
-    /* Adjust to the newly activated transform */
-    if( ssl->transform_out != NULL &&
-        ssl->minor_ver >= MBEDTLS_SSL_MINOR_VERSION_2 )
-    {
-        ssl->out_msg = ssl->out_iv + ssl->transform_out->ivlen -
-            ssl->transform_out->fixed_ivlen;
-    }
-    else
-        ssl->out_msg = ssl->out_iv;
-
-#if defined(MBEDTLS_SSL_HW_RECORD_ACCEL)
-    if( mbedtls_ssl_hw_record_activate != NULL )
-    {
-        if( ( ret = mbedtls_ssl_hw_record_activate( ssl, MBEDTLS_SSL_CHANNEL_OUTBOUND ) ) != 0 )
-        {
-            MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_hw_record_activate", ret );
-            return( MBEDTLS_ERR_SSL_HW_ACCEL_FAILED );
-        }
-    }
-#endif
-}
 
 /*
  * Retransmit the current flight of messages.
@@ -809,7 +697,7 @@ int mbedtls_ssl_write_record( mbedtls_ssl_context *ssl )
     int ret, done = 0;
     size_t dummy_length;
     size_t len = ssl->out_msglen;
-
+    size_t protected_record_size;
 
     ((void) dummy_length); /* TODO: Guard this appropriately. */
 
@@ -1068,7 +956,6 @@ int mbedtls_ssl_write_record( mbedtls_ssl_context *ssl )
                 /* Write Length */
                 ssl->out_len[0] = (unsigned char)( len >> 8 );
                 ssl->out_len[1] = (unsigned char)( len );
-
             }
             else
             {
@@ -1185,7 +1072,12 @@ int mbedtls_ssl_write_record( mbedtls_ssl_context *ssl )
         }
 
         /* Calculate the number of bytes we have to put on the wire */
-        ssl->out_left = mbedtls_ssl_hdr_len( ssl, MBEDTLS_SSL_DIRECTION_OUT, ssl->transform_out ) + ssl->out_msglen;
+        protected_record_size = mbedtls_ssl_hdr_len( ssl, MBEDTLS_SSL_DIRECTION_OUT,
+                                                     ssl->transform_out ) + len;
+
+        ssl->out_left += protected_record_size;
+        ssl->out_hdr  += protected_record_size;
+        mbedtls_ssl_update_out_pointers( ssl, ssl->transform_out );
 
         if( ssl->transform_out != NULL )
         {
