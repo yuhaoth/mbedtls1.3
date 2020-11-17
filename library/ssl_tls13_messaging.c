@@ -59,19 +59,6 @@
 #endif /* MBEDTLS_PLATFORM_C */
 
 /*
- * TODO
- */
-int mbedtls_ssl_check_pending( const mbedtls_ssl_context *ssl )
-{
-    /* This is part of the public API and thus needs to be implemented
-     * by any implementation of the messaging layer. Since it's currently
-     * not used from TLS 1.3 specific code or example programs, it's OK
-     * to use a dummy implementation. */
-    ((void) ssl);
-    return( -1 );
-}
-
-/*
  * Encryption/decryption functions
  */
 static int ssl_encrypt_buf( mbedtls_ssl_context *ssl )
@@ -938,66 +925,6 @@ int mbedtls_ssl_write_record( mbedtls_ssl_context *ssl )
 }
 
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
-/*
- * Mark bits in bitmask ( used for DTLS HS reassembly )
- */
-static void ssl_bitmask_set( unsigned char *mask, size_t offset, size_t len )
-{
-    unsigned int start_bits, end_bits;
-
-    start_bits = 8 - ( offset % 8 );
-    if( start_bits != 8 )
-    {
-        size_t first_byte_idx = offset / 8;
-
-        /* Special case */
-        if( len <= start_bits )
-        {
-            for( ; len != 0; len-- )
-                mask[first_byte_idx] |= 1 << ( start_bits - len );
-
-            /* Avoid potential issues with offset or len becoming invalid */
-            return;
-        }
-
-        offset += start_bits; /* Now offset % 8 == 0 */
-        len -= start_bits;
-
-        for( ; start_bits != 0; start_bits-- )
-            mask[first_byte_idx] |= 1 << ( start_bits - 1 );
-    }
-
-    end_bits = len % 8;
-    if( end_bits != 0 )
-    {
-        size_t last_byte_idx = ( offset + len ) / 8;
-
-        len -= end_bits; /* Now len % 8 == 0 */
-
-        for( ; end_bits != 0; end_bits-- )
-            mask[last_byte_idx] |= 1 << ( 8 - end_bits );
-    }
-
-    memset( mask + offset / 8, 0xFF, len / 8 );
-}
-
-/*
- * Check that bitmask is full
- */
-static int ssl_bitmask_check( unsigned char *mask, size_t len )
-{
-    size_t i;
-
-    for( i = 0; i < len / 8; i++ )
-        if( mask[i] != 0xFF )
-            return( -1 );
-
-    for( i = 0; i < len % 8; i++ )
-        if( ( mask[len / 8] & ( 1 << ( 7 - i ) ) ) == 0 )
-            return( -1 );
-
-    return( 0 );
-}
 
 /*
  * Reassemble fragmented DTLS handshake messages.
@@ -1154,121 +1081,6 @@ static int ssl_reassemble_dtls_handshake( mbedtls_ssl_context *ssl )
     return( 0 );
 }
 #endif /* MBEDTLS_SSL_PROTO_DTLS */
-
-static int ssl_prepare_handshake_record( mbedtls_ssl_context *ssl )
-{
-    const char magic_hrr_string[32] = { 0xCF, 0x21, 0xAD, 0x74, 0xE5, 0x9A, 0x61, 0x11, 0xBE, 0x1D, 0x8C, 0x02, 0x1E, 0x65, 0xB8, 0x91, 0xC2, 0xA2, 0x11, 0x16, 0x7A, 0xBB, 0x8C, 0x5E, 0x07, 0x9E, 0x09, 0xE2, 0xC8, 0xA8, 0x33 ,0x9C };
-
-    if( ssl->in_msglen < mbedtls_ssl_hs_hdr_len( ssl ) )
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "handshake message too short: %d",
-                                    ssl->in_msglen ) );
-        return( MBEDTLS_ERR_SSL_INVALID_RECORD );
-    }
-
-    ssl->in_hslen = mbedtls_ssl_hs_hdr_len( ssl ) + (
-        ( ssl->in_msg[1] << 16 ) |
-        ( ssl->in_msg[2] << 8  ) |
-        ssl->in_msg[3] );
-
-    MBEDTLS_SSL_DEBUG_MSG( 3, ( "handshake message: msglen ="
-                                " %d, type = %d, hslen = %d",
-                                ssl->in_msglen, ssl->in_msg[0], ssl->in_hslen ) );
-
-#if defined(MBEDTLS_SSL_PROTO_DTLS)
-    if( ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_DATAGRAM )
-    {
-        int ret;
-        unsigned int recv_msg_seq = ( ssl->in_msg[4] << 8 ) | ssl->in_msg[5];
-
-        /* ssl->handshake is NULL when receiving ClientHello for renego */
-        if( ssl->handshake != NULL &&
-            recv_msg_seq != ssl->handshake->in_msg_seq )
-        {
-            /* Retransmit only on last message from previous flight, to avoid
-             * too many retransmissions.
-             * Besides, No sane server ever retransmits HelloVerifyRequest */
-            if( recv_msg_seq == ssl->handshake->in_flight_start_seq - 1 &&
-                ssl->in_msg[0] != MBEDTLS_SSL_HS_HELLO_VERIFY_REQUEST )
-            {
-                MBEDTLS_SSL_DEBUG_MSG( 2, ( "received message from last flight, "
-                                            "message_seq = %d, start_of_flight = %d",
-                                            recv_msg_seq,
-                                            ssl->handshake->in_flight_start_seq ) );
-
-                if( ( ret = mbedtls_ssl_resend( ssl ) ) != 0 )
-                {
-                    MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_resend", ret );
-                    return( ret );
-                }
-            }
-            else
-            {
-                MBEDTLS_SSL_DEBUG_MSG( 2, ( "dropping out-of-sequence message: "
-                                            "message_seq = %d, expected = %d",
-                                            recv_msg_seq,
-                                            ssl->handshake->in_msg_seq ) );
-            }
-
-            return( MBEDTLS_ERR_SSL_WANT_READ );
-        }
-        /* Wait until message completion to increment in_msg_seq */
-
-        /* Reassemble if current message is fragmented or reassembly is
-         * already in progress */
-        if( ssl->in_msglen < ssl->in_hslen ||
-            memcmp( ssl->in_msg + 6, "\0\0\0",        3 ) != 0 ||
-            memcmp( ssl->in_msg + 9, ssl->in_msg + 1, 3 ) != 0 ||
-            ( ssl->handshake != NULL && ssl->handshake->hs_msg != NULL ) )
-        {
-            MBEDTLS_SSL_DEBUG_MSG( 2, ( "found fragmented DTLS handshake message" ) );
-
-            if( ( ret = ssl_reassemble_dtls_handshake( ssl ) ) != 0 )
-            {
-                MBEDTLS_SSL_DEBUG_RET( 1, "ssl_reassemble_dtls_handshake", ret );
-                return( ret );
-            }
-        }
-    }
-    else
-#endif /* MBEDTLS_SSL_PROTO_DTLS */
-        /* With TLS we don't handle fragmentation ( for now ) */
-        if( ssl->in_msglen < ssl->in_hslen )
-        {
-            MBEDTLS_SSL_DEBUG_MSG( 1, ( "TLS handshake fragmentation not supported" ) );
-            return( MBEDTLS_ERR_SSL_FEATURE_UNAVAILABLE );
-        }
-
-    if( ssl->state != MBEDTLS_SSL_HANDSHAKE_OVER &&
-        ssl->handshake != NULL )
-    {
-        /*
-         * If the server responds with the HRR message then a special handling
-         * with the modified transcript hash is necessary. We compute this hash later.
-         */
-        if( ( ssl->in_msg[0] == MBEDTLS_SSL_HS_SERVER_HELLO ) &&
-            ( memcmp( ssl->in_msg + mbedtls_ssl_hs_hdr_len( ssl ) + 2, &magic_hrr_string[0], 32 ) == 0 ) )
-        {
-            MBEDTLS_SSL_DEBUG_MSG( 5, ( "--- Special HRR Checksum Processing" ) );
-        }
-        else
-        {
-            MBEDTLS_SSL_DEBUG_MSG( 5, ( "--- Update Checksum ( ssl_prepare_handshake_record )" ) );
-            ssl->handshake->update_checksum( ssl, ssl->in_msg, ssl->in_hslen );
-        }
-    }
-
-    /* Handshake message is complete, increment counter */
-#if defined(MBEDTLS_SSL_PROTO_DTLS)
-    if( ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_DATAGRAM &&
-        ssl->handshake != NULL )
-    {
-        ssl->handshake->in_msg_seq++;
-    }
-#endif
-
-    return( 0 );
-}
 
 /*
  * DTLS anti-replay: RFC 6347 4.1.2.6
@@ -1932,7 +1744,7 @@ int mbedtls_ssl_read_record( mbedtls_ssl_context *ssl )
         MBEDTLS_SSL_DEBUG_BUF( 4, "remaining content in record",
                                ssl->in_msg, ssl->in_msglen );
 
-        if( ( ret = ssl_prepare_handshake_record( ssl ) ) != 0 )
+        if( ( ret = mbedtls_ssl_prepare_handshake_record( ssl ) ) != 0 )
             return( ret );
 
         return( 0 );
@@ -2055,7 +1867,7 @@ read_record_header:
      */
     if( ssl->in_msgtype == MBEDTLS_SSL_MSG_HANDSHAKE )
     {
-        if( ( ret = ssl_prepare_handshake_record( ssl ) ) != 0 )
+        if( ( ret = mbedtls_ssl_prepare_handshake_record( ssl ) ) != 0 )
             return( ret );
     }
 
@@ -2105,7 +1917,7 @@ read_record_header:
                     ssl->in_msglen = i - 1;
                     /* ssl->in_hslen = ( ( ssl->in_msg[1] << 16 ) | ( ssl->in_msg[2] << 8 ) | ( ssl->in_msg[3] ) ) + mbedtls_ssl_hs_hdr_len( ssl ); */
 
-                    if( ( ret = ssl_prepare_handshake_record( ssl ) ) != 0 )	return( ret );
+                    if( ( ret = mbedtls_ssl_prepare_handshake_record( ssl ) ) != 0 )	return( ret );
 
                     break;
                 case MBEDTLS_SSL_MSG_APPLICATION_DATA:
