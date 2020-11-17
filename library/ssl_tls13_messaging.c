@@ -1131,7 +1131,7 @@ int mbedtls_ssl_write_record( mbedtls_ssl_context *ssl )
             }
 #endif /* MBEDTLS_SSL_PROTO_DTLS */
 
-#if defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
+#if defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED) && defined(MBEDTLS_SSL_CLI_C)
             /* We need to patch the psk binder by
              * re-running the function to get the correct length information for the extension.
              * But: we only do that when in ClientHello state and when using a PSK mode
@@ -1149,7 +1149,7 @@ int mbedtls_ssl_write_record( mbedtls_ssl_context *ssl )
 
                 mbedtls_ssl_write_pre_shared_key_ext( ssl, ssl->handshake->ptr_to_psk_ext, &ssl->out_msg[len], &dummy_length, 1 );
             }
-#endif /* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED */
+#endif /* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED && MBEDTLS_SSL_CLI_C */
 
             /* For post-handshake messages we do not need to update the hash anymore */
             if( ssl->state != MBEDTLS_SSL_HANDSHAKE_OVER )
