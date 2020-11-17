@@ -1319,14 +1319,14 @@ int mbedtls_increment_sequence_number( unsigned char *sequenceNumber, unsigned c
      *
      * The structure is computed per TLS 1.3 specification as:
      *   - 64 bytes of octet 32,
-     *   - 33 bytes for the context string 
+     *   - 33 bytes for the context string
      *        (which is either "TLS 1.3, client CertificateVerify"
      *         or "TLS 1.3, server CertificateVerify"),
      *   - 1 byte for the octet 0x0, which servers as a separator,
      *   - 32 or 48 bytes for the Transcript-Hash(Handshake Context, Certificate)
      *     (depending on the size of the transcript_hash)
      *
-     * This results in a total size of 
+     * This results in a total size of
      * - 130 bytes for a SHA256-based transcript hash, or
      *   (64 + 33 + 1 + 32 bytes)
      * - 146 bytes for a SHA384-based transcript hash.
@@ -1362,7 +1362,7 @@ static void mbedtls_ssl_create_verify_structure(
     verify_buffer[64 + content_string_len] = 0x0;
     memcpy( verify_buffer + 64 + content_string_len + 1, transcript_hash, transcript_hash_len );
 
-    *verify_buffer_len = 64 + content_string_len + 1 + transcript_hash_len; 
+    *verify_buffer_len = 64 + content_string_len + 1 + transcript_hash_len;
 }
 
 
@@ -1755,7 +1755,7 @@ static int ssl_certificate_verify_coordinate( mbedtls_ssl_context* ssl )
 
 #if defined(MBEDTLS_SHA512_C)
     if( ssl->handshake->ciphersuite_info->mac == MBEDTLS_MD_SHA384 )
-    {        
+    {
         mbedtls_sha512_init( &sha384 );
 
         if( ( ret = mbedtls_sha512_starts_ret( &sha384, 1 ) ) != 0 )
@@ -1825,9 +1825,9 @@ static int ssl_certificate_verify_write( mbedtls_ssl_context* ssl,
             verify_buffer,
             &verify_buffer_len,
             ssl->conf->endpoint );
- 
+
     MBEDTLS_SSL_DEBUG_BUF( 5, "verify buffer structure", verify_buffer, verify_buffer_len );
-	
+
     /*
      *  struct {
      *    SignatureScheme algorithm;
@@ -1861,7 +1861,7 @@ static int ssl_certificate_verify_write( mbedtls_ssl_context* ssl,
             MBEDTLS_SSL_DEBUG_MSG( 1, ( "should never happen" ) );
             return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
     }
-    
+
     /* Verify whether we can use signature algorithm */
     ssl->handshake->signature_scheme_client = SIGNATURE_NONE;
 
@@ -1882,7 +1882,7 @@ static int ssl_certificate_verify_write( mbedtls_ssl_context* ssl,
             MBEDTLS_SSL_DEBUG_MSG( 1, ( "should never happen" ) );
             return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
     }
- 
+
     buf[4] = (unsigned char)( ( ssl->handshake->signature_scheme_client >> 8 ) & 0xFF );
     buf[5] = (unsigned char)( ( ssl->handshake->signature_scheme_client ) & 0xFF );
     offset = 2;
@@ -2009,7 +2009,7 @@ int mbedtls_ssl_read_certificate_verify_process( mbedtls_ssl_context* ssl )
 {
     int ret;
     unsigned char verify_buffer[ MBEDTLS_SSL_VERIFY_STRUCT_MAX_SIZE ];
-    size_t verify_buffer_len; 
+    size_t verify_buffer_len;
     unsigned char transcript[ MBEDTLS_MD_MAX_SIZE ];
     unsigned int transcript_len;
 #if defined(MBEDTLS_SHA256_C)
@@ -2024,7 +2024,7 @@ int mbedtls_ssl_read_certificate_verify_process( mbedtls_ssl_context* ssl )
 
     MBEDTLS_SSL_PROC_CHK( ssl_read_certificate_verify_coordinate( ssl ) );
 
-#if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED) // TBD: double-check 
+#if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED) // TBD: double-check
     if( ret == SSL_CERTIFICATE_VERIFY_READ )
     {
         /* Need to calculate the hash of the transcript first
@@ -2034,7 +2034,7 @@ int mbedtls_ssl_read_certificate_verify_process( mbedtls_ssl_context* ssl )
 #if defined(MBEDTLS_SHA256_C)
         if( ssl->handshake->ciphersuite_info->mac == MBEDTLS_MD_SHA256 )
         {
-            transcript_len=32; 
+            transcript_len=32;
             mbedtls_sha256_init( &sha256 );
 
             mbedtls_sha256_clone( &sha256, &ssl->handshake->fin_sha256 );
@@ -2249,13 +2249,13 @@ static int ssl_read_certificate_verify_parse( mbedtls_ssl_context* ssl,
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad certificate verify message" ) );
         return( MBEDTLS_ERR_SSL_BAD_HS_CERTIFICATE_VERIFY );
     }
-    
+
     /* Hash verify buffer with indicated hash function */
 #if defined(MBEDTLS_SHA256_C)
     if( md_alg == MBEDTLS_MD_SHA256 )
     {
         verify_hash_len = 32;
-        if( ( ret = mbedtls_sha256_ret( verify_buffer, 
+        if( ( ret = mbedtls_sha256_ret( verify_buffer,
             verify_buffer_len, verify_hash, 0 /* 0 for SHA-256 instead of SHA-224 */ )  ) != 0 )
         {
             MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_sha256_ret", ret );
