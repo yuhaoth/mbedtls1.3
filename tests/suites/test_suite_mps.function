@@ -41,7 +41,7 @@
  * Apart from this dependency, the MPS is entirely
  * independent of the rest of Mbed TLS and this suite
  * can be run standalone. */
-//#define TEST_SUITE_MPS_NO_SSL
+#define TEST_SUITE_MPS_NO_SSL
 
 /* The default size of the buffer used by the
  * Layer 0 stream mock implementation. */
