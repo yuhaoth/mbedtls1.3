@@ -1118,7 +1118,7 @@ struct mbedtls_ssl_session
     unsigned char *ticket;      /*!< RFC 5077 session ticket */
     size_t ticket_len;          /*!< session ticket length   */
     uint32_t ticket_lifetime;   /*!< ticket lifetime hint    */
-#endif /* MBEDTLS_SSL_SESSION_TICKETS && MBEDTLS_SSL_CLI_C ) */
+#endif /* MBEDTLS_SSL_SESSION_TICKETS && MBEDTLS_SSL_CLI_C */
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && defined(MBEDTLS_SSL_NEW_SESSION_TICKET)
 // TBD: Replace fields by ticket structure
