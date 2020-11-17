@@ -2412,7 +2412,9 @@ cleanup:
 
 static int ssl_write_certificate_coordinate( mbedtls_ssl_context* ssl )
 {
+#if defined(MBEDTLS_SSL_SRV_C)
     int have_own_cert = 1;
+#endif /* MBEDTLS_SSL_SRV_C */
 
 #if defined(MBEDTLS_SSL_CLI_C)
     if( ssl->conf->endpoint == MBEDTLS_SSL_IS_CLIENT )
@@ -2714,7 +2716,9 @@ cleanup:
 
 static int ssl_read_certificate_coordinate( mbedtls_ssl_context* ssl )
 {
+#if defined(MBEDTLS_SSL_SRV_C)
     int authmode = ssl->conf->authmode;
+#endif /* MBEDTLS_SSL_SRV_C */
 
     if( ssl->session_negotiate->key_exchange == MBEDTLS_KEY_EXCHANGE_PSK ||
         ssl->session_negotiate->key_exchange == MBEDTLS_KEY_EXCHANGE_ECDHE_PSK )
@@ -2761,9 +2765,10 @@ static int ssl_read_certificate_parse( mbedtls_ssl_context* ssl,
 {
     int ret;
     size_t i, n, certificate_request_context_len;
-    int authmode = ssl->conf->authmode;
 
 #if defined(MBEDTLS_SSL_SRV_C)
+    int authmode = ssl->conf->authmode;
+
     if( ssl->conf->endpoint == MBEDTLS_SSL_IS_SERVER )
     {
         /* read certificate request context length */

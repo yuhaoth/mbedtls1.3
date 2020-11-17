@@ -1384,10 +1384,10 @@ struct mbedtls_ssl_config
     char* early_data_buf;
     // Length of early data
     unsigned int early_data_len;
-#if defined(MBEDTLS_SSL_SRV_C)
+#if defined(MBEDTLS_SSL_CLI_C)
     // callback function for early data processing by the server-side
     int(*early_data_callback)(mbedtls_ssl_context*, unsigned char*, size_t);
-#endif /* MBEDTLS_SSL_SRV_C */
+#endif /* MBEDTLS_SSL_CLI_C */
 #endif /* MBEDTLS_ZERO_RTT */
 
 #endif /* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED */

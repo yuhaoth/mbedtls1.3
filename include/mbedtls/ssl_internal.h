@@ -469,16 +469,16 @@ struct mbedtls_ssl_handshake_params
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
     int signature_scheme;                        /*!<  Signature scheme  */
     int signature_scheme_client;  /*!<  Signature scheme to use by client-initiated CertificateVerify */
-#if defined(MBEDTLS_X509_CRT_PARSE_C) && defined(MBEDTLS_SSL_SRV_C)
+#if defined(MBEDTLS_X509_CRT_PARSE_C) && defined(MBEDTLS_SSL_CLI_C)
     int *received_signature_schemes_list;              /*!<  Received signature algorithms */
-#endif /* MBEDTLS_X509_CRT_PARSE_C && MBEDTLS_SSL_SRV_C */
+#endif /* MBEDTLS_X509_CRT_PARSE_C && MBEDTLS_SSL_CLI_C */
     mbedtls_ecp_curve_info server_preferred_curve; /*!<  Preferred curve requested by server (obtained in HelloRetryRequest  */
 #if defined(MBEDTLS_SSL_CLI_C)
     int hello_retry_requests_received; /*!<  Number of Hello Retry Request messages received from the server.  */
 #endif /* MBEDTLS_SSL_CLI_C */
-#if defined(MBEDTLS_SSL_SRV_C)
+#if defined(MBEDTLS_SSL_CLI_C)
     int hello_retry_requests_sent; /*!<  Number of Hello Retry Request messages sent by the server.  */
-#endif /* MBEDTLS_SSL_SRV_C */
+#endif /* MBEDTLS_SSL_CLI_C */
 #if defined(MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE)
     int ccs_sent; /* Number of CCS messages sent */
 #endif /* MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE */

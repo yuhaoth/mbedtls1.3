@@ -1600,6 +1600,28 @@ component_test_malloc_0_null () {
     if_build_succeeded tests/ssl-opt.sh -e 'proxy'
 }
 
+component_test_tls13 () {
+    msg "build: TLS 1.3 (ASanDbg) "
+    scripts/config.py   set MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+    cmake CC=gcc CMAKE_BUILD_TYPE=ASanDbg .
+    make
+
+    msg "test: compat.sh"
+    if_build_succeeded tests/compat.sh -m tls1_3 -t ECDSA
+}
+
+component_test_tls13_client_only () {
+    msg "build: TLS 1.3 client-only (ASanDbg) "
+    scripts/config.py   set MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+    scripts/config.py unset MBEDTLS_SSL_SRV_C
+    scripts/config.py   set MBEDTLS_SSL_CLI_C
+    cmake CC=gcc CMAKE_BUILD_TYPE=ASanDbg .
+    make
+
+    msg "test: TLS 1.3 client-only, compat.sh"
+    if_build_succeeded tests/compat.sh -m tls1_3 -t ECDSA
+}
+
 component_test_aes_fewer_tables () {
     msg "build: default config with AES_FEWER_TABLES enabled"
     scripts/config.py set MBEDTLS_AES_FEWER_TABLES
