@@ -4554,7 +4554,7 @@ static int ssl_finished_in_postprocess_cli( mbedtls_ssl_context *ssl )
     else
 #endif /* MBEDTLS_SHA256_C */
 #if defined(MBEDTLS_SHA512_C)
-        if( hash_type == MBEDTLS_MD_SHA384 )
+    if( hash_type == MBEDTLS_MD_SHA384 )
     {
         mbedtls_sha512_context sha512;
         mbedtls_sha512_init( &sha512 );
