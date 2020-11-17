@@ -1241,7 +1241,8 @@ struct mbedtls_ssl_config
     unsigned int rr_config;
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 
-#endif /* ( MBEDTLS_SSL_DTLS_HELLO_VERIFY || ( MBEDTLS_SSL_COOKIE_C && MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL ) ) && MBEDTLS_SSL_SRV_C */
+#endif /* ( MBEDTLS_SSL_DTLS_HELLO_VERIFY || ( MBEDTLS_SSL_COOKIE_C && 
+            MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL ) ) && MBEDTLS_SSL_SRV_C */
 
 #if ((defined(MBEDTLS_SSL_SESSION_TICKETS) || (defined(MBEDTLS_SSL_NEW_SESSION_TICKET) && defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)) ) && defined(MBEDTLS_SSL_SRV_C))
     /* Callback to create and write a session ticket */
