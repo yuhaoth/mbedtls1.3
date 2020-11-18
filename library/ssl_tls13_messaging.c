@@ -93,10 +93,7 @@ static int ssl_encrypt_buf( mbedtls_ssl_context *ssl )
         size_t add_data_len;
         unsigned char taglen;
 
-        /* Currently there is only one cipher with a short authentication tag defined */
-        if( ssl->handshake->ciphersuite_info->cipher == MBEDTLS_CIPHER_AES_128_CCM_8 )
-            taglen = 8;
-        else taglen = 16;
+        taglen = ssl->handshake->ciphersuite_info->flags & MBEDTLS_CIPHERSUITE_SHORT_TAG ? 8 : 16;
 
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
         if( ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_DATAGRAM )
@@ -286,10 +283,7 @@ static int ssl_decrypt_buf( mbedtls_ssl_context *ssl )
         unsigned char add_data[5];
         size_t add_data_len;
 
-        /* Currently there is only one cipher with a short authentication tag defined */
-        if( ssl->handshake->ciphersuite_info->cipher == MBEDTLS_CIPHER_AES_128_CCM_8 )
-            taglen = 8;
-        else taglen = 16;
+        taglen = ssl->handshake->ciphersuite_info->flags & MBEDTLS_CIPHERSUITE_SHORT_TAG ? 8 : 16;
 
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
         if( ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_DATAGRAM )
