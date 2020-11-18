@@ -328,8 +328,7 @@ static const mbedtls_ssl_ciphersuite_t ciphersuite_definitions[] =
     MBEDTLS_KEY_EXCHANGE_NONE, // field not used in TLS 1.3 implementation
     MBEDTLS_SSL_MAJOR_VERSION_3, MBEDTLS_SSL_MINOR_VERSION_4,
     MBEDTLS_SSL_MAJOR_VERSION_3, MBEDTLS_SSL_MINOR_VERSION_4,
-    0 // field not used in TLS 1.3 implementation
-    },
+    0 },
 #endif /* MBEDTLS_SHA512_C */
 #if defined(MBEDTLS_SHA256_C)
     { TLS_AES_128_GCM_SHA256, "TLS_AES_128_GCM_SHA256",
@@ -337,8 +336,7 @@ static const mbedtls_ssl_ciphersuite_t ciphersuite_definitions[] =
     MBEDTLS_KEY_EXCHANGE_NONE, // field not used in TLS 1.3 implementation
     MBEDTLS_SSL_MAJOR_VERSION_3, MBEDTLS_SSL_MINOR_VERSION_4,
     MBEDTLS_SSL_MAJOR_VERSION_3, MBEDTLS_SSL_MINOR_VERSION_4,
-    0 // field not used in TLS 1.3 implementation
-    },
+    0 },
 #endif /* MBEDTLS_SHA256_C */
 #endif /* MBEDTLS_GCM_C */
 
@@ -349,16 +347,14 @@ static const mbedtls_ssl_ciphersuite_t ciphersuite_definitions[] =
     MBEDTLS_KEY_EXCHANGE_NONE, // field not used in TLS 1.3 implementation
     MBEDTLS_SSL_MAJOR_VERSION_3, MBEDTLS_SSL_MINOR_VERSION_4,
     MBEDTLS_SSL_MAJOR_VERSION_3, MBEDTLS_SSL_MINOR_VERSION_4,
-    0 // field not used in TLS 1.3 implementation
-    },
+    0 },
 
     { TLS_AES_128_CCM_8_SHA256, "TLS_AES_128_CCM_8_SHA256",
-    MBEDTLS_CIPHER_AES_128_CCM_8, MBEDTLS_MD_SHA256,
+    MBEDTLS_CIPHER_AES_128_CCM, MBEDTLS_MD_SHA256,
     MBEDTLS_KEY_EXCHANGE_NONE, // field not used in TLS 1.3 implementation
     MBEDTLS_SSL_MAJOR_VERSION_3, MBEDTLS_SSL_MINOR_VERSION_4,
     MBEDTLS_SSL_MAJOR_VERSION_3, MBEDTLS_SSL_MINOR_VERSION_4,
-    0 // field not used in TLS 1.3 implementation
-    },
+    MBEDTLS_CIPHERSUITE_SHORT_TAG },
 #endif /* MBEDTLS_SHA256_C */
 #endif /* MBEDTLS_CCM_C */
 
