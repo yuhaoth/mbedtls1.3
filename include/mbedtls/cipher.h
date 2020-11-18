@@ -144,9 +144,6 @@ typedef enum {
     MBEDTLS_CIPHER_BLOWFISH_CTR,         /**< Blowfish cipher with CTR mode. */
     MBEDTLS_CIPHER_ARC4_128,             /**< RC4 cipher with 128-bit mode. */
     MBEDTLS_CIPHER_AES_128_CCM,          /**< AES cipher with 128-bit CCM mode. */
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
-    MBEDTLS_CIPHER_AES_128_CCM_8,
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
     MBEDTLS_CIPHER_AES_192_CCM,          /**< AES cipher with 192-bit CCM mode. */
     MBEDTLS_CIPHER_AES_256_CCM,          /**< AES cipher with 256-bit CCM mode. */
     MBEDTLS_CIPHER_CAMELLIA_128_CCM,     /**< Camellia cipher with 128-bit CCM mode. */
