@@ -88,9 +88,9 @@ int mbedtls_ssl_check_timer( mbedtls_ssl_context *ssl )
     return( 0 );
 }
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_2)
-
 static uint32_t ssl_get_hs_total_len( mbedtls_ssl_context const *ssl );
+
+#if defined(MBEDTLS_SSL_PROTO_TLS1_2)
 
 #if defined(MBEDTLS_SSL_RECORD_CHECKING)
 static int ssl_parse_record_header( mbedtls_ssl_context const *ssl,
@@ -1887,6 +1887,8 @@ static int ssl_decompress_buf( mbedtls_ssl_context *ssl )
 }
 #endif /* MBEDTLS_ZLIB_SUPPORT */
 
+#endif /* MBEDTLS_SSL_PROTO_TLS1_2 */
+
 /*
  * Fill the input message buffer by appending data to it.
  * The amount of data already fetched is in ssl->in_left.
@@ -2188,6 +2190,8 @@ int mbedtls_ssl_flush_output( mbedtls_ssl_context *ssl )
 
     return( 0 );
 }
+
+#if defined(MBEDTLS_SSL_PROTO_TLS1_2)
 
 /*
  * Functions to handle the DTLS retransmission state machine
@@ -3028,6 +3032,8 @@ static size_t ssl_get_reassembly_buffer_size( size_t msg_len,
 
 #endif /* MBEDTLS_SSL_PROTO_DTLS */
 
+#endif /* MBEDTLS_SSL_PROTO_TLS1_2 */
+
 static uint32_t ssl_get_hs_total_len( mbedtls_ssl_context const *ssl )
 {
     return( ( ssl->in_msg[1] << 16 ) |
@@ -3124,8 +3130,38 @@ int mbedtls_ssl_prepare_handshake_record( mbedtls_ssl_context *ssl )
         return( MBEDTLS_ERR_SSL_FEATURE_UNAVAILABLE );
     }
 
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+    if( ssl->state != MBEDTLS_SSL_HANDSHAKE_OVER &&
+        ssl->handshake != NULL )
+    {
+        const char magic_hrr_string[32] = { 0xCF, 0x21, 0xAD, 0x74, 0xE5, 0x9A,
+                                            0x61, 0x11, 0xBE, 0x1D, 0x8C, 0x02,
+                                            0x1E, 0x65, 0xB8, 0x91, 0xC2, 0xA2,
+                                            0x11, 0x16, 0x7A, 0xBB, 0x8C, 0x5E,
+                                            0x07, 0x9E, 0x09, 0xE2, 0xC8, 0xA8,
+                                            0x33 ,0x9C };
+        /*
+         * If the server responds with the HRR message then a special handling
+         * with the modified transcript hash is necessary. We compute this hash later.
+         */
+        if( ssl->in_msg[0] == MBEDTLS_SSL_HS_SERVER_HELLO &&
+            memcmp( ssl->in_msg + mbedtls_ssl_hs_hdr_len( ssl ) + 2,
+                    &magic_hrr_string[0], 32 ) == 0 )
+        {
+            MBEDTLS_SSL_DEBUG_MSG( 5, ( "--- Special HRR Checksum Processing" ) );
+        }
+        else
+        {
+            MBEDTLS_SSL_DEBUG_MSG( 5, ( "--- Update Checksum ( ssl_prepare_handshake_record )" ) );
+            ssl->handshake->update_checksum( ssl, ssl->in_msg, ssl->in_hslen );
+        }
+    }
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+
     return( 0 );
 }
+
+#if defined(MBEDTLS_SSL_PROTO_TLS1_2)
 
 void mbedtls_ssl_update_handshake_status( mbedtls_ssl_context *ssl )
 {
@@ -5205,10 +5241,10 @@ size_t mbedtls_ssl_get_bytes_avail( const mbedtls_ssl_context *ssl )
     return( ssl->in_offt == NULL ? 0 : ssl->in_msglen );
 }
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_2)
-
 int mbedtls_ssl_check_pending( const mbedtls_ssl_context *ssl )
 {
+    /* TODO: Check this for TLS 1.3! */
+
     /*
      * Case A: We're currently holding back
      * a message for further processing.
@@ -5262,6 +5298,7 @@ int mbedtls_ssl_check_pending( const mbedtls_ssl_context *ssl )
     return( 0 );
 }
 
+#if defined(MBEDTLS_SSL_PROTO_TLS1_2)
 
 int mbedtls_ssl_get_record_expansion( const mbedtls_ssl_context *ssl )
 {

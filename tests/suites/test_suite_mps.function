@@ -41,7 +41,7 @@
  * Apart from this dependency, the MPS is entirely
  * independent of the rest of Mbed TLS and this suite
  * can be run standalone. */
-//#define TEST_SUITE_MPS_NO_SSL
+#define TEST_SUITE_MPS_NO_SSL
 
 /* The default size of the buffer used by the
  * Layer 0 stream mock implementation. */
@@ -792,7 +792,7 @@ static int build_real_transforms( mbedtls_mps_transform_t *t_in_,
                            0, 0, MBEDTLS_SSL_MINOR_VERSION_3,
                            mbedtls_test_rnd_std_rand, NULL ) );
 }
-#endif
+#endif /* TEST_SUITE_MPS_NO_SSL */
 
 int transform_free( mbedtls_mps_transform_t *transform_ )
 {
@@ -5435,7 +5435,7 @@ void mbedtls_mps_l2_many_epochs( int mode,
         TEST_ASSERT( epochs_s[id] != NULL && epochs_c[id] != NULL );
 
 #if defined(TEST_SUITE_MPS_NO_SSL)
-        ((void) real_transform);
+        ((void) real_transforms);
 #else
         if( real_transforms == 1 )
         {
@@ -7148,7 +7148,7 @@ void mbedtls_mps_l3_basic_alert( int mode,
     mbedtls_mps_transform_t *dummy_c = malloc( sizeof( mbedtls_mps_transform_t ) );
     mbedtls_mps_transform_t *dummy_s = malloc( sizeof( mbedtls_mps_transform_t ) );
 
-#if !defined(TEST_SUITE_MPS_NO_SSL)
+#if defined(TEST_SUITE_MPS_NO_SSL)
     ((void) real_transforms);
 #else
     if( real_transforms == 1 )
@@ -7280,7 +7280,7 @@ void mbedtls_mps_l3_basic_ccs( int allocator_buffer_sz,
     mbedtls_mps_transform_t *dummy_c = malloc( sizeof( mbedtls_mps_transform_t ) );
     mbedtls_mps_transform_t *dummy_s = malloc( sizeof( mbedtls_mps_transform_t ) );
 
-#if !defined(TEST_SUITE_MPS_NO_SSL)
+#if defined(TEST_SUITE_MPS_NO_SSL)
     ((void) real_transforms);
 #else
     if( real_transforms == 1 )
