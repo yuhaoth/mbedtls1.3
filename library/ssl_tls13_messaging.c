@@ -84,7 +84,7 @@ static int ssl_encrypt_buf( mbedtls_ssl_context *ssl )
      */
 #if defined(MBEDTLS_GCM_C) || defined(MBEDTLS_CCM_C)
     if( mode == MBEDTLS_MODE_GCM ||
-        mode == MBEDTLS_MODE_CCM || mode == MBEDTLS_MODE_CCM_8 )
+        mode == MBEDTLS_MODE_CCM )
     {
         int ret;
         size_t enc_msglen, olen;
@@ -272,8 +272,7 @@ static int ssl_decrypt_buf( mbedtls_ssl_context *ssl )
 
 #if defined(MBEDTLS_GCM_C) || defined(MBEDTLS_CCM_C)
     if( mode == MBEDTLS_MODE_GCM ||
-        mode == MBEDTLS_MODE_CCM ||
-        mode == MBEDTLS_MODE_CCM_8 )
+        mode == MBEDTLS_MODE_CCM )
     {
         int ret;
         size_t dec_msglen, olen;
@@ -1703,7 +1702,6 @@ int mbedtls_ssl_get_record_expansion( const mbedtls_ssl_context *ssl, int direct
     {
         case MBEDTLS_MODE_GCM:
         case MBEDTLS_MODE_CCM:
-        case MBEDTLS_MODE_CCM_8:
         case MBEDTLS_MODE_STREAM:
             transform_expansion = transform->minlen;
             break;
