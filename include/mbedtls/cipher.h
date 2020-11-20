@@ -193,9 +193,6 @@ typedef enum {
     MBEDTLS_MODE_GCM,                    /**< The GCM cipher mode.         */
     MBEDTLS_MODE_STREAM,                 /**< The stream cipher mode.      */
     MBEDTLS_MODE_CCM,                    /**< The CCM cipher mode.         */
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
-    MBEDTLS_MODE_CCM_8,
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
     MBEDTLS_MODE_XTS,                    /**< The XTS cipher mode.         */
     MBEDTLS_MODE_CHACHAPOLY,             /**< The ChaCha-Poly cipher mode. */
     MBEDTLS_MODE_KW,                     /**< The SP800-38F KW mode */
