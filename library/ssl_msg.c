@@ -5854,6 +5854,8 @@ int mbedtls_ssl_write( mbedtls_ssl_context *ssl, const unsigned char *buf, size_
     return( ret );
 }
 
+#endif /* MBEDTLS_SSL_PROTO_TLS1_2 */
+
 /*
  * Notify the peer that the connection is being closed
  */
@@ -5884,6 +5886,8 @@ int mbedtls_ssl_close_notify( mbedtls_ssl_context *ssl )
 
     return( 0 );
 }
+
+#if defined(MBEDTLS_SSL_PROTO_TLS1_2)
 
 void mbedtls_ssl_transform_free( mbedtls_ssl_transform *transform )
 {

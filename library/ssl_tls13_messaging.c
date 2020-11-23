@@ -1976,38 +1976,6 @@ int mbedtls_ssl_write( mbedtls_ssl_context *ssl, const unsigned char *buf, size_
     return( ret );
 }
 
-/*
- * Notify the peer that the connection is being closed
- */
-int mbedtls_ssl_close_notify( mbedtls_ssl_context *ssl )
-{
-    int ret;
-
-    if( ssl == NULL || ssl->conf == NULL )
-        return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
-
-    MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> write close notify" ) );
-
-    if( ssl->out_left != 0 )
-        return( mbedtls_ssl_flush_output( ssl ) );
-
-    if( ssl->state == MBEDTLS_SSL_HANDSHAKE_OVER )
-    {
-        if( ( ret = mbedtls_ssl_send_alert_message( ssl,
-                                                    MBEDTLS_SSL_ALERT_LEVEL_WARNING,
-                                                    MBEDTLS_SSL_ALERT_MSG_CLOSE_NOTIFY ) ) != 0 )
-        {
-            MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_send_alert_message", ret );
-            return( ret );
-        }
-    }
-
-    MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= write close notify" ) );
-
-    return( 0 );
-}
-
-
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 
 #endif /* MBEDTLS_SSL_TLS_C */
