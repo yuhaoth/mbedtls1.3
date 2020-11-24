@@ -1241,7 +1241,7 @@ struct mbedtls_ssl_config
     unsigned int rr_config;
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 
-#endif /* ( MBEDTLS_SSL_DTLS_HELLO_VERIFY || ( MBEDTLS_SSL_COOKIE_C && 
+#endif /* ( MBEDTLS_SSL_DTLS_HELLO_VERIFY || ( MBEDTLS_SSL_COOKIE_C &&
             MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL ) ) && MBEDTLS_SSL_SRV_C */
 
 #if ((defined(MBEDTLS_SSL_SESSION_TICKETS) || (defined(MBEDTLS_SSL_NEW_SESSION_TICKET) && defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)) ) && defined(MBEDTLS_SSL_SRV_C))
@@ -1949,15 +1949,15 @@ void mbedtls_ssl_conf_verify( mbedtls_ssl_config *conf,
 /**
  * \brief          Configure signature algorithms (Optional).
  *
- *                 If set, the signature algorithms will be advertised in 
- *                 the signature_algorithms extension in the ClientHello of 
- *                 TLS/DTLS 1.3. 
+ *                 If set, the signature algorithms will be advertised in
+ *                 the signature_algorithms extension in the ClientHello of
+ *                 TLS/DTLS 1.3.
  *
  *
  * \param conf     The SSL configuration to use.
- * \param sig_algs A list of signature algorithms with the most preferred algorithm listed first.  
- *  
- *                 Note: sig_algs must be terminated with SIGNATURE_NONE. 
+ * \param sig_algs A list of signature algorithms with the most preferred algorithm listed first.
+ *
+ *                 Note: sig_algs must be terminated with SIGNATURE_NONE.
  */
 void mbedtls_ssl_conf_signature_algorithms( mbedtls_ssl_config *conf,
                      const int* sig_algs );
@@ -3664,7 +3664,7 @@ void mbedtls_ssl_conf_key_share_curves(mbedtls_ssl_config* conf,
     const mbedtls_ecp_group_id* curve_list);
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL && MBEDTLS_SSL_CLI_C && MBEDTLS_ECP_C */
 
-#if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED) 
+#if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
 /**
  * \brief          Set the allowed hashes for signatures during the handshake.
  *                 (Default: all available hashes except MD5.)
@@ -4284,29 +4284,6 @@ const char* mbedtls_ssl_get_key_exchange_name(const mbedtls_ssl_context* ssl);
  */
 const char *mbedtls_ssl_get_version( const mbedtls_ssl_context *ssl );
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
-/**
- * \brief          Return the (maximum) number of bytes added by the record
- *                 layer: header + encryption/MAC overhead (inc. padding).
- *                 Note: For DTLS 1.3 the header is of variable length and
- *                 changes over time. Be cautious when relying on the
- *                 information returned by this function.
- *
- * \param ssl      SSL context
- *
- * \param direction      int
- *
- *                 Specifies whether the size shall be determined
- *                 for outgoing or incoming packets.
- *
- *                 Use MBEDTLS_SSL_DIRECTION_IN or MBEDTLS_SSL_DIRECTION_OUT
- *
- * \return         Current maximum record expansion in bytes, or
- *                 MBEDTLS_ERR_SSL_FEATURE_UNAVAILABLE if compression is
- *                 enabled, which makes expansion much less predictable
- */
-int mbedtls_ssl_get_record_expansion(const mbedtls_ssl_context* ssl, int direction);
-#else
 /**
  * \brief          Return the (maximum) number of bytes added by the record
  *                 layer: header + encryption/MAC overhead (inc. padding)
@@ -4321,7 +4298,6 @@ int mbedtls_ssl_get_record_expansion(const mbedtls_ssl_context* ssl, int directi
  *                 enabled, which makes expansion much less predictable
  */
 int mbedtls_ssl_get_record_expansion( const mbedtls_ssl_context *ssl );
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 
 #if defined(MBEDTLS_SSL_MAX_FRAGMENT_LENGTH)
 /**

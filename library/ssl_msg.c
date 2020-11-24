@@ -5298,8 +5298,6 @@ int mbedtls_ssl_check_pending( const mbedtls_ssl_context *ssl )
     return( 0 );
 }
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_2)
-
 int mbedtls_ssl_get_record_expansion( const mbedtls_ssl_context *ssl )
 {
     size_t transform_expansion = 0;
@@ -5359,6 +5357,8 @@ int mbedtls_ssl_get_record_expansion( const mbedtls_ssl_context *ssl )
 
     return( (int)( out_hdr_len + transform_expansion ) );
 }
+
+#if defined(MBEDTLS_SSL_PROTO_TLS1_2)
 
 #if defined(MBEDTLS_SSL_RENEGOTIATION)
 /*

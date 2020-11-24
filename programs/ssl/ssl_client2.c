@@ -3024,22 +3024,10 @@ int main( int argc, char *argv[] )
                     mbedtls_ssl_get_ciphersuite( &ssl ) );
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
-    if( ( ret = mbedtls_ssl_get_record_expansion( &ssl, MBEDTLS_SSL_DIRECTION_OUT ) ) >= 0 )
-        mbedtls_printf( "    [ Record expansion (outgoing) is %d ]\n", ret );
-    else
-        mbedtls_printf( "    [ Record expansion (outgoing) is unknown]\n" );
-
-    if( ( ret = mbedtls_ssl_get_record_expansion( &ssl, MBEDTLS_SSL_DIRECTION_IN ) ) >= 0 )
-        mbedtls_printf( "    [ Record expansion (incoming) is %d ]\n", ret );
-    else
-        mbedtls_printf( "    [ Record expansion (incoming) is unknown]\n" );
-#else
     if( ( ret = mbedtls_ssl_get_record_expansion( &ssl ) ) >= 0 )
         mbedtls_printf( "    [ Record expansion is %d ]\n", ret );
     else
         mbedtls_printf( "    [ Record expansion is unknown (compression) ]\n" );
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 
 #if defined(MBEDTLS_SSL_MAX_FRAGMENT_LENGTH)
     mbedtls_printf( "    [ Maximum input fragment length is %u ]\n",

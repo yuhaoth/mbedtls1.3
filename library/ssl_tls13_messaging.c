@@ -1676,47 +1676,6 @@ int mbedtls_ssl_send_alert_message( mbedtls_ssl_context *ssl,
     return( 0 );
 }
 
-
-
-
-int mbedtls_ssl_get_record_expansion( const mbedtls_ssl_context *ssl, int direction )
-{
-    size_t transform_expansion;
-    mbedtls_ssl_transform *transform = ssl->transform_out;
-
-
-    if( transform == NULL && direction == MBEDTLS_SSL_DIRECTION_IN )
-        return( ( int ) mbedtls_ssl_hdr_len( ssl, MBEDTLS_SSL_DIRECTION_IN, transform ) );
-
-    if( transform == NULL && direction == MBEDTLS_SSL_DIRECTION_OUT )
-        return( ( int )mbedtls_ssl_hdr_len( ssl, MBEDTLS_SSL_DIRECTION_OUT, transform ) );
-
-    switch( mbedtls_cipher_get_cipher_mode( &transform->cipher_ctx_enc ) )
-    {
-        case MBEDTLS_MODE_GCM:
-        case MBEDTLS_MODE_CCM:
-        case MBEDTLS_MODE_STREAM:
-            transform_expansion = transform->minlen;
-            break;
-
-        case MBEDTLS_MODE_CBC:
-            transform_expansion = transform->maclen
-                + mbedtls_cipher_get_block_size( &transform->cipher_ctx_enc );
-            break;
-
-        default:
-            MBEDTLS_SSL_DEBUG_MSG( 1, ( "should never happen" ) );
-            return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
-    }
-
-    if( direction == MBEDTLS_SSL_DIRECTION_IN )
-        return( ( int )( mbedtls_ssl_hdr_len( ssl, MBEDTLS_SSL_DIRECTION_IN, transform ) + transform_expansion ) );
-    else
-        return( ( int )( mbedtls_ssl_hdr_len( ssl, MBEDTLS_SSL_DIRECTION_OUT, transform ) + transform_expansion ) );
-}
-
-
-
 /*
  * Receive application data decrypted from the SSL layer
  */
