@@ -4650,7 +4650,7 @@ void mbedtls_ssl_conf_early_data( mbedtls_ssl_config *conf, int early_data, char
  * the ticket and meta-data provided by the server in a post-
  * handshake message.
  */
-static int mbedtls_ssl_new_session_ticket_process( mbedtls_ssl_context* ssl );
+int mbedtls_ssl_new_session_ticket_process( mbedtls_ssl_context* ssl );
 static int mbedtls_ssl_new_session_ticket_fetch( mbedtls_ssl_context* ssl,
                                   unsigned char** buf,
                                   size_t* buflen );
@@ -4665,7 +4665,7 @@ static int mbedtls_ssl_new_session_ticket_postprocess( mbedtls_ssl_context* ssl,
  * Implementation
  */
 
-static int mbedtls_ssl_new_session_ticket_process( mbedtls_ssl_context* ssl )
+int mbedtls_ssl_new_session_ticket_process( mbedtls_ssl_context* ssl )
 {
     int ret;
     unsigned char* buf = NULL;
