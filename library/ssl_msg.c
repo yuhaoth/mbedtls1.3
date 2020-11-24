@@ -58,6 +58,9 @@
 #include "mbedtls/oid.h"
 #endif
 
+#define SSL_DONT_FORCE_FLUSH 0
+#define SSL_FORCE_FLUSH      1
+
 /*
  * Start a timer.
  * Passing millisecs = 0 cancels a running timer.
@@ -157,9 +160,6 @@ exit:
     return( ret );
 }
 #endif /* MBEDTLS_SSL_RECORD_CHECKING */
-
-#define SSL_DONT_FORCE_FLUSH 0
-#define SSL_FORCE_FLUSH      1
 
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
 
@@ -5702,6 +5702,8 @@ int mbedtls_ssl_read( mbedtls_ssl_context *ssl, unsigned char *buf, size_t len )
     return( (int) n );
 }
 
+#endif /* MBEDTLS_SSL_PROTO_TLS1_2 */
+
 /*
  * Send application data to be encrypted by the SSL layer, taking care of max
  * fragment length and buffer size.
@@ -5834,12 +5836,19 @@ int mbedtls_ssl_write( mbedtls_ssl_context *ssl, const unsigned char *buf, size_
     }
 #endif
 
-    if( ssl->state != MBEDTLS_SSL_HANDSHAKE_OVER )
+#if defined(MBEDTLS_ZERO_RTT)
+    /* TODO: What's the purpose of this check? */
+    if( ( ssl->handshake != NULL ) &&
+        ( ssl->handshake->early_data == MBEDTLS_SSL_EARLY_DATA_OFF ) )
+#endif /* MBEDTLS_ZERO_RTT */
     {
-        if( ( ret = mbedtls_ssl_handshake( ssl ) ) != 0 )
+        if( ssl->state != MBEDTLS_SSL_HANDSHAKE_OVER )
         {
-            MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_handshake", ret );
-            return( ret );
+            if( ( ret = mbedtls_ssl_handshake( ssl ) ) != 0 )
+            {
+                MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_handshake", ret );
+                return( ret );
+            }
         }
     }
 
@@ -5853,8 +5862,6 @@ int mbedtls_ssl_write( mbedtls_ssl_context *ssl, const unsigned char *buf, size_
 
     return( ret );
 }
-
-#endif /* MBEDTLS_SSL_PROTO_TLS1_2 */
 
 /*
  * Notify the peer that the connection is being closed

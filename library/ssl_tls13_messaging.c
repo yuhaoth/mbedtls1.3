@@ -33,7 +33,8 @@
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
 
-
+#define SSL_DONT_FORCE_FLUSH 0
+#define SSL_FORCE_FLUSH      1
 
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
 #include "mbedtls/aes.h"
@@ -505,7 +506,7 @@ static int ssl_decrypt_buf( mbedtls_ssl_context *ssl )
  * Write current record.
  * Uses ssl->out_msgtype, ssl->out_msglen and bytes at ssl->out_msg.
  */
-int mbedtls_ssl_write_record( mbedtls_ssl_context *ssl )
+int mbedtls_ssl_write_record( mbedtls_ssl_context *ssl, uint8_t force_flush )
 {
     int ret, done = 0;
     size_t dummy_length;
@@ -897,7 +898,8 @@ int mbedtls_ssl_write_record( mbedtls_ssl_context *ssl )
         }
     }
 
-    if( ( ret = mbedtls_ssl_flush_output( ssl ) ) != 0 )
+    if( force_flush == SSL_FORCE_FLUSH &&
+        ( ret = mbedtls_ssl_flush_output( ssl ) ) != 0 )
     {
         MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_flush_output", ret );
         return( ret );
@@ -1663,7 +1665,7 @@ int mbedtls_ssl_send_alert_message( mbedtls_ssl_context *ssl,
         ssl->out_msglen = 2;
     }
 
-    if( ( ret = mbedtls_ssl_write_record( ssl ) ) != 0 )
+    if( ( ret = mbedtls_ssl_write_record( ssl, SSL_FORCE_FLUSH ) ) != 0 )
     {
         MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_write_record", ret );
         return( ret );
@@ -1871,94 +1873,6 @@ int mbedtls_ssl_read( mbedtls_ssl_context *ssl, unsigned char *buf, size_t len )
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= read" ) );
 
     return( ( int ) n );
-}
-
-/*
- * Send application data to be encrypted by the SSL layer,
- * taking care of max fragment length and buffer size
- */
-static int ssl_write_real( mbedtls_ssl_context *ssl,
-                           const unsigned char *buf, size_t len )
-{
-    int ret;
-#if defined(MBEDTLS_SSL_MAX_FRAGMENT_LENGTH)
-    size_t max_len = mbedtls_ssl_get_max_frag_len( ssl );
-
-
-    if( len > max_len )
-    {
-#if defined(MBEDTLS_SSL_PROTO_DTLS)
-        if( ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_DATAGRAM )
-        {
-            MBEDTLS_SSL_DEBUG_MSG( 1, ( "fragment larger than the ( negotiated ) "
-                                        "maximum fragment length: %d > %d",
-                                        len, max_len ) );
-            return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
-        }
-        else
-#endif
-            len = max_len;
-    }
-#endif /* MBEDTLS_SSL_MAX_FRAGMENT_LENGTH */
-
-    if( ssl->out_left != 0 )
-    {
-        if( ( ret = mbedtls_ssl_flush_output( ssl ) ) != 0 )
-        {
-            MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_flush_output", ret );
-            return( ret );
-        }
-    }
-    else
-    {
-        ssl->out_msgtype = MBEDTLS_SSL_MSG_APPLICATION_DATA;
-        memcpy( ssl->out_msg, buf, len );
-        ssl->out_msglen = len;
-
-        if( ( ret = mbedtls_ssl_write_record( ssl ) ) != 0 )
-        {
-            MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_write_record", ret );
-            return( ret );
-        }
-    }
-
-    return( ( int ) len );
-}
-
-
-
-/*
- * Write application data ( public-facing wrapper )
- */
-int mbedtls_ssl_write( mbedtls_ssl_context *ssl, const unsigned char *buf, size_t len )
-{
-    int ret;
-
-    MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> write" ) );
-
-    if( ssl == NULL || ssl->conf == NULL )
-        return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
-
-
-#if defined(MBEDTLS_ZERO_RTT)
-    if( ( ssl->handshake!= NULL ) && ( ssl->handshake->early_data == MBEDTLS_SSL_EARLY_DATA_OFF ) )
-#endif/* MBEDTLS_ZERO_RTT */
-    {
-        if( ssl->state != MBEDTLS_SSL_HANDSHAKE_OVER )
-        {
-            if( ( ret = mbedtls_ssl_handshake( ssl ) ) != 0 )
-            {
-                MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_handshake", ret );
-                return( ret );
-            }
-        }
-    }
-
-    ret = ssl_write_real( ssl, buf, len );
-
-    MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= write" ) );
-
-    return( ret );
 }
 
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
