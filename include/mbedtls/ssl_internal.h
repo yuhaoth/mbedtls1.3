@@ -1294,7 +1294,7 @@ int mbedtls_ssl_write_finished( mbedtls_ssl_context *ssl );
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
-int mbedtls_ssl_parse_new_session_ticket(mbedtls_ssl_context* ssl);
+int mbedtls_ssl_new_session_ticket_process(mbedtls_ssl_context* ssl);
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 
 
