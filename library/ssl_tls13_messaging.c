@@ -1816,7 +1816,7 @@ int mbedtls_ssl_read( mbedtls_ssl_context *ssl, unsigned char *buf, size_t len )
                 ( ssl->in_msg[0] == MBEDTLS_SSL_HS_NEW_SESSION_TICKET ) ) {
                 MBEDTLS_SSL_DEBUG_MSG( 3, ( "NewSessionTicket received" ) );
 
-                if( ( ret = mbedtls_ssl_parse_new_session_ticket( ssl ) ) != 0 )
+                if( ( ret = mbedtls_ssl_new_session_ticket_process( ssl ) ) != 0 )
                 {
                     MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_parse_new_session_ticket", ret );
                     return( ret );
