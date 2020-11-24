@@ -526,7 +526,7 @@ int mbedtls_ssl_write_record( mbedtls_ssl_context *ssl )
     else
 #endif /* MBEDTLS_SSL_PROTO_DTLS */
     {
-        if( ( ssl->out_msg != NULL ) && ( ssl->out_msgtype == MBEDTLS_SSL_MSG_HANDSHAKE ) )
+        if( ssl->out_msgtype == MBEDTLS_SSL_MSG_HANDSHAKE )
         {
 
             if( ssl->out_msg[0] != MBEDTLS_SSL_HS_HELLO_REQUEST &&
