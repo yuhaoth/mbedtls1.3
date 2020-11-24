@@ -1264,6 +1264,7 @@ static int ssl_prepare_record_content( mbedtls_ssl_context *ssl )
     return( 0 );
 }
 
+
 void ssl_handshake_wrapup_free_hs_transform( mbedtls_ssl_context *ssl );
 
 /*
@@ -1274,10 +1275,13 @@ void ssl_handshake_wrapup_free_hs_transform( mbedtls_ssl_context *ssl );
  *
  */
 
-int mbedtls_ssl_read_record( mbedtls_ssl_context *ssl )
+int mbedtls_ssl_read_record( mbedtls_ssl_context *ssl, unsigned update_hs_digest )
 {
     int ret;
     int fetch_len;
+
+    /* Unused for now */
+    ((void) update_hs_digest);
 
     MBEDTLS_SSL_DEBUG_MSG( 5, ( "=> read record" ) );
 
@@ -1674,164 +1678,6 @@ int mbedtls_ssl_send_alert_message( mbedtls_ssl_context *ssl,
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= send alert message" ) );
 
     return( 0 );
-}
-
-/*
- * Receive application data decrypted from the SSL layer
- */
-int mbedtls_ssl_read( mbedtls_ssl_context *ssl, unsigned char *buf, size_t len )
-{
-    int ret, record_read = 0;
-    size_t n;
-
-    if( ssl == NULL || ssl->conf == NULL )
-        return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
-
-    MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> read" ) );
-
-#if defined(MBEDTLS_SSL_PROTO_DTLS)
-    if( ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_DATAGRAM )
-    {
-        if( ( ret = mbedtls_ssl_flush_output( ssl ) ) != 0 )
-            return( ret );
-
-        if( ssl->handshake != NULL &&
-            ssl->handshake->retransmit_state == MBEDTLS_SSL_RETRANS_SENDING )
-        {
-            if( ( ret = mbedtls_ssl_resend( ssl ) ) != 0 )
-                return( ret );
-        }
-    }
-#endif
-
-
-    if( ssl->state != MBEDTLS_SSL_HANDSHAKE_OVER )
-    {
-        ret = mbedtls_ssl_handshake( ssl );
-        if( ret == MBEDTLS_ERR_SSL_WAITING_SERVER_HELLO_RENEGO )
-        {
-            record_read = 1;
-        }
-        else if( ret != 0 )
-        {
-            MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_handshake", ret );
-            return( ret );
-        }
-    }
-
-    if( ssl->in_offt == NULL )
-    {
-        /* Start timer if not already running */
-        if( ssl->f_get_timer != NULL &&
-            ssl->f_get_timer( ssl->p_timer ) == -1 )
-        {
-            mbedtls_ssl_set_timer( ssl, ssl->conf->read_timeout );
-        }
-
-        if( !record_read )
-        {
-            if( ( ret = mbedtls_ssl_read_record( ssl ) ) != 0 )
-            {
-                if( ret == MBEDTLS_ERR_SSL_CONN_EOF )
-                    return( 0 );
-
-                if( ret == MBEDTLS_ERR_SSL_PEER_CLOSE_NOTIFY )
-                    return( ret );
-
-                MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_read_record", ret );
-                return( ret );
-            }
-        }
-
-
-
-
-        /* Fatal and closure alerts handled by mbedtls_ssl_read_record( ) */
-        if( ssl->in_msgtype == MBEDTLS_SSL_MSG_ALERT )
-        {
-            MBEDTLS_SSL_DEBUG_MSG( 2, ( "ignoring non-fatal non-closure alert" ) );
-            return( MBEDTLS_ERR_SSL_WANT_READ );
-        }
-
-#if defined(MBEDTLS_SSL_NEW_SESSION_TICKET)
-        /* Post-Handshake messages, like the NewSessionTicket message, appear after the finished
-         * message was sent */
-        if( ssl->in_msgtype == MBEDTLS_SSL_MSG_HANDSHAKE )
-        {
-            MBEDTLS_SSL_DEBUG_MSG( 3, ( "received post-handshake message" ) );
-
-#if defined(MBEDTLS_SSL_CLI_C)
-            if( ( ssl->conf->endpoint == MBEDTLS_SSL_IS_CLIENT ) &&
-                ( ssl->in_hslen != mbedtls_ssl_hs_hdr_len( ssl ) ) &&
-                ( ssl->in_msg[0] == MBEDTLS_SSL_HS_NEW_SESSION_TICKET ) ) {
-                MBEDTLS_SSL_DEBUG_MSG( 3, ( "NewSessionTicket received" ) );
-
-                if( ( ret = mbedtls_ssl_new_session_ticket_process( ssl ) ) != 0 )
-                {
-                    MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_parse_new_session_ticket", ret );
-                    return( ret );
-                }
-            }
-#endif /* MBEDTLS_SSL_CLI_C */
-        } else
-#endif /* MBEDTLS_SSL_NEW_SESSION_TICKET */
-#if defined(MBEDTLS_SSL_PROTO_DTLS)
-            if( ssl->in_msgtype == MBEDTLS_SSL_MSG_ACK )
-            {
-                /* We will not pass the Ack msg to the application. */
-                ssl->in_offt = NULL;
-                ssl->in_msglen = 0;
-                MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= read" ) );
-                return( MBEDTLS_ERR_SSL_WANT_READ );
-            }
-            else
-#endif /* MBEDTLS_SSL_PROTO_DTLS */
-                if( ssl->in_msgtype != MBEDTLS_SSL_MSG_APPLICATION_DATA )
-                {
-                    MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad application data message" ) );
-                    return( MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE );
-                }
-
-
-        if( ( ssl->conf->endpoint == MBEDTLS_SSL_IS_CLIENT ) &&
-            ( ssl->in_msg[0] == MBEDTLS_SSL_HS_NEW_SESSION_TICKET ) )
-        {
-            /* We will not pass a NewSessionTicket to the application. */
-            ssl->in_offt = NULL;
-            ssl->in_msglen = 0;
-            n = MBEDTLS_ERR_SSL_RECEIVED_NEW_SESSION_TICKET;
-            MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= read" ) );
-
-            /* For a post-handshake message we may need to return
-             * an ACK message
-             */
-            /* TBD. */
-            return( ( int ) n );
-
-        }
-        else
-        {
-            ssl->in_offt = ssl->in_msg;
-        }
-
-    }
-
-    n = ( len < ssl->in_msglen )
-        ? len : ssl->in_msglen;
-
-    memcpy( buf, ssl->in_offt, n );
-    ssl->in_msglen -= n;
-
-    if( ssl->in_msglen == 0 )
-        /* all bytes consumed  */
-        ssl->in_offt = NULL;
-    else
-        /* more data available */
-        ssl->in_offt += n;
-
-    MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= read" ) );
-
-    return( ( int ) n );
 }
 
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */

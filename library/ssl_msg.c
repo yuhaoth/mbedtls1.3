@@ -5392,19 +5392,63 @@ static int ssl_check_ctr_renegotiate( mbedtls_ssl_context *ssl )
 }
 #endif /* MBEDTLS_SSL_RENEGOTIATION */
 
+#endif /* MBEDTLS_SSL_PROTO_TLS1_2 */
+
 /* This function is called from mbedtls_ssl_read() when a handshake message is
- * received  after the initial handshake. In this context, handshake messages
- * may only be sent for the purpose of initiating renegotiations.
- *
- * This function is introduced as a separate helper since the handling
- * of post-handshake handshake messages changes significantly in TLS 1.3,
- * and having a helper function allows to distinguish between TLS <= 1.2 and
- * TLS 1.3 in the future without bloating the logic of mbedtls_ssl_read().
+ * received  after the initial handshake. In TLS 1.2, such messages usually
+ * trigger renegotiations. In (D)TLS 1.3, renegotiation has been replaced
+ * by a number of specific post-handshake messages.
  */
+static int ssl_handle_hs_message_post_handshake_tls12( mbedtls_ssl_context *ssl );
+static int ssl_handle_hs_message_post_handshake_tls13( mbedtls_ssl_context *ssl );
+
 static int ssl_handle_hs_message_post_handshake( mbedtls_ssl_context *ssl )
 {
-    int ret;
+    /* Check protocol version and dispatch accordingly. */
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+    if( ssl->minor_ver == MBEDTLS_SSL_MINOR_VERSION_4 )
+    {
+        return( ssl_handle_hs_message_post_handshake_tls13( ssl ) );
+    }
+    else
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+    {
+        return( ssl_handle_hs_message_post_handshake_tls12( ssl ) );
+    }
+}
 
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+static int ssl_handle_hs_message_post_handshake_tls13( mbedtls_ssl_context *ssl )
+{
+    MBEDTLS_SSL_DEBUG_MSG( 3, ( "received post-handshake message" ) );
+
+#if defined(MBEDTLS_SSL_NEW_SESSION_TICKET)
+#if defined(MBEDTLS_SSL_CLI_C)
+    if( ( ssl->conf->endpoint == MBEDTLS_SSL_IS_CLIENT ) &&
+        ( ssl->in_hslen != mbedtls_ssl_hs_hdr_len( ssl ) ) &&
+        ( ssl->in_msg[0] == MBEDTLS_SSL_HS_NEW_SESSION_TICKET ) )
+    {
+        int ret;
+        MBEDTLS_SSL_DEBUG_MSG( 3, ( "NewSessionTicket received" ) );
+
+        if( ( ret = mbedtls_ssl_new_session_ticket_process( ssl ) ) != 0 )
+        {
+            MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_parse_new_session_ticket", ret );
+            return( ret );
+        }
+
+        return( MBEDTLS_ERR_SSL_RECEIVED_NEW_SESSION_TICKET );
+    }
+#endif /* MBEDTLS_SSL_CLI_C */
+#endif /* MBEDTLS_SSL_NEW_SESSION_TICKET */
+
+    /* Fail in all other cases. */
+    return( MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE );
+}
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+
+static int ssl_handle_hs_message_post_handshake_tls12( mbedtls_ssl_context *ssl )
+{
     /*
      * - For client-side, expect SERVER_HELLO_REQUEST.
      * - For server-side, expect CLIENT_HELLO.
@@ -5706,8 +5750,6 @@ int mbedtls_ssl_read( mbedtls_ssl_context *ssl, unsigned char *buf, size_t len )
 
     return( (int) n );
 }
-
-#endif /* MBEDTLS_SSL_PROTO_TLS1_2 */
 
 /*
  * Send application data to be encrypted by the SSL layer, taking care of max
