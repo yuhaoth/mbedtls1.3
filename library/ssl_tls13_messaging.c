@@ -565,15 +565,6 @@ int mbedtls_ssl_write_record( mbedtls_ssl_context *ssl )
             ssl->out_msg[2] = (unsigned char)( ( len - 4 ) >> 8 );
             ssl->out_msg[3] = (unsigned char)( ( len - 4 ) );
 
-            if( ssl->transform_out != NULL )
-            {
-                /* We add the ContentType to the end of the payload
-                   and fake the one visible from the outside. */
-                ssl->out_msg[len] = MBEDTLS_SSL_MSG_HANDSHAKE;
-                len += 1;
-                ssl->out_msglen += 1;
-            }
-
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
             /*
              * DTLS has additional fields in the Handshake layer,
@@ -586,7 +577,6 @@ int mbedtls_ssl_write_record( mbedtls_ssl_context *ssl )
             {
                 /* Make room for the additional DTLS fields */
                 memmove( ssl->out_msg + mbedtls_ssl_hs_hdr_len( ssl ), ssl->out_msg + 4, len - 4 );
-                ssl->out_msglen += 8;
 #if defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
                 /* Advancing also the pointer to the pre_shared_key extension ( if used ) */
                 if( ( ssl->handshake != NULL ) && ( ssl->handshake->pre_shared_key_pointer != NULL ) )
@@ -647,23 +637,22 @@ int mbedtls_ssl_write_record( mbedtls_ssl_context *ssl )
             /* For post-handshake messages we do not need to update the hash anymore */
             if( ssl->state != MBEDTLS_SSL_HANDSHAKE_OVER )
             {
-                if( ssl->transform_out != NULL )
-                {
-                    /* If we append the handshake type to the message then we
-                     * don't include it in the handshake hash. */
-
-                    MBEDTLS_SSL_DEBUG_MSG( 5, ( "--- Update Checksum ( mbedtls_ssl_write_record-1 )" ) );
-
-                    ssl->handshake->update_checksum( ssl, ssl->out_msg, len - 1 );
-                }
-                else
-                {
-                    MBEDTLS_SSL_DEBUG_MSG( 5, ( "--- Update Checksum ( mbedtls_ssl_write_record )" ) );
-                    ssl->handshake->update_checksum( ssl, ssl->out_msg, len );
-                }
+                MBEDTLS_SSL_DEBUG_MSG( 5, ( "--- Update Checksum ( mbedtls_ssl_write_record )" ) );
+                ssl->handshake->update_checksum( ssl, ssl->out_msg, len );
             }
         }
     }
+
+    if( ssl->transform_out != NULL )
+    {
+        /* We add the ContentType to the end of the payload
+           and fake the one visible from the outside. */
+        ssl->out_msg[len] = ssl->out_msgtype;
+        len++;
+    }
+
+    /* Keep local `len` and ssl->out_msglen in sync */
+    ssl->out_msglen = len;
 
     /* Save handshake and CCS messages for resending */
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
@@ -1924,11 +1913,7 @@ static int ssl_write_real( mbedtls_ssl_context *ssl,
     {
         ssl->out_msgtype = MBEDTLS_SSL_MSG_APPLICATION_DATA;
         memcpy( ssl->out_msg, buf, len );
-
-        /* Adding content type at the end of the data*/
-        ssl->out_msg[len] = MBEDTLS_SSL_MSG_APPLICATION_DATA;
-        ssl->out_msglen = len + 1;
-        len++;
+        ssl->out_msglen = len;
 
         if( ( ret = mbedtls_ssl_write_record( ssl ) ) != 0 )
         {
