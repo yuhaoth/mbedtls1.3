@@ -4695,7 +4695,7 @@ static int mbedtls_ssl_new_session_ticket_fetch( mbedtls_ssl_context* ssl,
                                   size_t* dstlen )
 {
     *dst = ssl->in_msg + mbedtls_ssl_hs_hdr_len( ssl ); 
-    *dstlen = ssl->in_msg_len - mbedtls_ssl_hs_hdr_len( ssl );
+    *dstlen = ssl->in_msglen - mbedtls_ssl_hs_hdr_len( ssl );
     
     return( 0 );
 }
