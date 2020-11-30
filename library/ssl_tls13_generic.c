@@ -1002,6 +1002,7 @@ int mbedtls_ssl_derive_traffic_keys( mbedtls_ssl_context *ssl, mbedtls_ssl_key_s
     mbedtls_ssl_handshake_params *handshake = ssl->handshake;
     const mbedtls_ssl_ciphersuite_t *suite_info;
     unsigned char hash[MBEDTLS_MD_MAX_SIZE];
+    size_t keylen;
 
 #if defined(MBEDTLS_SHA256_C)
     mbedtls_sha256_context sha256;
@@ -1223,9 +1224,10 @@ int mbedtls_ssl_derive_traffic_keys( mbedtls_ssl_context *ssl, mbedtls_ssl_key_s
     transform->maclen = 0;
     transform->fixed_ivlen = 4;
     transform->ivlen = cipher_info->iv_size;
-    transform->keylen = cipher_info->key_bitlen / 8;
     transform->taglen =
             cipher_info->flags & MBEDTLS_CIPHERSUITE_SHORT_TAG ? 8 : 16;
+
+    keylen = cipher_info->key_bitlen / 8;
 
     /* Minimum length for an encrypted handshake message is
      *  - Handshake header
@@ -1239,14 +1241,14 @@ int mbedtls_ssl_derive_traffic_keys( mbedtls_ssl_context *ssl, mbedtls_ssl_key_s
     MBEDTLS_SSL_DEBUG_MSG( 3, ( "-->>Calling mbedtls_ssl_tls1_3_make_traffic_keys( ) with the following parameters:" ) );
     MBEDTLS_SSL_DEBUG_MSG( 3, ( "-- Hash Algorithm: %s", mbedtls_md_get_name( md_info ) ) );
     MBEDTLS_SSL_DEBUG_MSG( 3, ( "-- Handshake Traffic Secret Length: %d bytes", mbedtls_hash_size_for_ciphersuite( suite_info ) ) );
-    MBEDTLS_SSL_DEBUG_MSG( 3, ( "-- Key Length: %d bytes", transform->keylen ) );
+    MBEDTLS_SSL_DEBUG_MSG( 3, ( "-- Key Length: %d bytes", keylen ) );
     MBEDTLS_SSL_DEBUG_MSG( 3, ( "-- IV Length: %d bytes", transform->ivlen ) );
 
     if( ( ret = mbedtls_ssl_tls1_3_make_traffic_keys( mbedtls_md_get_type( md_info ),
                                  ssl->handshake->client_handshake_traffic_secret,
                                  ssl->handshake->server_handshake_traffic_secret,
                                  mbedtls_hash_size_for_ciphersuite( suite_info ),
-                                 transform->keylen, transform->ivlen, traffic_keys ) ) != 0 )
+                                 keylen, transform->ivlen, traffic_keys ) ) != 0 )
     {
         MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_tls1_3_make_traffic_keys failed", ret );
         goto exit;
@@ -3254,6 +3256,7 @@ int mbedtls_ssl_generate_application_traffic_keys(
     const mbedtls_ssl_ciphersuite_t *suite_info;
     const mbedtls_cipher_info_t *cipher_info;
     mbedtls_ssl_transform *transform = ssl->transform_negotiate;
+    size_t keylen;
 
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> derive application traffic keys" ) );
 
@@ -3281,9 +3284,10 @@ int mbedtls_ssl_generate_application_traffic_keys(
     transform->maclen = 0;
     transform->fixed_ivlen = 4;
     transform->ivlen = cipher_info->iv_size;
-    transform->keylen = cipher_info->key_bitlen / 8;
     transform->taglen =
             cipher_info->flags & MBEDTLS_CIPHERSUITE_SHORT_TAG ? 8 : 16;
+
+    keylen = cipher_info->key_bitlen / 8;
 
     /* Minimum length for an encrypted handshake message is
      *  - Handshake header
@@ -3386,23 +3390,23 @@ int mbedtls_ssl_generate_application_traffic_keys(
     MBEDTLS_SSL_DEBUG_BUF( 5, "-- Server_traffic_secret: ",
                               ssl->handshake->server_traffic_secret,
                               mbedtls_hash_size_for_ciphersuite( suite_info ) );
-    MBEDTLS_SSL_DEBUG_MSG( 5, ( "-- Key Length: %d bytes", transform->keylen ) );
+    MBEDTLS_SSL_DEBUG_MSG( 5, ( "-- Key Length: %d bytes", keylen ) );
     MBEDTLS_SSL_DEBUG_MSG( 5, ( "-- IV Length: %d bytes", transform->ivlen ) );
 
     if( ( ret = mbedtls_ssl_tls1_3_make_traffic_keys( mbedtls_md_get_type( md_info ),
                               ssl->handshake->client_traffic_secret,
                               ssl->handshake->server_traffic_secret,
                               mbedtls_hash_size_for_ciphersuite( suite_info ),
-                              transform->keylen, transform->ivlen, traffic_keys ) ) != 0 )
+                              keylen, transform->ivlen, traffic_keys ) ) != 0 )
     {
         MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_tls1_3_make_traffic_keys failed", ret );
         return( ret );
     }
 
     MBEDTLS_SSL_DEBUG_BUF( 5, "Record Type = Application Data, client_write_key:",
-                              traffic_keys->client_write_key, transform->keylen );
+                              traffic_keys->client_write_key, keylen );
     MBEDTLS_SSL_DEBUG_BUF( 5, "Record Type = Application Data, server_write_key:",
-                              traffic_keys->server_write_key, transform->keylen );
+                              traffic_keys->server_write_key, keylen );
     MBEDTLS_SSL_DEBUG_BUF( 5, "Record Type = Application Data, client_write_iv:",
                               traffic_keys->client_write_iv, transform->ivlen );
     MBEDTLS_SSL_DEBUG_BUF( 5, "Record Type = Application Data, server_write_iv:",
@@ -3635,6 +3639,7 @@ int mbedtls_ssl_early_data_key_derivation( mbedtls_ssl_context *ssl, mbedtls_ssl
     const mbedtls_md_info_t *md;
     unsigned char padbuf[MBEDTLS_MD_MAX_SIZE];
     mbedtls_ssl_transform *transform;
+    size_t keylen;
 
 #if defined(MBEDTLS_SHA256_C)
     mbedtls_sha256_context sha256;
@@ -3842,9 +3847,10 @@ int mbedtls_ssl_early_data_key_derivation( mbedtls_ssl_context *ssl, mbedtls_ssl
     transform->maclen = 0;
     transform->fixed_ivlen = 4;
     transform->ivlen = cipher_info->iv_size;
-    transform->keylen = cipher_info->key_bitlen / 8;
     transform->taglen =
             cipher_info->flags & MBEDTLS_CIPHERSUITE_SHORT_TAG ? 8 : 16;
+
+    keylen = cipher_info->key_bitlen / 8;
 
     /* Minimum length for an encrypted handshake message is
      *  - Handshake header
@@ -3858,21 +3864,20 @@ int mbedtls_ssl_early_data_key_derivation( mbedtls_ssl_context *ssl, mbedtls_ssl
     MBEDTLS_SSL_DEBUG_MSG( 3, ( "-->>Calling mbedtls_ssl_tls1_3_make_traffic_keys( ) with the following parameters:" ) );
     MBEDTLS_SSL_DEBUG_MSG( 3, ( "-- Hash Algorithm: %s", mbedtls_md_get_name( md ) ) );
     MBEDTLS_SSL_DEBUG_MSG( 3, ( "-- Early Traffic Secret Length: %d bytes", mbedtls_hash_size_for_ciphersuite( ciphersuite_info ) ) );
-    MBEDTLS_SSL_DEBUG_MSG( 3, ( "-- Key Length: %d bytes", transform->keylen ) );
     MBEDTLS_SSL_DEBUG_MSG( 3, ( "-- IV Length: %d bytes", transform->ivlen ) );
 
     if( ( ret = mbedtls_ssl_tls1_3_make_traffic_keys( mbedtls_md_get_type( md ),
                                  ssl->handshake->client_early_traffic_secret,
                                  ssl->handshake->client_early_traffic_secret,
                                  mbedtls_hash_size_for_ciphersuite( ciphersuite_info ),
-                                 transform->keylen, transform->ivlen, traffic_keys ) ) != 0 )
+                                 keylen, transform->ivlen, traffic_keys ) ) != 0 )
     {
         MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_tls1_3_make_traffic_keys failed", ret );
         goto exit;
     }
 
-    MBEDTLS_SSL_DEBUG_BUF( 3, "[TLS 1.3, ] + handshake key expansion, client_write_key:", traffic_keys->client_write_key, transform->keylen );
-    MBEDTLS_SSL_DEBUG_BUF( 3, "[TLS 1.3, ] + handshake key expansion, server_write_key:", traffic_keys->server_write_key, transform->keylen );
+    MBEDTLS_SSL_DEBUG_BUF( 3, "[TLS 1.3, ] + handshake key expansion, client_write_key:", traffic_keys->client_write_key, keylen );
+    MBEDTLS_SSL_DEBUG_BUF( 3, "[TLS 1.3, ] + handshake key expansion, server_write_key:", traffic_keys->server_write_key, keylen );
     MBEDTLS_SSL_DEBUG_BUF( 3, "[TLS 1.3, ] + handshake key expansion, client_write_iv:", traffic_keys->client_write_iv, transform->ivlen );
     MBEDTLS_SSL_DEBUG_BUF( 3, "[TLS 1.3, ] + handshake key expansion, server_write_iv:", traffic_keys->server_write_iv, transform->ivlen );
 
@@ -4694,9 +4699,9 @@ static int mbedtls_ssl_new_session_ticket_fetch( mbedtls_ssl_context* ssl,
                                   unsigned char** dst,
                                   size_t* dstlen )
 {
-    *dst = ssl->in_msg + mbedtls_ssl_hs_hdr_len( ssl ); 
+    *dst = ssl->in_msg + mbedtls_ssl_hs_hdr_len( ssl );
     *dstlen = ssl->in_msglen - mbedtls_ssl_hs_hdr_len( ssl );
-    
+
     return( 0 );
 }
 
@@ -4798,7 +4803,7 @@ static int mbedtls_ssl_new_session_ticket_parse( mbedtls_ssl_context* ssl,
     MBEDTLS_SSL_DEBUG_MSG( 3, ( "ticket->length: %d", ticket_len ) );
 
     /* Ticket Extension */
-    ext_len = ( (unsigned) buf[ 11 + ticket_nonce_len + ticket_len ] << 8 ) | 
+    ext_len = ( (unsigned) buf[ 11 + ticket_nonce_len + ticket_len ] << 8 ) |
               ( (unsigned) buf[ 12 + ticket_nonce_len + ticket_len ] );
 
     used += ext_len;
@@ -4878,7 +4883,7 @@ static int mbedtls_ssl_new_session_ticket_parse( mbedtls_ssl_context* ssl,
     ssl->session->ticket_received = time( NULL );
 #endif
 
-    return( 0 ); 
+    return( 0 );
 }
 
 

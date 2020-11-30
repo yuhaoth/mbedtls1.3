@@ -972,9 +972,6 @@ struct mbedtls_ssl_transform
     size_t taglen;                      /*!<  TAG(AEAD) len           */
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
-    /*!<  Chosen cipersuite_info  */
-    unsigned int keylen;                /*!<  symmetric key length (bytes)  */
-
     mbedtls_ssl_key_set traffic_keys;
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
     mbedtls_ssl_key_set traffic_keys_previous;
