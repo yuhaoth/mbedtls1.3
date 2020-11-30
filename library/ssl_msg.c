@@ -3525,14 +3525,6 @@ static int ssl_check_record_type( uint8_t record_type )
     return( 0 );
 }
 
-static int ssl_parse_record_header( mbedtls_ssl_context const *ssl,
-                                    unsigned char *buf,
-                                    size_t len,
-                                    mbedtls_record *rec )
-{
-    /* Check TLS version */
-}
-
 /*
  * ContentType type;
  * ProtocolVersion version;
