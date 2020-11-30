@@ -165,6 +165,11 @@ enum varint_length_enum { VARINT_LENGTH_FAILURE = 0, VARINT_LENGTH_1_BYTE = 1, V
 #define MBEDTLS_SSL_COMPRESSION_ADD             0
 #endif
 
+#if defined(MBEDTLS_SSL_PROTO_SSL3)   ||                              \
+    defined(MBEDTLS_SSL_PROTO_TLS1)   ||                              \
+    defined(MBEDTLS_SSL_PROTO_TLS1_1) ||                              \
+    defined(MBEDTLS_SSL_PROTO_TLS1_2)
+
 /* This macro determines whether CBC is supported. */
 #if defined(MBEDTLS_CIPHER_MODE_CBC) &&                               \
     ( defined(MBEDTLS_AES_C)      ||                                  \
@@ -187,6 +192,8 @@ enum varint_length_enum { VARINT_LENGTH_FAILURE = 0, VARINT_LENGTH_1_BYTE = 1, V
     defined(MBEDTLS_SSL_SOME_SUITES_USE_CBC)
 #define MBEDTLS_SSL_SOME_MODES_USE_MAC
 #endif
+
+#endif /* TLS <= 1.2 */
 
 #if defined(MBEDTLS_SSL_SOME_MODES_USE_MAC)
 /* Ciphersuites using HMAC */
