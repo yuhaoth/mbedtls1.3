@@ -2392,7 +2392,7 @@ static int ssl_certificate_request_coordinate( mbedtls_ssl_context* ssl )
 #else
     if( ssl->keep_current_message == 0 )
     {
-        if( ( ret = mbedtls_ssl_read_record( ssl, 1 ) ) != 0 )
+        if( ( ret = mbedtls_ssl_read_record( ssl, SSL_FORCE_FLUSH ) ) != 0 )
         {
             MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_read_record", ret );
             return( ret );
