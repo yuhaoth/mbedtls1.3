@@ -179,6 +179,10 @@ enum varint_length_enum { VARINT_LENGTH_FAILURE = 0, VARINT_LENGTH_1_BYTE = 1, V
 #define MBEDTLS_SSL_SOME_SUITES_USE_CBC
 #endif
 
+#if defined(MBEDTLS_ARC4_C) || defined(MBEDTLS_CIPHER_NULL_CIPHER)
+#define MBEDTLS_SSL_SOME_SUITES_USE_STREAM
+#endif
+
 /* This macro determines whether the CBC construct used in TLS 1.0-1.2 (as
  * opposed to the very different CBC construct used in SSLv3) is supported. */
 #if defined(MBEDTLS_SSL_SOME_SUITES_USE_CBC) && \
@@ -188,7 +192,7 @@ enum varint_length_enum { VARINT_LENGTH_FAILURE = 0, VARINT_LENGTH_1_BYTE = 1, V
 #define MBEDTLS_SSL_SOME_SUITES_USE_TLS_CBC
 #endif
 
-#if defined(MBEDTLS_ARC4_C) || defined(MBEDTLS_CIPHER_NULL_CIPHER) ||   \
+#if defined(MBEDTLS_SSL_SOME_SUITES_USE_STREAM) ||      \
     defined(MBEDTLS_SSL_SOME_SUITES_USE_CBC)
 #define MBEDTLS_SSL_SOME_MODES_USE_MAC
 #endif

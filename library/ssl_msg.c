@@ -768,7 +768,7 @@ int mbedtls_ssl_encrypt_buf( mbedtls_ssl_context *ssl,
     /*
      * Encrypt
      */
-#if defined(MBEDTLS_ARC4_C) || defined(MBEDTLS_CIPHER_NULL_CIPHER)
+#if defined(MBEDTLS_SSL_SOME_SUITES_USE_STREAM)
     if( mode == MBEDTLS_MODE_STREAM )
     {
         int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
@@ -793,7 +793,7 @@ int mbedtls_ssl_encrypt_buf( mbedtls_ssl_context *ssl,
         }
     }
     else
-#endif /* MBEDTLS_ARC4_C || MBEDTLS_CIPHER_NULL_CIPHER */
+#endif /* MBEDTLS_SSL_SOME_SUITES_USE_STREAM */
 
 #if defined(MBEDTLS_GCM_C) || \
     defined(MBEDTLS_CCM_C) || \
@@ -1245,7 +1245,7 @@ int mbedtls_ssl_decrypt_buf( mbedtls_ssl_context const *ssl,
     }
 #endif /* MBEDTLS_SSL_DTLS_CONNECTION_ID */
 
-#if defined(MBEDTLS_ARC4_C) || defined(MBEDTLS_CIPHER_NULL_CIPHER)
+#if defined(MBEDTLS_SSL_SOME_SUITES_USE_STREAM)
     if( mode == MBEDTLS_MODE_STREAM )
     {
         padlen = 0;
@@ -1266,7 +1266,7 @@ int mbedtls_ssl_decrypt_buf( mbedtls_ssl_context const *ssl,
         }
     }
     else
-#endif /* MBEDTLS_ARC4_C || MBEDTLS_CIPHER_NULL_CIPHER */
+#endif /* MBEDTLS_SSL_SOME_SUITES_USE_STREAM */
 #if defined(MBEDTLS_GCM_C) || \
     defined(MBEDTLS_CCM_C) || \
     defined(MBEDTLS_CHACHAPOLY_C)
