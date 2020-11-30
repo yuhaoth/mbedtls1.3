@@ -4847,7 +4847,7 @@ static int mbedtls_ssl_new_session_ticket_parse( mbedtls_ssl_context* ssl,
 
     if( suite_info == NULL )
     {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "suite_info == NULL, mbedtls_ssl_new_session_ticket_parse failed" ) );
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "should never happen" ) );
         return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
     }
 
