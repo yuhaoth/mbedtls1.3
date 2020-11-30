@@ -165,6 +165,11 @@ enum varint_length_enum { VARINT_LENGTH_FAILURE = 0, VARINT_LENGTH_1_BYTE = 1, V
 #define MBEDTLS_SSL_COMPRESSION_ADD             0
 #endif
 
+#if defined(MBEDTLS_SSL_PROTO_SSL3)   ||                              \
+    defined(MBEDTLS_SSL_PROTO_TLS1)   ||                              \
+    defined(MBEDTLS_SSL_PROTO_TLS1_1) ||                              \
+    defined(MBEDTLS_SSL_PROTO_TLS1_2)
+
 /* This macro determines whether CBC is supported. */
 #if defined(MBEDTLS_CIPHER_MODE_CBC) &&                               \
     ( defined(MBEDTLS_AES_C)      ||                                  \
@@ -172,6 +177,10 @@ enum varint_length_enum { VARINT_LENGTH_FAILURE = 0, VARINT_LENGTH_1_BYTE = 1, V
       defined(MBEDTLS_ARIA_C)     ||                                  \
       defined(MBEDTLS_DES_C) )
 #define MBEDTLS_SSL_SOME_SUITES_USE_CBC
+#endif
+
+#if defined(MBEDTLS_ARC4_C) || defined(MBEDTLS_CIPHER_NULL_CIPHER)
+#define MBEDTLS_SSL_SOME_SUITES_USE_STREAM
 #endif
 
 /* This macro determines whether the CBC construct used in TLS 1.0-1.2 (as
@@ -183,10 +192,12 @@ enum varint_length_enum { VARINT_LENGTH_FAILURE = 0, VARINT_LENGTH_1_BYTE = 1, V
 #define MBEDTLS_SSL_SOME_SUITES_USE_TLS_CBC
 #endif
 
-#if defined(MBEDTLS_ARC4_C) || defined(MBEDTLS_CIPHER_NULL_CIPHER) ||   \
+#if defined(MBEDTLS_SSL_SOME_SUITES_USE_STREAM) ||      \
     defined(MBEDTLS_SSL_SOME_SUITES_USE_CBC)
 #define MBEDTLS_SSL_SOME_MODES_USE_MAC
 #endif
+
+#endif /* TLS <= 1.2 */
 
 #if defined(MBEDTLS_SSL_SOME_MODES_USE_MAC)
 /* Ciphersuites using HMAC */
@@ -961,9 +972,6 @@ struct mbedtls_ssl_transform
     size_t taglen;                      /*!<  TAG(AEAD) len           */
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
-    /*!<  Chosen cipersuite_info  */
-    unsigned int keylen;                /*!<  symmetric key length (bytes)  */
-
     mbedtls_ssl_key_set traffic_keys;
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
     mbedtls_ssl_key_set traffic_keys_previous;
