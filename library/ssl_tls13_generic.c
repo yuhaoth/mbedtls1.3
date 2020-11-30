@@ -4798,7 +4798,8 @@ static int mbedtls_ssl_new_session_ticket_parse( mbedtls_ssl_context* ssl,
     MBEDTLS_SSL_DEBUG_MSG( 3, ( "ticket->length: %d", ticket_len ) );
 
     /* Ticket Extension */
-    ext_len = ( buf[ 11+ ticket_nonce_len + ticket_len ] << 8 ) | ( buf[ 12 + ticket_nonce_len + ticket_len ] );
+    ext_len = ( (unsigned) buf[ 11 + ticket_nonce_len + ticket_len ] << 8 ) | 
+              ( (unsigned) buf[ 12 + ticket_nonce_len + ticket_len ] );
 
     used += ext_len;
 
