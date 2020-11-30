@@ -4851,7 +4851,8 @@ static int mbedtls_ssl_new_session_ticket_parse( mbedtls_ssl_context* ssl,
         return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
     }
 
-    MBEDTLS_SSL_DEBUG_BUF( 3, "resumption_master_secret", ssl->session->resumption_master_secret,
+    MBEDTLS_SSL_DEBUG_BUF( 3, "resumption_master_secret",
+                           ssl->session->resumption_master_secret,
         mbedtls_hash_size_for_ciphersuite( suite_info ) );
 
     ret = mbedtls_ssl_tls1_3_hkdf_expand_label( suite_info->mac,
