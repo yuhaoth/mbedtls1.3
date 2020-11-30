@@ -4735,8 +4735,8 @@ static int mbedtls_ssl_new_session_ticket_parse( mbedtls_ssl_context* ssl,
 
     /* Ticket lifetime */
     ssl->session->ticket_lifetime =
-        ( buf[0] << 24 ) | ( buf[1] << 16 ) |
-        ( buf[2] << 8 ) | ( buf[3] );
+        ( (unsigned) buf[0] << 24 ) | ( (unsigned) buf[1] << 16 ) |
+        ( (unsigned) buf[2] << 8  ) | ( (unsigned) buf[3] << 0 );
 
     MBEDTLS_SSL_DEBUG_MSG( 3, ( "ticket->lifetime: %d", ssl->session->ticket_lifetime ) );
 
