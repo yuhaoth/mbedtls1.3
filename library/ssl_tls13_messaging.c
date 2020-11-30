@@ -1264,9 +1264,6 @@ static int ssl_prepare_record_content( mbedtls_ssl_context *ssl )
     return( 0 );
 }
 
-
-void ssl_handshake_wrapup_free_hs_transform( mbedtls_ssl_context *ssl );
-
 /*
  * Read a record. ( TLS 1.3 only )
  *
