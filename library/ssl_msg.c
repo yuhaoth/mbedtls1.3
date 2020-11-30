@@ -58,6 +58,9 @@
 #include "mbedtls/oid.h"
 #endif
 
+#define SSL_DONT_FORCE_FLUSH 0
+#define SSL_FORCE_FLUSH      1
+
 /*
  * Start a timer.
  * Passing millisecs = 0 cancels a running timer.
@@ -157,9 +160,6 @@ exit:
     return( ret );
 }
 #endif /* MBEDTLS_SSL_RECORD_CHECKING */
-
-#define SSL_DONT_FORCE_FLUSH 0
-#define SSL_FORCE_FLUSH      1
 
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
 
@@ -4974,6 +4974,8 @@ int mbedtls_ssl_handle_message_type( mbedtls_ssl_context *ssl )
     return( 0 );
 }
 
+#endif /* MBEDTLS_SSL_PROTO_TLS1_2 */
+
 int mbedtls_ssl_send_fatal_handshake_failure( mbedtls_ssl_context *ssl )
 {
     return( mbedtls_ssl_send_alert_message( ssl,
@@ -5007,6 +5009,8 @@ int mbedtls_ssl_send_alert_message( mbedtls_ssl_context *ssl,
 
     return( 0 );
 }
+
+#if defined(MBEDTLS_SSL_PROTO_TLS1_2)
 
 int mbedtls_ssl_write_change_cipher_spec( mbedtls_ssl_context *ssl )
 {
@@ -5298,8 +5302,6 @@ int mbedtls_ssl_check_pending( const mbedtls_ssl_context *ssl )
     return( 0 );
 }
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_2)
-
 int mbedtls_ssl_get_record_expansion( const mbedtls_ssl_context *ssl )
 {
     size_t transform_expansion = 0;
@@ -5360,6 +5362,8 @@ int mbedtls_ssl_get_record_expansion( const mbedtls_ssl_context *ssl )
     return( (int)( out_hdr_len + transform_expansion ) );
 }
 
+#if defined(MBEDTLS_SSL_PROTO_TLS1_2)
+
 #if defined(MBEDTLS_SSL_RENEGOTIATION)
 /*
  * Check record counters and renegotiate if they're above the limit.
@@ -5391,6 +5395,175 @@ static int ssl_check_ctr_renegotiate( mbedtls_ssl_context *ssl )
     return( mbedtls_ssl_renegotiate( ssl ) );
 }
 #endif /* MBEDTLS_SSL_RENEGOTIATION */
+
+#endif /* MBEDTLS_SSL_PROTO_TLS1_2 */
+
+/* This function is called from mbedtls_ssl_read() when a handshake message is
+ * received  after the initial handshake. In TLS 1.2, such messages usually
+ * trigger renegotiations. In (D)TLS 1.3, renegotiation has been replaced
+ * by a number of specific post-handshake messages.
+ */
+static int ssl_handle_hs_message_post_handshake_tls12( mbedtls_ssl_context *ssl );
+static int ssl_handle_hs_message_post_handshake_tls13( mbedtls_ssl_context *ssl );
+
+static int ssl_handle_hs_message_post_handshake( mbedtls_ssl_context *ssl )
+{
+    /* Check protocol version and dispatch accordingly. */
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+    if( ssl->minor_ver == MBEDTLS_SSL_MINOR_VERSION_4 )
+    {
+        return( ssl_handle_hs_message_post_handshake_tls13( ssl ) );
+    }
+    else
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+    {
+        return( ssl_handle_hs_message_post_handshake_tls12( ssl ) );
+    }
+}
+
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+static int ssl_handle_hs_message_post_handshake_tls13( mbedtls_ssl_context *ssl )
+{
+    MBEDTLS_SSL_DEBUG_MSG( 3, ( "received post-handshake message" ) );
+
+#if defined(MBEDTLS_SSL_NEW_SESSION_TICKET)
+#if defined(MBEDTLS_SSL_CLI_C)
+    if( ( ssl->conf->endpoint == MBEDTLS_SSL_IS_CLIENT ) &&
+        ( ssl->in_hslen != mbedtls_ssl_hs_hdr_len( ssl ) ) &&
+        ( ssl->in_msg[0] == MBEDTLS_SSL_HS_NEW_SESSION_TICKET ) )
+    {
+        int ret;
+        MBEDTLS_SSL_DEBUG_MSG( 3, ( "NewSessionTicket received" ) );
+
+        if( ( ret = mbedtls_ssl_new_session_ticket_process( ssl ) ) != 0 )
+        {
+            MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_parse_new_session_ticket", ret );
+            return( ret );
+        }
+
+        return( MBEDTLS_ERR_SSL_RECEIVED_NEW_SESSION_TICKET );
+    }
+#endif /* MBEDTLS_SSL_CLI_C */
+#endif /* MBEDTLS_SSL_NEW_SESSION_TICKET */
+
+    /* Fail in all other cases. */
+    return( MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE );
+}
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+
+static int ssl_handle_hs_message_post_handshake_tls12( mbedtls_ssl_context *ssl )
+{
+    /*
+     * - For client-side, expect SERVER_HELLO_REQUEST.
+     * - For server-side, expect CLIENT_HELLO.
+     * - Fail (TLS) or silently drop record (DTLS) in other cases.
+     */
+
+#if defined(MBEDTLS_SSL_CLI_C)
+    if( ssl->conf->endpoint == MBEDTLS_SSL_IS_CLIENT &&
+        ( ssl->in_msg[0] != MBEDTLS_SSL_HS_HELLO_REQUEST ||
+          ssl->in_hslen  != mbedtls_ssl_hs_hdr_len( ssl ) ) )
+    {
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "handshake received (not HelloRequest)" ) );
+
+        /* With DTLS, drop the packet (probably from last handshake) */
+#if defined(MBEDTLS_SSL_PROTO_DTLS)
+        if( ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_DATAGRAM )
+        {
+            return( 0 );
+        }
+#endif
+        return( MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE );
+    }
+#endif /* MBEDTLS_SSL_CLI_C */
+
+#if defined(MBEDTLS_SSL_SRV_C)
+    if( ssl->conf->endpoint == MBEDTLS_SSL_IS_SERVER &&
+        ssl->in_msg[0] != MBEDTLS_SSL_HS_CLIENT_HELLO )
+    {
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "handshake received (not ClientHello)" ) );
+
+        /* With DTLS, drop the packet (probably from last handshake) */
+#if defined(MBEDTLS_SSL_PROTO_DTLS)
+        if( ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_DATAGRAM )
+        {
+            return( 0 );
+        }
+#endif
+        return( MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE );
+    }
+#endif /* MBEDTLS_SSL_SRV_C */
+
+#if defined(MBEDTLS_SSL_RENEGOTIATION)
+    /* Determine whether renegotiation attempt should be accepted */
+    if( ! ( ssl->conf->disable_renegotiation == MBEDTLS_SSL_RENEGOTIATION_DISABLED ||
+            ( ssl->secure_renegotiation == MBEDTLS_SSL_LEGACY_RENEGOTIATION &&
+              ssl->conf->allow_legacy_renegotiation ==
+              MBEDTLS_SSL_LEGACY_NO_RENEGOTIATION ) ) )
+    {
+        /*
+         * Accept renegotiation request
+         */
+
+        /* DTLS clients need to know renego is server-initiated */
+#if defined(MBEDTLS_SSL_PROTO_DTLS)
+        if( ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_DATAGRAM &&
+            ssl->conf->endpoint == MBEDTLS_SSL_IS_CLIENT )
+        {
+            ssl->renego_status = MBEDTLS_SSL_RENEGOTIATION_PENDING;
+        }
+#endif
+        ret = mbedtls_ssl_start_renegotiation( ssl );
+        if( ret != MBEDTLS_ERR_SSL_WAITING_SERVER_HELLO_RENEGO &&
+            ret != 0 )
+        {
+            MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_start_renegotiation",
+                                   ret );
+            return( ret );
+        }
+    }
+    else
+#endif /* MBEDTLS_SSL_RENEGOTIATION */
+    {
+        /*
+         * Refuse renegotiation
+         */
+
+        MBEDTLS_SSL_DEBUG_MSG( 3, ( "refusing renegotiation, sending alert" ) );
+
+#if defined(MBEDTLS_SSL_PROTO_SSL3)
+        if( ssl->minor_ver == MBEDTLS_SSL_MINOR_VERSION_0 )
+        {
+            /* SSLv3 does not have a "no_renegotiation" warning, so
+               we send a fatal alert and abort the connection. */
+            mbedtls_ssl_send_alert_message( ssl, MBEDTLS_SSL_ALERT_LEVEL_FATAL,
+                                            MBEDTLS_SSL_ALERT_MSG_UNEXPECTED_MESSAGE );
+            return( MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE );
+        }
+        else
+#endif /* MBEDTLS_SSL_PROTO_SSL3 */
+#if defined(MBEDTLS_SSL_PROTO_TLS1) || defined(MBEDTLS_SSL_PROTO_TLS1_1) || \
+    defined(MBEDTLS_SSL_PROTO_TLS1_2)
+            if( ssl->minor_ver >= MBEDTLS_SSL_MINOR_VERSION_1 )
+            {
+                if( ( ret = mbedtls_ssl_send_alert_message( ssl,
+                                                            MBEDTLS_SSL_ALERT_LEVEL_WARNING,
+                                                            MBEDTLS_SSL_ALERT_MSG_NO_RENEGOTIATION ) ) != 0 )
+                {
+                    return( ret );
+                }
+            }
+            else
+#endif /* MBEDTLS_SSL_PROTO_TLS1 || MBEDTLS_SSL_PROTO_TLS1_1 ||
+          MBEDTLS_SSL_PROTO_TLS1_2 */
+            {
+                MBEDTLS_SSL_DEBUG_MSG( 1, ( "should never happen" ) );
+                return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
+            }
+    }
+
+    return( 0 );
+}
 
 /*
  * Receive application data decrypted from the SSL layer
@@ -5490,135 +5663,15 @@ int mbedtls_ssl_read( mbedtls_ssl_context *ssl, unsigned char *buf, size_t len )
 
         if( ssl->in_msgtype == MBEDTLS_SSL_MSG_HANDSHAKE )
         {
-            MBEDTLS_SSL_DEBUG_MSG( 1, ( "received handshake message" ) );
-
-            /*
-             * - For client-side, expect SERVER_HELLO_REQUEST.
-             * - For server-side, expect CLIENT_HELLO.
-             * - Fail (TLS) or silently drop record (DTLS) in other cases.
-             */
-
-#if defined(MBEDTLS_SSL_CLI_C)
-            if( ssl->conf->endpoint == MBEDTLS_SSL_IS_CLIENT &&
-                ( ssl->in_msg[0] != MBEDTLS_SSL_HS_HELLO_REQUEST ||
-                  ssl->in_hslen  != mbedtls_ssl_hs_hdr_len( ssl ) ) )
+            ret = ssl_handle_hs_message_post_handshake( ssl );
+            if( ret != 0)
             {
-                MBEDTLS_SSL_DEBUG_MSG( 1, ( "handshake received (not HelloRequest)" ) );
-
-                /* With DTLS, drop the packet (probably from last handshake) */
-#if defined(MBEDTLS_SSL_PROTO_DTLS)
-                if( ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_DATAGRAM )
-                {
-                    continue;
-                }
-#endif
-                return( MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE );
-            }
-#endif /* MBEDTLS_SSL_CLI_C */
-
-#if defined(MBEDTLS_SSL_SRV_C)
-            if( ssl->conf->endpoint == MBEDTLS_SSL_IS_SERVER &&
-                ssl->in_msg[0] != MBEDTLS_SSL_HS_CLIENT_HELLO )
-            {
-                MBEDTLS_SSL_DEBUG_MSG( 1, ( "handshake received (not ClientHello)" ) );
-
-                /* With DTLS, drop the packet (probably from last handshake) */
-#if defined(MBEDTLS_SSL_PROTO_DTLS)
-                if( ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_DATAGRAM )
-                {
-                    continue;
-                }
-#endif
-                return( MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE );
-            }
-#endif /* MBEDTLS_SSL_SRV_C */
-
-#if defined(MBEDTLS_SSL_RENEGOTIATION)
-            /* Determine whether renegotiation attempt should be accepted */
-            if( ! ( ssl->conf->disable_renegotiation == MBEDTLS_SSL_RENEGOTIATION_DISABLED ||
-                    ( ssl->secure_renegotiation == MBEDTLS_SSL_LEGACY_RENEGOTIATION &&
-                      ssl->conf->allow_legacy_renegotiation ==
-                                                   MBEDTLS_SSL_LEGACY_NO_RENEGOTIATION ) ) )
-            {
-                /*
-                 * Accept renegotiation request
-                 */
-
-                /* DTLS clients need to know renego is server-initiated */
-#if defined(MBEDTLS_SSL_PROTO_DTLS)
-                if( ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_DATAGRAM &&
-                    ssl->conf->endpoint == MBEDTLS_SSL_IS_CLIENT )
-                {
-                    ssl->renego_status = MBEDTLS_SSL_RENEGOTIATION_PENDING;
-                }
-#endif
-                ret = mbedtls_ssl_start_renegotiation( ssl );
-                if( ret != MBEDTLS_ERR_SSL_WAITING_SERVER_HELLO_RENEGO &&
-                    ret != 0 )
-                {
-                    MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_start_renegotiation",
-                                           ret );
-                    return( ret );
-                }
-            }
-            else
-#endif /* MBEDTLS_SSL_RENEGOTIATION */
-            {
-                /*
-                 * Refuse renegotiation
-                 */
-
-                MBEDTLS_SSL_DEBUG_MSG( 3, ( "refusing renegotiation, sending alert" ) );
-
-#if defined(MBEDTLS_SSL_PROTO_SSL3)
-                if( ssl->minor_ver == MBEDTLS_SSL_MINOR_VERSION_0 )
-                {
-                    /* SSLv3 does not have a "no_renegotiation" warning, so
-                       we send a fatal alert and abort the connection. */
-                    mbedtls_ssl_send_alert_message( ssl, MBEDTLS_SSL_ALERT_LEVEL_FATAL,
-                                                    MBEDTLS_SSL_ALERT_MSG_UNEXPECTED_MESSAGE );
-                    return( MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE );
-                }
-                else
-#endif /* MBEDTLS_SSL_PROTO_SSL3 */
-#if defined(MBEDTLS_SSL_PROTO_TLS1) || defined(MBEDTLS_SSL_PROTO_TLS1_1) || \
-    defined(MBEDTLS_SSL_PROTO_TLS1_2)
-                if( ssl->minor_ver >= MBEDTLS_SSL_MINOR_VERSION_1 )
-                {
-                    if( ( ret = mbedtls_ssl_send_alert_message( ssl,
-                                    MBEDTLS_SSL_ALERT_LEVEL_WARNING,
-                                    MBEDTLS_SSL_ALERT_MSG_NO_RENEGOTIATION ) ) != 0 )
-                    {
-                        return( ret );
-                    }
-                }
-                else
-#endif /* MBEDTLS_SSL_PROTO_TLS1 || MBEDTLS_SSL_PROTO_TLS1_1 ||
-          MBEDTLS_SSL_PROTO_TLS1_2 */
-                {
-                    MBEDTLS_SSL_DEBUG_MSG( 1, ( "should never happen" ) );
-                    return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
-                }
+                MBEDTLS_SSL_DEBUG_RET( 1, "ssl_handle_hs_message_post_handshake",
+                                          ret );
+                return( ret );
             }
 
-            /* At this point, we don't know whether the renegotiation has been
-             * completed or not. The cases to consider are the following:
-             * 1) The renegotiation is complete. In this case, no new record
-             *    has been read yet.
-             * 2) The renegotiation is incomplete because the client received
-             *    an application data record while awaiting the ServerHello.
-             * 3) The renegotiation is incomplete because the client received
-             *    a non-handshake, non-application data message while awaiting
-             *    the ServerHello.
-             * In each of these case, looping will be the proper action:
-             * - For 1), the next iteration will read a new record and check
-             *   if it's application data.
-             * - For 2), the loop condition isn't satisfied as application data
-             *   is present, hence continue is the same as break
-             * - For 3), the loop condition is satisfied and read_record
-             *   will re-deliver the message that was held back by the client
-             *   when expecting the ServerHello.
-             */
+            /* Post-handshake handshake messages are not passed to the user. */
             continue;
         }
 #if defined(MBEDTLS_SSL_RENEGOTIATION)
@@ -5834,12 +5887,19 @@ int mbedtls_ssl_write( mbedtls_ssl_context *ssl, const unsigned char *buf, size_
     }
 #endif
 
-    if( ssl->state != MBEDTLS_SSL_HANDSHAKE_OVER )
+#if defined(MBEDTLS_ZERO_RTT)
+    /* TODO: What's the purpose of this check? */
+    if( ( ssl->handshake != NULL ) &&
+        ( ssl->handshake->early_data == MBEDTLS_SSL_EARLY_DATA_OFF ) )
+#endif /* MBEDTLS_ZERO_RTT */
     {
-        if( ( ret = mbedtls_ssl_handshake( ssl ) ) != 0 )
+        if( ssl->state != MBEDTLS_SSL_HANDSHAKE_OVER )
         {
-            MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_handshake", ret );
-            return( ret );
+            if( ( ret = mbedtls_ssl_handshake( ssl ) ) != 0 )
+            {
+                MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_handshake", ret );
+                return( ret );
+            }
         }
     }
 
@@ -5884,6 +5944,8 @@ int mbedtls_ssl_close_notify( mbedtls_ssl_context *ssl )
 
     return( 0 );
 }
+
+#if defined(MBEDTLS_SSL_PROTO_TLS1_2)
 
 void mbedtls_ssl_transform_free( mbedtls_ssl_transform *transform )
 {

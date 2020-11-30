@@ -25,8 +25,10 @@
 #include MBEDTLS_CONFIG_FILE
 #endif
 
-
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+
+#define SSL_DONT_FORCE_FLUSH 0
+#define SSL_FORCE_FLUSH      1
 
 #include "mbedtls/hkdf.h"
 
@@ -135,7 +137,7 @@ int ssl_write_early_data_process( mbedtls_ssl_context* ssl )
         ssl->out_msgtype = MBEDTLS_SSL_MSG_APPLICATION_DATA;
 
         /* Dispatch message */
-        MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_write_record( ssl ) );
+        MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_write_record( ssl, SSL_FORCE_FLUSH ) );
 
         /* Update state */
         MBEDTLS_SSL_PROC_CHK( ssl_write_early_data_postprocess( ssl ) );
@@ -274,7 +276,7 @@ int ssl_write_end_of_early_data_process( mbedtls_ssl_context* ssl )
         ssl->out_msg[0] = MBEDTLS_SSL_HS_END_OF_EARLY_DATA;
 
         /* Dispatch message */
-        MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_write_record( ssl ) );
+        MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_write_record( ssl, SSL_FORCE_FLUSH ) );
 
         /* Update state */
         MBEDTLS_SSL_PROC_CHK( ssl_write_end_of_early_data_postprocess( ssl ) );
@@ -1515,7 +1517,7 @@ static int ssl_client_hello_process( mbedtls_ssl_context* ssl )
 #endif
 
     /* Dispatch message */
-    MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_write_record( ssl ) );
+    MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_write_record( ssl, SSL_FORCE_FLUSH ) );
 
     /* NOTE: With the new messaging layer, the postprocessing
      *       step might come after the dispatching step if the
@@ -2390,7 +2392,7 @@ static int ssl_certificate_request_coordinate( mbedtls_ssl_context* ssl )
 #else
     if( ssl->keep_current_message == 0 )
     {
-        if( ( ret = mbedtls_ssl_read_record( ssl ) ) != 0 )
+        if( ( ret = mbedtls_ssl_read_record( ssl, SSL_FORCE_FLUSH ) ) != 0 )
         {
             MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_read_record", ret );
             return( ret );
@@ -2596,7 +2598,7 @@ static int ssl_encrypted_extensions_process( mbedtls_ssl_context* ssl )
 
     MBEDTLS_SSL_PROC_CHK( ssl_encrypted_extensions_prepare( ssl ) );
 
-    if( ( ret = mbedtls_ssl_read_record( ssl ) ) != 0 )
+    if( ( ret = mbedtls_ssl_read_record( ssl, 1 ) ) != 0 )
     {
         MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_read_record", ret );
         goto cleanup;
@@ -2900,7 +2902,7 @@ static int ssl_server_hello_coordinate( mbedtls_ssl_context* ssl )
     /* SHA-256 of "HelloRetryRequest" stored in magic_hrr_string to distinguish HRR from regular ServerHello */
     const char magic_hrr_string[32] = { 0xCF, 0x21, 0xAD, 0x74, 0xE5, 0x9A, 0x61, 0x11, 0xBE, 0x1D, 0x8C, 0x02, 0x1E, 0x65, 0xB8, 0x91, 0xC2, 0xA2, 0x11, 0x16, 0x7A, 0xBB, 0x8C, 0x5E, 0x07, 0x9E, 0x09, 0xE2, 0xC8, 0xA8, 0x33 ,0x9C };
 
-    if( ( ret = mbedtls_ssl_read_record( ssl ) ) != 0 )
+    if( ( ret = mbedtls_ssl_read_record( ssl, 1 ) ) != 0 )
     {
         /* No alert on a read error. */
         MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_read_record", ret );
