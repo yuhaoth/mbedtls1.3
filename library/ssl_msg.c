@@ -4974,14 +4974,14 @@ int mbedtls_ssl_handle_message_type( mbedtls_ssl_context *ssl )
     return( 0 );
 }
 
+#endif /* MBEDTLS_SSL_PROTO_TLS1_2 */
+
 int mbedtls_ssl_send_fatal_handshake_failure( mbedtls_ssl_context *ssl )
 {
     return( mbedtls_ssl_send_alert_message( ssl,
                   MBEDTLS_SSL_ALERT_LEVEL_FATAL,
                   MBEDTLS_SSL_ALERT_MSG_HANDSHAKE_FAILURE ) );
 }
-
-#endif /* MBEDTLS_SSL_PROTO_TLS1_2 */
 
 int mbedtls_ssl_send_alert_message( mbedtls_ssl_context *ssl,
                             unsigned char level,
