@@ -1640,46 +1640,6 @@ int mbedtls_ssl_handle_pending_alert( mbedtls_ssl_context *ssl )
     return( 0 );
 }
 
-int mbedtls_ssl_send_alert_message( mbedtls_ssl_context *ssl,
-                                    unsigned char level,
-                                    unsigned char message )
-{
-    int ret;
-
-    if( ssl == NULL || ssl->conf == NULL )
-        return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
-
-    MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> send alert message" ) );
-
-    ssl->out_msgtype = MBEDTLS_SSL_MSG_ALERT;
-    ssl->out_msg[0] = level;
-    ssl->out_msg[1] = message;
-
-    /* TBD: We need to check what alert messages are sent encrypted.
-       Particularly for alerts that are send after cleaning the
-       handshake will potentially transmitted in cleartext. */
-    if( ssl->transform != NULL || ssl->transform_out!=NULL )
-    {
-        /* If we encrypt then we add the content type and optionally padding. */
-        ssl->out_msglen = 3; // 3 includes the content type as well
-        /* We use no padding. */
-        ssl->out_msg[2] = MBEDTLS_SSL_MSG_ALERT;
-    } else
-    {
-        ssl->out_msglen = 2;
-    }
-
-    if( ( ret = mbedtls_ssl_write_record( ssl, SSL_FORCE_FLUSH ) ) != 0 )
-    {
-        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_write_record", ret );
-        return( ret );
-    }
-
-    MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= send alert message" ) );
-
-    return( 0 );
-}
-
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 
 #endif /* MBEDTLS_SSL_TLS_C */
