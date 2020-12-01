@@ -4780,13 +4780,16 @@ static int mbedtls_ssl_new_session_ticket_parse( mbedtls_ssl_context* ssl,
         ssl->session->ticket_nonce_len = 0;
     }
 
-    if( ( ssl->session->ticket_nonce = mbedtls_calloc( 1, ticket_nonce_len ) ) == NULL )
+    if( ticket_nonce_len > 0 )
     {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "ticket_nonce alloc failed" ) );
-        return( MBEDTLS_ERR_SSL_ALLOC_FAILED );
-    }
+        if( ( ssl->session->ticket_nonce = mbedtls_calloc( 1, ticket_nonce_len ) ) == NULL )
+        {
+            MBEDTLS_SSL_DEBUG_MSG( 1, ( "ticket_nonce alloc failed" ) );
+            return( MBEDTLS_ERR_SSL_ALLOC_FAILED );
+        }
 
-    memcpy( ssl->session->ticket_nonce, &buf[9], ticket_nonce_len );
+        memcpy( ssl->session->ticket_nonce, &buf[9], ticket_nonce_len );
+    }
 
     ssl->session->ticket_nonce_len = ticket_nonce_len;
 
