@@ -167,10 +167,10 @@ static int ssl_write_early_data_prepare( mbedtls_ssl_context* ssl )
 #endif /* MBEDTLS_SSL_PROTO_DTLS */
 
     mbedtls_ssl_transform_free( ssl->transform_negotiate );
-    ret = mbedtls_set_traffic_key( ssl, &traffic_keys, ssl->transform_negotiate, 0 );
+    ret = mbedtls_ssl_tls13_build_transform( ssl, &traffic_keys, ssl->transform_negotiate, 0 );
     if( ret != 0 )
     {
-        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_set_traffic_key", ret );
+        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_tls13_build_transform", ret );
         return( ret );
     }
 
@@ -326,10 +326,10 @@ static int ssl_write_end_of_early_data_prepare( mbedtls_ssl_context* ssl )
 #endif /* MBEDTLS_SSL_PROTO_DTLS */
 
     mbedtls_ssl_transform_free( ssl->transform_negotiate );
-    ret = mbedtls_set_traffic_key( ssl, &traffic_keys, ssl->transform_negotiate, 0 );
+    ret = mbedtls_ssl_tls13_build_transform( ssl, &traffic_keys, ssl->transform_negotiate, 0 );
     if( ret != 0 )
     {
-        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_set_traffic_key", ret );
+        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_tls13_build_transform", ret );
         return( ret );
     }
 
@@ -2664,10 +2664,10 @@ static int ssl_encrypted_extensions_prepare( mbedtls_ssl_context* ssl ) {
         return( ret );
     }
 
-    ret = mbedtls_set_traffic_key( ssl, &traffic_keys, ssl->transform_negotiate, 0 );
+    ret = mbedtls_ssl_tls13_build_transform( ssl, &traffic_keys, ssl->transform_negotiate, 0 );
     if( ret != 0 )
     {
-        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_set_traffic_key", ret );
+        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_tls13_build_transform", ret );
         return( ret );
     }
 

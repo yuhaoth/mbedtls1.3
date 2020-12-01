@@ -1313,7 +1313,7 @@ int mbedtls_ssl_handshake_key_derivation( mbedtls_ssl_context* ssl,
 int mbedtls_ssl_read_certificate_verify_process(mbedtls_ssl_context* ssl);
 int mbedtls_ssl_certificate_verify_process(mbedtls_ssl_context* ssl);
 
-int mbedtls_set_traffic_key( mbedtls_ssl_context* ssl,
+int mbedtls_ssl_tls13_build_transform( mbedtls_ssl_context* ssl,
                              mbedtls_ssl_key_set* traffic_keys,
                              mbedtls_ssl_transform* transform,
                              int mode );

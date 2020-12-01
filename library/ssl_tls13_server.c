@@ -1866,10 +1866,10 @@ static int ssl_read_end_of_early_data_preprocess( mbedtls_ssl_context* ssl )
         goto cleanup;
     }
 
-    ret = mbedtls_set_traffic_key( ssl, &traffic_keys, ssl->transform_negotiate, 0 );
+    ret = mbedtls_ssl_tls13_build_transform( ssl, &traffic_keys, ssl->transform_negotiate, 0 );
     if( ret != 0 )
     {
-        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_set_traffic_key", ret );
+        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_tls13_build_transform", ret );
         goto cleanup;
     }
 
@@ -1973,10 +1973,10 @@ static int ssl_read_early_data_preprocess( mbedtls_ssl_context* ssl )
         goto cleanup;
     }
 
-    ret = mbedtls_set_traffic_key( ssl, &traffic_keys, ssl->transform_negotiate, 0 );
+    ret = mbedtls_ssl_tls13_build_transform( ssl, &traffic_keys, ssl->transform_negotiate, 0 );
     if( ret != 0 )
     {
-        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_set_traffic_key", ret );
+        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_tls13_build_transform", ret );
         goto cleanup;
     }
 
@@ -3482,10 +3482,10 @@ static int ssl_encrypted_extensions_prepare( mbedtls_ssl_context* ssl )
     }
 
     /* Setup transform from handshake key material */
-    ret = mbedtls_set_traffic_key( ssl, &traffic_keys, ssl->transform_negotiate, 0 );
+    ret = mbedtls_ssl_tls13_build_transform( ssl, &traffic_keys, ssl->transform_negotiate, 0 );
     if( ret != 0 )
     {
-        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_set_traffic_key", ret );
+        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_tls13_build_transform", ret );
         return( ret );
     }
 
@@ -4772,10 +4772,10 @@ int mbedtls_ssl_handshake_server_step( mbedtls_ssl_context *ssl )
                     return( ret );
                 }
 
-                ret = mbedtls_set_traffic_key( ssl, &traffic_keys, ssl->transform_negotiate,0 );
+                ret = mbedtls_ssl_tls13_build_transform( ssl, &traffic_keys, ssl->transform_negotiate,0 );
                 if( ret != 0 )
                 {
-                    MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_set_traffic_key", ret );
+                    MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_tls13_build_transform", ret );
                     return( ret );
                 }
 
@@ -4809,10 +4809,10 @@ int mbedtls_ssl_handshake_server_step( mbedtls_ssl_context *ssl )
                 return( ret );
             }
 
-            ret = mbedtls_set_traffic_key( ssl, &traffic_keys, ssl->transform_negotiate, 0 );
+            ret = mbedtls_ssl_tls13_build_transform( ssl, &traffic_keys, ssl->transform_negotiate, 0 );
             if( ret != 0 )
             {
-                MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_set_traffic_key", ret );
+                MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_tls13_build_transform", ret );
                 return( ret );
             }
 

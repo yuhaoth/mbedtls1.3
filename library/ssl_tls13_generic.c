@@ -3411,7 +3411,7 @@ static void ssl_setup_seq_protection_keys( mbedtls_ssl_context *ssl,
 #endif /* MBEDTLS_SSL_PROTO_DTLS */
 
 
-/* mbedtls_set_traffic_key() activates keys and IVs for
+/* mbedtls_ssl_tls13_build_transform() activates keys and IVs for
  * the negotiated ciphersuite for use with encryption/decryption.
  * The sequence numbers are also set to zero.
  *
@@ -3419,7 +3419,7 @@ static void ssl_setup_seq_protection_keys( mbedtls_ssl_context *ssl,
  *   - Do not backup old keys       -- use 1
  *   - Backup old keys in transform -- use 0
  */
-int mbedtls_set_traffic_key( mbedtls_ssl_context *ssl,
+int mbedtls_ssl_tls13_build_transform( mbedtls_ssl_context *ssl,
                              mbedtls_ssl_key_set *traffic_keys,
                              mbedtls_ssl_transform *transform,
                              int remove_old_keys )
@@ -3542,6 +3542,7 @@ int mbedtls_set_traffic_key( mbedtls_ssl_context *ssl,
     transform->maclen      = 0;
     transform->fixed_ivlen = 4;
     transform->minlen      = transform->taglen + 1;
+    transform->minor_ver   = MBEDTLS_SSL_MINOR_VER_4;
 
     /*
      * In case of DTLS, setup sequence number protection keys.
@@ -3918,10 +3919,10 @@ static int ssl_finished_out_prepare( mbedtls_ssl_context* ssl )
 
             /* Setup transform from handshake keying material */
             mbedtls_ssl_transform_free( ssl->transform_out );
-            ret = mbedtls_set_traffic_key( ssl, traffic_keys, ssl->transform_out, 0 );
+            ret = mbedtls_ssl_tls13_build_transform( ssl, traffic_keys, ssl->transform_out, 0 );
             if( ret != 0 )
             {
-                MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_set_traffic_key", ret );
+                MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_tls13_build_transform", ret );
                 return ( ret );
             }
 
@@ -4029,10 +4030,10 @@ static int ssl_finished_out_postprocess( mbedtls_ssl_context* ssl )
 #endif /* MBEDTLS_SSL_PROTO_DTLS */
 
         mbedtls_ssl_transform_free( ssl->transform_negotiate );
-        ret = mbedtls_set_traffic_key( ssl, traffic_keys, ssl->transform_negotiate, 0 );
+        ret = mbedtls_ssl_tls13_build_transform( ssl, traffic_keys, ssl->transform_negotiate, 0 );
         if( ret != 0 )
         {
-            MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_set_traffic_key", ret );
+            MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_tls13_build_transform", ret );
             return ( ret );
         }
 
