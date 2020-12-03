@@ -1,4 +1,5 @@
 */Makefile
+!fuzz/Makefile
 *.sln
 *.vcxproj
 
