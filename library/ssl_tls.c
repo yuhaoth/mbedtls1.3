@@ -6545,7 +6545,7 @@ void mbedtls_ssl_session_free( mbedtls_ssl_session *session )
 
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
-    if( session->ticket_nonce_len > 0 ) mbedtls_free( session->ticket_nonce );
+    mbedtls_free( session->ticket_nonce );
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 
 #endif
