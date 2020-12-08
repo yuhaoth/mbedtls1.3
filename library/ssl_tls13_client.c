@@ -3900,7 +3900,7 @@ int mbedtls_ssl_handshake_client_step( mbedtls_ssl_context *ssl )
             if( ret != 0 )
             {
                 MBEDTLS_SSL_DEBUG_RET( 1, "ssl_server_hello_process", ret );
-                return( ret );
+                break;
             }
 
 #if	defined(MBEDTLS_SSL_PROTO_DTLS)
@@ -3990,7 +3990,7 @@ int mbedtls_ssl_handshake_client_step( mbedtls_ssl_context *ssl )
             if( ret != 0 )
             {
                 MBEDTLS_SSL_DEBUG_RET( 1, "ssl_parse_server_hello", ret );
-                return( ret );
+                break;
             }
 
 #if	defined(MBEDTLS_SSL_PROTO_DTLS)
