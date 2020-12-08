@@ -1306,19 +1306,33 @@ static uint32_t get_varint_value(const uint32_t input);
 #endif /* MBEDTLS_SSL_TLS13_CTLS */
 
 
-int mbedtls_ssl_key_derivation(mbedtls_ssl_context* ssl, mbedtls_ssl_key_set* traffic_keys);
-
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+int mbedtls_ssl_handshake_key_derivation( mbedtls_ssl_context* ssl,
+                                          mbedtls_ssl_key_set* traffic_keys );
 int mbedtls_ssl_read_certificate_verify_process(mbedtls_ssl_context* ssl);
 int mbedtls_ssl_certificate_verify_process(mbedtls_ssl_context* ssl);
 
+int mbedtls_ssl_tls13_build_transform( mbedtls_ssl_context* ssl,
+                             mbedtls_ssl_key_set* traffic_keys,
+                             mbedtls_ssl_transform* transform,
+                             int mode );
+
+void mbedtls_ssl_set_inbound_transform( mbedtls_ssl_context *ssl,
+                                        mbedtls_ssl_transform *transform );
+void mbedtls_ssl_set_outbound_transform( mbedtls_ssl_context *ssl,
+                                         mbedtls_ssl_transform *transform );
+
 int mbedtls_ssl_tls1_3_derive_master_secret(mbedtls_ssl_context* ssl);
-int mbedtls_set_traffic_key(mbedtls_ssl_context* ssl, mbedtls_ssl_key_set* traffic_keys, mbedtls_ssl_transform* transform, int mode);
-int mbedtls_ssl_generate_application_traffic_keys(mbedtls_ssl_context* ssl, mbedtls_ssl_key_set* traffic_keys);
+
+int mbedtls_ssl_generate_application_traffic_keys( mbedtls_ssl_context* ssl,
+                                                   mbedtls_ssl_key_set* traffic_keys );
+int mbedtls_ssl_generate_handshake_traffic_keys( mbedtls_ssl_context* ssl,
+                                                 mbedtls_ssl_key_set* traffic_keys );
+int mbedtls_ssl_generate_early_data_keys( mbedtls_ssl_context* ssl,
+                                          mbedtls_ssl_key_set* traffic_keys );
 int mbedtls_ssl_generate_resumption_master_secret(mbedtls_ssl_context* ssl);
 int mbedtls_ssl_write_encrypted_extension(mbedtls_ssl_context* ssl);
-int mbedtls_ssl_derive_traffic_keys(mbedtls_ssl_context* ssl, mbedtls_ssl_key_set* traffic_keys);
 int mbedtls_increment_sequence_number(unsigned char* sequenceNumber, unsigned char* nonce, size_t ivlen);
 
 #if defined(MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE)
@@ -1334,7 +1348,6 @@ int mbedtls_ssl_parse_signature_algorithms_ext(mbedtls_ssl_context* ssl, const u
 int mbedtls_ssl_check_signature_scheme(const mbedtls_ssl_context* ssl, int signature_scheme);
 #endif /* MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED */
 #if defined(MBEDTLS_ZERO_RTT)
-int mbedtls_ssl_early_data_key_derivation(mbedtls_ssl_context* ssl, mbedtls_ssl_key_set* traffic_keys);
 int mbedtls_ssl_write_early_data_ext(mbedtls_ssl_context* ssl, unsigned char* buf, size_t buflen, size_t* olen);
 #endif /* MBEDTLS_ZERO_RTT */
 #if (defined(MBEDTLS_ECDH_C) || defined(MBEDTLS_ECDSA_C))

@@ -155,10 +155,10 @@ static int ssl_write_early_data_prepare( mbedtls_ssl_context* ssl )
     int ret;
     mbedtls_ssl_key_set traffic_keys;
 
-    ret = mbedtls_ssl_early_data_key_derivation( ssl, &traffic_keys );
+    ret = mbedtls_ssl_generate_early_data_keys( ssl, &traffic_keys );
     if( ret != 0 )
     {
-        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_key_derivation", ret );
+        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_generate_early_data_keys", ret );
         return( ret );
     }
 
@@ -167,12 +167,32 @@ static int ssl_write_early_data_prepare( mbedtls_ssl_context* ssl )
 #endif /* MBEDTLS_SSL_PROTO_DTLS */
 
     mbedtls_ssl_transform_free( ssl->transform_negotiate );
-    ret = mbedtls_set_traffic_key( ssl, &traffic_keys, ssl->transform_negotiate, 0 );
+    ret = mbedtls_ssl_tls13_build_transform( ssl, &traffic_keys, ssl->transform_negotiate, 0 );
     if( ret != 0 )
     {
-        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_set_traffic_key", ret );
+        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_tls13_build_transform", ret );
         return( ret );
     }
+
+    /* Activate transform */
+
+#if defined(MBEDTLS_SSL_SRV_C)
+    if( ssl->conf->endpoint == MBEDTLS_SSL_IS_SERVER )
+    {
+        MBEDTLS_SSL_DEBUG_MSG( 3, ( "switching to new transform spec for inbound data" ) );
+        mbedtls_ssl_set_inbound_transform( ssl, ssl->transform_negotiate );
+        ssl->session_in = ssl->session_negotiate;
+    }
+#endif
+
+#if defined(MBEDTLS_SSL_CLI_C)
+    if( ssl->conf->endpoint == MBEDTLS_SSL_IS_CLIENT )
+    {
+        MBEDTLS_SSL_DEBUG_MSG( 3, ( "switching to new transform spec for outbound data" ) );
+        mbedtls_ssl_set_outbound_transform( ssl, ssl->transform_negotiate );
+        ssl->session_out = ssl->session_negotiate;
+    }
+#endif
 
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
     /* epoch value( 1 ) is used for messages protected using keys derived
@@ -294,10 +314,10 @@ static int ssl_write_end_of_early_data_prepare( mbedtls_ssl_context* ssl )
     int ret;
     mbedtls_ssl_key_set traffic_keys;
 
-    ret = mbedtls_ssl_early_data_key_derivation( ssl, &traffic_keys );
+    ret = mbedtls_ssl_generate_early_data_keys( ssl, &traffic_keys );
     if( ret != 0 )
     {
-        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_key_derivation", ret );
+        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_generate_early_data_keys", ret );
         return( ret );
     }
 
@@ -306,10 +326,10 @@ static int ssl_write_end_of_early_data_prepare( mbedtls_ssl_context* ssl )
 #endif /* MBEDTLS_SSL_PROTO_DTLS */
 
     mbedtls_ssl_transform_free( ssl->transform_negotiate );
-    ret = mbedtls_set_traffic_key( ssl, &traffic_keys, ssl->transform_negotiate, 0 );
+    ret = mbedtls_ssl_tls13_build_transform( ssl, &traffic_keys, ssl->transform_negotiate, 0 );
     if( ret != 0 )
     {
-        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_set_traffic_key", ret );
+        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_tls13_build_transform", ret );
         return( ret );
     }
 
@@ -2636,28 +2656,29 @@ static int ssl_encrypted_extensions_prepare( mbedtls_ssl_context* ssl ) {
     int ret;
     mbedtls_ssl_key_set traffic_keys;
 
-    if( ssl->transform_in == NULL )
+    /* Generate handshake keying material */
+    ret = mbedtls_ssl_handshake_key_derivation( ssl, &traffic_keys );
+    if( ret != 0 )
     {
-        ret = mbedtls_ssl_key_derivation( ssl, &traffic_keys );
-        if( ret != 0 )
-        {
-            MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_key_derivation", ret );
-            return( ret );
-        }
+        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_handshake_key_derivation", ret );
+        return( ret );
+    }
+
+    ret = mbedtls_ssl_tls13_build_transform( ssl, &traffic_keys, ssl->transform_negotiate, 0 );
+    if( ret != 0 )
+    {
+        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_tls13_build_transform", ret );
+        return( ret );
+    }
+
+    /* Switch to new keys for inbound traffic. */
+    mbedtls_ssl_set_inbound_transform( ssl, ssl->transform_negotiate );
+    ssl->session_in = ssl->session_negotiate;
 
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
-        traffic_keys.epoch = 2;
+    traffic_keys.epoch = 2;
 #endif /* MBEDTLS_SSL_PROTO_DTLS */
 
-        mbedtls_ssl_transform_free( ssl->transform_negotiate );
-        ret = mbedtls_set_traffic_key( ssl, &traffic_keys, ssl->transform_negotiate, 0 );
-        if( ret != 0 )
-        {
-            MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_set_traffic_key", ret );
-            return( ret );
-        }
-
-    }
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
     /* epoch value ( 2 ) is used for messages
      * protected using keys derived from the handshake_traffic_secret
