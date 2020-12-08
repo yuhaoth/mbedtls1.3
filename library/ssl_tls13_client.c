@@ -2913,7 +2913,8 @@ static int ssl_server_hello_coordinate( mbedtls_ssl_context* ssl )
      * of ClientHello's we sent, and fail if it
      * exceeds the configured threshold. */
 
-    if( ( ssl->in_msgtype != MBEDTLS_SSL_MSG_HANDSHAKE ) || ( ssl->in_msg[0] != MBEDTLS_SSL_HS_SERVER_HELLO ) )
+    if( ( ssl->in_msgtype != MBEDTLS_SSL_MSG_HANDSHAKE ) || 
+        ( ssl->in_msg[0] != MBEDTLS_SSL_HS_SERVER_HELLO ) )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "unexpected message" ) );
 
