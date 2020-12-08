@@ -3542,7 +3542,6 @@ int mbedtls_ssl_tls13_build_transform( mbedtls_ssl_context *ssl,
     transform->maclen      = 0;
     transform->fixed_ivlen = 4;
     transform->minlen      = transform->taglen + 1;
-    transform->minor_ver   = MBEDTLS_SSL_MINOR_VER_4;
 
     /*
      * In case of DTLS, setup sequence number protection keys.
