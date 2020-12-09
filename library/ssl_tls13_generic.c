@@ -3990,7 +3990,7 @@ static int ssl_finished_out_prepare( mbedtls_ssl_context* ssl )
 
 static int ssl_finished_out_postprocess( mbedtls_ssl_context* ssl )
 {
-    int ret;
+    int ret = 0;
 #if defined(MBEDTLS_SSL_SRV_C)
     const mbedtls_ssl_ciphersuite_t *suite_info =
         mbedtls_ssl_ciphersuite_from_id( ssl->session_negotiate->ciphersuite );
