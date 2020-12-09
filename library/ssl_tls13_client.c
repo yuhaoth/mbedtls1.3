@@ -528,11 +528,10 @@ static int ssl_write_max_fragment_length_ext( mbedtls_ssl_context *ssl,
  */
 static int ssl_write_alpn_ext( mbedtls_ssl_context *ssl,
                               unsigned char *buf,
-                              size_t buflen,
+                              const unsigned char* end,
                               size_t *olen )
 {
     unsigned char *p = buf;
-    const unsigned char* end = buf + buflen;
     size_t alpnlen = 0;
     const char **cur;
 
