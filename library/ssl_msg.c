@@ -4910,6 +4910,19 @@ int mbedtls_ssl_handle_message_type( mbedtls_ssl_context *ssl )
             return( MBEDTLS_ERR_SSL_EARLY_MESSAGE );
         }
 #endif
+
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+        if( ssl->minor_ver == MBEDTLS_SSL_MINOR_VERSION_4 )
+        {
+#if defined(MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE)
+            MBEDTLS_SSL_DEBUG_MSG( 1, ( "Ignore ChangeCipherSpec in TLS 1.3 compatibility mode" ) );
+            return( MBEDTLS_ERR_SSL_CONTINUE_PROCESSING );
+#else
+            MBEDTLS_SSL_DEBUG_MSG( 1, ( "ChangeCipherSpec invalid in TLS 1.3 without compatibility mode" ) );
+            return( MBEDTLS_ERR_SSL_INVALID_RECORD );
+#endif /* MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE */
+        }
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
     }
 
     if( ssl->in_msgtype == MBEDTLS_SSL_MSG_ALERT )
