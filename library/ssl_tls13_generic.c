@@ -1004,6 +1004,7 @@ void mbedtls_ssl_set_outbound_transform( mbedtls_ssl_context *ssl,
                                          mbedtls_ssl_transform *transform )
 {
     ssl->transform_out = transform;
+    memset( ssl->out_ctr, 0, 8 );
 }
 
 /* mbedtls_ssl_generate_handshake_traffic_keys() generates keys necessary for
@@ -2078,7 +2079,7 @@ int mbedtls_ssl_read_certificate_verify_process( mbedtls_ssl_context* ssl )
                                      !ssl->conf->endpoint );
 
         /* Read message */
-        if( ( ret = mbedtls_ssl_read_record( ssl, 1 ) ) != 0 )
+        if( ( ret = mbedtls_ssl_read_record( ssl, 0 ) ) != 0 )
         {
             MBEDTLS_SSL_DEBUG_RET( 1, ( "mbedtls_ssl_read_record_layer" ), ret );
             return( ret );
@@ -2655,7 +2656,7 @@ int mbedtls_ssl_read_certificate_process( mbedtls_ssl_context* ssl )
         /* Reading step */
         if( ssl->keep_current_message == 0 )
         {
-            if( ( ret = mbedtls_ssl_read_record( ssl, 1 ) ) != 0 )
+            if( ( ret = mbedtls_ssl_read_record( ssl, 0 ) ) != 0 )
             {
                 /* mbedtls_ssl_read_record may have sent an alert already. We
                    let it decide whether to alert. */
@@ -3543,8 +3544,9 @@ int mbedtls_ssl_tls13_build_transform( mbedtls_ssl_context *ssl,
 
     transform->ivlen       = traffic_keys->iv_len;
     transform->maclen      = 0;
-    transform->fixed_ivlen = 4;
+    transform->fixed_ivlen = transform->ivlen;
     transform->minlen      = transform->taglen + 1;
+    transform->minor_ver   = MBEDTLS_SSL_MINOR_VERSION_4;
 
     /*
      * In case of DTLS, setup sequence number protection keys.
@@ -4194,7 +4196,7 @@ int mbedtls_ssl_finished_in_process( mbedtls_ssl_context* ssl )
     MBEDTLS_SSL_PROC_CHK( ssl_finished_in_preprocess( ssl ) );
 
     /* Fetching step */
-    if( ( ret = mbedtls_ssl_read_record( ssl, 1 ) ) != 0 )
+    if( ( ret = mbedtls_ssl_read_record( ssl, 0 ) ) != 0 )
     {
         MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_read_record", ret );
         goto cleanup;

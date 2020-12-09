@@ -1830,7 +1830,7 @@ int ssl_read_end_of_early_data_process( mbedtls_ssl_context* ssl )
     MBEDTLS_SSL_PROC_CHK( ssl_read_end_of_early_data_preprocess( ssl ) );
 
     /* Fetching step */
-    if ( (ret = mbedtls_ssl_read_record( ssl, 1 ) ) != 0 )
+    if ( (ret = mbedtls_ssl_read_record( ssl, 0 ) ) != 0 )
     {
         MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_read_record", ret );
         goto cleanup;
@@ -1905,7 +1905,7 @@ int ssl_read_early_data_process( mbedtls_ssl_context* ssl )
     MBEDTLS_SSL_PROC_CHK( ssl_read_early_data_preprocess( ssl ) );
 
     /* Fetching step */
-    if( ( ret = mbedtls_ssl_read_record( ssl, 1 ) ) != 0 )
+    if ( ( ret = mbedtls_ssl_read_record( ssl, 0 ) ) != 0 )
     {
         MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_read_record", ret );
         goto cleanup;

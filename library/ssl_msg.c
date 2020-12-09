@@ -93,8 +93,6 @@ int mbedtls_ssl_check_timer( mbedtls_ssl_context *ssl )
 
 static uint32_t ssl_get_hs_total_len( mbedtls_ssl_context const *ssl );
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_2)
-
 #if defined(MBEDTLS_SSL_RECORD_CHECKING)
 static int ssl_parse_record_header( mbedtls_ssl_context const *ssl,
                                     unsigned char *buf,
@@ -253,7 +251,6 @@ static int ssl_get_remaining_payload_in_datagram( mbedtls_ssl_context const *ssl
 }
 
 #endif /* MBEDTLS_SSL_PROTO_DTLS */
-#endif /* MBEDTLS_SSL_PROTO_TLS1_2 */
 
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
 
@@ -3161,8 +3158,6 @@ int mbedtls_ssl_prepare_handshake_record( mbedtls_ssl_context *ssl )
     return( 0 );
 }
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_2)
-
 void mbedtls_ssl_update_handshake_status( mbedtls_ssl_context *ssl )
 {
     mbedtls_ssl_handshake_params * const hs = ssl->handshake;
@@ -4973,8 +4968,6 @@ int mbedtls_ssl_handle_message_type( mbedtls_ssl_context *ssl )
 
     return( 0 );
 }
-
-#endif /* MBEDTLS_SSL_PROTO_TLS1_2 */
 
 int mbedtls_ssl_send_fatal_handshake_failure( mbedtls_ssl_context *ssl )
 {
