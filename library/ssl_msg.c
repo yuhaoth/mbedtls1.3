@@ -1304,14 +1304,6 @@ int mbedtls_ssl_decrypt_buf( mbedtls_ssl_context const *ssl,
             dynamic_iv = rec->ctr;
         }
 
-        /* Check that there's space for the authentication tag. */
-        if( rec->data_len < transform->taglen )
-        {
-            MBEDTLS_SSL_DEBUG_MSG( 1, ( "msglen (%d) < taglen (%d) " ) );
-            return( MBEDTLS_ERR_SSL_INVALID_MAC );
-        }
-        rec->data_len -= transform->taglen;
-
         /*
          * Prepare nonce from dynamic and static parts.
          */
@@ -1325,10 +1317,34 @@ int mbedtls_ssl_decrypt_buf( mbedtls_ssl_context const *ssl,
          * Build additional data for AEAD encryption.
          * This depends on the TLS version.
          */
+
+        /* Check that there's space for the authentication tag. */
+        if( rec->data_len < transform->taglen )
+        {
+            MBEDTLS_SSL_DEBUG_MSG( 1, ( "msglen (%d) < taglen (%d) " ) );
+            return( MBEDTLS_ERR_SSL_INVALID_MAC );
+        }
+
+        /* In TLS 1.3, the AAD uses the Ciphertext Length */
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+        if( transform->minor_ver != MBEDTLS_SSL_MINOR_VERSION_4 )
+#endif
+        {
+            rec->data_len -= transform->taglen;
+        }
+
         ssl_extract_add_data_from_record( add_data, &add_data_len, rec,
                                           transform->minor_ver );
         MBEDTLS_SSL_DEBUG_BUF( 4, "additional data used for AEAD",
                                add_data, add_data_len );
+
+        /* In TLS 1.3, the AAD uses the Ciphertext Length */
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+        if( transform->minor_ver == MBEDTLS_SSL_MINOR_VERSION_4 )
+#endif
+        {
+            rec->data_len -= transform->taglen;
+        }
 
         /* Because of the check above, we know that there are
          * explicit_iv_len Bytes preceeding data, and taglen
