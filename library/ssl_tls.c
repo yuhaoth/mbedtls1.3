@@ -3610,6 +3610,7 @@ void mbedtls_ssl_handshake_wrapup_free_hs_transform( mbedtls_ssl_context *ssl )
     mbedtls_free( ssl->handshake );
     ssl->handshake = NULL;
 
+#if defined(MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER)
     /*
      * Free the previous transform and swith in the current one
      */
@@ -3620,6 +3621,7 @@ void mbedtls_ssl_handshake_wrapup_free_hs_transform( mbedtls_ssl_context *ssl )
     }
     ssl->transform = ssl->transform_negotiate;
     ssl->transform_negotiate = NULL;
+#endif /* MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER */
 
     MBEDTLS_SSL_DEBUG_MSG( 3, ( "<= handshake wrapup: final free" ) );
 }
@@ -3988,13 +3990,17 @@ void mbedtls_ssl_session_init( mbedtls_ssl_session *session )
 static int ssl_handshake_init( mbedtls_ssl_context *ssl )
 {
     /* Clear old handshake information if present */
+#if defined(MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER)
     if( ssl->transform_negotiate )
         mbedtls_ssl_transform_free( ssl->transform_negotiate );
+#endif /* MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER */
+
     if( ssl->session_negotiate )
         mbedtls_ssl_session_free( ssl->session_negotiate );
     if( ssl->handshake )
         mbedtls_ssl_handshake_free( ssl );
 
+#if defined(MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER)
     /*
      * Either the pointers are now NULL or cleared properly and can be freed.
      * Now allocate missing structures.
@@ -4003,6 +4009,13 @@ static int ssl_handshake_init( mbedtls_ssl_context *ssl )
     {
         ssl->transform_negotiate = mbedtls_calloc( 1, sizeof(mbedtls_ssl_transform) );
     }
+#endif /* MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER */
+
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+    ssl->transform_handshake   = mbedtls_calloc( 1, sizeof(mbedtls_ssl_transform) );
+    ssl->transform_earlydata   = mbedtls_calloc( 1, sizeof(mbedtls_ssl_transform) );
+    ssl->transform_application = mbedtls_calloc( 1, sizeof(mbedtls_ssl_transform) );
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 
     if( ssl->session_negotiate == NULL )
     {
@@ -4076,18 +4089,38 @@ static int ssl_handshake_init( mbedtls_ssl_context *ssl )
 #endif
 
     /* All pointers should exist and can be directly freed without issue */
-    if( ssl->handshake == NULL ||
+    if( ssl->handshake           == NULL ||
+#if defined(MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER)
         ssl->transform_negotiate == NULL ||
-        ssl->session_negotiate == NULL )
+#endif
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+        ssl->transform_handshake   == NULL ||
+        ssl->transform_earlydata   == NULL ||
+        ssl->transform_application == NULL ||
+#endif
+        ssl->session_negotiate   == NULL )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "alloc() of ssl sub-contexts failed" ) );
 
         mbedtls_free( ssl->handshake );
-        mbedtls_free( ssl->transform_negotiate );
-        mbedtls_free( ssl->session_negotiate );
-
         ssl->handshake = NULL;
+
+#if defined(MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER)
+        mbedtls_free( ssl->transform_negotiate );
         ssl->transform_negotiate = NULL;
+#endif
+
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+        mbedtls_free( ssl->transform_handshake   );
+        mbedtls_free( ssl->transform_earlydata   );
+        mbedtls_free( ssl->transform_application );
+        ssl->transform_handshake   = NULL;
+        ssl->transform_earlydata   = NULL;
+
+        ssl->transform_application = NULL;
+#endif
+
+        mbedtls_free( ssl->session_negotiate );
         ssl->session_negotiate = NULL;
 
         return( MBEDTLS_ERR_SSL_ALLOC_FAILED );
@@ -4095,8 +4128,17 @@ static int ssl_handshake_init( mbedtls_ssl_context *ssl )
 
     /* Initialize structures */
     mbedtls_ssl_session_init( ssl->session_negotiate );
-    mbedtls_ssl_transform_init( ssl->transform_negotiate );
     ssl_handshake_params_init( ssl->handshake );
+
+#if defined(MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER)
+    mbedtls_ssl_transform_init( ssl->transform_negotiate );
+#endif
+
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+    mbedtls_ssl_transform_init( ssl->transform_handshake   );
+    mbedtls_ssl_transform_init( ssl->transform_earlydata   );
+    mbedtls_ssl_transform_init( ssl->transform_application );
+#endif
 
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
     if( ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_DATAGRAM )
@@ -4370,12 +4412,14 @@ int mbedtls_ssl_session_reset_int( mbedtls_ssl_context *ssl, int partial )
     }
 #endif
 
+#if defined(MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER)
     if( ssl->transform )
     {
         mbedtls_ssl_transform_free( ssl->transform );
         mbedtls_free( ssl->transform );
         ssl->transform = NULL;
     }
+#endif /* MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER */
 
     if( ssl->session )
     {
@@ -4975,7 +5019,7 @@ void mbedtls_ssl_conf_dhm_min_bitlen( mbedtls_ssl_config *conf,
 }
 #endif /* MBEDTLS_DHM_C && MBEDTLS_SSL_CLI_C */
 
-#if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED) 
+#if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
 /*
  * Set allowed/preferred hashes for handshake signatures
  */
@@ -7238,20 +7282,34 @@ void mbedtls_ssl_free( mbedtls_ssl_context *ssl )
     }
 #endif
 
+#if defined(MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER)
     if( ssl->transform )
     {
         mbedtls_ssl_transform_free( ssl->transform );
         mbedtls_free( ssl->transform );
     }
+#endif
 
     if( ssl->handshake )
     {
         mbedtls_ssl_handshake_free( ssl );
-        mbedtls_ssl_transform_free( ssl->transform_negotiate );
-        mbedtls_ssl_session_free( ssl->session_negotiate );
-
         mbedtls_free( ssl->handshake );
+
+#if defined(MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER)
+        mbedtls_ssl_transform_free( ssl->transform_negotiate );
         mbedtls_free( ssl->transform_negotiate );
+#endif
+
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+        mbedtls_ssl_transform_free( ssl->transform_handshake   );
+        mbedtls_ssl_transform_free( ssl->transform_earlydata   );
+        mbedtls_ssl_transform_free( ssl->transform_application );
+        mbedtls_free( ssl->transform_handshake   );
+        mbedtls_free( ssl->transform_earlydata   );
+        mbedtls_free( ssl->transform_application );
+#endif
+
+        mbedtls_ssl_session_free( ssl->session_negotiate );
         mbedtls_free( ssl->session_negotiate );
     }
 

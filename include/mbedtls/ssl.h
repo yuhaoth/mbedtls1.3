@@ -597,6 +597,7 @@ extern "C" {
         MBEDTLS_SSL_CERTIFICATE_VERIFY,
         MBEDTLS_SSL_SERVER_FINISHED,
         MBEDTLS_SSL_EARLY_DATA,
+        MBEDTLS_SSL_END_OF_EARLY_DATA,
         MBEDTLS_SSL_CLIENT_CERTIFICATE,
         MBEDTLS_SSL_CLIENT_CERTIFICATE_VERIFY,
         MBEDTLS_SSL_CLIENT_FINISHED,
@@ -1550,8 +1551,17 @@ struct mbedtls_ssl_context
      */
     mbedtls_ssl_transform *transform_in;        /*!<  current transform params (in)   */
     mbedtls_ssl_transform *transform_out;       /*!<  current transform params (in)   */
+
+#if defined(MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER)
     mbedtls_ssl_transform *transform;           /*!<  negotiated transform params     */
     mbedtls_ssl_transform *transform_negotiate; /*!<  transform params in negotiation */
+#endif /* MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER */
+
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+    mbedtls_ssl_transform *transform_handshake;
+    mbedtls_ssl_transform *transform_earlydata;
+    mbedtls_ssl_transform *transform_application;
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 
     /*
      * Timers
