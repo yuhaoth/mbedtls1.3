@@ -7876,27 +7876,6 @@ int mbedtls_ssl_check_sig_hash( const mbedtls_ssl_context *ssl,
 }
 #endif /* MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED */
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
-void mbedtls_ssl_write_version( int major, int minor, int transport,
-    unsigned char ver[2] )
-{
-    ((void) transport);
-
-    ver[0] = (unsigned char) major;
-    ver[1] = (unsigned char) minor;
-
-}
-
-void mbedtls_ssl_read_version( int* major, int* minor, int transport,
-    const unsigned char ver[2] )
-{
-    ((void) transport);
-
-    *major = ver[0];
-    *minor = ver[1];
-}
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
-
 #if defined(MBEDTLS_X509_CRT_PARSE_C)
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
 int mbedtls_ssl_check_cert_usage( const mbedtls_x509_crt* cert,
