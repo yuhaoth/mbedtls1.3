@@ -1004,7 +1004,7 @@ void mbedtls_ssl_set_outbound_transform( mbedtls_ssl_context *ssl,
                                          mbedtls_ssl_transform *transform )
 {
     ssl->transform_out = transform;
-    memset( ssl->out_ctr, 0, 8 );
+    memset( ssl->cur_out_ctr, 0, 8 );
 }
 
 /* mbedtls_ssl_generate_handshake_traffic_keys() generates keys necessary for
