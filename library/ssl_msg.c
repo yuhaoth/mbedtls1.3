@@ -3841,17 +3841,6 @@ static int ssl_prepare_record_content( mbedtls_ssl_context *ssl,
     MBEDTLS_SSL_DEBUG_BUF( 4, "input record from network",
                            rec->buf, rec->buf_len );
 
-    /* In TLS 1.3, always treat ChangeCipherSpec records
-     * as unencrypted. The only thing we do with them is
-     * check the length and content and ignore them. */
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
-    if( ssl->minor_ver == MBEDTLS_SSL_MINOR_VERSION_4 )
-    {
-        if( rec->type == MBEDTLS_SSL_MSG_CHANGE_CIPHER_SPEC )
-            done = 1;
-    }
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
-
 #if defined(MBEDTLS_SSL_HW_RECORD_ACCEL)
     if( mbedtls_ssl_hw_record_read != NULL )
     {
@@ -3868,6 +3857,19 @@ static int ssl_prepare_record_content( mbedtls_ssl_context *ssl,
             done = 1;
     }
 #endif /* MBEDTLS_SSL_HW_RECORD_ACCEL */
+
+    /* In TLS 1.3, always treat ChangeCipherSpec records
+     * as unencrypted. The only thing we do with them is
+     * check the length and content and ignore them. */
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+    if( ssl->transform_in != NULL &&
+        ssl->transform_in->minor_ver == MBEDTLS_SSL_MINOR_VERSION_4 )
+    {
+        if( rec->type == MBEDTLS_SSL_MSG_CHANGE_CIPHER_SPEC )
+            done = 1;
+    }
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+
     if( !done && ssl->transform_in != NULL )
     {
         unsigned char const old_msg_type = rec->type;
