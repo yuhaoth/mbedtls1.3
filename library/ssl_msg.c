@@ -2804,7 +2804,7 @@ int mbedtls_ssl_write_record( mbedtls_ssl_context *ssl, uint8_t force_flush )
         /* Skip writing the record content type to after the encryption,
          * as it may change when using the CID extension. */
 
-        mbedtls_ssl_write_version( ssl->major_ver, ssl->minor_ver,
+        mbedtls_ssl_write_wire_version( ssl->major_ver, ssl->minor_ver,
                            ssl->conf->transport, ssl->out_hdr + 1 );
 
         memcpy( ssl->out_ctr, ssl->cur_out_ctr, 8 );
@@ -2821,7 +2821,7 @@ int mbedtls_ssl_write_record( mbedtls_ssl_context *ssl, uint8_t force_flush )
             rec.data_offset = ssl->out_msg - rec.buf;
 
             memcpy( &rec.ctr[0], ssl->out_ctr, 8 );
-            mbedtls_ssl_write_version( ssl->major_ver, ssl->minor_ver,
+            mbedtls_ssl_write_wire_version( ssl->major_ver, ssl->minor_ver,
                                        ssl->conf->transport, rec.ver );
             rec.type = ssl->out_msgtype;
 
@@ -6055,15 +6055,21 @@ static void ssl_buffering_free_slot( mbedtls_ssl_context *ssl,
 
 #endif /* MBEDTLS_SSL_PROTO_DTLS */
 
-/*
- * Convert version numbers to/from wire format
- * and, for DTLS, to/from TLS equivalent.
- *
- * For TLS this is the identity.
- * For DTLS, use 1's complement (v -> 255 - v, and then map as follows:
- * 1.0 <-> 3.2      (DTLS 1.0 is based on TLS 1.1)
- * 1.x <-> 3.x+1    for x != 0 (DTLS 1.2 based on TLS 1.2)
- */
+#endif /* MBEDTLS_SSL_PROTO_TLS1_2 */
+
+void mbedtls_ssl_write_wire_version( int major, int minor, int transport,
+                        unsigned char ver[2] )
+{
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+    /* TLS 1.3 still uses the TLS 1.3 version identifier
+     * for backwards compatibility. */
+    if( minor == MBEDTLS_SSL_MINOR_VERSION_4 )
+        minor = MBEDTLS_SSL_MINOR_VERSION_3;
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+
+    mbedtls_ssl_write_version( major, minor, transport, ver );
+}
+
 void mbedtls_ssl_write_version( int major, int minor, int transport,
                         unsigned char ver[2] )
 {
@@ -6107,8 +6113,6 @@ void mbedtls_ssl_read_version( int *major, int *minor, int transport,
         *minor = ver[1];
     }
 }
-
-#endif /* MBEDTLS_SSL_PROTO_TLS1_2 */
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
 /*

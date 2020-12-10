@@ -1515,6 +1515,8 @@ int mbedtls_ssl_check_cert_usage( const mbedtls_x509_crt *cert,
 
 #endif /* MBEDTLS_X509_CRT_PARSE_C */
 
+void mbedtls_ssl_write_wire_version( int major, int minor, int transport,
+                                     unsigned char ver[2] );
 void mbedtls_ssl_write_version( int major, int minor, int transport,
                         unsigned char ver[2] );
 void mbedtls_ssl_read_version( int *major, int *minor, int transport,
