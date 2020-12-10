@@ -1253,17 +1253,12 @@ void mbedtls_ssl_update_handshake_status( mbedtls_ssl_context *ssl );
  *
  */
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
-
 int mbedtls_ssl_handshake_client_step(mbedtls_ssl_context* ssl);
 int mbedtls_ssl_handshake_server_step(mbedtls_ssl_context* ssl);
 void mbedtls_ssl_handshake_wrapup(mbedtls_ssl_context* ssl);
 
 int mbedtls_ssl_send_fatal_handshake_failure(mbedtls_ssl_context* ssl);
-
-#else
 int mbedtls_ssl_write_handshake_msg( mbedtls_ssl_context *ssl );
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 
 int mbedtls_ssl_read_record( mbedtls_ssl_context *ssl,
                              unsigned update_hs_digest );
