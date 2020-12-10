@@ -413,7 +413,8 @@ static int ssl_parse_inner_plaintext( unsigned char const *content,
 static void ssl_extract_add_data_from_record( unsigned char* add_data,
                                               size_t *add_data_len,
                                               mbedtls_record *rec,
-                                              unsigned minor_ver )
+                                              unsigned minor_ver,
+                                              size_t taglen )
 {
     /* Quoting RFC 5246 (TLS 1.2):
      *
@@ -435,12 +436,18 @@ static void ssl_extract_add_data_from_record( unsigned char* add_data,
      */
 
     unsigned char *cur = add_data;
+    size_t ad_len_field = rec->data_len;
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
-    if( minor_ver != MBEDTLS_SSL_MINOR_VERSION_4 )
+    if( minor_ver == MBEDTLS_SSL_MINOR_VERSION_4 )
+    {
+        ad_len_field += taglen;
+    }
+    else
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
     {
         ((void) minor_ver);
+        ((void) taglen);
         memcpy( cur, rec->ctr, sizeof( rec->ctr ) );
         cur += sizeof( rec->ctr );
     }
@@ -467,8 +474,8 @@ static void ssl_extract_add_data_from_record( unsigned char* add_data,
     else
 #endif /* MBEDTLS_SSL_DTLS_CONNECTION_ID */
     {
-        cur[0] = ( rec->data_len >> 8 ) & 0xFF;
-        cur[1] = ( rec->data_len >> 0 ) & 0xFF;
+        cur[0] = ( ad_len_field >> 8 ) & 0xFF;
+        cur[1] = ( ad_len_field >> 0 ) & 0xFF;
         cur += 2;
     }
 
@@ -839,7 +846,8 @@ int mbedtls_ssl_encrypt_buf( mbedtls_ssl_context *ssl,
          * This depends on the TLS version.
          */
         ssl_extract_add_data_from_record( add_data, &add_data_len, rec,
-                                          transform->minor_ver );
+                                          transform->minor_ver,
+                                          transform->taglen );
 
         MBEDTLS_SSL_DEBUG_BUF( 4, "IV used (internal)",
                                iv, transform->ivlen );
@@ -1325,26 +1333,12 @@ int mbedtls_ssl_decrypt_buf( mbedtls_ssl_context const *ssl,
             return( MBEDTLS_ERR_SSL_INVALID_MAC );
         }
 
-        /* In TLS 1.3, the AAD uses the Ciphertext Length */
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
-        if( transform->minor_ver != MBEDTLS_SSL_MINOR_VERSION_4 )
-#endif
-        {
-            rec->data_len -= transform->taglen;
-        }
-
+        rec->data_len -= transform->taglen;
         ssl_extract_add_data_from_record( add_data, &add_data_len, rec,
-                                          transform->minor_ver );
+                                          transform->minor_ver,
+                                          transform->taglen );
         MBEDTLS_SSL_DEBUG_BUF( 4, "additional data used for AEAD",
                                add_data, add_data_len );
-
-        /* In TLS 1.3, the AAD uses the Ciphertext Length */
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
-        if( transform->minor_ver == MBEDTLS_SSL_MINOR_VERSION_4 )
-#endif
-        {
-            rec->data_len -= transform->taglen;
-        }
 
         /* Because of the check above, we know that there are
          * explicit_iv_len Bytes preceeding data, and taglen
