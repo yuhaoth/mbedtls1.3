@@ -278,7 +278,7 @@ int ssl_write_end_of_early_data_process( mbedtls_ssl_context* ssl )
         ssl->out_msg[0] = MBEDTLS_SSL_HS_END_OF_EARLY_DATA;
 
         /* Dispatch message */
-        MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_write_record( ssl, SSL_FORCE_FLUSH ) );
+        MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_write_handshake_msg( ssl ) );
 
         /* Update state */
         MBEDTLS_SSL_PROC_CHK( ssl_write_end_of_early_data_postprocess( ssl ) );
@@ -1490,7 +1490,7 @@ static int ssl_client_hello_process( mbedtls_ssl_context* ssl )
 #endif
 
     /* Dispatch message */
-    MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_write_record( ssl, SSL_FORCE_FLUSH ) );
+    MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_write_handshake_msg( ssl ) );
 
     /* NOTE: With the new messaging layer, the postprocessing
      *       step might come after the dispatching step if the
