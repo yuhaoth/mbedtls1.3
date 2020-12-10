@@ -2688,6 +2688,28 @@ int mbedtls_ssl_write_handshake_msg( mbedtls_ssl_context *ssl )
         }
 #endif /* MBEDTLS_SSL_PROTO_DTLS */
 
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+#if defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED) && defined(MBEDTLS_SSL_CLI_C)
+        /* We need to patch the psk binder by
+         * re-running the function to get the correct length information for the extension.
+         * But: we only do that when in ClientHello state and when using a PSK mode
+         */
+        if( ( ssl->conf->endpoint == MBEDTLS_SSL_IS_CLIENT )                  &&
+            ( ssl->state == MBEDTLS_SSL_CLIENT_HELLO )                        &&
+            ( ssl->handshake->extensions_present & PRE_SHARED_KEY_EXTENSION ) &&
+            ( ssl->conf->key_exchange_modes == MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_ALL ||
+              ssl->conf->key_exchange_modes == MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_ALL     ||
+              ssl->conf->key_exchange_modes == MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_KE  ||
+              ssl->conf->key_exchange_modes == MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_DHE_KE ) )
+        {
+            size_t len = ssl->out_msglen;
+            size_t dummy_length;
+            mbedtls_ssl_write_pre_shared_key_ext( ssl, ssl->handshake->ptr_to_psk_ext,
+                                                  &ssl->out_msg[len], &dummy_length, 1 );
+        }
+#endif /* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED && MBEDTLS_SSL_CLI_C */
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+
         /* Update running hashes of handshake messages seen */
         if( hs_type != MBEDTLS_SSL_HS_HELLO_REQUEST )
             ssl->handshake->update_checksum( ssl, ssl->out_msg, ssl->out_msglen );
