@@ -69,7 +69,7 @@ static int ssl_encrypt_buf( mbedtls_ssl_context *ssl )
 
     MBEDTLS_SSL_DEBUG_MSG( 3, ( "=> encrypt buf" ) );
 
-    if( ssl->session_out == NULL || ssl->transform_out == NULL )
+    if( ssl->transform_out == NULL )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "should never happen" ) );
         return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
@@ -256,7 +256,7 @@ static int ssl_decrypt_buf( mbedtls_ssl_context *ssl )
 
     MBEDTLS_SSL_DEBUG_MSG( 3, ( "=> decrypt buf" ) );
 
-    if( ssl->session_in == NULL || ssl->transform_in == NULL )
+    if( ssl->transform_in == NULL )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "should never happen" ) );
         return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
@@ -1530,7 +1530,7 @@ read_record_header:
                     break;
 #endif /* MBEDTLS_SSL_PROTO_DTLS */
                 default:
-                    MBEDTLS_SSL_DEBUG_MSG( 1, ( "unknown message" ) );
+                    MBEDTLS_SSL_DEBUG_MSG( 1, ( "unknown message type %u", ssl->in_msg[i-1] ) );
 
                     mbedtls_ssl_send_alert_message( ssl,
                                                     MBEDTLS_SSL_ALERT_LEVEL_FATAL,

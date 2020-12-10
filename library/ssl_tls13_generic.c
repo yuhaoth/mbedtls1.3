@@ -2415,10 +2415,7 @@ static int ssl_write_certificate_coordinate( mbedtls_ssl_context* ssl )
 #if defined(MBEDTLS_SSL_CLI_C)
     if( ssl->conf->endpoint == MBEDTLS_SSL_IS_CLIENT )
     {
-        /* Pre-configuration */
-        ssl->transform_out = ssl->transform_negotiate;
-        ssl->session_out = ssl->session_negotiate;
-        memset( ssl->transform_out->sequence_number_enc, 0x0, 12 ); /* Set sequence number to zero */
+        mbedtls_ssl_set_outbound_transform( ssl, ssl->transform_handshake );
     }
 #endif /* MBEDTLS_SSL_CLI_C */
 
@@ -2716,6 +2713,13 @@ static int ssl_read_certificate_coordinate( mbedtls_ssl_context* ssl )
     int authmode = ssl->conf->authmode;
 #endif /* MBEDTLS_SSL_SRV_C */
 
+#if defined(MBEDTLS_SSL_SRV_C)
+    if( ssl->conf->endpoint == MBEDTLS_SSL_IS_SERVER )
+    {
+        mbedtls_ssl_set_inbound_transform( ssl, ssl->transform_handshake );
+    }
+#endif /* MBEDTLS_SSL_SRV_C */
+
     if( ssl->session_negotiate->key_exchange == MBEDTLS_KEY_EXCHANGE_PSK ||
         ssl->session_negotiate->key_exchange == MBEDTLS_KEY_EXCHANGE_ECDHE_PSK )
     {
@@ -2730,7 +2734,6 @@ static int ssl_read_certificate_coordinate( mbedtls_ssl_context* ssl )
 #if defined(MBEDTLS_SSL_SRV_C)
     if( ssl->conf->endpoint == MBEDTLS_SSL_IS_SERVER )
     {
-
         /* If SNI was used, overwrite authentication mode
          * from the configuration. */
 #if defined(MBEDTLS_SSL_SERVER_NAME_INDICATION)
@@ -3905,43 +3908,6 @@ static int ssl_finished_out_prepare( mbedtls_ssl_context* ssl )
 
     if( ssl->conf->endpoint == MBEDTLS_SSL_IS_CLIENT )
     {
-#if defined(MBEDTLS_ZERO_RTT)
-        if( ssl->handshake->early_data == MBEDTLS_SSL_EARLY_DATA_ON )
-        {
-            /* Generate handshake key material */
-            ret = mbedtls_ssl_handshake_key_derivation( ssl, traffic_keys );
-            if( ret != 0 )
-            {
-                MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_handshake_key_derivation", ret );
-                return ( ret );
-            }
-
-            /* Setup transform from handshake keying material */
-            mbedtls_ssl_transform_free( ssl->transform_out );
-            ret = mbedtls_ssl_tls13_build_transform( ssl, traffic_keys, ssl->transform_out, 0 );
-            if( ret != 0 )
-            {
-                MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_tls13_build_transform", ret );
-                return ( ret );
-            }
-
-            ssl->session_out = ssl->session_negotiate;
-            ssl->session_in = ssl->session_negotiate;
-
-            mbedtls_ssl_set_inbound_transform( ssl, ssl->transform_negotiate );
-            mbedtls_ssl_set_outbound_transform( ssl, ssl->transform_negotiate );
-
-#if defined(MBEDTLS_SSL_PROTO_DTLS)
-            traffic_keys.epoch = 2;
-            /* epoch value ( 2 ) is used for messages protected using keys derived
-             * from the handshake_traffic_secret.
-             */
-            ssl->in_epoch = 2;
-            ssl->out_epoch = 2;
-#endif /* MBEDTLS_SSL_PROTO_DTLS */
-        }
-#endif /* MBEDTLS_ZERO_RTT */
-
         ret = mbedtls_ssl_generate_application_traffic_keys( ssl, traffic_keys );
         if( ret != 0 )
         {
@@ -4006,8 +3972,6 @@ static int ssl_finished_out_postprocess( mbedtls_ssl_context* ssl )
 #endif /* MBEDTLS_SSL_SRV_C */
 
 #if defined(MBEDTLS_SSL_CLI_C)
-    mbedtls_ssl_key_set* traffic_keys = ssl->handshake->state_local.finished_out.traffic_keys;
-
     if( ssl->conf->endpoint == MBEDTLS_SSL_IS_CLIENT )
     {
 
@@ -4027,14 +3991,6 @@ static int ssl_finished_out_postprocess( mbedtls_ssl_context* ssl )
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
         traffic_keys.epoch = 3;
 #endif /* MBEDTLS_SSL_PROTO_DTLS */
-
-        mbedtls_ssl_transform_free( ssl->transform_negotiate );
-        ret = mbedtls_ssl_tls13_build_transform( ssl, traffic_keys, ssl->transform_negotiate, 0 );
-        if( ret != 0 )
-        {
-            MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_tls13_build_transform", ret );
-            return ( ret );
-        }
 
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
         /* epoch value ( 3 ) is used for payloads protected using keys
@@ -4058,7 +4014,10 @@ static int ssl_finished_out_postprocess( mbedtls_ssl_context* ssl )
 #if defined(MBEDTLS_ZERO_RTT)
         if( ssl->handshake->early_data == MBEDTLS_SSL_EARLY_DATA_ON )
         {
-            mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_EARLY_DATA );
+            /* Activate early data transform */
+            MBEDTLS_SSL_DEBUG_MSG( 3, ( "switching to new transform spec for inbound 0-RTT data" ) );
+            mbedtls_ssl_set_inbound_transform( ssl, ssl->transform_earlydata );
+            mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_EARLY_APP_DATA );
         }
         else
 #endif /* MBEDTLS_ZERO_RTT */
@@ -4132,6 +4091,23 @@ static int ssl_finished_out_postprocess( mbedtls_ssl_context* ssl )
             MBEDTLS_SSL_DEBUG_MSG( 1, ( "MBEDTLS_SHA512_C not set but ciphersuite with SHA384 negotiated" ) );
             return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
 #endif /* MBEDTLS_SHA512_C */
+        }
+
+        mbedtls_ssl_key_set traffic_keys;
+        ret = mbedtls_ssl_generate_application_traffic_keys( ssl, &traffic_keys );
+
+        if( ret != 0 )
+        {
+            MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_generate_application_traffic_keys", ret );
+            return( ret );
+        }
+
+        ret = mbedtls_ssl_tls13_build_transform( ssl, &traffic_keys,
+                                                 ssl->transform_application, 0 );
+        if( ret != 0 )
+        {
+            MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_tls13_build_transform", ret );
+            return( ret );
         }
     }
 
@@ -4408,6 +4384,23 @@ static int ssl_finished_in_postprocess_cli( mbedtls_ssl_context *ssl )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "should never happen" ) );
         return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
+    }
+
+    mbedtls_ssl_key_set traffic_keys;
+    ret = mbedtls_ssl_generate_application_traffic_keys( ssl, &traffic_keys );
+
+    if( ret != 0 )
+    {
+        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_generate_application_traffic_keys", ret );
+        return( ret );
+    }
+
+    ret = mbedtls_ssl_tls13_build_transform( ssl, &traffic_keys,
+                                             ssl->transform_application, 0 );
+    if( ret != 0 )
+    {
+        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_tls13_build_transform", ret );
+        return( ret );
     }
 
 exit:

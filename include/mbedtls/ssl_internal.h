@@ -169,6 +169,7 @@ enum varint_length_enum { VARINT_LENGTH_FAILURE = 0, VARINT_LENGTH_1_BYTE = 1, V
     defined(MBEDTLS_SSL_PROTO_TLS1)   ||                              \
     defined(MBEDTLS_SSL_PROTO_TLS1_1) ||                              \
     defined(MBEDTLS_SSL_PROTO_TLS1_2)
+#define MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER
 
 /* This macro determines whether CBC is supported. */
 #if defined(MBEDTLS_CIPHER_MODE_CBC) &&                               \

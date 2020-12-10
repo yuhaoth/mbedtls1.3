@@ -1856,31 +1856,8 @@ cleanup:
 
 static int ssl_read_end_of_early_data_preprocess( mbedtls_ssl_context* ssl )
 {
-    int ret;
-    mbedtls_ssl_key_set traffic_keys;
-
-    ret = mbedtls_ssl_generate_early_data_keys( ssl, &traffic_keys );
-    if( ret != 0 )
-    {
-        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_generate_early_data_keys", ret );
-        goto cleanup;
-    }
-
-    ret = mbedtls_ssl_tls13_build_transform( ssl, &traffic_keys, ssl->transform_negotiate, 0 );
-    if( ret != 0 )
-    {
-        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_tls13_build_transform", ret );
-        goto cleanup;
-    }
-
-    /* Activate transform */
-    MBEDTLS_SSL_DEBUG_MSG( 3, ( "switching to new transform spec for inbound data" ) );
-    mbedtls_ssl_set_inbound_transform( ssl, ssl->transform_negotiate );
-    ssl->session_in = ssl->session_negotiate;
-
-cleanup:
-    mbedtls_platform_zeroize( &traffic_keys, sizeof( traffic_keys ) );
-    return( ret );
+    ((void) ssl);
+    return( 0 );
 }
 
 
@@ -1928,31 +1905,33 @@ int ssl_read_early_data_process( mbedtls_ssl_context* ssl )
     MBEDTLS_SSL_PROC_CHK( ssl_read_early_data_preprocess( ssl ) );
 
     /* Fetching step */
-    if ( (ret = mbedtls_ssl_read_record( ssl, 1 ) ) != 0 )
+    if( ( ret = mbedtls_ssl_read_record( ssl, 1 ) ) != 0 )
     {
         MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_read_record", ret );
         goto cleanup;
     }
 
-    /* Check whether there is early data */
-    if ( ssl->in_msg != NULL && ssl->in_msglen > 0 )
+    /* Check for EndOfEarlyData */
+    if( ssl->in_msgtype == MBEDTLS_SSL_MSG_HANDSHAKE )
     {
-
-        /* Parsing step */
-        MBEDTLS_SSL_PROC_CHK( ssl_read_early_data_parse( ssl,
-            ssl->in_msg,
-            ssl->in_msglen ) );
-
+        ssl->keep_current_message = 1;
+        /* Postprocessing step: Update state machine */
+        MBEDTLS_SSL_PROC_CHK( ssl_read_early_data_postprocess( ssl ) );
+        return( 0 );
     }
-    else
+
+    if( ssl->in_msgtype != MBEDTLS_SSL_MSG_APPLICATION_DATA )
     {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "No early data received!" ) );
-        ret = MBEDTLS_ERR_SSL_BAD_EARLY_DATA;
+        ret = MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE;
         goto cleanup;
     }
 
-    /* Postprocessing step: Update state machine */
-    MBEDTLS_SSL_PROC_CHK( ssl_read_early_data_postprocess( ssl ) );
+    /* Parsing step */
+    MBEDTLS_SSL_PROC_CHK( ssl_read_early_data_parse( ssl,
+                                ssl->in_msg, ssl->in_msglen ) );
+
+    /* No state machine update at this point -- we might receive
+     * multiple 0-RTT messages. */
 
 cleanup:
 
@@ -1963,48 +1942,20 @@ cleanup:
 
 static int ssl_read_early_data_preprocess( mbedtls_ssl_context* ssl )
 {
-    int ret;
-    mbedtls_ssl_key_set traffic_keys;
-
-    ret = mbedtls_ssl_generate_early_data_keys( ssl, &traffic_keys );
-    if( ret != 0 )
-    {
-        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_generate_early_data_keys", ret );
-        goto cleanup;
-    }
-
-    ret = mbedtls_ssl_tls13_build_transform( ssl, &traffic_keys, ssl->transform_negotiate, 0 );
-    if( ret != 0 )
-    {
-        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_tls13_build_transform", ret );
-        goto cleanup;
-    }
-
-    /* Activate transform */
-    MBEDTLS_SSL_DEBUG_MSG( 3, ( "switching to new transform spec for inbound data" ) );
-    mbedtls_ssl_set_inbound_transform( ssl, ssl->transform_negotiate );
-    ssl->session_in = ssl->session_negotiate;
-
-#if defined(MBEDTLS_SSL_PROTO_DTLS)
-    /* epoch value( 1 ) is used for messages protected using keys derived
-     *	from early_traffic_secret.
-     */
-    ssl->in_epoch = 1;
-    ssl->out_epoch = 1;
-#endif /* MBEDTLS_SSL_PROTO_DTLS */
-
-cleanup:
-    mbedtls_platform_zeroize( &traffic_keys, sizeof( traffic_keys ) );
-    return( ret );
+    ((void) ssl);
+    return( 0 );
 }
 
 static int ssl_read_early_data_parse( mbedtls_ssl_context* ssl,
     unsigned char const* buf,
     size_t buflen )
 {
-    /* Check whether we have enough buffer space */
+    /* Check whether we have enough buffer space. */
     if ( buflen <= ssl->conf->early_data_len )
     {
+        /* TODO: We need to check that we're not receiving more 0-RTT
+         * than what the ticket allows. */
+
         /* copy data to staging area */
         memcpy( ssl->conf->early_data_buf, buf, buflen );
         /* execute callback to process application data */
@@ -2021,7 +1972,7 @@ static int ssl_read_early_data_parse( mbedtls_ssl_context* ssl,
 
 static int ssl_read_early_data_postprocess( mbedtls_ssl_context* ssl )
 {
-    mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_SERVER_HELLO );
+    mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_END_OF_EARLY_DATA );
     return ( 0 );
 }
 #endif /* MBEDTLS_ZERO_RTT */
@@ -2087,7 +2038,7 @@ static int ssl_client_hello_parse( mbedtls_ssl_context* ssl,
 
 /* Update the handshake state machine */
 /* TODO: At the moment, this doesn't update the state machine - why? */
-static int ssl_client_hello_postprocess( mbedtls_ssl_context* ssl, int ret );
+static int ssl_client_hello_postprocess( mbedtls_ssl_context* ssl );
 
 
 /*
@@ -2106,7 +2057,7 @@ static int ssl_client_hello_process( mbedtls_ssl_context* ssl )
 
     MBEDTLS_SSL_PROC_CHK( ssl_client_hello_parse( ssl, buf, buflen ) );
 
-    MBEDTLS_SSL_PROC_CHK( ssl_client_hello_postprocess( ssl, ret ) );
+    MBEDTLS_SSL_PROC_CHK( ssl_client_hello_postprocess( ssl ) );
 
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
     if( ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_DATAGRAM )
@@ -2139,7 +2090,8 @@ read_record_header:
 
     buf = ssl->in_hdr;
 
-    MBEDTLS_SSL_DEBUG_BUF( 4, "record header", buf, mbedtls_ssl_hdr_len( ssl, MBEDTLS_SSL_DIRECTION_IN, ssl->transform_negotiate ) );
+    MBEDTLS_SSL_DEBUG_BUF( 4, "record header", buf,
+             mbedtls_ssl_hdr_len( ssl, MBEDTLS_SSL_DIRECTION_IN, NULL ) );
 
     /*
      * TLS Client Hello
@@ -2171,8 +2123,7 @@ read_record_header:
             MBEDTLS_SSL_DEBUG_MSG( 3, ( "CCS, message len.: %d", msg_len ) );
 
             if( ( ret = mbedtls_ssl_fetch_input( ssl, mbedtls_ssl_hdr_len( ssl,
-                          MBEDTLS_SSL_DIRECTION_IN,
-                          ssl->transform_negotiate ) + msg_len ) ) != 0 )
+                                    MBEDTLS_SSL_DIRECTION_IN, NULL ) + msg_len ) ) != 0 )
             {
                 MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_fetch_input", ret );
                 return( MBEDTLS_ERR_SSL_BAD_HS_CHANGE_CIPHER_SPEC );
@@ -3319,11 +3270,36 @@ cleanup:
     return( final_ret );
 }
 
-static int ssl_client_hello_postprocess( mbedtls_ssl_context* ssl, int ret ) {
+static int ssl_client_hello_postprocess( mbedtls_ssl_context* ssl )
+{
+    int ret = 0;
+#if defined(MBEDTLS_ZERO_RTT)
+    mbedtls_ssl_key_set traffic_keys;
 
-    ( (void ) ssl );
-    ( (void ) ret );
-    return ( 0 );
+    if( ssl->handshake->early_data == MBEDTLS_SSL_EARLY_DATA_ON )
+    {
+
+        ret = mbedtls_ssl_generate_early_data_keys( ssl, &traffic_keys );
+        if( ret != 0 )
+        {
+            MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_generate_early_data_keys", ret );
+            goto cleanup;
+        }
+
+        ret = mbedtls_ssl_tls13_build_transform( ssl, &traffic_keys, ssl->transform_earlydata, 0 );
+        if( ret != 0 )
+        {
+            MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_tls13_build_transform", ret );
+            goto cleanup;
+        }
+    }
+
+cleanup:
+    mbedtls_platform_zeroize( &traffic_keys, sizeof( traffic_keys ) );
+
+#endif /* MBEDTLS_ZERO_RTT */
+
+    return ( ret );
 }
 
 
@@ -3482,12 +3458,13 @@ static int ssl_encrypted_extensions_prepare( mbedtls_ssl_context* ssl )
     }
 
     /* Setup transform from handshake key material */
-    ret = mbedtls_ssl_tls13_build_transform( ssl, &traffic_keys, ssl->transform_negotiate, 0 );
+    ret = mbedtls_ssl_tls13_build_transform( ssl, &traffic_keys, ssl->transform_handshake, 0 );
     if( ret != 0 )
     {
         MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_tls13_build_transform", ret );
         return( ret );
     }
+    mbedtls_ssl_set_outbound_transform( ssl, ssl->transform_handshake );
 
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
     if( ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_DATAGRAM )
@@ -3497,12 +3474,6 @@ static int ssl_encrypted_extensions_prepare( mbedtls_ssl_context* ssl )
         memcpy( ssl->handshake->alt_out_ctr, ssl->out_ctr, 8 );
     }
 #endif
-
-    mbedtls_ssl_set_outbound_transform( ssl, ssl->transform_negotiate );
-    mbedtls_ssl_set_inbound_transform( ssl, ssl->transform_negotiate );
-
-    ssl->session_out   = ssl->session_negotiate;
-    ssl->session_in    = ssl->session_negotiate;
 
     /*
      * Switch to our negotiated transform and session parameters for outbound
@@ -3712,12 +3683,6 @@ static int ssl_write_hello_retry_request( mbedtls_ssl_context *ssl )
             MBEDTLS_SSL_DEBUG_BUF( 3, "server version", p - 2, 2 );
         }
 #endif /* MBEDTLS_SSL_PROTO_DTLS */
-    }
-
-    if( ssl->transform_negotiate == NULL )
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "ssl_write_hello_retry_request: ssl->transform_negotiate == NULL" ) );
-        return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
     }
 
     /*ciphersuite_info = ssl->handshake->ciphersuite_info; */
@@ -4425,8 +4390,6 @@ static int ssl_certificate_request_postprocess( mbedtls_ssl_context* ssl )
 int mbedtls_ssl_handshake_server_step( mbedtls_ssl_context *ssl )
 {
     int ret = 0;
-    mbedtls_ssl_key_set traffic_keys;
-
 
     if( ssl->state == MBEDTLS_SSL_HANDSHAKE_OVER || ssl->handshake == NULL )
         return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
@@ -4503,16 +4466,7 @@ int mbedtls_ssl_handshake_server_step( mbedtls_ssl_context *ssl )
                     else
 #endif /* MBEDTLS_SSL_COOKIE_C && MBEDTLS_SSL_PROTO_DTLS */
                     {
-#if defined(MBEDTLS_ZERO_RTT)
-                        if( ssl->handshake->early_data == MBEDTLS_SSL_EARLY_DATA_ON )
-                        {
-                            mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_EARLY_APP_DATA );
-                        }
-                        else
-#endif /* MBEDTLS_ZERO_RTT */
-                        {
-                            mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_SERVER_HELLO );
-                        }
+                        mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_SERVER_HELLO );
                     }
                     break;
 #if ( defined(MBEDTLS_ECDH_C) || defined(MBEDTLS_ECDSA_C) )
@@ -4754,43 +4708,15 @@ int mbedtls_ssl_handshake_server_step( mbedtls_ssl_context *ssl )
 
 #if defined(MBEDTLS_ZERO_RTT)
 
-        case MBEDTLS_SSL_EARLY_DATA:
+        case MBEDTLS_SSL_END_OF_EARLY_DATA:
             ret = ssl_read_end_of_early_data_process( ssl );
             break;
+
 #endif /* MBEDTLS_ZERO_RTT */
 
             /* ----- READ FINISHED ----*/
 
         case MBEDTLS_SSL_CLIENT_FINISHED:
-#if defined(MBEDTLS_ZERO_RTT)
-            if( ssl->handshake->early_data == MBEDTLS_SSL_EARLY_DATA_ON )
-            {
-                ret = mbedtls_ssl_handshake_key_derivation( ssl, &traffic_keys );
-                if( ret != 0 )
-                {
-                    MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_handshake_key_derivation", ret );
-                    return( ret );
-                }
-
-                ret = mbedtls_ssl_tls13_build_transform( ssl, &traffic_keys, ssl->transform_negotiate,0 );
-                if( ret != 0 )
-                {
-                    MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_tls13_build_transform", ret );
-                    return( ret );
-                }
-
-                mbedtls_ssl_set_inbound_transform( ssl, ssl->transform_negotiate );
-                ssl->session_in = ssl->session_negotiate;
-            }
-#endif /* MBEDTLS_ZERO_RTT */
-
-            ret = mbedtls_ssl_generate_application_traffic_keys( ssl, &traffic_keys );
-
-            if( ret != 0 )
-            {
-                MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_generate_application_traffic_keys", ret );
-                return( ret );
-            }
 
             ret = mbedtls_ssl_finished_in_process( ssl );
 
@@ -4806,13 +4732,6 @@ int mbedtls_ssl_handshake_server_step( mbedtls_ssl_context *ssl )
             if( ret != 0 )
             {
                 MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_generate_resumption_master_secret ", ret );
-                return( ret );
-            }
-
-            ret = mbedtls_ssl_tls13_build_transform( ssl, &traffic_keys, ssl->transform_negotiate, 0 );
-            if( ret != 0 )
-            {
-                MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_tls13_build_transform", ret );
                 return( ret );
             }
 
@@ -4847,6 +4766,10 @@ int mbedtls_ssl_handshake_server_step( mbedtls_ssl_context *ssl )
 
         case MBEDTLS_SSL_HANDSHAKE_WRAPUP:
             MBEDTLS_SSL_DEBUG_MSG( 2, ( "handshake: done" ) );
+
+            mbedtls_ssl_set_inbound_transform ( ssl, ssl->transform_application );
+            mbedtls_ssl_set_outbound_transform( ssl, ssl->transform_application );
+
             mbedtls_ssl_handshake_wrapup( ssl );
             mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_HANDSHAKE_OVER );
 
