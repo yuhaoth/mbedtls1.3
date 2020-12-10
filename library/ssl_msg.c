@@ -2198,8 +2198,6 @@ int mbedtls_ssl_flush_output( mbedtls_ssl_context *ssl )
     return( 0 );
 }
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_2)
-
 /*
  * Functions to handle the DTLS retransmission state machine
  */
@@ -3060,8 +3058,6 @@ static size_t ssl_get_reassembly_buffer_size( size_t msg_len,
 }
 
 #endif /* MBEDTLS_SSL_PROTO_DTLS */
-
-#endif /* MBEDTLS_SSL_PROTO_TLS1_2 */
 
 static uint32_t ssl_get_hs_total_len( mbedtls_ssl_context const *ssl )
 {

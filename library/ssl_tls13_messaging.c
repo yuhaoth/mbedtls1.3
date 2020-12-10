@@ -59,6 +59,8 @@
 #define mbedtls_free       free
 #endif /* MBEDTLS_PLATFORM_C */
 
+#if 0
+
 /*
  * Encryption/decryption functions
  */
@@ -658,6 +660,8 @@ int mbedtls_ssl_write_record( mbedtls_ssl_context *ssl, uint8_t force_flush )
 
     return( 0 );
 }
+
+#endif /* 0 */
 
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 
