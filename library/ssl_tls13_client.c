@@ -1911,7 +1911,7 @@ static int ssl_client_hello_write( mbedtls_ssl_context* ssl,
         buf += cur_ext_len;
 
         if( ret == 0 )
-            ssl->handshake->extensions_present += PSK_KEY_EXCHANGE_MODES_EXTENSION;
+            ssl->handshake->extensions_present |= PSK_KEY_EXCHANGE_MODES_EXTENSION;
     }
 #endif /* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED */
 
@@ -1928,7 +1928,7 @@ static int ssl_client_hello_write( mbedtls_ssl_context* ssl,
         total_ext_len += cur_ext_len;
         buf += cur_ext_len;
 
-        if( ret == 0 ) ssl->handshake->extensions_present += SUPPORTED_GROUPS_EXTENSION;
+        if( ret == 0 ) ssl->handshake->extensions_present |= SUPPORTED_GROUPS_EXTENSION;
     }
 
     /* The supported_signature_algorithms extension is REQUIRED for
@@ -1941,7 +1941,7 @@ static int ssl_client_hello_write( mbedtls_ssl_context* ssl,
         total_ext_len += cur_ext_len;
         buf += cur_ext_len;
 
-        if( ret == 0 ) ssl->handshake->extensions_present += SIGNATURE_ALGORITHM_EXTENSION;
+        if( ret == 0 ) ssl->handshake->extensions_present |= SIGNATURE_ALGORITHM_EXTENSION;
     }
     /* We need to send the key shares under three conditions:
      * 1 ) A certificate-based ciphersuite is being offered. In this case
@@ -1958,7 +1958,7 @@ static int ssl_client_hello_write( mbedtls_ssl_context* ssl,
         total_ext_len += cur_ext_len;
         buf += cur_ext_len;
 
-        if( ret == 0 ) ssl->handshake->extensions_present += KEY_SHARE_EXTENSION;
+        if( ret == 0 ) ssl->handshake->extensions_present |= KEY_SHARE_EXTENSION;
     }
     else if( ssl->handshake->extensions_present & SUPPORTED_GROUPS_EXTENSION && ssl->handshake->extensions_present & SIGNATURE_ALGORITHM_EXTENSION )
     {
@@ -1967,7 +1967,7 @@ static int ssl_client_hello_write( mbedtls_ssl_context* ssl,
         total_ext_len += cur_ext_len;
         buf += cur_ext_len;
 
-        if( ret == 0 ) ssl->handshake->extensions_present += KEY_SHARE_EXTENSION;
+        if( ret == 0 ) ssl->handshake->extensions_present |= KEY_SHARE_EXTENSION;
     }
 #endif /* MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED */
 
@@ -1987,7 +1987,7 @@ static int ssl_client_hello_write( mbedtls_ssl_context* ssl,
         buf += cur_ext_len;
 
         if( ret == 0 )
-            ssl->handshake->extensions_present += PRE_SHARED_KEY_EXTENSION;
+            ssl->handshake->extensions_present |= PRE_SHARED_KEY_EXTENSION;
     }
 #endif /* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED */
 
@@ -2114,7 +2114,7 @@ static int ssl_parse_server_psk_identity_ext( mbedtls_ssl_context *ssl,
     }
 
 /*	buf += 2; */
-    ssl->handshake->extensions_present += PRE_SHARED_KEY_EXTENSION;
+    ssl->handshake->extensions_present |= PRE_SHARED_KEY_EXTENSION;
     return( 0 );
 }
 
@@ -2212,7 +2212,7 @@ static int ssl_parse_key_shares_ext( mbedtls_ssl_context *ssl,
         return( MBEDTLS_ERR_SSL_BAD_HS_SERVER_KEY_EXCHANGE );
     }
 
-    ssl->handshake->extensions_present += KEY_SHARE_EXTENSION;
+    ssl->handshake->extensions_present |= KEY_SHARE_EXTENSION;
     return( ret );
 }
 #endif /* MBEDTLS_ECDH_C || MBEDTLS_ECDSA_C */
