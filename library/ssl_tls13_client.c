@@ -2024,8 +2024,7 @@ static int ssl_parse_supported_version_ext( mbedtls_ssl_context* ssl,
     else
 #endif /* MBEDTLS_SSL_PROTO_DTLS */
     {
-        /* TODO: Remove magic numbers */
-        if( len != 2 && buf[0] != 0x3 && buf[1] != 0x3 )
+        if( len != 2 || buf[0] != MBEDTLS_SSL_MAJOR_VERSION_3 || buf[1] != MBEDTLS_SSL_MINOR_VERSION_4 )
         {
             MBEDTLS_SSL_DEBUG_MSG( 1, ( "unexpected version" ) );
             return( MBEDTLS_ERR_SSL_BAD_HS_SERVER_HELLO );
