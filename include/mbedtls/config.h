@@ -1755,6 +1755,8 @@
  */
 #define MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
 
+#define MBEDTLS_RSA_PSS_RSAE_SHA256
+
 /* \def MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE
  *
  * Enable TLS 1.3 middlebox compatibility mode.

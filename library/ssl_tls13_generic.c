@@ -2464,6 +2464,12 @@ static int ssl_read_certificate_verify_parse( mbedtls_ssl_context* ssl,
             md_alg = MBEDTLS_MD_SHA512;
             sig_alg = MBEDTLS_PK_ECDSA;
             break;
+#if defined(MBEDTLS_RSA_PSS_RSAE_SHA256)
+        case SIGNATURE_RSA_PSS_RSAE_SHA256:
+            md_alg = MBEDTLS_MD_SHA256;
+            sig_alg = MBEDTLS_PK_RSASSA_PSS;
+            break;
+#endif
         default:
             MBEDTLS_SSL_DEBUG_MSG( 1, ( "Certificate Verify: Unknown signature algorithm." ) );
             return( MBEDTLS_ERR_SSL_BAD_HS_CERTIFICATE_VERIFY );
@@ -2537,16 +2543,26 @@ static int ssl_read_certificate_verify_parse( mbedtls_ssl_context* ssl,
        return( MBEDTLS_ERR_SSL_BAD_HS_CERTIFICATE_VERIFY );
     }
 
-    MBEDTLS_SSL_DEBUG_BUF( 3, "verify hash", verify_hash, verify_hash_len );
-
-    ret = mbedtls_pk_verify( &ssl->session_negotiate->peer_cert->pk,
+    mbedtls_pk_rsassa_pss_options* opts_ptr = NULL;
+    mbedtls_pk_rsassa_pss_options opts;
+    if (sig_alg == MBEDTLS_PK_RSASSA_PSS) {
+      opts.mgf1_hash_id = md_alg;
+      const mbedtls_md_info_t* md_info;
+      if ((md_info = mbedtls_md_info_from_type(md_alg)) == NULL)
+        return (MBEDTLS_ERR_SSL_INTERNAL_ERROR);
+      opts.expected_salt_len = mbedtls_md_get_size(md_info);
+      opts_ptr = &opts;
+    }
+    if ((ret = mbedtls_pk_verify_ext(
+            sig_alg,
+            opts_ptr,
+            &ssl->session_negotiate->peer_cert->pk,
                              md_alg,
-                             verify_hash, verify_hash_len,
-                             buf, sig_len );
-
-    if( ret != 0 )
-    {
-        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_pk_verify", ret );
+            verify_hash,
+            verify_hash_len,
+            buf,
+            sig_len)) != 0) {
+      MBEDTLS_SSL_DEBUG_RET(1, "mbedtls_pk_verify_ext", ret);
         return( ret );
     }
 
