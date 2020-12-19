@@ -4999,6 +4999,7 @@ int mbedtls_ssl_write_early_data_ext( mbedtls_ssl_context *ssl,
 #if defined(MBEDTLS_SSL_CLI_C)
     if( ssl->conf->endpoint == MBEDTLS_SSL_IS_CLIENT )
     {
+        ssl->early_data_status = MBEDTLS_SSL_EARLY_DATA_NOT_SENT;
         if( ssl->conf->key_exchange_modes == MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_ECDHE_ECDSA ||
             ssl->conf->early_data == MBEDTLS_SSL_EARLY_DATA_DISABLED ) {
 
@@ -5020,6 +5021,7 @@ int mbedtls_ssl_write_early_data_ext( mbedtls_ssl_context *ssl,
     if( ssl->conf->endpoint == MBEDTLS_SSL_IS_CLIENT )
     {
         MBEDTLS_SSL_DEBUG_MSG( 3, ( "client hello, adding early_data extension" ) );
+        ssl->early_data_status = MBEDTLS_SSL_EARLY_DATA_REJECTED;
     }
 #endif /* MBEDTLS_SSL_CLI_C */
 

@@ -1293,6 +1293,11 @@ int mbedtls_ssl_write_finished( mbedtls_ssl_context *ssl );
 int mbedtls_ssl_new_session_ticket_process(mbedtls_ssl_context* ssl);
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+/* parse early data extension */
+int ssl_parse_early_data_ext(mbedtls_ssl_context *ssl,
+    const unsigned char *buf, size_t len);
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 
 #if defined(MBEDTLS_SSL_TLS13_CTLS)
 static enum varint_length_enum set_varint_length(uint32_t input, uint32_t* output);

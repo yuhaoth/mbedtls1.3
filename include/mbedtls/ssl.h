@@ -787,6 +787,19 @@ typedef struct mbedtls_ssl_key_cert mbedtls_ssl_key_cert;
 typedef struct mbedtls_ssl_flight_item mbedtls_ssl_flight_item;
 #endif
 
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+#define MBEDTLS_SSL_EARLY_DATA_NOT_SENT       0
+#define MBEDTLS_SSL_EARLY_DATA_REJECTED       1
+#define MBEDTLS_SSL_EARLY_DATA_ACCEPTED       2
+
+/**
+ * \brief get client early data state. This can only be called after handshake is completed
+ *
+ * \param ssl        SSL context.
+ */
+int mbedtls_ssl_get_early_data_status(mbedtls_ssl_context *ssl);
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && defined(MBEDTLS_SSL_NEW_SESSION_TICKET)
 
 typedef enum
@@ -1735,6 +1748,14 @@ struct mbedtls_ssl_context
                             *   Possible values are #MBEDTLS_SSL_CID_ENABLED
                             *   and #MBEDTLS_SSL_CID_DISABLED. */
 #endif /* MBEDTLS_SSL_DTLS_CONNECTION_ID */
+
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+    /*
+     * early data request state
+     */
+    int early_data_status;
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+
 };
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
