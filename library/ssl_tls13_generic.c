@@ -3565,7 +3565,6 @@ int mbedtls_ssl_generate_early_data_keys( mbedtls_ssl_context *ssl,
     int ret;
     int hash_length;
     const mbedtls_ssl_ciphersuite_t *ciphersuite_info;
-    mbedtls_ssl_handshake_params *handshake = ssl->handshake;
     const mbedtls_cipher_info_t *cipher_info;
     const mbedtls_md_info_t *md;
     unsigned char padbuf[MBEDTLS_MD_MAX_SIZE];
@@ -3586,7 +3585,7 @@ int mbedtls_ssl_generate_early_data_keys( mbedtls_ssl_context *ssl,
     if( cipher_info == NULL )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "cipher info for %d not found",
-                                    handshake->ciphersuite_info->cipher ) );
+                                    ssl->handshake->ciphersuite_info->cipher ) );
         return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
     }
 
@@ -3594,7 +3593,7 @@ int mbedtls_ssl_generate_early_data_keys( mbedtls_ssl_context *ssl,
     if( md == NULL )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "mbedtls_md info for %d not found",
-                                    handshake->ciphersuite_info->mac ) );
+                                    ssl->handshake->ciphersuite_info->mac ) );
         return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
     }
 
