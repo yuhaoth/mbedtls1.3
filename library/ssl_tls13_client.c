@@ -2640,7 +2640,9 @@ static int ssl_encrypted_extensions_postprocess( mbedtls_ssl_context* ssl ) {
 #endif /* MBEDTLS_SSL_PROTO_DTLS */
 
 #if defined(MBEDTLS_ZERO_RTT)
-    if( ssl->handshake->early_data == MBEDTLS_SSL_EARLY_DATA_ON )
+    if( ssl->handshake->early_data == MBEDTLS_SSL_EARLY_DATA_ON &&
+        ( ssl->session_negotiate->key_exchange == MBEDTLS_KEY_EXCHANGE_PSK ||
+                ssl->session_negotiate->key_exchange == MBEDTLS_KEY_EXCHANGE_ECDHE_PSK ) )
     {
         mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_SERVER_FINISHED );
     }
