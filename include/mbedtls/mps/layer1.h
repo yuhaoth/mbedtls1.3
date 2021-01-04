@@ -34,8 +34,8 @@
 /*
  * External interface to layer 0
  */
-typedef int mps_l0_recv_t( unsigned char *buf, size_t buflen );
-typedef int mps_l0_send_t( unsigned char const *buf, size_t buflen );
+typedef int mps_l0_recv_t( void* ctx, unsigned char *buf, size_t buflen );
+typedef int mps_l0_send_t( void* ctx, unsigned char const *buf, size_t buflen );
 
 /*
  *
@@ -54,7 +54,10 @@ typedef struct
 {
     mps_alloc     *alloc; /*!< The allocator to use to acquire and release
                            *   the read-buffer used by Layer 1.              */
-    mps_l0_recv_t *recv;  /*!< The Layer 0 receive callback                  */
+
+    void          *recv_ctx; /*!< The opaque context to be passed to the
+                              *   receive callback. This may be \c NULL.     */
+    mps_l0_recv_t *recv;     /*!< The Layer 0 receive callback               */
 
     /* OPTIMIZATION:
      * This buffer is already present in the allocator and
@@ -97,7 +100,10 @@ typedef struct
 {
     mps_alloc     *alloc;  /*!< The allocator to use to acquire and release
                             *   the write-buffer used by Layer 1.            */
-    mps_l0_send_t *send;   /*!< The Layer 0 send callback                    */
+
+    void          *send_ctx; /*!< The opaque context to be passed to the
+                              *   send callback. This may be \c NULL.        */
+    mps_l0_send_t *send;     /*!< The Layer 0 send callback                  */
 
     /* OPTIMIZATION:
      * This buffer is already present in the allocator and
@@ -149,7 +155,10 @@ typedef struct
 {
     mps_alloc     *alloc;   /*!< The allocator to use to acquire and release
                              *   the read-buffer used by Layer 1.             */
-    mps_l0_recv_t *recv;    /*!< The Layer 0 receive callback                 */
+
+    void          *recv_ctx; /*!< The opaque context to be passed to the
+                              *   receive callback. This may be \c NULL.     */
+    mps_l0_recv_t *recv;     /*!< The Layer 0 receive callback               */
 
     /* OPTIMIZATION:
      * This buffer is already present in the allocator and
@@ -178,7 +187,10 @@ typedef struct
 {
     mps_alloc     *alloc;   /*!< The allocator to use to acquire and release
                              *   the write-buffer used by Layer 1.            */
-    mps_l0_send_t *send;    /*!< The Layer 0 receive callback                 */
+
+    void          *send_ctx; /*!< The opaque context to be passed to the
+                              *   send callback. This may be \c NULL.         */
+    mps_l0_send_t *send;     /*!< The Layer 0 receive callback                */
 
     /* OPTIMIZATION:
      * This buffer is already present in the allocator and
@@ -309,7 +321,8 @@ mbedtls_mps_l1_get_mode( mps_l1 *l1 )
  */
 
 MBEDTLS_MPS_PUBLIC int mps_l1_init( mps_l1 *ctx, uint8_t mode, mps_alloc *alloc,
-                            mps_l0_send_t *send, mps_l0_recv_t *recv );
+                                    void* send_ctx, mps_l0_send_t *send,
+                                    void* recv_ctx, mps_l0_recv_t *recv );
 
 /**
  * \brief          Free a Layer 1 context.
