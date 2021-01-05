@@ -2639,15 +2639,12 @@ static int ssl_encrypted_extensions_postprocess( mbedtls_ssl_context* ssl ) {
         mbedtls_ack_add_record( ssl, MBEDTLS_SSL_HS_ENCRYPTED_EXTENSION, MBEDTLS_SSL_ACK_RECORDS_RECEIVED );
 #endif /* MBEDTLS_SSL_PROTO_DTLS */
 
-#if defined(MBEDTLS_ZERO_RTT)
-    if( ssl->handshake->early_data == MBEDTLS_SSL_EARLY_DATA_ON &&
-        ( ssl->session_negotiate->key_exchange == MBEDTLS_KEY_EXCHANGE_PSK ||
-                ssl->session_negotiate->key_exchange == MBEDTLS_KEY_EXCHANGE_ECDHE_PSK ) )
+    if( ssl->session_negotiate->key_exchange == MBEDTLS_KEY_EXCHANGE_PSK ||
+                ssl->session_negotiate->key_exchange == MBEDTLS_KEY_EXCHANGE_ECDHE_PSK )
     {
         mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_SERVER_FINISHED );
     }
     else
-#endif /* MBEDTLS_ZERO_RTT */
     {
         mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_CERTIFICATE_REQUEST );
     }
