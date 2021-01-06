@@ -153,7 +153,7 @@
 #define MBEDTLS_MPS_TRANSFORM_VALIDATION
 
 /*! This flag controls whether tracing for MPS should be enabled. */
-#define MBEDTLS_MPS_TRACE
+//#define MBEDTLS_MPS_TRACE
 
 /*! This internal macro determines whether all Layers of MPS should
  *  be compiled into a single source file.
