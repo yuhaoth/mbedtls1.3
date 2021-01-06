@@ -611,6 +611,10 @@ MBEDTLS_MPS_STATIC int mps_generic_failure_handler( mbedtls_mps *mps, int ret )
     int found = 0;
     const char *error_string = NULL;
 
+#if !defined(MBEDTLS_MPS_TRACE)
+    ((void) error_string);
+#endif
+
     if( ret == 0 )
         return( 0 );
 

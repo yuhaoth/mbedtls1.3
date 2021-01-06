@@ -717,9 +717,9 @@ int l2_out_prepare_record( mbedtls_mps_l2 *ctx,
     if( ret != 0 )
         RETURN( ret );
 
-    transform_get_expansion( epoch->transform,
-                             &pre_expansion,
-                             &post_expansion );
+    mbedtls_mps_transform_get_expansion( epoch->transform,
+                                         &pre_expansion,
+                                         &post_expansion );
 
 #if defined(MBEDTLS_MPS_TRANSFORM_VALIDATION)
     {
@@ -873,9 +873,9 @@ int l2_out_dispatch_record( mbedtls_mps_l2 *ctx )
         /* Step 2: Apply record payload protection. */
         TRACE( trace_comment, "Encrypt record. The plaintext offset is %u.",
                (unsigned) rec.buf.data_offset );
-        ret = transform_encrypt( epoch->transform, &rec,
-                                 ctx->conf.f_rng,
-                                 ctx->conf.p_rng );
+        ret = mbedtls_mps_transform_encrypt( epoch->transform, &rec,
+                                             ctx->conf.f_rng,
+                                             ctx->conf.p_rng );
         if( ret != 0 )
         {
             TRACE( trace_comment, "The record encryption failed with %d", ret );
@@ -1944,7 +1944,7 @@ int l2_in_fetch_record( mbedtls_mps_l2 *ctx, mps_rec *rec )
         RETURN( ret );
     }
 
-    ret = transform_decrypt( epoch->transform, rec );
+    ret = mbedtls_mps_transform_decrypt( epoch->transform, rec );
     if( ret != 0 )
     {
         TRACE( trace_comment, "Decryption failed with: %d", (int) ret );
@@ -2709,7 +2709,7 @@ void l2_epoch_free( mbedtls_mps_l2_epoch_t *epoch )
 {
     if( epoch->transform != NULL )
     {
-        transform_free( epoch->transform );
+        mbedtls_mps_transform_free( epoch->transform );
         free( epoch->transform );
     }
 

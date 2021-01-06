@@ -172,6 +172,7 @@ OBJS_TLS= \
 	  mps/layer3.o \
 	  mps/mps.o \
 	  mps/allocator.o \
+          mps/transform.o \
           # This line is intentionally left blank
 
 .SILENT:
