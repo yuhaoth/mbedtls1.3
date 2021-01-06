@@ -469,7 +469,7 @@ typedef struct
  * Transform multiplexing mock record payload protection
  * and real payload protection.
  */
-struct mbedtls_mps_transform_t
+struct mbedtls_mps_transform_wrap_t
 {
     uint8_t type; /* 0: mock, 1: real */
     mbedtls_transform_mock_t mock;
@@ -477,9 +477,10 @@ struct mbedtls_mps_transform_t
     mbedtls_ssl_transform real;
 #endif
 };
+typedef struct mbedtls_mps_transform_wrap_t mbedtls_mps_transform_wrap_t;
 
-static void build_mock_transforms( mbedtls_mps_transform_t *ptr0,
-                                   mbedtls_mps_transform_t *ptr1,
+static void build_mock_transforms( mbedtls_mps_transform_wrap_t *ptr0,
+                                   mbedtls_mps_transform_wrap_t *ptr1,
                                    size_t enabled, size_t pad )
 {
     ptr0->type = 0;
@@ -550,8 +551,8 @@ static void read_version( int *major, int *minor, int transport,
  * TLS version.
  */
 #if !defined(TEST_SUITE_MPS_NO_SSL)
-static int build_real_transforms_worker( mbedtls_mps_transform_t *t_in_,
-                                  mbedtls_mps_transform_t *t_out_,
+static int build_real_transforms_worker( mbedtls_mps_transform_wrap_t *t_in_,
+                                  mbedtls_mps_transform_wrap_t *t_out_,
                                   int cipher_type, int hash_id,
                                   int etm, int tag_mode, int ver,
                                   int (*f_rng)(void *, unsigned char *, size_t),
@@ -741,8 +742,8 @@ static int build_real_transforms_worker( mbedtls_mps_transform_t *t_in_,
     return( 0 );
 }
 
-static int build_real_transforms( mbedtls_mps_transform_t *t_in_,
-                                  mbedtls_mps_transform_t *t_out_ )
+static int build_real_transforms( mbedtls_mps_transform_wrap_t *t_in_,
+                                  mbedtls_mps_transform_wrap_t *t_out_ )
 {
     return( build_real_transforms_worker( t_in_, t_out_,
                            MBEDTLS_CIPHER_AES_256_GCM,
@@ -752,8 +753,9 @@ static int build_real_transforms( mbedtls_mps_transform_t *t_in_,
 }
 #endif /* TEST_SUITE_MPS_NO_SSL */
 
-int transform_free( mbedtls_mps_transform_t *transform_ )
+static int mps_transform_free( void *transform__ )
 {
+    mbedtls_mps_transform_wrap_t *transform_ = (mbedtls_mps_transform_wrap_t*) transform__;
 #if !defined(TEST_SUITE_MPS_NO_SSL)
     if( transform_->type == 1 )
     {
@@ -770,14 +772,16 @@ int transform_free( mbedtls_mps_transform_t *transform_ )
     return( 0 );
 }
 
-int transform_encrypt( mbedtls_mps_transform_t *transform_, mps_rec *rec,
-                       int (*f_rng)(void *, unsigned char *, size_t),
-                       void *p_rng )
+int mps_transform_encrypt( void *transform__,
+                           mps_rec *rec,
+                           int (*f_rng)(void *, unsigned char *, size_t),
+                           void *p_rng )
 {
     size_t idx;
     size_t pre_pad;
     size_t post_pad;
     unsigned char checksum;
+    mbedtls_mps_transform_wrap_t *transform_ = (mbedtls_mps_transform_wrap_t*) transform__;
     mbedtls_transform_mock_t *transform;
 
     /* Distinguish between our test-only mock transforms and
@@ -885,7 +889,7 @@ int transform_encrypt( mbedtls_mps_transform_t *transform_, mps_rec *rec,
     return( 0 );
 }
 
-int transform_decrypt( mbedtls_mps_transform_t *transform_, mps_rec *rec )
+int mps_transform_decrypt( void *transform__, mps_rec *rec )
 {
     size_t idx;
     size_t pre_pad;
@@ -893,6 +897,7 @@ int transform_decrypt( mbedtls_mps_transform_t *transform_, mps_rec *rec )
     uint8_t val;
     uint8_t checksum;
 
+    mbedtls_mps_transform_wrap_t *transform_ = (mbedtls_mps_transform_wrap_t*) transform__;
     mbedtls_transform_mock_t *transform;
     transform = &transform_->mock;
 
@@ -1024,9 +1029,10 @@ int transform_decrypt( mbedtls_mps_transform_t *transform_, mps_rec *rec )
     return( 0 );
 }
 
-int transform_get_expansion( mbedtls_mps_transform_t *transform,
-                             size_t *pre_exp, size_t *post_exp )
+int mps_transform_get_expansion( void *transform_,
+                                 size_t *pre_exp, size_t *post_exp )
 {
+    mbedtls_mps_transform_wrap_t * const transform = (mbedtls_mps_transform_wrap_t*) transform_;
 #if !defined(TEST_SUITE_MPS_NO_SSL)
     if( transform->type == 1 )
     {
@@ -1334,6 +1340,15 @@ static int free_mps_layers()
     }
 
     return( 0 );
+}
+
+__attribute__((constructor))
+static void set_transform_pointers()
+{
+    mbedtls_mps_transform_free = mps_transform_free;
+    mbedtls_mps_transform_encrypt = mps_transform_encrypt;
+    mbedtls_mps_transform_decrypt = mps_transform_decrypt;
+    mbedtls_mps_transform_get_expansion = mps_transform_get_expansion;
 }
 
 /* END_HEADER */
@@ -4068,8 +4083,8 @@ void mbedtls_mps_l2_basic( int mode,
     mps_l2_in in_srv;
 
     /* Dummy record transformations for epoch 0 */
-    mbedtls_mps_transform_t *dummy_c = malloc( sizeof( mbedtls_mps_transform_t ) );
-    mbedtls_mps_transform_t *dummy_s = malloc( sizeof( mbedtls_mps_transform_t ) );
+    mbedtls_mps_transform_wrap_t *dummy_c = malloc( sizeof( mbedtls_mps_transform_wrap_t ) );
+    mbedtls_mps_transform_wrap_t *dummy_s = malloc( sizeof( mbedtls_mps_transform_wrap_t ) );
 
 #if defined(TEST_SUITE_MPS_NO_SSL)
     ((void) real_transforms);
@@ -4219,8 +4234,8 @@ void mbedtls_mps_l2_non_packable_type( int mode,
     mps_l2_in in_srv, in_cli;
 
     /* Dummy record transformations for epoch 0 */
-    mbedtls_mps_transform_t *dummy_c = malloc( sizeof( mbedtls_mps_transform_t ) );
-    mbedtls_mps_transform_t *dummy_s = malloc( sizeof( mbedtls_mps_transform_t ) );
+    mbedtls_mps_transform_wrap_t *dummy_c = malloc( sizeof( mbedtls_mps_transform_wrap_t ) );
+    mbedtls_mps_transform_wrap_t *dummy_s = malloc( sizeof( mbedtls_mps_transform_wrap_t ) );
 
     build_mock_transforms( dummy_s, dummy_c, 1, 5 );
 
@@ -4381,8 +4396,8 @@ void mbedtls_mps_l2_bad_record( int mode,
     mps_l2_in in_srv;
 
     /* Dummy record transformations for epoch 0 */
-    mbedtls_mps_transform_t *dummy_c = malloc( sizeof( mbedtls_mps_transform_t ) );
-    mbedtls_mps_transform_t *dummy_s = malloc( sizeof( mbedtls_mps_transform_t ) );
+    mbedtls_mps_transform_wrap_t *dummy_c = malloc( sizeof( mbedtls_mps_transform_wrap_t ) );
+    mbedtls_mps_transform_wrap_t *dummy_s = malloc( sizeof( mbedtls_mps_transform_wrap_t ) );
 
     build_mock_transforms( dummy_s, dummy_c,
                            /* Use ID transform in case we want to test corrupted content
@@ -4635,8 +4650,8 @@ void mbedtls_mps_l2_anti_replay( int variant )
     mps_l2_in   in_srv;
 
     /* Dummy record transformations for epoch 0 */
-    mbedtls_mps_transform_t *dummy_c = malloc( sizeof( mbedtls_mps_transform_t ) );
-    mbedtls_mps_transform_t *dummy_s = malloc( sizeof( mbedtls_mps_transform_t ) );
+    mbedtls_mps_transform_wrap_t *dummy_c = malloc( sizeof( mbedtls_mps_transform_wrap_t ) );
+    mbedtls_mps_transform_wrap_t *dummy_s = malloc( sizeof( mbedtls_mps_transform_wrap_t ) );
 
     build_mock_transforms( dummy_s, dummy_c, 1, 5 );
 
@@ -4914,8 +4929,8 @@ void mbedtls_mps_l2_pausing( int accumulator_too_small,
     /* The length of the single type B chunk the client sends. */
     mbedtls_mps_size_t const msg_chunk_size_B = 40;
 
-    mbedtls_mps_transform_t *dummy_c = malloc( sizeof( mbedtls_mps_transform_t ) );
-    mbedtls_mps_transform_t *dummy_s = malloc( sizeof( mbedtls_mps_transform_t ) );
+    mbedtls_mps_transform_wrap_t *dummy_c = malloc( sizeof( mbedtls_mps_transform_wrap_t ) );
+    mbedtls_mps_transform_wrap_t *dummy_s = malloc( sizeof( mbedtls_mps_transform_wrap_t ) );
 
     build_mock_transforms( dummy_s, dummy_c, 1, 5 );
 
@@ -5118,10 +5133,10 @@ void mbedtls_mps_l2_switch_epoch( int mode,
     mps_l2_out out_cli;
     mps_l2_in in_srv;
 
-    mbedtls_mps_transform_t *epoch0_c = malloc( sizeof( mbedtls_mps_transform_t ) );
-    mbedtls_mps_transform_t *epoch1_c = malloc( sizeof( mbedtls_mps_transform_t ) );
-    mbedtls_mps_transform_t *epoch0_s = malloc( sizeof( mbedtls_mps_transform_t ) );
-    mbedtls_mps_transform_t *epoch1_s = malloc( sizeof( mbedtls_mps_transform_t ) );
+    mbedtls_mps_transform_wrap_t *epoch0_c = malloc( sizeof( mbedtls_mps_transform_wrap_t ) );
+    mbedtls_mps_transform_wrap_t *epoch1_c = malloc( sizeof( mbedtls_mps_transform_wrap_t ) );
+    mbedtls_mps_transform_wrap_t *epoch0_s = malloc( sizeof( mbedtls_mps_transform_wrap_t ) );
+    mbedtls_mps_transform_wrap_t *epoch1_s = malloc( sizeof( mbedtls_mps_transform_wrap_t ) );
 
 #if !defined(TEST_SUITE_MPS_NO_SSL)
     if( real_transforms == 1 )
@@ -5290,8 +5305,8 @@ void mbedtls_mps_l2_queueing( int allocator_buffer_sz,
     /* Layer 2 objects */
     mps_l2_out out_cli;
     mps_l2_in in_srv;
-    mbedtls_mps_transform_t *dummy_c = malloc( sizeof( mbedtls_mps_transform_t ) );
-    mbedtls_mps_transform_t *dummy_s = malloc( sizeof( mbedtls_mps_transform_t ) );
+    mbedtls_mps_transform_wrap_t *dummy_c = malloc( sizeof( mbedtls_mps_transform_wrap_t ) );
+    mbedtls_mps_transform_wrap_t *dummy_s = malloc( sizeof( mbedtls_mps_transform_wrap_t ) );
 
     build_mock_transforms( dummy_s, dummy_c, 1, 5 );
 
@@ -5396,16 +5411,16 @@ void mbedtls_mps_l2_many_epochs( int mode,
     mbedtls_mps_epoch_id next_cli_epoch;
     mbedtls_mps_epoch_id next_srv_epoch;
 
-    mbedtls_mps_transform_t **epochs_c = malloc( num_rounds *
-                                             sizeof( mbedtls_mps_transform_t ) );
-    mbedtls_mps_transform_t **epochs_s = malloc( num_rounds *
-                                             sizeof( mbedtls_mps_transform_t ) );
+    mbedtls_mps_transform_wrap_t **epochs_c = malloc( num_rounds *
+                                             sizeof( mbedtls_mps_transform_wrap_t ) );
+    mbedtls_mps_transform_wrap_t **epochs_s = malloc( num_rounds *
+                                             sizeof( mbedtls_mps_transform_wrap_t ) );
 
     TEST_ASSERT( epochs_s != NULL && epochs_c != NULL );
     for( size_t id=0; id < (unsigned) num_rounds; id++ )
     {
-        epochs_c[id] = malloc( sizeof( mbedtls_mps_transform_t ) );
-        epochs_s[id] = malloc( sizeof( mbedtls_mps_transform_t ) );
+        epochs_c[id] = malloc( sizeof( mbedtls_mps_transform_wrap_t ) );
+        epochs_s[id] = malloc( sizeof( mbedtls_mps_transform_wrap_t ) );
         TEST_ASSERT( epochs_s[id] != NULL && epochs_c[id] != NULL );
 
 #if defined(TEST_SUITE_MPS_NO_SSL)
@@ -5634,10 +5649,10 @@ void mbedtls_mps_l2_piggyback_data( int mode,
     mps_l2_out out_cli;
     mps_l2_in in_srv;
 
-    mbedtls_mps_transform_t *epoch0_c = malloc( sizeof( mbedtls_mps_transform_t ) );
-    mbedtls_mps_transform_t *epoch1_c = malloc( sizeof( mbedtls_mps_transform_t ) );
-    mbedtls_mps_transform_t *epoch0_s = malloc( sizeof( mbedtls_mps_transform_t ) );
-    mbedtls_mps_transform_t *epoch1_s = malloc( sizeof( mbedtls_mps_transform_t ) );
+    mbedtls_mps_transform_wrap_t *epoch0_c = malloc( sizeof( mbedtls_mps_transform_wrap_t ) );
+    mbedtls_mps_transform_wrap_t *epoch1_c = malloc( sizeof( mbedtls_mps_transform_wrap_t ) );
+    mbedtls_mps_transform_wrap_t *epoch0_s = malloc( sizeof( mbedtls_mps_transform_wrap_t ) );
+    mbedtls_mps_transform_wrap_t *epoch1_s = malloc( sizeof( mbedtls_mps_transform_wrap_t ) );
 
 #if defined(TEST_SUITE_MPS_NO_SSL)
     ((void) real_transforms);
@@ -5758,7 +5773,7 @@ void mbedtls_mps_l2_random( int allocator_buffer_sz,
 
     typed_data_chunk **chunks[2];
     size_t *chunks_per_epoch[2];
-    mbedtls_mps_transform_t **epochs[2];
+    mbedtls_mps_transform_wrap_t **epochs[2];
     mbedtls_mps_epoch_id read_epoch[2];
     mbedtls_mps_epoch_id write_epoch[2];
     size_t read_chunk[2];
@@ -5766,8 +5781,8 @@ void mbedtls_mps_l2_random( int allocator_buffer_sz,
 
     mbedtls_mps_epoch_id latest_epoch[2];
 
-    epochs[0] = malloc( num_epochs * sizeof( mbedtls_mps_transform_t ) );
-    epochs[1] = malloc( num_epochs * sizeof( mbedtls_mps_transform_t ) );
+    epochs[0] = malloc( num_epochs * sizeof( mbedtls_mps_transform_wrap_t ) );
+    epochs[1] = malloc( num_epochs * sizeof( mbedtls_mps_transform_wrap_t ) );
     chunks[0] = malloc( num_epochs * sizeof( typed_data_chunk* ) );
     chunks[1] = malloc( num_epochs * sizeof( typed_data_chunk* ) );
     chunks_per_epoch[0] = malloc( num_epochs * sizeof( size_t ) );
@@ -5781,8 +5796,8 @@ void mbedtls_mps_l2_random( int allocator_buffer_sz,
     {
         size_t chunks_in_epoch;
 
-        epochs[0][id] = malloc( sizeof( mbedtls_mps_transform_t ) );
-        epochs[1][id] = malloc( sizeof( mbedtls_mps_transform_t ) );
+        epochs[0][id] = malloc( sizeof( mbedtls_mps_transform_wrap_t ) );
+        epochs[1][id] = malloc( sizeof( mbedtls_mps_transform_wrap_t ) );
         TEST_ASSERT( epochs[0][id] != NULL && epochs[1][id] != NULL );
 
 #if defined(TEST_SUITE_MPS_NO_SSL)
@@ -6240,8 +6255,8 @@ void mbedtls_mps_l3_basic_handshake(
     size_t additional_fetch = partial_commit ? 10 : 0;
 
     /* Dummy record transformations for epoch 0 */
-    mbedtls_mps_transform_t *dummy_c = malloc( sizeof( mbedtls_mps_transform_t ) );
-    mbedtls_mps_transform_t *dummy_s = malloc( sizeof( mbedtls_mps_transform_t ) );
+    mbedtls_mps_transform_wrap_t *dummy_c = malloc( sizeof( mbedtls_mps_transform_wrap_t ) );
+    mbedtls_mps_transform_wrap_t *dummy_s = malloc( sizeof( mbedtls_mps_transform_wrap_t ) );
 
 #if defined(TEST_SUITE_MPS_NO_SSL)
     ((void) real_transforms);
@@ -6524,8 +6539,8 @@ void mbedtls_mps_l3_bad_msg( int variant )
     mps_l2_out out_cli;
 
     /* Dummy record transformations for epoch 0 */
-    mbedtls_mps_transform_t *dummy_c = malloc( sizeof( mbedtls_mps_transform_t ) );
-    mbedtls_mps_transform_t *dummy_s = malloc( sizeof( mbedtls_mps_transform_t ) );
+    mbedtls_mps_transform_wrap_t *dummy_c = malloc( sizeof( mbedtls_mps_transform_wrap_t ) );
+    mbedtls_mps_transform_wrap_t *dummy_s = malloc( sizeof( mbedtls_mps_transform_wrap_t ) );
 
     build_mock_transforms( dummy_c, dummy_s, 1, 5 );
 
@@ -6686,8 +6701,8 @@ void mbedtls_mps_l3_handshake_gradual( int max_out,
     mps_l3_handshake_in hs_in;
 
     /* Dummy record transformations for epoch 0 */
-    mbedtls_mps_transform_t *dummy_c = malloc( sizeof( mbedtls_mps_transform_t ) );
-    mbedtls_mps_transform_t *dummy_s = malloc( sizeof( mbedtls_mps_transform_t ) );
+    mbedtls_mps_transform_wrap_t *dummy_c = malloc( sizeof( mbedtls_mps_transform_wrap_t ) );
+    mbedtls_mps_transform_wrap_t *dummy_s = malloc( sizeof( mbedtls_mps_transform_wrap_t ) );
 
 #if defined(TEST_SUITE_MPS_NO_SSL)
     ((void) real_transforms);
@@ -7018,8 +7033,8 @@ void mbedtls_mps_l3_basic_application( int mode,
     mps_l3_app_in app_in;
 
     /* Dummy record transformations for epoch 0 */
-    mbedtls_mps_transform_t *dummy_c = malloc( sizeof( mbedtls_mps_transform_t ) );
-    mbedtls_mps_transform_t *dummy_s = malloc( sizeof( mbedtls_mps_transform_t ) );
+    mbedtls_mps_transform_wrap_t *dummy_c = malloc( sizeof( mbedtls_mps_transform_wrap_t ) );
+    mbedtls_mps_transform_wrap_t *dummy_s = malloc( sizeof( mbedtls_mps_transform_wrap_t ) );
 
 #if defined(TEST_SUITE_MPS_NO_SSL)
     ((void) real_transforms);
@@ -7119,8 +7134,8 @@ void mbedtls_mps_l3_basic_alert( int mode,
     mbedtls_mps_epoch_id srv_epoch;
 
     /* Dummy record transformations for epoch 0 */
-    mbedtls_mps_transform_t *dummy_c = malloc( sizeof( mbedtls_mps_transform_t ) );
-    mbedtls_mps_transform_t *dummy_s = malloc( sizeof( mbedtls_mps_transform_t ) );
+    mbedtls_mps_transform_wrap_t *dummy_c = malloc( sizeof( mbedtls_mps_transform_wrap_t ) );
+    mbedtls_mps_transform_wrap_t *dummy_s = malloc( sizeof( mbedtls_mps_transform_wrap_t ) );
 
 #if defined(TEST_SUITE_MPS_NO_SSL)
     ((void) real_transforms);
@@ -7251,8 +7266,8 @@ void mbedtls_mps_l3_basic_ccs( int allocator_buffer_sz,
     mbedtls_mps_epoch_id srv_epoch;
 
     /* Dummy record transformations for epoch 0 */
-    mbedtls_mps_transform_t *dummy_c = malloc( sizeof( mbedtls_mps_transform_t ) );
-    mbedtls_mps_transform_t *dummy_s = malloc( sizeof( mbedtls_mps_transform_t ) );
+    mbedtls_mps_transform_wrap_t *dummy_c = malloc( sizeof( mbedtls_mps_transform_wrap_t ) );
+    mbedtls_mps_transform_wrap_t *dummy_s = malloc( sizeof( mbedtls_mps_transform_wrap_t ) );
 
 #if defined(TEST_SUITE_MPS_NO_SSL)
     ((void) real_transforms);
@@ -7385,8 +7400,8 @@ void mbedtls_mps_l3_handshake_alert_interleaved( int allocator_buffer_sz,
     mbedtls_mps_epoch_id srv_epoch;
 
     /* Dummy record transformations for epoch 0 */
-    mbedtls_mps_transform_t *dummy_c = malloc( sizeof( mbedtls_mps_transform_t ) );
-    mbedtls_mps_transform_t *dummy_s = malloc( sizeof( mbedtls_mps_transform_t ) );
+    mbedtls_mps_transform_wrap_t *dummy_c = malloc( sizeof( mbedtls_mps_transform_wrap_t ) );
+    mbedtls_mps_transform_wrap_t *dummy_s = malloc( sizeof( mbedtls_mps_transform_wrap_t ) );
 
 #if defined(TEST_SUITE_MPS_NO_SSL)
     ((void) real_transforms);
@@ -7750,7 +7765,7 @@ void mbedtls_mps_l3_random( int allocator_buffer_sz,
 
     typed_data_chunk_l3 **chunks[2];
     size_t *chunks_per_epoch[2];
-    mbedtls_mps_transform_t **epochs[2];
+    mbedtls_mps_transform_wrap_t **epochs[2];
     mbedtls_mps_epoch_id read_epoch[2];
     size_t read_chunk[2];
     mbedtls_mps_epoch_id write_epoch[2];
@@ -7760,8 +7775,8 @@ void mbedtls_mps_l3_random( int allocator_buffer_sz,
 
     srand( time( NULL ) );
 
-    epochs[0] = malloc( num_epochs * sizeof( mbedtls_mps_transform_t ) );
-    epochs[1] = malloc( num_epochs * sizeof( mbedtls_mps_transform_t ) );
+    epochs[0] = malloc( num_epochs * sizeof( mbedtls_mps_transform_wrap_t ) );
+    epochs[1] = malloc( num_epochs * sizeof( mbedtls_mps_transform_wrap_t ) );
     chunks[0] = malloc( num_epochs * sizeof( typed_data_chunk* ) );
     chunks[1] = malloc( num_epochs * sizeof( typed_data_chunk* ) );
     chunks_per_epoch[0] = malloc( num_epochs * sizeof( size_t ) );
@@ -7776,8 +7791,8 @@ void mbedtls_mps_l3_random( int allocator_buffer_sz,
         size_t chunks_in_epoch;
         printf( "Initialize epoch %u\n", (unsigned) id );
 
-        epochs[0][id] = malloc( sizeof( mbedtls_mps_transform_t ) );
-        epochs[1][id] = malloc( sizeof( mbedtls_mps_transform_t ) );
+        epochs[0][id] = malloc( sizeof( mbedtls_mps_transform_wrap_t ) );
+        epochs[1][id] = malloc( sizeof( mbedtls_mps_transform_wrap_t ) );
         TEST_ASSERT( epochs[0][id] != NULL && epochs[1][id] != NULL );
 
 #if defined(TEST_SUITE_MPS_NO_SSL)
@@ -8438,8 +8453,8 @@ void mbedtls_mps_l4_basic_handshake(
     size_t additional_fetch = partial_commit ? 10 : 0;
 
     /* Dummy record transformations for epoch 0 */
-    mbedtls_mps_transform_t *dummy_c = malloc( sizeof( mbedtls_mps_transform_t ) );
-    mbedtls_mps_transform_t *dummy_s = malloc( sizeof( mbedtls_mps_transform_t ) );
+    mbedtls_mps_transform_wrap_t *dummy_c = malloc( sizeof( mbedtls_mps_transform_wrap_t ) );
+    mbedtls_mps_transform_wrap_t *dummy_s = malloc( sizeof( mbedtls_mps_transform_wrap_t ) );
 
 #if defined(TEST_SUITE_MPS_NO_SSL)
     ((void) real_transforms);
@@ -8577,15 +8592,15 @@ void mbedtls_mps_l4_warning( int mode,
     mbedtls_mps_epoch_id srv_epoch[2];
 
     /* Dummy record transformations for epoch 0 */
-    mbedtls_mps_transform_t *dummy_c[2];
-    mbedtls_mps_transform_t *dummy_s[2];
+    mbedtls_mps_transform_wrap_t *dummy_c[2];
+    mbedtls_mps_transform_wrap_t *dummy_s[2];
 
     mbedtls_mps_alert_t srv_alert;
 
-    dummy_c[0] = malloc( sizeof( mbedtls_mps_transform_t ) );
-    dummy_c[1] = malloc( sizeof( mbedtls_mps_transform_t ) );
-    dummy_s[0] = malloc( sizeof( mbedtls_mps_transform_t ) );
-    dummy_s[1] = malloc( sizeof( mbedtls_mps_transform_t ) );
+    dummy_c[0] = malloc( sizeof( mbedtls_mps_transform_wrap_t ) );
+    dummy_c[1] = malloc( sizeof( mbedtls_mps_transform_wrap_t ) );
+    dummy_s[0] = malloc( sizeof( mbedtls_mps_transform_wrap_t ) );
+    dummy_s[1] = malloc( sizeof( mbedtls_mps_transform_wrap_t ) );
     TEST_ASSERT( dummy_c[0] != NULL && dummy_c[1] != NULL &&
                  dummy_s[0] != NULL && dummy_s[1] != NULL );
 
@@ -8697,13 +8712,13 @@ void mbedtls_mps_l4_ccs( int mode,
     mbedtls_mps_epoch_id srv_epoch[2];
 
     /* Dummy record transformations for epoch 0 */
-    mbedtls_mps_transform_t *dummy_c[2];
-    mbedtls_mps_transform_t *dummy_s[2];
+    mbedtls_mps_transform_wrap_t *dummy_c[2];
+    mbedtls_mps_transform_wrap_t *dummy_s[2];
 
-    dummy_c[0] = malloc( sizeof( mbedtls_mps_transform_t ) );
-    dummy_c[1] = malloc( sizeof( mbedtls_mps_transform_t ) );
-    dummy_s[0] = malloc( sizeof( mbedtls_mps_transform_t ) );
-    dummy_s[1] = malloc( sizeof( mbedtls_mps_transform_t ) );
+    dummy_c[0] = malloc( sizeof( mbedtls_mps_transform_wrap_t ) );
+    dummy_c[1] = malloc( sizeof( mbedtls_mps_transform_wrap_t ) );
+    dummy_s[0] = malloc( sizeof( mbedtls_mps_transform_wrap_t ) );
+    dummy_s[1] = malloc( sizeof( mbedtls_mps_transform_wrap_t ) );
     TEST_ASSERT( dummy_c[0] != NULL && dummy_c[1] != NULL &&
                  dummy_s[0] != NULL && dummy_s[1] != NULL );
 
@@ -8831,13 +8846,13 @@ void mbedtls_mps_l4_hs_inconsistent_continuation( int variant )
     mbedtls_mps_handshake_in hs_in_srv;
 
     /* Dummy record transformations for epoch 0 */
-    mbedtls_mps_transform_t *dummy_c[2];
-    mbedtls_mps_transform_t *dummy_s[2];
+    mbedtls_mps_transform_wrap_t *dummy_c[2];
+    mbedtls_mps_transform_wrap_t *dummy_s[2];
 
-    dummy_c[0] = malloc( sizeof( mbedtls_mps_transform_t ) );
-    dummy_c[1] = malloc( sizeof( mbedtls_mps_transform_t ) );
-    dummy_s[0] = malloc( sizeof( mbedtls_mps_transform_t ) );
-    dummy_s[1] = malloc( sizeof( mbedtls_mps_transform_t ) );
+    dummy_c[0] = malloc( sizeof( mbedtls_mps_transform_wrap_t ) );
+    dummy_c[1] = malloc( sizeof( mbedtls_mps_transform_wrap_t ) );
+    dummy_s[0] = malloc( sizeof( mbedtls_mps_transform_wrap_t ) );
+    dummy_s[1] = malloc( sizeof( mbedtls_mps_transform_wrap_t ) );
     TEST_ASSERT( dummy_c[0] != NULL && dummy_c[1] != NULL &&
                  dummy_s[0] != NULL && dummy_s[1] != NULL );
 
@@ -9072,8 +9087,8 @@ void mbedtls_mps_l4_disruption( int mode,
     mbedtls_mps_handshake_in hs_in;
 
     /* Dummy record transformations for epoch 0 */
-    mbedtls_mps_transform_t *dummy_c = malloc( sizeof( mbedtls_mps_transform_t ) );
-    mbedtls_mps_transform_t *dummy_s = malloc( sizeof( mbedtls_mps_transform_t ) );
+    mbedtls_mps_transform_wrap_t *dummy_c = malloc( sizeof( mbedtls_mps_transform_wrap_t ) );
+    mbedtls_mps_transform_wrap_t *dummy_s = malloc( sizeof( mbedtls_mps_transform_wrap_t ) );
 
     build_mock_transforms( dummy_c, dummy_s, 1, 5 );
 
@@ -9293,8 +9308,8 @@ void mbedtls_mps_l4_dtls_fragmentation( int allocator_buffer_sz,
     mps_l3_handshake_in hs_in;
 
     /* Dummy record transformations for epoch 0 */
-    mbedtls_mps_transform_t *dummy_c = malloc( sizeof( mbedtls_mps_transform_t ) );
-    mbedtls_mps_transform_t *dummy_s = malloc( sizeof( mbedtls_mps_transform_t ) );
+    mbedtls_mps_transform_wrap_t *dummy_c = malloc( sizeof( mbedtls_mps_transform_wrap_t ) );
+    mbedtls_mps_transform_wrap_t *dummy_s = malloc( sizeof( mbedtls_mps_transform_wrap_t ) );
 
     size_t hs_len = L4_DEFAULT_QUEUE_SIZE;
     size_t hs_offset;
@@ -9439,8 +9454,8 @@ void mbedtls_mps_l4_dtls_reassembly( int allocator_buffer_sz,
     mbedtls_mps_handshake_in  hs_in;
 
     /* Dummy record transformations for epoch 0 */
-    mbedtls_mps_transform_t *dummy_c = malloc( sizeof( mbedtls_mps_transform_t ) );
-    mbedtls_mps_transform_t *dummy_s = malloc( sizeof( mbedtls_mps_transform_t ) );
+    mbedtls_mps_transform_wrap_t *dummy_c = malloc( sizeof( mbedtls_mps_transform_wrap_t ) );
+    mbedtls_mps_transform_wrap_t *dummy_s = malloc( sizeof( mbedtls_mps_transform_wrap_t ) );
 
     size_t hs_len    = 100;
 
@@ -9680,7 +9695,7 @@ void mbedtls_mps_l4_flight_exchange( int mode,
 
     dummy_cb_ctx *cb_ctxs;
 
-    mbedtls_mps_transform_t **epochs[2];
+    mbedtls_mps_transform_wrap_t **epochs[2];
     size_t num_epochs;
 
     mbedtls_mps_epoch_id next_epoch[2];
@@ -9704,14 +9719,14 @@ void mbedtls_mps_l4_flight_exchange( int mode,
             break;
     }
 
-    epochs[0] = malloc( num_epochs * sizeof( mbedtls_mps_transform_t ) );
-    epochs[1] = malloc( num_epochs * sizeof( mbedtls_mps_transform_t ) );
+    epochs[0] = malloc( num_epochs * sizeof( mbedtls_mps_transform_wrap_t ) );
+    epochs[1] = malloc( num_epochs * sizeof( mbedtls_mps_transform_wrap_t ) );
 
     TEST_ASSERT( epochs[1] != NULL && epochs[0] != NULL );
     for( size_t id=0; id < (unsigned) num_epochs; id++ )
     {
-        epochs[0][id] = malloc( sizeof( mbedtls_mps_transform_t ) );
-        epochs[1][id] = malloc( sizeof( mbedtls_mps_transform_t ) );
+        epochs[0][id] = malloc( sizeof( mbedtls_mps_transform_wrap_t ) );
+        epochs[1][id] = malloc( sizeof( mbedtls_mps_transform_wrap_t ) );
         TEST_ASSERT( epochs[1][id] != NULL && epochs[0][id] != NULL );
 
         build_mock_transforms( epochs[0][id], epochs[1][id],
@@ -9998,7 +10013,7 @@ void mbedtls_mps_l4_flight_exchange( int mode,
 
                 /* MPS owns the transform once passed to it, hence will destroy
                  * it when being freed. Set it up again. */
-                epochs[1][0] = malloc( sizeof( mbedtls_mps_transform_t ) );
+                epochs[1][0] = malloc( sizeof( mbedtls_mps_transform_wrap_t ) );
                 epochs[1][0]->type = 0;
                 epochs[1][0]->mock.enabled = 1;
                 epochs[1][0]->mock.pad = 5;

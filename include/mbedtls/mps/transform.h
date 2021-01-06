@@ -30,8 +30,7 @@
 /*
  * \brief   Opaque representation of record protection mechanisms.
  */
-struct mbedtls_mps_transform_t;
-typedef struct mbedtls_mps_transform_t mbedtls_mps_transform_t;
+typedef void mbedtls_mps_transform_t;
 
 /*
  * \brief         Structure representing an inclusion of two buffers.
@@ -64,7 +63,8 @@ typedef struct
                          *   surrounded by a parent buffer. */
 } mps_rec;
 
-extern int transform_free( mbedtls_mps_transform_t *transform );
+typedef int mbedtls_mps_transform_free_t( void *transform );
+extern mbedtls_mps_transform_free_t *mbedtls_mps_transform_free;
 
 /*
  * \brief Encrypt a record using a particular protection mechanism.
@@ -79,9 +79,12 @@ extern int transform_free( mbedtls_mps_transform_t *transform );
  * \return            \c 0 on success.
  * \return            A negative error code on failure.
  */
-extern int transform_encrypt( mbedtls_mps_transform_t *transform, mps_rec *rec,
-                              int (*f_rng)(void *, unsigned char *, size_t),
-                              void *p_rng );
+typedef int mbedtls_mps_transform_encrypt_t(
+    void *transform, mps_rec *rec,
+    int (*f_rng)(void *, unsigned char *, size_t),
+    void *p_rng );
+
+extern mbedtls_mps_transform_encrypt_t *mbedtls_mps_transform_encrypt;
 
 /*
  * \brief Decrypt a record using a particular protection mechanism.
@@ -94,8 +97,10 @@ extern int transform_encrypt( mbedtls_mps_transform_t *transform, mps_rec *rec,
  * \return            \c 0 on success.
  * \return            A negative error code on failure.
  */
-extern int transform_decrypt( mbedtls_mps_transform_t *transform,
-                              mps_rec *rec );
+typedef int mbedtls_mps_transform_decrypt_t( void *transform,
+                                             mps_rec *rec );
+
+extern mbedtls_mps_transform_decrypt_t *mbedtls_mps_transform_decrypt;
 
 /*
  * \brief Obtain the encryption expansion for a record protection mechanism.
@@ -113,7 +118,9 @@ extern int transform_decrypt( mbedtls_mps_transform_t *transform,
  * \return            \c 0 on success.
  * \return            A negative error code on failure.
  */
-extern int transform_get_expansion( mbedtls_mps_transform_t *transform,
-                                    size_t *pre_exp, size_t *post_exp );
+typedef int mbedtls_mps_transform_get_expansion_t( void *transform,
+    size_t *pre_exp, size_t *post_exp );
+
+extern mbedtls_mps_transform_get_expansion_t *mbedtls_mps_transform_get_expansion;
 
 #endif /* MBEDTLS_MPS_TRANSFORM_H */

@@ -116,6 +116,7 @@ set(src_tls
     mps/mps.c
     mps/reader.c
     mps/writer.c
+    mps/transform.c
 )
 
 if(CMAKE_COMPILER_IS_GNUCC)
