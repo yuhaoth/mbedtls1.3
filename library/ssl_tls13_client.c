@@ -1233,9 +1233,17 @@ static int ssl_client_hello_write_partial( mbedtls_ssl_context* ssl,
 static int ssl_client_hello_process( mbedtls_ssl_context* ssl )
 {
     int ret = 0;
+#if defined(MBEDTLS_SSL_USE_MPS)
+    size_t len_without_binders;
+    mbedtls_mps_handshake_out msg;
+    unsigned char *buf;
+    mbedtls_mps_size_t buf_len, msg_len;
+#else
     size_t msg_len, len_without_binders;
     unsigned char *buf;
     size_t len;
+#endif /* MBEDTLS_SSL_USE_MPS */
+
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> write client hello" ) );
 
     if( ssl->handshake->state_local.cli_hello_out.preparation_done == 0 )
@@ -1243,6 +1251,67 @@ static int ssl_client_hello_process( mbedtls_ssl_context* ssl )
         MBEDTLS_SSL_PROC_CHK( ssl_client_hello_prepare( ssl ) );
         ssl->handshake->state_local.cli_hello_out.preparation_done = 1;
     }
+
+#if defined(MBEDTLS_SSL_USE_MPS)
+
+    /* Make sure we can write a new message. */
+    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_flush( &ssl->mps.l4 ) );
+
+    msg.type   = MBEDTLS_SSL_HS_CLIENT_HELLO;
+    msg.length = MBEDTLS_MPS_SIZE_UNKNOWN;
+    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_write_handshake( &ssl->mps.l4,
+                                                       &msg, NULL, NULL ) );
+
+    /* Request write-buffer */
+    MBEDTLS_SSL_PROC_CHK( mbedtls_writer_get_ext( msg.handle, MBEDTLS_MPS_SIZE_MAX,
+                                                  &buf, &buf_len ) );
+
+    MBEDTLS_SSL_PROC_CHK( ssl_client_hello_write_partial( ssl, buf, buf_len,
+                                                  &len_without_binders,
+                                                  &msg_len ) );
+
+    {
+        unsigned char hs_hdr[4];
+
+        /* Build HS header for checksum update. */
+        hs_hdr[0] = MBEDTLS_SSL_HS_CLIENT_HELLO;
+        hs_hdr[1] = (unsigned char)( msg_len >> 16 );
+        hs_hdr[2] = (unsigned char)( msg_len >>  8 );
+        hs_hdr[3] = (unsigned char)( msg_len >>  0 );
+
+        ssl->handshake->update_checksum( ssl, hs_hdr, sizeof( hs_hdr ) );
+
+        /* Manually update the checksum with ClientHello using dummy PSK binders. */
+        ssl->handshake->update_checksum( ssl, buf, len_without_binders );
+    }
+
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && \
+    defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
+    /* Patch the PSK binder after updating the HS checksum. */
+    {
+
+        size_t dummy0, dummy1;
+        mbedtls_ssl_write_pre_shared_key_ext( ssl,
+                                              buf + len_without_binders,
+                                              buf + msg_len,
+                                              &dummy0, &dummy1,
+                                              SSL_WRITE_PSK_EXT_ADD_PSK_BINDERS );
+
+        /* Manually update the checksum with ClientHello using dummy PSK binders. */
+        ssl->handshake->update_checksum( ssl, buf + len_without_binders,
+                                         msg_len - len_without_binders );
+    }
+#endif /* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED &&
+          MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+
+    /* Commit message */
+    MBEDTLS_SSL_PROC_CHK( mbedtls_writer_commit_partial_ext( msg.handle,
+                                                             buf_len - msg_len ) );
+
+    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_dispatch( &ssl->mps.l4 ) );
+    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_flush( &ssl->mps.l4 ) );
+
+#else /* MBEDTLS_SSL_USE_MPS */
 
     /* Make sure we can write a new message. */
     MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_flush_output( ssl ) );
@@ -1311,6 +1380,8 @@ static int ssl_client_hello_process( mbedtls_ssl_context* ssl )
     /* Dispatch message */
     MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_write_handshake_msg_ext(
                               ssl, 0 /* no checksum update */ ) );
+
+#endif /* MBEDTLS_SSL_USE_MPS */
 
     /* NOTE: With the new messaging layer, the postprocessing
      *       step might come after the dispatching step if the
@@ -1398,7 +1469,6 @@ static int ssl_client_hello_write_partial( mbedtls_ssl_context* ssl,
     size_t total_ext_len;        /* Size of list of extensions    */
 
     /* Length information */
-    size_t const tls_hs_hdr_len = 4;
     size_t rand_bytes_len;
     size_t version_len;
 
@@ -1448,14 +1518,21 @@ static int ssl_client_hello_write_partial( mbedtls_ssl_context* ssl,
         version_len = 2;
     }
 
-    if( buflen < tls_hs_hdr_len + version_len + rand_bytes_len )
+    /* With MPS we don't need to write the handshake header. */
+#if !defined(MBEDTLS_SSL_USE_MPS)
     {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "buffer too small to hold ClientHello" ) );
-        return( MBEDTLS_ERR_SSL_BUFFER_TOO_SMALL );
-    }
+        size_t const tls_hs_hdr_len = 4;
 
-    buf += tls_hs_hdr_len;
-    buflen -= tls_hs_hdr_len;
+        if( buflen < tls_hs_hdr_len + version_len + rand_bytes_len )
+        {
+            MBEDTLS_SSL_DEBUG_MSG( 1, ( "buffer too small to hold ClientHello" ) );
+            return( MBEDTLS_ERR_SSL_BUFFER_TOO_SMALL );
+        }
+
+        buf += tls_hs_hdr_len;
+        buflen -= tls_hs_hdr_len;
+    }
+#endif /* MBEDTLS_SSL_USE_MPS */
 
     if( ssl->conf->max_major_ver == 0 )
     {
