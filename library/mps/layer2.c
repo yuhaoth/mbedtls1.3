@@ -135,6 +135,7 @@ MBEDTLS_MPS_STATIC int l2_type_empty_allowed( mbedtls_mps_l2 *ctx,
  * Epoch handling
  */
 
+#if defined(MBEDTLS_MPS_TRACE)
 static inline const char * l2_epoch_usage_to_string(
     mbedtls_mps_epoch_usage usage )
 {
@@ -150,6 +151,7 @@ static inline const char * l2_epoch_usage_to_string(
 
     return( "NONE" );
 }
+#endif /* MBEDTLS_MPS_TRACE */
 
 /* Internal macro used to indicate internal usage
  * of an epoch, e.g. because data it still pending
