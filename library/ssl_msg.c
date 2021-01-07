@@ -580,6 +580,146 @@ static void ssl_build_record_nonce( unsigned char *dst_iv,
 }
 #endif /* MBEDTLS_GCM_C || MBEDTLS_CCM_C || MBEDTLS_CHACHAPOLY_C */
 
+#if defined(MBEDTLS_SSL_USE_MPS)
+int mbedtls_mps_transform_encrypt_default(
+    void* transform_,
+    mps_rec *rec,
+    int (*f_rng)(void *, unsigned char *, size_t),
+    void *p_rng )
+{
+    int ret;
+    mbedtls_ssl_transform *transform = (mbedtls_ssl_transform*) transform_;
+    mbedtls_record rec_alt;
+
+    if( transform == NULL )
+    {
+        /* We model no encryption as the NULL transform. */
+        return( 0 );
+    }
+
+    /* TEMPORARY:
+     * Convert between different versions of record structure.
+     * This needs to be uniformized at some point.
+     */
+
+    rec_alt.buf = rec->buf.buf;
+    rec_alt.buf_len = rec->buf.buf_len;
+    rec_alt.data_len = rec->buf.data_len;
+    rec_alt.data_offset = rec->buf.data_offset;
+    rec_alt.type = rec->type;
+    rec_alt.ctr[0] = ( rec->ctr[1] >> 24 ) & 0xFF;
+    rec_alt.ctr[1] = ( rec->ctr[1] >> 16 ) & 0xFF;
+    rec_alt.ctr[2] = ( rec->ctr[1] >>  8 ) & 0xFF;
+    rec_alt.ctr[3] = ( rec->ctr[1] >>  0 ) & 0xFF;
+    rec_alt.ctr[4] = ( rec->ctr[0] >> 24 ) & 0xFF;
+    rec_alt.ctr[5] = ( rec->ctr[0] >> 16 ) & 0xFF;
+    rec_alt.ctr[6] = ( rec->ctr[0] >>  8 ) & 0xFF;
+    rec_alt.ctr[7] = ( rec->ctr[0] >>  0 ) & 0xFF;
+    mbedtls_ssl_write_version( rec->major_ver, rec->minor_ver,
+                   MBEDTLS_MPS_MODE_STREAM, &rec_alt.ver[0] );
+
+    ret = mbedtls_ssl_encrypt_buf( NULL, transform, &rec_alt, f_rng, p_rng );
+    if( ret != 0 )
+        return( ret );
+
+    rec->buf.data_offset = rec_alt.data_offset;
+    rec->buf.data_len = rec_alt.data_len;
+
+    return( 0 );
+}
+
+int mbedtls_mps_transform_decrypt_default( void *transform_, mps_rec *rec )
+{
+    mbedtls_ssl_transform *transform = (mbedtls_ssl_transform*) transform_;
+
+    int ret;
+    mbedtls_record rec_alt;
+
+    if( transform == NULL )
+    {
+        /* We model no encryption as the NULL transform. */
+        return( 0 );
+    }
+
+    /* TEMPORARY:
+     * Convert between different versions of record structure.
+     * This needs to be uniformized at some point.
+     */
+
+    rec_alt.buf = rec->buf.buf;
+    rec_alt.buf_len = rec->buf.buf_len;
+    rec_alt.data_len = rec->buf.data_len;
+    rec_alt.data_offset = rec->buf.data_offset;
+    rec_alt.type = rec->type;
+    rec_alt.ctr[0] = ( rec->ctr[1] >> 24 ) & 0xFF;
+    rec_alt.ctr[1] = ( rec->ctr[1] >> 16 ) & 0xFF;
+    rec_alt.ctr[2] = ( rec->ctr[1] >>  8 ) & 0xFF;
+    rec_alt.ctr[3] = ( rec->ctr[1] >>  0 ) & 0xFF;
+    rec_alt.ctr[4] = ( rec->ctr[0] >> 24 ) & 0xFF;
+    rec_alt.ctr[5] = ( rec->ctr[0] >> 16 ) & 0xFF;
+    rec_alt.ctr[6] = ( rec->ctr[0] >>  8 ) & 0xFF;
+    rec_alt.ctr[7] = ( rec->ctr[0] >>  0 ) & 0xFF;
+    mbedtls_ssl_write_version( rec->major_ver, rec->minor_ver,
+                               MBEDTLS_MPS_MODE_STREAM, &rec_alt.ver[0] );
+
+    ret = mbedtls_ssl_decrypt_buf( NULL, transform, &rec_alt );
+    if( ret != 0 )
+        return( ret );
+
+    rec->buf.data_offset = rec_alt.data_offset;
+    rec->buf.data_len = rec_alt.data_len;
+
+    return( 0 );
+}
+
+int mbedtls_mps_transform_get_expansion_default( void *transform_,
+                                 size_t *pre_exp, size_t *post_exp )
+{
+    mbedtls_ssl_transform * transform = (mbedtls_ssl_transform*) transform_;
+
+    if( transform == NULL )
+    {
+        /* We model no encryption as the NULL transform. */
+        *pre_exp  = 0;
+        *post_exp = 0;
+        return( 0 );
+    }
+
+    /* For the moment copied from mbedtls_ssl_get_record_expansion */
+    *pre_exp = transform->ivlen - transform->fixed_ivlen;
+    switch( mbedtls_cipher_get_cipher_mode(
+                &transform->cipher_ctx_enc ) )
+    {
+    case MBEDTLS_MODE_GCM:
+    case MBEDTLS_MODE_CCM:
+        *post_exp = transform->taglen;
+        break;
+
+    case MBEDTLS_MODE_STREAM:
+        *post_exp = 0;
+        break;
+
+    case MBEDTLS_MODE_CBC:
+        *post_exp = transform->maclen
+            + mbedtls_cipher_get_block_size(
+                &transform->cipher_ctx_enc );
+        break;
+
+    default:
+        return( -1 );
+    }
+
+    return( 0 );
+}
+
+int mbedtls_mps_transform_free_default( void *transform_ )
+{
+    mbedtls_ssl_transform * transform = (mbedtls_ssl_transform*) transform_;
+    mbedtls_ssl_transform_free( transform );
+    return( 0 );
+}
+#endif /* MBEDTLS_SSL_USE_MPS */
+
 int mbedtls_ssl_encrypt_buf( mbedtls_ssl_context *ssl,
                              mbedtls_ssl_transform *transform,
                              mbedtls_record *rec,

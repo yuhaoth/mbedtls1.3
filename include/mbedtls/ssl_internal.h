@@ -1810,6 +1810,19 @@ int mbedtls_ssl_decrypt_buf( mbedtls_ssl_context const *ssl,
                              mbedtls_ssl_transform *transform,
                              mbedtls_record *rec );
 
+#if defined(MBEDTLS_SSL_USE_MPS)
+int mbedtls_mps_transform_free_default( void *transform );
+int mbedtls_mps_transform_encrypt_default(
+    void *transform, mps_rec *rec,
+    int (*f_rng)(void *, unsigned char *, size_t),
+    void *p_rng );
+int mbedtls_mps_transform_decrypt_default( void *transform,
+                                           mps_rec *rec );
+int mbedtls_mps_transform_get_expansion_default( void *transform,
+                                                 size_t *pre_exp,
+                                                 size_t *post_exp );
+#endif /* MBEDTLS_SSL_USE_MPS */
+
 /* Length of the "epoch" field in the record header */
 static inline size_t mbedtls_ssl_ep_len( const mbedtls_ssl_context *ssl )
 {

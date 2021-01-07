@@ -33,6 +33,14 @@
 
 #include "mbedtls/ssl_ciphersuites.h"
 
+#if defined(MBEDTLS_SSL_USE_MPS)
+#include "mbedtls/mps/mps.h"
+#include "mbedtls/mps/layer1.h"
+#include "mbedtls/mps/layer2.h"
+#include "mbedtls/mps/layer3.h"
+#include "mbedtls/mps/allocator.h"
+#endif /* MBEDTLS_SSL_USE_MPS */
+
 #if defined(MBEDTLS_X509_CRT_PARSE_C)
 #include "mbedtls/x509_crt.h"
 #include "mbedtls/x509_crl.h"
@@ -1606,6 +1614,24 @@ struct mbedtls_ssl_context
     mbedtls_ssl_transform *transform_earlydata;
     mbedtls_ssl_transform *transform_application;
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+
+#if defined(MBEDTLS_SSL_USE_MPS)
+    /* MPS structures */
+    struct
+    {
+        /* TODO: In a context where we use all MPS layers together,
+         *       the references between them should be inlined and
+         *       their configurations consolidated. At the moment,
+         *       we're wasting a bit of memory here. (On the other
+         *       hand, this modularity is very useful for standalone
+         *       testing of the various components). */
+        mps_alloc alloc;
+        mps_l1 l1;
+        mbedtls_mps_l2 l2;
+        mps_l3 l3;
+        mbedtls_mps l4;
+    } mps;
+#endif /* MBEDTLS_SSL_USE_MPS */
 
     /*
      * Timers
