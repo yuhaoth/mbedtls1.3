@@ -45,6 +45,7 @@
     ( -( MBEDTLS_WRITER_ERR_BASE | (code) ) )
 
 #include <stdint.h>
+#include <stdio.h>
 #include "error.h"
 
 /**
@@ -521,7 +522,7 @@ typedef unsigned mbedtls_mps_hs_seq_nr_t;
 typedef uint16_t mbedtls_mps_stored_size_t;
 typedef int16_t mbedtls_mps_stored_opt_size_t;
 #else
-typedef unsigned mbedtls_mps_stored_size_t;
+typedef size_t mbedtls_mps_stored_size_t;
 typedef int mbedtls_mps_stored_opt_size_t;
 #endif /* MBEDTLS_MPS_STORED_SMALL_TYPES */
 
@@ -544,7 +545,7 @@ typedef int mbedtls_mps_stored_opt_size_t;
 #if defined(MBEDTLS_MPS_INTERNAL_SMALL_TYPES)
 typedef mbedtls_mps_stored_size_t mbedtls_mps_size_t;
 #else
-typedef unsigned mbedtls_mps_size_t;
+typedef size_t mbedtls_mps_size_t;
 #endif /* MBEDTLS_MPS_INTERNAL_SMALL_TYPES */
 
 #if (mbedtls_mps_size_t) -1 > (mbedtls_mps_stored_size_t) -1
