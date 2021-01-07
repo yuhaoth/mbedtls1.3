@@ -1314,17 +1314,15 @@ run_test    "TLS 1.3, TLS_AES_128_CCM_SHA256, ECDHE-ECDSA, empty client certific
 
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
 run_test    "TLS 1.3 TLS_AES_256_GCM_SHA384, ECDHE-ECDSA, SRV auth" \
-            "$P_SRV debug_level=5 force_version=tls1_3 key_exchange_modes=ecdhe_ecdsa ca_file=certs/ca.crt crt_file=certs/server.crt key_file=certs/server.key" \
-            "$P_CLI debug_level=5 force_version=tls1_3 server_name=localhost force_ciphersuite=TLS_AES_256_GCM_SHA384 key_exchange_modes=ecdhe_ecdsa ca_file=certs/ca.crt crt_file=none key_file=none" \
+            "$P_SRV debug_level=5 force_version=tls1_3 key_exchange_modes=ecdhe_ecdsa" \
+            "$P_CLI debug_level=5 force_version=tls1_3 server_name=localhost force_ciphersuite=TLS_AES_256_GCM_SHA384 key_exchange_modes=ecdhe_ecdsa" \
             0 \
 	    -s "Verifying peer X.509 certificate... failed"                                        \
 	    -s "Certificate verification was skipped"                                              \
             -c "Protocol is TLSv1.3"                                                               \
             -c "Ciphersuite is TLS_AES_256_GCM_SHA384"                                             \
 	    -c "Verifying peer X.509 certificate... ok"                                            \
-	    -c "subject name      : C=AU, ST=Some-State, O=Internet Widgits Pty Ltd, CN=localhost" \
-	    -c "signed using      : ECDSA with SHA384"                                             \
-	    -c "EC key size       : 384 bits"
+	    -c "subject name      : C=NL, O=PolarSSL, CN=localhost"
 
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
 requires_config_enabled MBEDTLS_DEBUG_C
@@ -1401,17 +1399,15 @@ run_test    "TLS 1.3, TLS_AES_256_GCM_SHA384, ECDHE-ECDSA, CLI+SRV auth, with ti
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
 requires_config_enabled MBEDTLS_DEBUG_C
 run_test    "TLS 1.3, TLS_AES_256_GCM_SHA384 with ECDHE-ECDSA (server auth only) with ticket" \
-            "$P_SRV debug_level=5 force_version=tls1_3 key_exchange_modes=all tickets=1 ca_file=certs/ca.crt crt_file=certs/server.crt key_file=certs/server.key" \
-            "$P_CLI debug_level=5 force_version=tls1_3 server_name=localhost force_ciphersuite=TLS_AES_256_GCM_SHA384 key_exchange_modes=ecdhe_ecdsa ca_file=certs/ca.crt crt_file=none key_file=none reconnect=1 tickets=1" \
+            "$P_SRV debug_level=5 force_version=tls1_3 key_exchange_modes=all tickets=1" \
+            "$P_CLI debug_level=5 force_version=tls1_3 server_name=localhost force_ciphersuite=TLS_AES_256_GCM_SHA384 key_exchange_modes=ecdhe_ecdsa reconnect=1 tickets=1" \
             0 \
 	    -s "Verifying peer X.509 certificate... failed"                                        \
 	    -s "Certificate verification was skipped"                                              \
             -c "Protocol is TLSv1.3"                                                               \
             -c "Ciphersuite is TLS_AES_256_GCM_SHA384"                                             \
 	    -c "Verifying peer X.509 certificate... ok"                                            \
-	    -c "subject name      : C=AU, ST=Some-State, O=Internet Widgits Pty Ltd, CN=localhost" \
-	    -c "signed using      : ECDSA with SHA384"                                             \
-	    -c "EC key size       : 384 bits"                                                      \
+	    -c "subject name      : C=NL, O=PolarSSL, CN=localhost"                                \
 	    -c "got ticket"                                                                        \
 	    -c "client hello, adding psk_key_exchange_modes extension"                             \
 	    -c "client hello, adding pre_shared_key extension"                                     \
