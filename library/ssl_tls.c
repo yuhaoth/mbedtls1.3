@@ -7425,7 +7425,7 @@ static int ssl_preset_suiteb_signature_algorithms_tls13[] = {
 /* TBD: This signature algorithm is not yet fully implemented. */
 //    SIGNATURE_ECDSA_SECP521r1_SHA512,
 #endif /* MBEDTLS_SHA512_C && MBEDTLS_ECP_DP_SECP521R1_ENABLED */
-#if defined(MBEDTLS_RSA_PSS_RSAE_SHA256)
+#if defined(MBEDTLS_X509_RSASSA_PSS_SUPPORT)
 	SIGNATURE_RSA_PSS_RSAE_SHA256,
 #endif
     SIGNATURE_NONE

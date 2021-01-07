@@ -2424,6 +2424,8 @@ static int ssl_read_certificate_verify_parse( mbedtls_ssl_context* ssl,
     mbedtls_md_type_t md_alg;
     unsigned char verify_hash[ MBEDTLS_MD_MAX_SIZE ];
     size_t verify_hash_len;
+    mbedtls_pk_rsassa_pss_options* opts_ptr = NULL;
+    mbedtls_pk_rsassa_pss_options opts;
 
     if( buflen < mbedtls_ssl_hs_hdr_len( ssl ) )
     {
@@ -2464,7 +2466,7 @@ static int ssl_read_certificate_verify_parse( mbedtls_ssl_context* ssl,
             md_alg = MBEDTLS_MD_SHA512;
             sig_alg = MBEDTLS_PK_ECDSA;
             break;
-#if defined(MBEDTLS_RSA_PSS_RSAE_SHA256)
+#if defined(MBEDTLS_X509_RSASSA_PSS_SUPPORT)
         case SIGNATURE_RSA_PSS_RSAE_SHA256:
             md_alg = MBEDTLS_MD_SHA256;
             sig_alg = MBEDTLS_PK_RSASSA_PSS;
@@ -2543,8 +2545,6 @@ static int ssl_read_certificate_verify_parse( mbedtls_ssl_context* ssl,
        return( MBEDTLS_ERR_SSL_BAD_HS_CERTIFICATE_VERIFY );
     }
 
-    mbedtls_pk_rsassa_pss_options* opts_ptr = NULL;
-    mbedtls_pk_rsassa_pss_options opts;
     if (sig_alg == MBEDTLS_PK_RSASSA_PSS) {
       opts.mgf1_hash_id = md_alg;
       const mbedtls_md_info_t* md_info;
