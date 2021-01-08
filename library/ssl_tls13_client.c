@@ -2120,6 +2120,7 @@ static int ssl_parse_server_psk_identity_ext( mbedtls_ssl_context *ssl,
 
 #endif
 
+#if defined(MBEDTLS_ZERO_RTT)
 /* Early Data Extension
 *
 * struct {} Empty;
@@ -2132,22 +2133,26 @@ static int ssl_parse_server_psk_identity_ext( mbedtls_ssl_context *ssl,
 *   };
 * } EarlyDataIndication;
 */
-int ssl_parse_early_data_ext(mbedtls_ssl_context *ssl,
-    const unsigned char *buf, size_t len) {
+int ssl_parse_early_data_ext( mbedtls_ssl_context *ssl,
+    const unsigned char *buf, size_t len )
+{
   ( ( void )buf );
-  if (ssl->state == MBEDTLS_SSL_ENCRYPTED_EXTENSIONS
-      && ssl->handshake->early_data == MBEDTLS_SSL_EARLY_DATA_ON
-      && len == 0) {
+  if ( ssl->state == MBEDTLS_SSL_ENCRYPTED_EXTENSIONS &&
+      ssl->handshake->early_data == MBEDTLS_SSL_EARLY_DATA_ON &&
+      len == 0 )
+  {
     ssl->early_data_status = MBEDTLS_SSL_EARLY_DATA_ACCEPTED;
     return 0;
   }
-  return MBEDTLS_ERR_SSL_INTERNAL_ERROR;
+  return MBEDTLS_ERR_SSL_BAD_INPUT_DATA;
 }
 
-int mbedtls_ssl_get_early_data_status(mbedtls_ssl_context *ssl)
+int mbedtls_ssl_get_early_data_status( mbedtls_ssl_context *ssl )
 {
   return ssl->early_data_status;
 }
+#endif /* MBEDTLS_ZERO_RTT */
+
 #if ( defined(MBEDTLS_ECDH_C) || defined(MBEDTLS_ECDSA_C) )
 
 /* TODO: Code for MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED missing */
@@ -2766,6 +2771,7 @@ static int ssl_encrypted_extensions_parse( mbedtls_ssl_context* ssl,
                 break;
 #endif /* MBEDTLS_SSL_SERVER_NAME_INDICATION */
 
+#if defined(MBEDTLS_ZERO_RTT)
             case MBEDTLS_TLS_EXT_EARLY_DATA:
               MBEDTLS_SSL_DEBUG_MSG(3, ("found early data extension"));
 
@@ -2775,6 +2781,7 @@ static int ssl_encrypted_extensions_parse( mbedtls_ssl_context* ssl,
                 return(ret);
               }
               break;
+#endif /* MBEDTLS_ZERO_RTT */
             default:
                 MBEDTLS_SSL_DEBUG_MSG( 3, ( "unknown extension found: %d ( ignoring )", ext_id ) );
         }

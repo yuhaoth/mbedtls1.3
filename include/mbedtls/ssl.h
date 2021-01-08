@@ -787,18 +787,27 @@ typedef struct mbedtls_ssl_key_cert mbedtls_ssl_key_cert;
 typedef struct mbedtls_ssl_flight_item mbedtls_ssl_flight_item;
 #endif
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && defined(MBEDTLS_ZERO_RTT) && defined(MBEDTLS_SSL_CLI_C)
 #define MBEDTLS_SSL_EARLY_DATA_NOT_SENT       0
 #define MBEDTLS_SSL_EARLY_DATA_REJECTED       1
 #define MBEDTLS_SSL_EARLY_DATA_ACCEPTED       2
 
 /**
- * \brief get client early data state. This can only be called after handshake is completed
+ * \brief get client early data status.
  *
  * \param ssl        SSL context.
+ *
+ *
+ * \return         The early data status.
+ *
+ * \note           The status is initially set as not sent (MBEDTLS_SSL_EARLY_DATA_NOT_SENT).
+ *                 If the early data extension is sent by client, it will be set to
+ *                 rejected (MBEDTLS_SSL_EARLY_DATA_REJECTED).
+ *                 Once client receives early data extension from corresponding server response,
+ *                 the status will be set to accepted (MBEDTLS_SSL_EARLY_DATA_ACCEPTED)
  */
-int mbedtls_ssl_get_early_data_status(mbedtls_ssl_context *ssl);
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+int mbedtls_ssl_get_early_data_status( mbedtls_ssl_context *ssl );
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL && MBEDTLS_ZERO_RTT && MBEDTLS_SSL_CLI_C */
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && defined(MBEDTLS_SSL_NEW_SESSION_TICKET)
 
@@ -1749,12 +1758,12 @@ struct mbedtls_ssl_context
                             *   and #MBEDTLS_SSL_CID_DISABLED. */
 #endif /* MBEDTLS_SSL_DTLS_CONNECTION_ID */
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && defined(MBEDTLS_ZERO_RTT) && defined(MBEDTLS_SSL_CLI_C)
     /*
      * early data request state
      */
     int early_data_status;
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL && MBEDTLS_ZERO_RTT && MBEDTLS_SSL_CLI_C */
 
 };
 
