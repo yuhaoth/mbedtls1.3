@@ -1512,6 +1512,24 @@ run_test    "TLS 1.3, TLS_AES_128_CCM_SHA256 with ECDHE-ECDSA, SRV auth, HRR enf
             -c "Verifying peer X.509 certificate... ok" \
             -c "Key Exchange Mode is ECDHE-ECDSA"
 
+# test early data status - not sent
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+requires_config_enabled MBEDTLS_DEBUG_C
+run_test    "TLS 1.3, TLS_AES_256_GCM_SHA384, ext PSK, early data status - not sent" \
+            "$P_SRV debug_level=5 force_version=tls1_3 psk=010203 psk_identity=0a0b0c" \
+            "$P_CLI debug_level=5 force_version=tls1_3 force_ciphersuite=TLS_AES_256_GCM_SHA384 psk=010203 psk_identity=0a0b0c" \
+            0 \
+	    -c "early data status = 0"  \
+
+# test early data status - accepted
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+requires_config_enabled MBEDTLS_DEBUG_C
+run_test    "TLS 1.3, TLS_AES_256_GCM_SHA384, ext PSK, early data status - accepted" \
+            "$P_SRV debug_level=5 force_version=tls1_3 early_data=1 key_exchange_modes=psk psk=010203 psk_identity=0a0b0c" \
+            "$P_CLI debug_level=5 force_version=tls1_3 force_ciphersuite=TLS_AES_256_GCM_SHA384 key_exchange_modes=psk early_data=1 psk=010203 psk_identity=0a0b0c" \
+            0 \
+	    -c "early data status = 2"  \
+
 #
 # TLS 1.2 specific tests
 #
