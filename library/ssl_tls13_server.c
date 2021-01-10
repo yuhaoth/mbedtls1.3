@@ -521,7 +521,7 @@ int mbedtls_ssl_parse_new_session_ticket_server(
     if( ( ret = ssl->conf->f_ticket_parse( ssl->conf->p_ticket, ticket,
                                          ticket_buffer, len ) ) != 0 )
     {
-        mbedtls_platform_zeroize( &ticket, sizeof( mbedtls_ssl_ticket ) );
+        mbedtls_platform_zeroize( ticket, sizeof( mbedtls_ssl_ticket ) );
         mbedtls_free( ticket_buffer );
         if( ret == MBEDTLS_ERR_SSL_INVALID_MAC )
             MBEDTLS_SSL_DEBUG_MSG( 3, ( "ticket is not authentic" ) );
