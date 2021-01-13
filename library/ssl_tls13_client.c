@@ -2605,28 +2605,7 @@ cleanup:
 }
 
 static int ssl_encrypted_extensions_prepare( mbedtls_ssl_context* ssl ) {
-
-    int ret;
-    mbedtls_ssl_key_set traffic_keys;
-
-    /* Generate handshake keying material */
-    ret = mbedtls_ssl_handshake_key_derivation( ssl, &traffic_keys );
-    if( ret != 0 )
-    {
-        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_handshake_key_derivation", ret );
-        return( ret );
-    }
-
-    ret = mbedtls_ssl_tls13_build_transform( ssl, &traffic_keys, ssl->transform_handshake, 0 );
-    if( ret != 0 )
-    {
-        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_tls13_build_transform", ret );
-        return( ret );
-    }
-
-    /* Switch to new keys for inbound traffic. */
-    mbedtls_ssl_set_inbound_transform( ssl, ssl->transform_handshake );
-    ssl->session_in = ssl->session_negotiate;
+    ( ( void )ssl );
 
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
     traffic_keys.epoch = 2;
@@ -3267,6 +3246,7 @@ static int ssl_server_hello_parse( mbedtls_ssl_context* ssl,
 
 static int ssl_server_hello_postprocess( mbedtls_ssl_context* ssl )
 {
+    int ret;
     /* We need to set the key exchange algorithm based on the
      * following rules:
      *
@@ -3303,6 +3283,26 @@ static int ssl_server_hello_postprocess( mbedtls_ssl_context* ssl )
     }
 #endif /* MBEDTLS_CID */
 
+    mbedtls_ssl_key_set traffic_keys;
+
+    /* Generate handshake keying material */
+    ret = mbedtls_ssl_handshake_key_derivation( ssl, &traffic_keys );
+    if( ret != 0 )
+    {
+        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_handshake_key_derivation", ret );
+        return( ret );
+    }
+
+    ret = mbedtls_ssl_tls13_build_transform( ssl, &traffic_keys, ssl->transform_handshake, 0 );
+    if( ret != 0 )
+    {
+        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_tls13_build_transform", ret );
+        return( ret );
+    }
+
+    /* Switch to new keys for inbound traffic. */
+    mbedtls_ssl_set_inbound_transform( ssl, ssl->transform_handshake );
+    ssl->session_in = ssl->session_negotiate;
     return( 0 );
 }
 
