@@ -2161,7 +2161,7 @@ int ssl_parse_encrypted_extensions_early_data_ext( mbedtls_ssl_context *ssl,
 
 int mbedtls_ssl_get_early_data_status( mbedtls_ssl_context *ssl )
 {
-  return ssl->early_data_status;
+    return( ssl->early_data_status );
 }
 #endif /* MBEDTLS_ZERO_RTT */
 
