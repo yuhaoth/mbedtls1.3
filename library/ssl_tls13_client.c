@@ -2139,15 +2139,24 @@ int ssl_parse_encrypted_extensions_early_data_ext( mbedtls_ssl_context *ssl,
                                                    const unsigned char *buf,
                                                    size_t len )
 {
-  ( ( void )buf );
-  if ( ssl->state == MBEDTLS_SSL_ENCRYPTED_EXTENSIONS &&
-      ssl->handshake->early_data == MBEDTLS_SSL_EARLY_DATA_ON &&
-      len == 0 )
-  {
+    if( ssl->handshake->early_data != MBEDTLS_SSL_EARLY_DATA_ON )
+    {
+        /* The server must not send the EarlyDataIndication if the
+         * client hasn't indicated the use of 0-RTT. */
+        return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
+    }
+
+    if( len != 0 )
+    {
+        /* The message must be empty. */
+        return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
+    }
+
+    /* Nothing to parse */
+    ((void) buf);
+
     ssl->early_data_status = MBEDTLS_SSL_EARLY_DATA_ACCEPTED;
-    return 0;
-  }
-  return MBEDTLS_ERR_SSL_BAD_INPUT_DATA;
+    return( 0 );
 }
 
 int mbedtls_ssl_get_early_data_status( mbedtls_ssl_context *ssl )
