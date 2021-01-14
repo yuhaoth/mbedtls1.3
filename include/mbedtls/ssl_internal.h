@@ -1294,7 +1294,7 @@ int mbedtls_ssl_new_session_ticket_process(mbedtls_ssl_context* ssl);
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && \
-    defined(MBEDTLS_ZERO_RTT) \&& defined(MBEDTLS_SSL_CLI_C)
+    defined(MBEDTLS_ZERO_RTT) && defined(MBEDTLS_SSL_CLI_C)
 /* parse early data extension */
 int ssl_parse_encrypted_extensions_early_data_ext( mbedtls_ssl_context *ssl,
     const unsigned char *buf, size_t len );
