@@ -796,16 +796,16 @@ typedef struct mbedtls_ssl_flight_item mbedtls_ssl_flight_item;
 /**
  * \brief Get information about the use of 0-RTT in a TLS 1.3 handshake
  *
- * \param ssl        SSL context.
+ * \param ssl      The SSL context to query
  *
- *
- * \return         The early data status.
- *
- * \note           The status is initially set as not sent (MBEDTLS_SSL_EARLY_DATA_NOT_SENT).
- *                 If the early data extension is sent by client, it will be set to
- *                 rejected (MBEDTLS_SSL_EARLY_DATA_REJECTED).
- *                 Once client receives early data extension from corresponding server response,
- *                 the status will be set to accepted (MBEDTLS_SSL_EARLY_DATA_ACCEPTED)
+ * \returns        #MBEDTLS_SSL_EARLY_DATA_NOT_SENT if the client has not indicated
+ *                 the use of 0-RTT.
+ * \returns        #MBEDTLS_SSL_EARLY_DATA_REJECTED if the client has indicated the use
+ *                 of 0-RTT but the server has not accepted it.
+ *                 In this situation, the client may want to re-send the 0-RTT data
+ *                 as ordinary post-handshake application data via mbedtls_ssl_write().
+ * \returns        #MBEDTLS_SSL_EARLY_DATA_ACCEPTED if the client has indicated the use
+ *                 of 0-RTT and the server has accepted it.
  */
 int mbedtls_ssl_get_early_data_status( mbedtls_ssl_context *ssl );
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL && MBEDTLS_ZERO_RTT && MBEDTLS_SSL_CLI_C */
