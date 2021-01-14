@@ -2606,19 +2606,6 @@ cleanup:
 
 static int ssl_encrypted_extensions_prepare( mbedtls_ssl_context* ssl ) {
     ( ( void )ssl );
-
-#if defined(MBEDTLS_SSL_PROTO_DTLS)
-    traffic_keys.epoch = 2;
-#endif /* MBEDTLS_SSL_PROTO_DTLS */
-
-#if defined(MBEDTLS_SSL_PROTO_DTLS)
-    /* epoch value ( 2 ) is used for messages
-     * protected using keys derived from the handshake_traffic_secret
-     */
-    ssl->in_epoch = 2;
-    ssl->out_epoch = 2;
-#endif /* MBEDTLS_SSL_PROTO_DTLS */
-
     return( 0 );
 }
 
@@ -3303,6 +3290,21 @@ static int ssl_server_hello_postprocess( mbedtls_ssl_context* ssl )
     /* Switch to new keys for inbound traffic. */
     mbedtls_ssl_set_inbound_transform( ssl, ssl->transform_handshake );
     ssl->session_in = ssl->session_negotiate;
+
+#if defined(MBEDTLS_SSL_PROTO_DTLS)
+    traffic_keys.epoch = 2;
+#endif /* MBEDTLS_SSL_PROTO_DTLS */
+
+#if defined(MBEDTLS_SSL_PROTO_DTLS)
+    /* epoch value ( 2 ) is used for messages
+     * protected using keys derived from the handshake_traffic_secret
+     */
+    ssl->in_epoch = 2;
+    ssl->out_epoch = 2;
+#endif /* MBEDTLS_SSL_PROTO_DTLS */
+
+    mbedtls_platform_zeroize( &traffic_keys, sizeof( traffic_keys ) );
+
     return( 0 );
 }
 
