@@ -2161,6 +2161,12 @@ int ssl_parse_encrypted_extensions_early_data_ext( mbedtls_ssl_context *ssl,
 
 int mbedtls_ssl_get_early_data_status( mbedtls_ssl_context *ssl )
 {
+    if( ssl->state != MBEDTLS_SSL_HANDSHAKE_OVER )
+        return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
+
+    if( ssl->conf->endpoint == MBEDTLS_SSL_IS_SERVER )
+        return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
+
     return( ssl->early_data_status );
 }
 #endif /* MBEDTLS_ZERO_RTT */

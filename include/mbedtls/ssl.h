@@ -796,8 +796,12 @@ typedef struct mbedtls_ssl_flight_item mbedtls_ssl_flight_item;
 /**
  * \brief Get information about the use of 0-RTT in a TLS 1.3 handshake
  *
- * \param ssl      The SSL context to query
+ * \param ssl      The SSL context to query.
  *
+ * \returns        #MBEDTLS_ERR_SSL_BAD_INPUT_DATA if this function is called
+ *                 from the server-side.
+ * \returns        #MBEDTLS_ERR_SSL_BAD_INPUT_DATA if this function is called
+ *                 prior to completion of the handshake.
  * \returns        #MBEDTLS_SSL_EARLY_DATA_NOT_SENT if the client has not indicated
  *                 the use of 0-RTT.
  * \returns        #MBEDTLS_SSL_EARLY_DATA_REJECTED if the client has indicated the use
