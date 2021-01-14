@@ -5020,6 +5020,9 @@ int mbedtls_ssl_write_early_data_ext( mbedtls_ssl_context *ssl,
     if( ssl->conf->endpoint == MBEDTLS_SSL_IS_CLIENT )
     {
         MBEDTLS_SSL_DEBUG_MSG( 3, ( "client hello, adding early_data extension" ) );
+        /* We're using rejected once we sent the EarlyData extension,
+           and change it to accepted upon receipt of the server extension. */
+        ssl->early_data_status = MBEDTLS_SSL_EARLY_DATA_REJECTED;
     }
 #endif /* MBEDTLS_SSL_CLI_C */
 

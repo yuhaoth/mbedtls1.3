@@ -3101,6 +3101,11 @@ int main( int argc, char *argv[] )
           MBEDTLS_SSL_PROTO_TLS1_2 */
 #endif /* MBEDTLS_SSL_EXPORT_KEYS */
 
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && \
+    defined(MBEDTLS_ZERO_RTT) && defined(MBEDTLS_SSL_CLI_C)
+    mbedtls_printf( "early data status = %d\n", mbedtls_ssl_get_early_data_status( &ssl ) );
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL && MBEDTLS_ZERO_RTT && MBEDTLS_SSL_CLI_C */
+
 #if defined(MBEDTLS_X509_CRT_PARSE_C)
     /*
      * 5. Verify the server certificate

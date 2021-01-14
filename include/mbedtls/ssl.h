@@ -787,6 +787,33 @@ typedef struct mbedtls_ssl_key_cert mbedtls_ssl_key_cert;
 typedef struct mbedtls_ssl_flight_item mbedtls_ssl_flight_item;
 #endif
 
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && \
+    defined(MBEDTLS_ZERO_RTT) && defined(MBEDTLS_SSL_CLI_C)
+#define MBEDTLS_SSL_EARLY_DATA_NOT_SENT       0
+#define MBEDTLS_SSL_EARLY_DATA_REJECTED       1
+#define MBEDTLS_SSL_EARLY_DATA_ACCEPTED       2
+
+/**
+ * \brief Get information about the use of 0-RTT in a TLS 1.3 handshake
+ *
+ * \param ssl      The SSL context to query.
+ *
+ * \returns        #MBEDTLS_ERR_SSL_BAD_INPUT_DATA if this function is called
+ *                 from the server-side.
+ * \returns        #MBEDTLS_ERR_SSL_BAD_INPUT_DATA if this function is called
+ *                 prior to completion of the handshake.
+ * \returns        #MBEDTLS_SSL_EARLY_DATA_NOT_SENT if the client has not indicated
+ *                 the use of 0-RTT.
+ * \returns        #MBEDTLS_SSL_EARLY_DATA_REJECTED if the client has indicated the use
+ *                 of 0-RTT but the server has not accepted it.
+ *                 In this situation, the client may want to re-send the 0-RTT data
+ *                 as ordinary post-handshake application data via mbedtls_ssl_write().
+ * \returns        #MBEDTLS_SSL_EARLY_DATA_ACCEPTED if the client has indicated the use
+ *                 of 0-RTT and the server has accepted it.
+ */
+int mbedtls_ssl_get_early_data_status( mbedtls_ssl_context *ssl );
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL && MBEDTLS_ZERO_RTT && MBEDTLS_SSL_CLI_C */
+
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && defined(MBEDTLS_SSL_NEW_SESSION_TICKET)
 
 typedef enum
@@ -1735,6 +1762,15 @@ struct mbedtls_ssl_context
                             *   Possible values are #MBEDTLS_SSL_CID_ENABLED
                             *   and #MBEDTLS_SSL_CID_DISABLED. */
 #endif /* MBEDTLS_SSL_DTLS_CONNECTION_ID */
+
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && \
+    defined(MBEDTLS_ZERO_RTT) && defined(MBEDTLS_SSL_CLI_C)
+    /*
+     * early data request state
+     */
+    int early_data_status;
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL && MBEDTLS_ZERO_RTT && MBEDTLS_SSL_CLI_C */
+
 };
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
