@@ -2132,9 +2132,12 @@ static int ssl_parse_server_psk_identity_ext( mbedtls_ssl_context *ssl,
 *     case encrypted_extensions: Empty;
 *   };
 * } EarlyDataIndication;
+*
+* This function only handles the case of the EncryptedExtensions message.
 */
-int ssl_parse_early_data_ext( mbedtls_ssl_context *ssl,
-    const unsigned char *buf, size_t len )
+int ssl_parse_encrypted_extensions_early_data_ext( mbedtls_ssl_context *ssl,
+                                                   const unsigned char *buf,
+                                                   size_t len )
 {
   ( ( void )buf );
   if ( ssl->state == MBEDTLS_SSL_ENCRYPTED_EXTENSIONS &&
@@ -2773,15 +2776,18 @@ static int ssl_encrypted_extensions_parse( mbedtls_ssl_context* ssl,
 
 #if defined(MBEDTLS_ZERO_RTT)
             case MBEDTLS_TLS_EXT_EARLY_DATA:
-              MBEDTLS_SSL_DEBUG_MSG(3, ("found early data extension"));
+                MBEDTLS_SSL_DEBUG_MSG(3, ("found early data extension"));
 
-              if ((ret =  ssl_parse_early_data_ext(ssl, ext + 4, (size_t)ext_size)) != 0)
-              {
-                MBEDTLS_SSL_DEBUG_RET(1, "ssl_parse_early_data_ext", ret);
-                return(ret);
-              }
-              break;
+                ret = ssl_parse_encrypted_extensions_early_data_ext(
+                    ssl, ext + 4, (size_t) ext_size );
+                if( ret != 0 )
+                {
+                    MBEDTLS_SSL_DEBUG_RET( 1, "ssl_parse_early_data_ext", ret );
+                    return( ret );
+                }
+                break;
 #endif /* MBEDTLS_ZERO_RTT */
+
             default:
                 MBEDTLS_SSL_DEBUG_MSG( 3, ( "unknown extension found: %d ( ignoring )", ext_id ) );
         }
