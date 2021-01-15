@@ -3234,6 +3234,7 @@ static int ssl_server_hello_parse( mbedtls_ssl_context* ssl,
 static int ssl_server_hello_postprocess( mbedtls_ssl_context* ssl )
 {
     int ret;
+    mbedtls_ssl_key_set traffic_keys;
     /* We need to set the key exchange algorithm based on the
      * following rules:
      *
@@ -3269,8 +3270,6 @@ static int ssl_server_hello_postprocess( mbedtls_ssl_context* ssl )
         ssl->in_cid_len = 0;
     }
 #endif /* MBEDTLS_CID */
-
-    mbedtls_ssl_key_set traffic_keys;
 
     /* Generate handshake keying material */
     ret = mbedtls_ssl_handshake_key_derivation( ssl, &traffic_keys );
