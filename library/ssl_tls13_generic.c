@@ -3904,20 +3904,6 @@ static int ssl_finished_out_prepare( mbedtls_ssl_context* ssl )
 {
     int ret;
 
-#if defined(MBEDTLS_SSL_CLI_C)
-    mbedtls_ssl_key_set* traffic_keys = ssl->handshake->state_local.finished_out.traffic_keys;
-
-    if( ssl->conf->endpoint == MBEDTLS_SSL_IS_CLIENT )
-    {
-        ret = mbedtls_ssl_generate_application_traffic_keys( ssl, traffic_keys );
-        if( ret != 0 )
-        {
-            MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_generate_application_traffic_keys", ret );
-            return ( ret );
-        }
-    }
-#endif /* MBEDTLS_SSL_CLI_C */
-
     /*
      * Set the out_msg pointer to the correct location based on IV length
      */
