@@ -98,29 +98,21 @@ typedef struct
  */
 // clang-format off
 
-//    { wrap_aes_ecb_encrypt,  144, 0.0f,  1.0f, 0x0, 0xc7b0 }, /*  0 */
-//    { wrap_aes_ecb_encrypt,  224, 0.0f,  1.0f, 0x0, 0x5481 }, /*  1 */
-//    { wrap_aes_ecb_encrypt,  320, 0.0f,  1.0f, 0x0, 0x998a }, /*  2 */
-// .. 
-//     { wrap_aes_ecb_encrypt, 2048, 0.0f, 10.0f, 0x0, 0x989e }, /* 13 */
-
-
 static task_entry_t g_task[] =
 {
-    { wrap_ecdsa_sign     ,    0, 0.0f,  1.0f, 0x0, 0x3a47 }, /*  6 */
-    { wrap_ecdsa_verify   ,    0, 0.0f,  2.0f, 0x0, 0x3a47 }, /*  7 */
-    { wrap_aes_ccm_encrypt,   52, 0.0f,  1.0f, 0x0, 0xd82d }, /*  3 */
-    { wrap_aes_ccm_encrypt,   52, 0.0f,  1.0f, 0x0, 0xd82d }, /*  3 */
-    { wrap_aes_ccm_encrypt,   52, 0.0f,  1.0f, 0x0, 0xd82d }, /*  3 */
+    { wrap_aes_ecb_encrypt,  144, 0.0f,  1.0f, 0x0, 0xc7b0 }, /*  0 */
+    { wrap_aes_ecb_encrypt,  224, 0.0f,  1.0f, 0x0, 0x5481 }, /*  1 */
+    { wrap_aes_ecb_encrypt,  320, 0.0f,  1.0f, 0x0, 0x998a }, /*  2 */
     { wrap_aes_ccm_encrypt,   52, 0.0f,  1.0f, 0x0, 0xd82d }, /*  3 */
     { wrap_aes_ccm_decrypt,  168, 0.0f,  1.0f, 0x0, 0x005b }, /*  4 */
     { wrap_ecdh           ,    0, 0.0f,  1.0f, 0x0, 0xb659 }, /*  5 */
+    { wrap_ecdsa_sign     ,    0, 0.0f,  1.0f, 0x0, 0x3a47 }, /*  6 */
+    { wrap_ecdsa_verify   ,    0, 0.0f,  2.0f, 0x0, 0x3a47 }, /*  7 */
     { wrap_sha256         ,   23, 0.0f,  3.0f, 0x0, 0x2151 }, /*  8 */
     { wrap_sha256         ,   57, 0.0f,  1.0f, 0x0, 0x3b3c }, /*  9 */
     { wrap_sha256         ,  384, 0.0f,  1.0f, 0x0, 0x1d3f }, /* 10 */
     { wrap_variation_001  ,    0, 0.0f,  3.0f, 0x0, 0x0000 }, /* 11 */
     { wrap_sha256         , 4224, 0.0f,  4.0f, 0x0, 0x9284 }, /* 12 */
-    { wrap_aes_ccm_encrypt,   52, 0.0f,  1.0f, 0x0, 0xd82d }, /*  3 */
 };
 // clang-format on
 static const size_t g_numtasks = sizeof(g_task) / sizeof(task_entry_t);
@@ -241,7 +233,7 @@ th_timestamp(void)
         elapsedMicroSeconds = t.tv_sec * (NSEC_PER_SEC / TIMER_RES_DIVIDER)
                               + t.tv_nsec / TIMER_RES_DIVIDER;
 #elif _WIN32
-        elapsedMicroSeconds = (uint64_t) t.time * 1000 * 1000 + t.millitm * 1000;
+        elapsedMicroSeconds = ( (uint64_t) t.time ) * 1000 * 1000 + ( (uint64_t) t.millitm ) * 1000;
 #else
 #warning "Operating system not recognized"
 #endif
@@ -466,6 +458,7 @@ wrap_aes_ecb_encrypt(unsigned int n, unsigned int i)
     buflen = AES_KEYSIZE + n + n;
     buffer = (unsigned char *)th_malloc(buflen);
     assert(buffer != NULL);
+    memset(buffer,0,buflen);
     // Assign the helper points to the region of the buffer
     key = buffer;
     in  = key + AES_KEYSIZE;
