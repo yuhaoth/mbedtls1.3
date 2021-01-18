@@ -326,8 +326,8 @@ th_ecdh_calc_secret(
                                     &olen );
     if( status != PSA_SUCCESS )
     {
-        printf( "psa_raw_key_agreement failed\n" );
-        return( EXIT_FAILURE );
+        th_printf("e-[psa_raw_key_agreement: -0x%04x]\r\n", -status);
+        return EE_STATUS_ERROR; 
     }
 #endif /* CRYPTO_PSA */
 

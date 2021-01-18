@@ -53,6 +53,8 @@
 // Stored timestamps (a single primitive may generate multiple stamps)
 #define MAX_TIMESTAMPS 64u
 
+#define HASH_SIZE 32 //length of SHA256 hash in bytes
+
 // All wrapper functions fit this prototype (n=dataset octets, i=iterations)
 typedef uint16_t wrapper_function_t(unsigned int n, unsigned int i);
 
