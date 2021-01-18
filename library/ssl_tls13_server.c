@@ -3065,16 +3065,16 @@ static int ssl_client_hello_parse( mbedtls_ssl_context* ssl,
         }
     }
 
+    if( ssl->session_negotiate->key_exchange == 0 ) {
+      MBEDTLS_SSL_DEBUG_MSG( 1, ( "ClientHello message misses mandatory extensions." ) );
+      return( MBEDTLS_ERR_SSL_BAD_HS_MISSING_EXTENSION_EXT );
+    }
+
     /* If we previously determined that an HRR is needed then
      * we will send it now.
      */
     if( final_ret == MBEDTLS_ERR_SSL_BAD_HS_WRONG_KEY_SHARE )
         return( MBEDTLS_ERR_SSL_BAD_HS_WRONG_KEY_SHARE );
-
-/*	if( ssl->session_negotiate->key_exchange == 0 ) { */
-    MBEDTLS_SSL_DEBUG_MSG( 1, ( "ClientHello message misses mandatory extensions." ) );
-    return( MBEDTLS_ERR_SSL_BAD_HS_MISSING_EXTENSION_EXT );
-/*	} */
 
     end_client_hello:
 
