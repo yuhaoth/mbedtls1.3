@@ -2546,6 +2546,7 @@ static int ssl_read_certificate_verify_parse( mbedtls_ssl_context* ssl,
        return( MBEDTLS_ERR_SSL_BAD_HS_CERTIFICATE_VERIFY );
     }
 
+    MBEDTLS_SSL_DEBUG_BUF( 3, "verify hash", verify_hash, verify_hash_len );
     if ( sig_alg == MBEDTLS_PK_RSASSA_PSS )
     {
       opts.mgf1_hash_id = md_alg;
