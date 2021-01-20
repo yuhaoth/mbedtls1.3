@@ -1530,6 +1530,17 @@ run_test    "TLS 1.3, TLS_AES_256_GCM_SHA384, ext PSK, early data status - accep
             0 \
 	    -c "early data status = 2"  \
 
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+requires_config_enabled MBEDTLS_DEBUG_C
+run_test    "TLS 1.3, TLS_AES_128_CCM_8_SHA256, ClientHello message misses mandatory extensions" \
+            "$P_SRV debug_level=5 force_version=tls1_3 key_exchange_modes=ecdhe_ecdsa named_groups=secp256r1" \
+            "$P_CLI debug_level=5 force_version=tls1_3 server_name=localhost force_ciphersuite=TLS_AES_128_CCM_8_SHA256 key_exchange_modes=psk_dhe  key_share_named_groups=secp521r1" \
+            1 \
+	    -s "ClientHello message misses mandatory extensions."                 \
+	    -s "send alert message"                                               \
+	    -C "received HelloRetryRequest message"                               \
+      -c "got an alert message, type: \\[2:109]"
+
 #
 # TLS 1.2 specific tests
 #
