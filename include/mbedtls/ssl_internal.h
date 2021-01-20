@@ -1309,6 +1309,93 @@ static uint32_t get_varint_value(const uint32_t input);
 
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+
+/*
+ * Helper functions around key exchange modes.
+ */
+static inline unsigned mbedtls_ssl_conf_tls13_get_key_exchange_modes( mbedtls_ssl_context *ssl )
+{
+    return( ssl->conf->key_exchange_modes );
+}
+
+static inline int mbedtls_ssl_conf_tls13_pure_psk_enabled( mbedtls_ssl_context *ssl )
+{
+    if( ( mbedtls_ssl_conf_tls13_get_key_exchange_modes( ssl ) &
+          MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_KE ) != 0 )
+    {
+        return( 1 );
+    }
+
+    return( 0 );
+}
+
+static inline int mbedtls_ssl_conf_tls13_psk_ecdhe_enabled( mbedtls_ssl_context *ssl )
+{
+    if( ( mbedtls_ssl_conf_tls13_get_key_exchange_modes( ssl ) &
+          MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_DHE_KE ) != 0 )
+    {
+        return( 1 );
+    }
+
+    return( 0 );
+}
+
+static inline int mbedtls_ssl_conf_tls13_some_ecdhe_enabled( mbedtls_ssl_context *ssl )
+{
+    if( ( mbedtls_ssl_conf_tls13_get_key_exchange_modes( ssl ) &
+          ( MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_DHE_KE | \
+            MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_ECDHE_ECDSA ) ) != 0 )
+    {
+        return( 1 );
+    }
+
+    return( 0 );
+}
+
+static inline int mbedtls_ssl_conf_tls13_some_psk_enabled( mbedtls_ssl_context *ssl )
+{
+    if( ( mbedtls_ssl_conf_tls13_get_key_exchange_modes( ssl ) &
+          MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_ALL ) != 0 )
+    {
+        return( 1 );
+    }
+
+    return( 0 );
+}
+
+static inline int mbedtls_ssl_conf_tls13_pure_ecdhe_enabled( mbedtls_ssl_context *ssl )
+{
+    if( ( mbedtls_ssl_conf_tls13_get_key_exchange_modes( ssl ) &
+          MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_ECDHE_ECDSA ) != 0 )
+    {
+        return( 1 );
+    }
+
+    return( 0 );
+}
+
+static inline mbedtls_ssl_tls13_key_exchange_with_psk( mbedtls_ssl_context *ssl )
+{
+    if( ssl->session_negotiate->key_exchange == MBEDTLS_KEY_EXCHANGE_PSK ||
+        ssl->session_negotiate->key_exchange == MBEDTLS_KEY_EXCHANGE_ECDHE_PSK )
+    {
+        return( 1 );
+    }
+
+    return( 0 );
+}
+
+/*
+ * Helper functions around EarlyData
+ */
+static inline int mbedtls_ssl_conf_tls13_0rtt_enabled( mbedtls_ssl_context *ssl )
+{
+    if( ssl->conf->early_data == MBEDTLS_SSL_EARLY_DATA_ENABLED )
+        return( 1 );
+
+    return( 0 );
+}
+
 int mbedtls_ssl_handshake_key_derivation( mbedtls_ssl_context* ssl,
                                           mbedtls_ssl_key_set* traffic_keys );
 int mbedtls_ssl_read_certificate_verify_process(mbedtls_ssl_context* ssl);
