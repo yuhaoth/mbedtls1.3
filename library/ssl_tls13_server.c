@@ -3828,9 +3828,9 @@ static int ssl_write_hello_retry_request( mbedtls_ssl_context *ssl )
         *p++ = ( *curve )->tls_id & 0xFF;
 
         MBEDTLS_SSL_DEBUG_MSG( 3, ( "NamedGroup in HRR: %s", ( *curve )->name ) );
+        total_ext_len += ext_length + 4 /* 2 bytes for extension_type and 2 bytes for length field */;
 
     }
-    total_ext_len += ext_length + 4 /* 2 bytes for extension_type and 2 bytes for length field */;
 #endif /* MBEDTLS_ECDH_C */
 
     *extension_start++ = (unsigned char)( ( total_ext_len >> 8 ) & 0xFF );
