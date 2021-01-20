@@ -4837,7 +4837,7 @@ int mbedtls_ssl_conf_client_ticket( const mbedtls_ssl_context *ssl,
      * TBD: Ideally, the application developer should have the option
      * to decide between plain PSK-KE and PSK-KE-DH
      */
-    ret = mbedtls_ssl_conf_ke( conf, 0 );
+    ret = mbedtls_ssl_conf_tls13_key_exchange( conf, 0 );
     if( ret != 0 )
         return( ret );
 

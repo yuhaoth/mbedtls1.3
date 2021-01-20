@@ -3393,7 +3393,7 @@ int mbedtls_ssl_conf_own_cert( mbedtls_ssl_config *conf,
  * \returns A negative error code on failure.
  */
 
-int mbedtls_ssl_conf_ke( mbedtls_ssl_config* conf,
+int mbedtls_ssl_conf_tls13_key_exchange( mbedtls_ssl_config* conf,
                          const int key_exchange_mode );
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 
