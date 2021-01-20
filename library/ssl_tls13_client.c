@@ -577,19 +577,19 @@ static int ssl_write_psk_key_exchange_modes_ext( mbedtls_ssl_context *ssl,
                                                  unsigned char* end,
                                                  size_t* olen )
 {
-    unsigned char *p = (unsigned char *) buf;
-    *olen = 0;
+    unsigned char *p;
+    int num_modes = 0;
 
-    /* Check whether we have any PSK credentials configured. */
-    /*if( ssl->conf->psk == NULL || ssl->conf->psk_identity == NULL || */
-    /*	ssl->conf->psk_identity_len == 0 || ssl->conf->psk_len == 0 ) */
-    /*{ */
-    /*	MBEDTLS_SSL_DEBUG_MSG( 3, ( "No key for use with the pre_shared_key extension available." ) ); */
-    /*	return( MBEDTLS_ERR_SSL_PRIVATE_KEY_REQUIRED ); */
-    /*} */
+    /* Skip writing extension if no PSK key exchange mode
+     * is enabled in the config. */
+    if( !mbedtls_ssl_conf_tls13_some_psk_enabled( ssl ) )
+    {
+        *olen = 0;
+        return( 0 );
+    }
 
-    /* max length of this extension is 7 bytes */
-    if( (size_t)( end - p ) < 7 )
+    /* Require 7 bytes of data, otherwise fail, even if extension might be shorter. */
+    if( (size_t)( end - buf ) < 7 )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "Not enough buffer" ) );
         return( MBEDTLS_ERR_SSL_BUFFER_TOO_SMALL );
@@ -598,43 +598,36 @@ static int ssl_write_psk_key_exchange_modes_ext( mbedtls_ssl_context *ssl,
     MBEDTLS_SSL_DEBUG_MSG( 3, ( "client hello, adding psk_key_exchange_modes extension" ) );
 
     /* Extension Type */
-    *p++ = (unsigned char)( ( MBEDTLS_TLS_EXT_PSK_KEY_EXCHANGE_MODES >> 8 ) & 0xFF );
-    *p++ = (unsigned char)( ( MBEDTLS_TLS_EXT_PSK_KEY_EXCHANGE_MODES >> 0 ) & 0xFF );
+    buf[0] = (unsigned char)( ( MBEDTLS_TLS_EXT_PSK_KEY_EXCHANGE_MODES >> 8 ) & 0xFF );
+    buf[1] = (unsigned char)( ( MBEDTLS_TLS_EXT_PSK_KEY_EXCHANGE_MODES >> 0 ) & 0xFF );
 
-    if( ssl->conf->key_exchange_modes ==
-          MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_ALL ||
-        ssl->conf->key_exchange_modes ==
-          MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_ALL )
+    /* Skip extension length (2 byte) and PSK mode list length (1 byte) for now. */
+    p = buf + 5;
+
+    if( mbedtls_ssl_conf_tls13_pure_psk_enabled( ssl ) )
     {
-        /* Extension Length */
-        *p++ = 0;
-        *p++ = 3;
+        *p++ = MBEDTLS_SSL_TLS13_PSK_MODE_PURE;
+        num_modes++;
 
-        /* 1 byte length field for array of PskKeyExchangeMode */
-        *p++ = 2;
-        *p++ = MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_KE;
-        *p++ = MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_DHE_KE;
-        *olen = 7;
-
-        MBEDTLS_SSL_DEBUG_MSG( 5, ( "Adding %d and %d psk_key_exchange_modes",
-                                    MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_KE,
-                                    MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_DHE_KE ) );
-    }
-    else
-    {
-        /* Extension Length */
-        *p++ = 0;
-        *p++ = 2;
-
-        /* 1 byte length field for array of PskKeyExchangeMode */
-        *p++ = 1;
-        *p++= ssl->conf->key_exchange_modes;
-        *olen = 6;
-
-        MBEDTLS_SSL_DEBUG_MSG( 5, ( "Adding %d psk_key_exchange_mode",
-                                    ssl->conf->key_exchange_modes ) );
+        MBEDTLS_SSL_DEBUG_MSG( 5, ( "Adding pure PSK key exchange mode" ) );
     }
 
+    if( mbedtls_ssl_conf_tls13_psk_ecdhe_enabled( ssl ) )
+    {
+        *p++ = MBEDTLS_SSL_TLS13_PSK_MODE_ECDHE;
+        num_modes++;
+
+        MBEDTLS_SSL_DEBUG_MSG( 5, ( "Adding PSK-ECDHE key exchange mode" ) );
+    }
+
+    /* Add extension length: PSK mode list length byte + actual PSK mode list length */
+    buf[2] = 0;
+    buf[3] = num_modes + 1;
+    /* Add PSK mode list length */
+    buf[4] = num_modes;
+
+    *olen = p - buf;
+    ssl->handshake->extensions_present |= PSK_KEY_EXCHANGE_MODES_EXTENSION;
     return ( 0 );
 }
 #endif /* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED */
@@ -1925,15 +1918,9 @@ static int ssl_client_hello_write( mbedtls_ssl_context* ssl,
 
     /* Add the psk_key_exchange_modes extension.
      */
-    if( ssl->conf->key_exchange_modes != MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_ECDHE_ECDSA )
-    {
-        ret = ssl_write_psk_key_exchange_modes_ext( ssl, buf, end, &cur_ext_len );
-        total_ext_len += cur_ext_len;
-        buf += cur_ext_len;
-
-        if( ret == 0 )
-            ssl->handshake->extensions_present |= PSK_KEY_EXCHANGE_MODES_EXTENSION;
-    }
+    ret = ssl_write_psk_key_exchange_modes_ext( ssl, buf, end, &cur_ext_len );
+    total_ext_len += cur_ext_len;
+    buf += cur_ext_len;
 #endif /* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED */
 
 #if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)

@@ -1398,58 +1398,39 @@ static int ssl_parse_key_exchange_modes_ext( mbedtls_ssl_context *ssl,
                                              const unsigned char *buf,
                                              size_t len )
 {
-    int ret = 0;
+    size_t psk_mode_list_len;
+    unsigned psk_key_exchange_modes = 0;
 
-    /* Length has to be either 1 or 2 based on the currently defined psk key exchange modes */
-    if( len < 2 || len > 3 )
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad psk key exchange modes extension in client hello message" ) );
+    /* Read PSK mode list length (1 Byte) */
+    psk_mode_list_len = *buf++;
+    len--;
+
+    /* There's no content after the PSK mode list, to its length
+     * must match the total length of the extension. */
+    if( psk_mode_list_len != len )
         return( MBEDTLS_ERR_SSL_BAD_HS_CLIENT_HELLO );
-    }
 
-    /* We check for the allowed combinations and set the key_exchange_modes variable accordingly */
-    if( buf[0] == 2 )
+    /* Currently, there are only two PSK modes, so even without looking
+     * at the content, something's wrong if the list has more than 2 items. */
+    if( psk_mode_list_len > 2 )
+        return( MBEDTLS_ERR_SSL_BAD_HS_CLIENT_HELLO );
+
+    while( psk_mode_list_len-- != 0 )
     {
-        if( ( buf[1] == MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_KE ||
-              buf[1] == MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_DHE_KE ) &&
-            ( buf[2] == MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_KE ||
-              buf[2] == MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_DHE_KE ) )
+        switch( *buf )
         {
-            ssl->session_negotiate->key_exchange_modes =
-                MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_ALL;
-        }
-        else
-        {
-            ret = MBEDTLS_ERR_SSL_BAD_HS_CLIENT_HELLO;
-        }
-    }
-    else if( buf[0] == 1 )
-    {
-        switch ( buf[1] )
-        {
-            case 0:
-                ssl->session_negotiate->key_exchange_modes =
-                    MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_KE;
-                break;
-            case 1:
-                ssl->session_negotiate->key_exchange_modes =
-                    MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_DHE_KE;
-                break;
-            default:
-                ret = MBEDTLS_ERR_SSL_BAD_HS_CLIENT_HELLO;
+        case MBEDTLS_SSL_TLS13_PSK_MODE_PURE:
+            psk_key_exchange_modes |= MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_KE;
+            break;
+        case MBEDTLS_SSL_TLS13_PSK_MODE_ECDHE:
+            psk_key_exchange_modes |= MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_DHE_KE;
+            break;
+        default:
+            return( MBEDTLS_ERR_SSL_BAD_HS_CLIENT_HELLO );
         }
     }
-    else
-    {
-        ret = MBEDTLS_ERR_SSL_BAD_HS_CLIENT_HELLO;
-    }
 
-    if( ret != 0 )
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad psk key exchange modes extension in client hello message" ) );
-        return( ret );
-    }
-
+    ssl->session_negotiate->key_exchange_modes = psk_key_exchange_modes;
     return ( 0 );
 }
 #endif /* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED */
