@@ -2935,7 +2935,7 @@ static int ssl_client_hello_parse( mbedtls_ssl_context* ssl,
                     MBEDTLS_SSL_DEBUG_MSG( 3, ( "Using a PSK key exchange" ) );
                     ssl->session_negotiate->key_exchange = MBEDTLS_KEY_EXCHANGE_PSK;
                     ssl->handshake->early_data = MBEDTLS_SSL_EARLY_DATA_ON;
-                    goto end_client_hello;
+                    goto have_key_exchange;
                 }
             }
         }
@@ -2967,7 +2967,7 @@ static int ssl_client_hello_parse( mbedtls_ssl_context* ssl,
                     MBEDTLS_SSL_DEBUG_MSG( 3, ( "Using a ECDHE-PSK key exchange" ) );
                     ssl->session_negotiate->key_exchange = MBEDTLS_KEY_EXCHANGE_ECDHE_PSK;
                     ssl->handshake->early_data = MBEDTLS_SSL_EARLY_DATA_ON;
-                    goto end_client_hello;
+                    goto have_key_exchange;
                 }
             }
         }
@@ -3007,7 +3007,7 @@ static int ssl_client_hello_parse( mbedtls_ssl_context* ssl,
                 }
                 MBEDTLS_SSL_DEBUG_MSG( 3, ( "Using a PSK key exchange" ) );
                 ssl->session_negotiate->key_exchange = MBEDTLS_KEY_EXCHANGE_PSK;
-                goto end_client_hello;
+                goto have_key_exchange;
             }
         }
     }
@@ -3040,7 +3040,7 @@ static int ssl_client_hello_parse( mbedtls_ssl_context* ssl,
 
                 MBEDTLS_SSL_DEBUG_MSG( 3, ( "Using a ECDHE-PSK key exchange" ) );
                 ssl->session_negotiate->key_exchange = MBEDTLS_KEY_EXCHANGE_ECDHE_PSK;
-                goto end_client_hello;
+                goto have_key_exchange;
             }
         }
     }
@@ -3062,7 +3062,7 @@ static int ssl_client_hello_parse( mbedtls_ssl_context* ssl,
         {
             MBEDTLS_SSL_DEBUG_MSG( 3, ( "Using a ECDSA-ECDHE key exchange" ) );
             ssl->session_negotiate->key_exchange = MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA;
-            goto end_client_hello;
+            goto have_key_exchange;
         }
     }
 
@@ -3077,7 +3077,7 @@ static int ssl_client_hello_parse( mbedtls_ssl_context* ssl,
     if( final_ret == MBEDTLS_ERR_SSL_BAD_HS_WRONG_KEY_SHARE )
         return( MBEDTLS_ERR_SSL_BAD_HS_WRONG_KEY_SHARE );
 
-    end_client_hello:
+    have_key_exchange:
 
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
     if( ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_DATAGRAM )
