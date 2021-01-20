@@ -2284,6 +2284,59 @@ read_record_header:
     return( 0 );
 }
 
+static void ssl_debug_print_client_hello_exts( mbedtls_ssl_context *ssl )
+{
+    MBEDTLS_SSL_DEBUG_MSG( 3, ( "Supported Extensions:" ) );
+    MBEDTLS_SSL_DEBUG_MSG( 3, ( "- KEY_SHARE_EXTENSION ( %s )",
+                                ( ( ssl->handshake->extensions_present & KEY_SHARE_EXTENSION ) > 0 ) ?
+                                "TRUE" : "FALSE" ) );
+    MBEDTLS_SSL_DEBUG_MSG( 3, ( "- PSK_KEY_EXCHANGE_MODES_EXTENSION ( %s )",
+                                ( ( ssl->handshake->extensions_present & PSK_KEY_EXCHANGE_MODES_EXTENSION ) > 0 ) ?
+                                "TRUE" : "FALSE" ) );
+    MBEDTLS_SSL_DEBUG_MSG( 3, ( "- PRE_SHARED_KEY_EXTENSION ( %s )",
+                                ( ( ssl->handshake->extensions_present & PRE_SHARED_KEY_EXTENSION ) > 0 ) ?
+                                "TRUE" : "FALSE" ) );
+    MBEDTLS_SSL_DEBUG_MSG( 3, ( "- SIGNATURE_ALGORITHM_EXTENSION ( %s )",
+                                ( ( ssl->handshake->extensions_present & SIGNATURE_ALGORITHM_EXTENSION ) > 0 ) ?
+                                "TRUE" : "FALSE" ) );
+    MBEDTLS_SSL_DEBUG_MSG( 3, ( "- SUPPORTED_GROUPS_EXTENSION ( %s )",
+                                ( ( ssl->handshake->extensions_present & SUPPORTED_GROUPS_EXTENSION ) >0 ) ?
+                                "TRUE" : "FALSE" ) );
+    MBEDTLS_SSL_DEBUG_MSG( 3, ( "- SUPPORTED_VERSION_EXTENSION ( %s )",
+                                ( ( ssl->handshake->extensions_present & SUPPORTED_VERSION_EXTENSION ) > 0 ) ?
+                                "TRUE" : "FALSE" ) );
+#if defined(MBEDTLS_CID)
+    MBEDTLS_SSL_DEBUG_MSG( 3, ( "- CID_EXTENSION  ( %s )",
+                                ( ( ssl->handshake->extensions_present & CID_EXTENSION ) > 0 ) ?
+                                "TRUE" : "FALSE" ) );
+#endif /* MBEDTLS_CID */
+#if defined ( MBEDTLS_SSL_SERVER_NAME_INDICATION )
+    MBEDTLS_SSL_DEBUG_MSG( 3, ( "- SERVERNAME_EXTENSION    ( %s )",
+                                ( ( ssl->handshake->extensions_present & SERVERNAME_EXTENSION ) > 0 ) ?
+                                "TRUE" : "FALSE" ) );
+#endif /* MBEDTLS_SSL_SERVER_NAME_INDICATION */
+#if defined ( MBEDTLS_SSL_ALPN )
+    MBEDTLS_SSL_DEBUG_MSG( 3, ( "- ALPN_EXTENSION   ( %s )",
+                                ( ( ssl->handshake->extensions_present & ALPN_EXTENSION ) > 0 ) ?
+                                "TRUE" : "FALSE" ) );
+#endif /* MBEDTLS_SSL_ALPN */
+#if defined ( MBEDTLS_SSL_MAX_FRAGMENT_LENGTH )
+    MBEDTLS_SSL_DEBUG_MSG( 3, ( "- MAX_FRAGMENT_LENGTH_EXTENSION  ( %s )",
+                                ( ( ssl->handshake->extensions_present & MAX_FRAGMENT_LENGTH_EXTENSION ) > 0 ) ?
+                                "TRUE" : "FALSE" ) );
+#endif /* MBEDTLS_SSL_MAX_FRAGMENT_LENGTH */
+#if defined ( MBEDTLS_SSL_COOKIE_C )
+    MBEDTLS_SSL_DEBUG_MSG( 3, ( "- COOKIE_EXTENSION ( %s )",
+                                ( ( ssl->handshake->extensions_present & COOKIE_EXTENSION ) >0 ) ?
+                                "TRUE" : "FALSE" ) );
+#endif /* MBEDTLS_SSL_COOKIE_C */
+#if defined(MBEDTLS_ZERO_RTT)
+    MBEDTLS_SSL_DEBUG_MSG( 3, ( "- EARLY_DATA_EXTENSION ( %s )",
+                                ( ( ssl->handshake->extensions_present & EARLY_DATA_EXTENSION ) > 0 ) ?
+                                "TRUE" : "FALSE" ) );
+#endif /* MBEDTLS_ZERO_RTT*/
+}
+
 static int ssl_client_hello_parse( mbedtls_ssl_context* ssl,
                                   unsigned char* buf,
                                   size_t buflen )
@@ -2840,56 +2893,7 @@ static int ssl_client_hello_parse( mbedtls_ssl_context* ssl,
     ssl->handshake->ciphersuite_info = ciphersuite_info;
 
     /* List all the extensions we have received */
-
-    MBEDTLS_SSL_DEBUG_MSG( 3, ( "Supported Extensions:" ) );
-    MBEDTLS_SSL_DEBUG_MSG( 3, ( "- KEY_SHARE_EXTENSION ( %s )",
-                                ( ( ssl->handshake->extensions_present & KEY_SHARE_EXTENSION ) > 0 ) ?
-                                "TRUE" : "FALSE" ) );
-    MBEDTLS_SSL_DEBUG_MSG( 3, ( "- PSK_KEY_EXCHANGE_MODES_EXTENSION ( %s )",
-                                ( ( ssl->handshake->extensions_present & PSK_KEY_EXCHANGE_MODES_EXTENSION ) > 0 ) ?
-                                "TRUE" : "FALSE" ) );
-    MBEDTLS_SSL_DEBUG_MSG( 3, ( "- PRE_SHARED_KEY_EXTENSION ( %s )",
-                                ( ( ssl->handshake->extensions_present & PRE_SHARED_KEY_EXTENSION ) > 0 ) ?
-                                "TRUE" : "FALSE" ) );
-    MBEDTLS_SSL_DEBUG_MSG( 3, ( "- SIGNATURE_ALGORITHM_EXTENSION ( %s )",
-                                ( ( ssl->handshake->extensions_present & SIGNATURE_ALGORITHM_EXTENSION ) > 0 ) ?
-                                "TRUE" : "FALSE" ) );
-    MBEDTLS_SSL_DEBUG_MSG( 3, ( "- SUPPORTED_GROUPS_EXTENSION ( %s )",
-                                ( ( ssl->handshake->extensions_present & SUPPORTED_GROUPS_EXTENSION ) >0 ) ?
-                                "TRUE" : "FALSE" ) );
-    MBEDTLS_SSL_DEBUG_MSG( 3, ( "- SUPPORTED_VERSION_EXTENSION ( %s )",
-                                ( ( ssl->handshake->extensions_present & SUPPORTED_VERSION_EXTENSION ) > 0 ) ?
-                                "TRUE" : "FALSE" ) );
-#if defined(MBEDTLS_CID)
-    MBEDTLS_SSL_DEBUG_MSG( 3, ( "- CID_EXTENSION  ( %s )",
-                                ( ( ssl->handshake->extensions_present & CID_EXTENSION ) > 0 ) ?
-                                "TRUE" : "FALSE" ) );
-#endif /* MBEDTLS_CID */
-#if defined ( MBEDTLS_SSL_SERVER_NAME_INDICATION )
-    MBEDTLS_SSL_DEBUG_MSG( 3, ( "- SERVERNAME_EXTENSION    ( %s )",
-                                ( ( ssl->handshake->extensions_present & SERVERNAME_EXTENSION ) > 0 ) ?
-                                "TRUE" : "FALSE" ) );
-#endif /* MBEDTLS_SSL_SERVER_NAME_INDICATION */
-#if defined ( MBEDTLS_SSL_ALPN )
-    MBEDTLS_SSL_DEBUG_MSG( 3, ( "- ALPN_EXTENSION   ( %s )",
-                                ( ( ssl->handshake->extensions_present & ALPN_EXTENSION ) > 0 ) ?
-                                "TRUE" : "FALSE" ) );
-#endif /* MBEDTLS_SSL_ALPN */
-#if defined ( MBEDTLS_SSL_MAX_FRAGMENT_LENGTH )
-    MBEDTLS_SSL_DEBUG_MSG( 3, ( "- MAX_FRAGMENT_LENGTH_EXTENSION  ( %s )",
-                                ( ( ssl->handshake->extensions_present & MAX_FRAGMENT_LENGTH_EXTENSION ) > 0 ) ?
-                                "TRUE" : "FALSE" ) );
-#endif /* MBEDTLS_SSL_MAX_FRAGMENT_LENGTH */
-#if defined ( MBEDTLS_SSL_COOKIE_C )
-    MBEDTLS_SSL_DEBUG_MSG( 3, ( "- COOKIE_EXTENSION ( %s )",
-                                ( ( ssl->handshake->extensions_present & COOKIE_EXTENSION ) >0 ) ?
-                                "TRUE" : "FALSE" ) );
-#endif /* MBEDTLS_SSL_COOKIE_C */
-#if defined(MBEDTLS_ZERO_RTT)
-    MBEDTLS_SSL_DEBUG_MSG( 3, ( "- EARLY_DATA_EXTENSION ( %s )",
-                                ( ( ssl->handshake->extensions_present & EARLY_DATA_EXTENSION ) > 0 ) ?
-                                "TRUE" : "FALSE" ) );
-#endif /* MBEDTLS_ZERO_RTT*/
+    ssl_debug_print_client_hello_exts( ssl );
 
 /* Determine key exchange algorithm to use. There are three types of key exchanges
  * supported in TLS 1.3, namely (EC)DH with ECDSA, (EC)DH with PSK, and plain PSK.
