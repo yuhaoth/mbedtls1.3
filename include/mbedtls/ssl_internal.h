@@ -1374,7 +1374,7 @@ static inline int mbedtls_ssl_conf_tls13_pure_ecdhe_enabled( mbedtls_ssl_context
     return( 0 );
 }
 
-static inline mbedtls_ssl_tls13_key_exchange_with_psk( mbedtls_ssl_context *ssl )
+static inline int mbedtls_ssl_tls13_key_exchange_with_psk( mbedtls_ssl_context *ssl )
 {
     if( ssl->session_negotiate->key_exchange == MBEDTLS_KEY_EXCHANGE_PSK ||
         ssl->session_negotiate->key_exchange == MBEDTLS_KEY_EXCHANGE_ECDHE_PSK )
