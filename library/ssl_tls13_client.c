@@ -1934,20 +1934,17 @@ static int ssl_client_hello_write( mbedtls_ssl_context* ssl,
         total_ext_len += cur_ext_len;
         buf += cur_ext_len;
 
-        if( ret == 0 ) ssl->handshake->extensions_present |= SUPPORTED_GROUPS_EXTENSION;
-    }
+        if( ret == 0 )
+            ssl->handshake->extensions_present |= SUPPORTED_GROUPS_EXTENSION;
 
-    /* The supported_signature_algorithms extension is REQUIRED for
-     * certificate authenticated ciphersuites.
-     */
-
-    if( mbedtls_ssl_conf_tls13_pure_psk_enabled( ssl ) )
-    {
+        /* The supported_signature_algorithms extension is REQUIRED for
+         * certificate authenticated ciphersuites. */
         ret = mbedtls_ssl_write_signature_algorithms_ext( ssl, buf, end, &cur_ext_len );
         total_ext_len += cur_ext_len;
         buf += cur_ext_len;
 
-        if( ret == 0 ) ssl->handshake->extensions_present |= SIGNATURE_ALGORITHM_EXTENSION;
+        if( ret == 0 )
+            ssl->handshake->extensions_present |= SIGNATURE_ALGORITHM_EXTENSION;
     }
     /* We need to send the key shares under three conditions:
      * 1 ) A certificate-based ciphersuite is being offered. In this case
