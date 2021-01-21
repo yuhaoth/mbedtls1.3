@@ -983,9 +983,8 @@ int mbedtls_ssl_write_pre_shared_key_ext( mbedtls_ssl_context *ssl,
     /* Check whether we have any PSK credentials configured. */
     if( mbedtls_ssl_get_psk( ssl, NULL, NULL ) != 0 )
     {
-        MBEDTLS_SSL_DEBUG_MSG( 3, ( "No externally configured PSK available." ) );
-
-        return( MBEDTLS_ERR_SSL_PRIVATE_KEY_REQUIRED );
+        MBEDTLS_SSL_DEBUG_MSG( 3, ( "client hello, skip pre_shared_key extensions" ) );
+        return( 0 );
     }
 
     MBEDTLS_SSL_DEBUG_MSG( 3, ( "client hello, adding pre_shared_key extension" ) );
