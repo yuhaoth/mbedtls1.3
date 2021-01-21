@@ -1139,6 +1139,8 @@ int mbedtls_ssl_write_pre_shared_key_ext( mbedtls_ssl_context *ssl,
         }
     }
     *olen = ext_length + 4;
+
+    ssl->handshake->extensions_present |= PRE_SHARED_KEY_EXTENSION;
     return( 0 );
 }
 
@@ -1987,9 +1989,6 @@ static int ssl_client_hello_write( mbedtls_ssl_context* ssl,
         ret = mbedtls_ssl_write_pre_shared_key_ext( ssl, buf, end, &cur_ext_len, 0 );
         total_ext_len += cur_ext_len;
         buf += cur_ext_len;
-
-        if( ret == 0 )
-            ssl->handshake->extensions_present |= PRE_SHARED_KEY_EXTENSION;
     }
 #endif /* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED */
 
