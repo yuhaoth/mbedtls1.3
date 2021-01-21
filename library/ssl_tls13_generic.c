@@ -4833,14 +4833,6 @@ int mbedtls_ssl_conf_client_ticket( const mbedtls_ssl_context *ssl,
     if( ret != 0 )
         return( ret );
 
-    /* Set the key exchange mode to PSK
-     * TBD: Ideally, the application developer should have the option
-     * to decide between plain PSK-KE and PSK-KE-DH
-     */
-    ret = mbedtls_ssl_conf_tls13_key_exchange( conf, 0 );
-    if( ret != 0 )
-        return( ret );
-
     /* We set the ticket_age_add and the time we received the ticket */
 #if defined(MBEDTLS_HAVE_TIME)
     ret = mbedtls_ssl_conf_ticket_meta( conf,
