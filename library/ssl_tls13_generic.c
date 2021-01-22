@@ -1141,6 +1141,16 @@ int mbedtls_ssl_write_signature_algorithms_ext( mbedtls_ssl_context *ssl,
 
     *olen = 0;
 
+    /* Skip the extension on the client if all allowed key exchanges
+     * are PSK-based. */
+#if defined(MBEDTLS_SSL_CLI_C)
+    if( ssl->conf->endpoint == MBEDTLS_SSL_IS_CLIENT &&
+        !mbedtls_ssl_conf_tls13_some_ecdhe_enabled( ssl ) )
+    {
+        return( 0 );
+    }
+#endif /* MBEDTLS_SSL_CLI_C */
+
     MBEDTLS_SSL_DEBUG_MSG( 3, ( "adding signature_algorithms extension" ) );
 
     /*
@@ -1189,6 +1199,7 @@ int mbedtls_ssl_write_signature_algorithms_ext( mbedtls_ssl_context *ssl,
 
     *olen = 6 + sig_alg_len;
 
+    ssl->handshake->extensions_present |= SIGNATURE_ALGORITHM_EXTENSION;
     return( 0 );
 }
 

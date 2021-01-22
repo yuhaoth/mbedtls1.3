@@ -939,6 +939,9 @@ static int ssl_write_supported_groups_ext( mbedtls_ssl_context *ssl,
 
     *olen = 0;
 
+    if( !mbedtls_ssl_conf_tls13_some_ecdhe_enabled( ssl ) )
+        return( 0 );
+
 #if defined(MBEDTLS_ECP_C)
     for ( grp_id = ssl->conf->curve_list;
           *grp_id != MBEDTLS_ECP_DP_NONE;
@@ -1650,21 +1653,16 @@ static int ssl_client_hello_write( mbedtls_ssl_context* ssl,
     /* The supported_groups and the key_share extensions are
      * REQUIRED for ECDHE ciphersuites.
      */
-    if( mbedtls_ssl_conf_tls13_some_ecdhe_enabled( ssl ) )
-    {
     ret = ssl_write_supported_groups_ext( ssl, buf, end, &cur_ext_len );
     total_ext_len += cur_ext_len;
     buf += cur_ext_len;
 
-        /* The supported_signature_algorithms extension is REQUIRED for
-         * certificate authenticated ciphersuites. */
-        ret = mbedtls_ssl_write_signature_algorithms_ext( ssl, buf, end, &cur_ext_len );
-        total_ext_len += cur_ext_len;
-        buf += cur_ext_len;
+    /* The supported_signature_algorithms extension is REQUIRED for
+     * certificate authenticated ciphersuites. */
+    ret = mbedtls_ssl_write_signature_algorithms_ext( ssl, buf, end, &cur_ext_len );
+    total_ext_len += cur_ext_len;
+    buf += cur_ext_len;
 
-        if( ret == 0 )
-            ssl->handshake->extensions_present |= SIGNATURE_ALGORITHM_EXTENSION;
-    }
     /* We need to send the key shares under three conditions:
      * 1 ) A certificate-based ciphersuite is being offered. In this case
      *    supported_groups and supported_signature extensions have been successfully added.
