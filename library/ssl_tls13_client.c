@@ -342,6 +342,9 @@ static void ssl_write_hostname_ext( mbedtls_ssl_context *ssl,
 
     *olen = 0;
 
+    if( !mbedtls_ssl_conf_tls13_pure_ecdhe_enabled( ssl ) )
+        return;
+
     if( ssl->hostname == NULL )
         return;
 
@@ -410,6 +413,11 @@ static void ssl_write_supported_versions_ext( mbedtls_ssl_context *ssl,
     unsigned char *p = buf;
 
     *olen = 0;
+
+#if defined(MBEDTLS_SSL_TLS13_CTLS)
+    if( ssl->handshake->ctls == MBEDTLS_SSL_TLS13_CTLS_USE )
+        return;
+#endif /* MBEDTLS_SSL_TLS13_CTLS */
 
     MBEDTLS_SSL_DEBUG_MSG( 3, ( "client hello, adding supported version extension" ) );
 
@@ -1568,14 +1576,9 @@ static int ssl_client_hello_write( mbedtls_ssl_context* ssl,
      * For cTLS we only need to provide it if there is more than one version
      * and currently there is only one.
      */
-#if defined(MBEDTLS_SSL_TLS13_CTLS)
-    if( ssl->handshake->ctls == MBEDTLS_SSL_TLS13_CTLS_DO_NOT_USE )
-#endif /* MBEDTLS_SSL_TLS13_CTLS */
-    {
-        ssl_write_supported_versions_ext( ssl, buf, end, &cur_ext_len );
-        total_ext_len += cur_ext_len;
-        buf += cur_ext_len;
-    }
+    ssl_write_supported_versions_ext( ssl, buf, end, &cur_ext_len );
+    total_ext_len += cur_ext_len;
+    buf += cur_ext_len;
 
     /* For TLS / DTLS 1.3 we need to support the use of cookies
      * ( if the server provided them ) */
@@ -1604,12 +1607,9 @@ static int ssl_client_hello_write( mbedtls_ssl_context* ssl,
 
 #if defined(MBEDTLS_SSL_SERVER_NAME_INDICATION)
     /* For PSK-based ciphersuites we don't really need the SNI extension */
-    if( mbedtls_ssl_conf_tls13_pure_ecdhe_enabled( ssl ) )
-    {
-        ssl_write_hostname_ext( ssl, buf, end, &cur_ext_len );
-        total_ext_len += cur_ext_len;
-        buf += cur_ext_len;
-    }
+    ssl_write_hostname_ext( ssl, buf, end, &cur_ext_len );
+    total_ext_len += cur_ext_len;
+    buf += cur_ext_len;
 #endif /* MBEDTLS_SSL_SERVER_NAME_INDICATION */
 
 #if defined(MBEDTLS_CID)
