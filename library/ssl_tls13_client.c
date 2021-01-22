@@ -1005,6 +1005,8 @@ static int ssl_write_supported_groups_ext( mbedtls_ssl_context *ssl,
     MBEDTLS_SSL_DEBUG_BUF( 3, "Supported groups extension", buf + 4, elliptic_curve_len + 2 );
 
     *olen = 6 + elliptic_curve_len;
+
+    ssl->handshake->extensions_present |= SUPPORTED_GROUPS_EXTENSION;
     return( 0 );
 }
 #endif /* defined(MBEDTLS_ECDH_C) */
@@ -1650,12 +1652,9 @@ static int ssl_client_hello_write( mbedtls_ssl_context* ssl,
      */
     if( mbedtls_ssl_conf_tls13_some_ecdhe_enabled( ssl ) )
     {
-        ret = ssl_write_supported_groups_ext( ssl, buf, end, &cur_ext_len );
-        total_ext_len += cur_ext_len;
-        buf += cur_ext_len;
-
-        if( ret == 0 )
-            ssl->handshake->extensions_present |= SUPPORTED_GROUPS_EXTENSION;
+    ret = ssl_write_supported_groups_ext( ssl, buf, end, &cur_ext_len );
+    total_ext_len += cur_ext_len;
+    buf += cur_ext_len;
 
         /* The supported_signature_algorithms extension is REQUIRED for
          * certificate authenticated ciphersuites. */
