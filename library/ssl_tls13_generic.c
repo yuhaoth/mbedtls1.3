@@ -4828,22 +4828,16 @@ int mbedtls_ssl_conf_client_ticket( const mbedtls_ssl_context *ssl,
 
     /* Set the psk and psk_identity */
     ret = mbedtls_ssl_conf_psk( conf, ticket->key, ticket->key_len,
-                                ( const unsigned char * )ticket->ticket,
+                                (const unsigned char *)ticket->ticket,
                                 ticket->ticket_len );
-    if( ret != 0 )
-        return( ret );
-
-    /* Set the key exchange mode to PSK
-     * TBD: Ideally, the application developer should have the option
-     * to decide between plain PSK-KE and PSK-KE-DH
-     */
-    ret = mbedtls_ssl_conf_ke( conf, 0 );
     if( ret != 0 )
         return( ret );
 
     /* We set the ticket_age_add and the time we received the ticket */
 #if defined(MBEDTLS_HAVE_TIME)
-    ret = mbedtls_ssl_conf_ticket_meta( conf, ticket->ticket_age_add, ticket->start );
+    ret = mbedtls_ssl_conf_ticket_meta( conf,
+                                        ticket->ticket_age_add,
+                                        ticket->start );
 #else
     ret = mbedtls_ssl_conf_ticket_meta( conf, ticket->ticket_age_add );
 #endif /* MBEDTLS_HAVE_TIME */

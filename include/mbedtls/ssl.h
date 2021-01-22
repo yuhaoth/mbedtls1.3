@@ -169,16 +169,33 @@
 #define CID_EXTENSION 2048
 
 
-/* Key Exchange Modes
- * MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_ALL refers to
- * the two PSK modes.
+/*
+ * TLS 1.3 Key Exchange Modes
+ *
+ * Mbed TLS internal identifiers for use with the SSL configuration API
+ * mbedtls_ssl_conf_tls13_key_exchange().
  */
-#define MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_KE 0
-#define MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_DHE_KE 1
-#define MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_NONE 252
-#define MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_ECDHE_ECDSA 253
-#define MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_ALL 254
-#define MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_ALL 255
+
+#define MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_NONE                0
+#define MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_KE      ( 1u << 0 )
+#define MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_DHE_KE  ( 1u << 1 )
+#define MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_ECDHE_ECDSA ( 1u << 2 )
+
+/* Convenience macros for sets of key exchanges. */
+#define MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_ALL ( MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_KE     | \
+                                                  MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_DHE_KE | \
+                                                  MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_ECDHE_ECDSA )
+#define MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_ALL ( MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_KE     | \
+                                                      MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_DHE_KE )
+
+/*
+ * Constants from RFC 8446 for TLS 1.3 PSK modes
+ *
+ * Those are used in the Pre-Shared Key Exchange Modes extension.
+ * See Section 4.2.9 in RFC 8446.
+ */
+#define MBEDTLS_SSL_TLS13_PSK_MODE_PURE  0 /* Pure PSK-based exchange  */
+#define MBEDTLS_SSL_TLS13_PSK_MODE_ECDHE 1 /* PSK+ECDHE-based exchange */
 
 /*
  * Various constants
@@ -3396,7 +3413,7 @@ int mbedtls_ssl_conf_own_cert( mbedtls_ssl_config *conf,
  * \returns A negative error code on failure.
  */
 
-int mbedtls_ssl_conf_ke( mbedtls_ssl_config* conf,
+int mbedtls_ssl_conf_tls13_key_exchange( mbedtls_ssl_config* conf,
                          const int key_exchange_mode );
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 

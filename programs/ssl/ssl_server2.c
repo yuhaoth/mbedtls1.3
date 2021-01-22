@@ -3929,7 +3929,7 @@ int main( int argc, char *argv[] )
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
     /* Configure supported TLS 1.3 key exchange modes. */
-    mbedtls_ssl_conf_ke(&conf, opt.key_exchange_modes);
+    mbedtls_ssl_conf_tls13_key_exchange(&conf, opt.key_exchange_modes);
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 
 #if defined(MBEDTLS_DHM_C)

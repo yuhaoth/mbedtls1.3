@@ -1395,49 +1395,42 @@ static int ssl_parse_max_fragment_length_ext( mbedtls_ssl_context *ssl,
  */
 
 static int ssl_parse_key_exchange_modes_ext( mbedtls_ssl_context *ssl,
-                                            const unsigned char *buf,
-                                            size_t len )
+                                             const unsigned char *buf,
+                                             size_t len )
 {
-    int ret = 0;
+    size_t psk_mode_list_len;
+    unsigned psk_key_exchange_modes = 0;
 
-    /* Length has to be either 1 or 2 based on the currently defined psk key exchange modes */
-    if( len < 2 || len >3 )
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad psk key exchange modes extension in client hello message" ) );
+    /* Read PSK mode list length (1 Byte) */
+    psk_mode_list_len = *buf++;
+    len--;
+
+    /* There's no content after the PSK mode list, to its length
+     * must match the total length of the extension. */
+    if( psk_mode_list_len != len )
         return( MBEDTLS_ERR_SSL_BAD_HS_CLIENT_HELLO );
-    }
 
-    /* We check for the allowed combinations and set the key_exchange_modes variable accordingly */
-    if( buf[0] == 2 )
+    /* Currently, there are only two PSK modes, so even without looking
+     * at the content, something's wrong if the list has more than 2 items. */
+    if( psk_mode_list_len > 2 )
+        return( MBEDTLS_ERR_SSL_BAD_HS_CLIENT_HELLO );
+
+    while( psk_mode_list_len-- != 0 )
     {
-        if( ( buf[1] == MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_KE || buf[1] == MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_DHE_KE ) &&
-            ( buf[2] == MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_KE || buf[2] == MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_DHE_KE ) ) {
-            ssl->session_negotiate->key_exchange_modes = MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_ALL;
-        }
-        else ret = MBEDTLS_ERR_SSL_BAD_HS_CLIENT_HELLO;
-    }
-    else if( buf[0] == 1 )
-    {
-        switch ( buf[1] )
+        switch( *buf )
         {
-            case 0:
-                ssl->session_negotiate->key_exchange_modes = MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_KE;
-                break;
-            case 1:
-                ssl->session_negotiate->key_exchange_modes = MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_DHE_KE;
-                break;
-            default:
-                ret = MBEDTLS_ERR_SSL_BAD_HS_CLIENT_HELLO;
+        case MBEDTLS_SSL_TLS13_PSK_MODE_PURE:
+            psk_key_exchange_modes |= MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_KE;
+            break;
+        case MBEDTLS_SSL_TLS13_PSK_MODE_ECDHE:
+            psk_key_exchange_modes |= MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_DHE_KE;
+            break;
+        default:
+            return( MBEDTLS_ERR_SSL_BAD_HS_CLIENT_HELLO );
         }
     }
-    else ret = MBEDTLS_ERR_SSL_BAD_HS_CLIENT_HELLO;
 
-    if( ret != 0 )
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad psk key exchange modes extension in client hello message" ) );
-        return( ret );
-    }
-
+    ssl->session_negotiate->key_exchange_modes = psk_key_exchange_modes;
     return ( 0 );
 }
 #endif /* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED */
@@ -2291,6 +2284,171 @@ read_record_header:
     return( 0 );
 }
 
+static void ssl_debug_print_client_hello_exts( mbedtls_ssl_context *ssl )
+{
+    MBEDTLS_SSL_DEBUG_MSG( 3, ( "Supported Extensions:" ) );
+    MBEDTLS_SSL_DEBUG_MSG( 3, ( "- KEY_SHARE_EXTENSION ( %s )",
+                                ( ( ssl->handshake->extensions_present & KEY_SHARE_EXTENSION ) > 0 ) ?
+                                "TRUE" : "FALSE" ) );
+    MBEDTLS_SSL_DEBUG_MSG( 3, ( "- PSK_KEY_EXCHANGE_MODES_EXTENSION ( %s )",
+                                ( ( ssl->handshake->extensions_present & PSK_KEY_EXCHANGE_MODES_EXTENSION ) > 0 ) ?
+                                "TRUE" : "FALSE" ) );
+    MBEDTLS_SSL_DEBUG_MSG( 3, ( "- PRE_SHARED_KEY_EXTENSION ( %s )",
+                                ( ( ssl->handshake->extensions_present & PRE_SHARED_KEY_EXTENSION ) > 0 ) ?
+                                "TRUE" : "FALSE" ) );
+    MBEDTLS_SSL_DEBUG_MSG( 3, ( "- SIGNATURE_ALGORITHM_EXTENSION ( %s )",
+                                ( ( ssl->handshake->extensions_present & SIGNATURE_ALGORITHM_EXTENSION ) > 0 ) ?
+                                "TRUE" : "FALSE" ) );
+    MBEDTLS_SSL_DEBUG_MSG( 3, ( "- SUPPORTED_GROUPS_EXTENSION ( %s )",
+                                ( ( ssl->handshake->extensions_present & SUPPORTED_GROUPS_EXTENSION ) >0 ) ?
+                                "TRUE" : "FALSE" ) );
+    MBEDTLS_SSL_DEBUG_MSG( 3, ( "- SUPPORTED_VERSION_EXTENSION ( %s )",
+                                ( ( ssl->handshake->extensions_present & SUPPORTED_VERSION_EXTENSION ) > 0 ) ?
+                                "TRUE" : "FALSE" ) );
+#if defined(MBEDTLS_CID)
+    MBEDTLS_SSL_DEBUG_MSG( 3, ( "- CID_EXTENSION  ( %s )",
+                                ( ( ssl->handshake->extensions_present & CID_EXTENSION ) > 0 ) ?
+                                "TRUE" : "FALSE" ) );
+#endif /* MBEDTLS_CID */
+#if defined ( MBEDTLS_SSL_SERVER_NAME_INDICATION )
+    MBEDTLS_SSL_DEBUG_MSG( 3, ( "- SERVERNAME_EXTENSION    ( %s )",
+                                ( ( ssl->handshake->extensions_present & SERVERNAME_EXTENSION ) > 0 ) ?
+                                "TRUE" : "FALSE" ) );
+#endif /* MBEDTLS_SSL_SERVER_NAME_INDICATION */
+#if defined ( MBEDTLS_SSL_ALPN )
+    MBEDTLS_SSL_DEBUG_MSG( 3, ( "- ALPN_EXTENSION   ( %s )",
+                                ( ( ssl->handshake->extensions_present & ALPN_EXTENSION ) > 0 ) ?
+                                "TRUE" : "FALSE" ) );
+#endif /* MBEDTLS_SSL_ALPN */
+#if defined ( MBEDTLS_SSL_MAX_FRAGMENT_LENGTH )
+    MBEDTLS_SSL_DEBUG_MSG( 3, ( "- MAX_FRAGMENT_LENGTH_EXTENSION  ( %s )",
+                                ( ( ssl->handshake->extensions_present & MAX_FRAGMENT_LENGTH_EXTENSION ) > 0 ) ?
+                                "TRUE" : "FALSE" ) );
+#endif /* MBEDTLS_SSL_MAX_FRAGMENT_LENGTH */
+#if defined ( MBEDTLS_SSL_COOKIE_C )
+    MBEDTLS_SSL_DEBUG_MSG( 3, ( "- COOKIE_EXTENSION ( %s )",
+                                ( ( ssl->handshake->extensions_present & COOKIE_EXTENSION ) >0 ) ?
+                                "TRUE" : "FALSE" ) );
+#endif /* MBEDTLS_SSL_COOKIE_C */
+#if defined(MBEDTLS_ZERO_RTT)
+    MBEDTLS_SSL_DEBUG_MSG( 3, ( "- EARLY_DATA_EXTENSION ( %s )",
+                                ( ( ssl->handshake->extensions_present & EARLY_DATA_EXTENSION ) > 0 ) ?
+                                "TRUE" : "FALSE" ) );
+#endif /* MBEDTLS_ZERO_RTT*/
+}
+
+static int ssl_client_hello_has_psk_extensions( mbedtls_ssl_context *ssl )
+{
+    if( ( ssl->handshake->extensions_present & PRE_SHARED_KEY_EXTENSION ) &&
+        ( ssl->handshake->extensions_present & PSK_KEY_EXCHANGE_MODES_EXTENSION ) )
+    {
+        return( 1 );
+    }
+
+    return( 0 );
+}
+
+static int ssl_client_hello_has_cert_extensions( mbedtls_ssl_context *ssl )
+{
+    if( ( ssl->handshake->extensions_present & SUPPORTED_GROUPS_EXTENSION )    &&
+        ( ssl->handshake->extensions_present & SIGNATURE_ALGORITHM_EXTENSION ) &&
+        ( ssl->handshake->extensions_present & KEY_SHARE_EXTENSION ) )
+    {
+        return( 1 );
+    }
+
+    return( 0 );
+}
+
+static int ssl_client_hello_allows_psk_mode( mbedtls_ssl_context *ssl,
+                                             unsigned psk_mode )
+{
+    if( ( ssl->session_negotiate->key_exchange_modes & psk_mode ) != 0 )
+    {
+        return( 1 );
+    }
+
+    return( 0 );
+}
+
+static int ssl_client_hello_allows_pure_psk( mbedtls_ssl_context *ssl )
+{
+    return( ssl_client_hello_allows_psk_mode( ssl,
+                           MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_KE ) );
+}
+
+static int ssl_client_hello_allows_psk_ecdhe( mbedtls_ssl_context *ssl )
+{
+    return( ssl_client_hello_allows_psk_mode( ssl,
+                           MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_DHE_KE ) );
+}
+
+static int ssl_check_psk_key_exchange( mbedtls_ssl_context *ssl )
+{
+    if( !ssl_client_hello_has_psk_extensions( ssl ) )
+        return( 0 );
+
+    /* Test whether pure PSK is offered by client and supported by us. */
+    if( mbedtls_ssl_conf_tls13_pure_psk_enabled( ssl ) &&
+        ssl_client_hello_allows_pure_psk( ssl ) )
+    {
+        MBEDTLS_SSL_DEBUG_MSG( 3, ( "Using a PSK key exchange" ) );
+        ssl->session_negotiate->key_exchange = MBEDTLS_KEY_EXCHANGE_PSK;
+        return( 1 );
+    }
+
+    /* Test whether PSK-ECDHE is offered by client and supported by us. */
+    if( mbedtls_ssl_conf_tls13_psk_ecdhe_enabled( ssl ) &&
+        ssl_client_hello_allows_psk_ecdhe( ssl ) )
+    {
+        MBEDTLS_SSL_DEBUG_MSG( 3, ( "Using a ECDHE-PSK key exchange" ) );
+        ssl->session_negotiate->key_exchange = MBEDTLS_KEY_EXCHANGE_ECDHE_PSK;
+        return( 1 );
+    }
+
+    /* Can't use PSK */
+    return( 0 );
+}
+
+static int ssl_check_certificate_key_exchange( mbedtls_ssl_context *ssl )
+{
+    if( !mbedtls_ssl_conf_tls13_pure_ecdhe_enabled( ssl ) )
+        return( 0 );
+
+    if( !ssl_client_hello_has_cert_extensions( ssl ) )
+        return( 0 );
+
+    ssl->session_negotiate->key_exchange = MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA;
+    return( 1 );
+}
+
+#if defined(MBEDTLS_ZERO_RTT)
+static int ssl_check_use_0rtt_handshake( mbedtls_ssl_context *ssl )
+{
+    /* Check if the user has enabled 0-RTT in the config */
+    if( !mbedtls_ssl_conf_tls13_0rtt_enabled( ssl ) )
+        return( 0 );
+
+    /* Check if the client has indicated the use of 0-RTT */
+    if( ( ssl->handshake->extensions_present & EARLY_DATA_EXTENSION ) == 0 )
+        return( 0 );
+
+    /* If the client has indicated the use of 0-RTT but not sent
+     * the PSK extensions, that's not conformant (and there's no
+     * way to continue from here). */
+    if( !ssl_client_hello_has_psk_extensions( ssl ) )
+    {
+        MBEDTLS_SSL_DEBUG_MSG( 1,
+            ( "Client indicated 0-RTT without offering PSK extensions" ) );
+        return( MBEDTLS_ERR_SSL_BAD_HS_CLIENT_HELLO );
+    }
+
+    /* Accept 0-RTT */
+    ssl->handshake->early_data = MBEDTLS_SSL_EARLY_DATA_ON;
+    return( 0 );
+}
+#endif /* MBEDTLS_ZERO_RTT*/
+
 static int ssl_client_hello_parse( mbedtls_ssl_context* ssl,
                                   unsigned char* buf,
                                   size_t buflen )
@@ -2847,236 +3005,51 @@ static int ssl_client_hello_parse( mbedtls_ssl_context* ssl,
     ssl->handshake->ciphersuite_info = ciphersuite_info;
 
     /* List all the extensions we have received */
+    ssl_debug_print_client_hello_exts( ssl );
 
-    MBEDTLS_SSL_DEBUG_MSG( 3, ( "Supported Extensions:" ) );
-    MBEDTLS_SSL_DEBUG_MSG( 3, ( "- KEY_SHARE_EXTENSION ( %s )", ( ( ssl->handshake->extensions_present & KEY_SHARE_EXTENSION ) > 0 ) ? "TRUE" : "FALSE" ) );
-    MBEDTLS_SSL_DEBUG_MSG( 3, ( "- PSK_KEY_EXCHANGE_MODES_EXTENSION ( %s )", ( ( ssl->handshake->extensions_present & PSK_KEY_EXCHANGE_MODES_EXTENSION ) > 0 ) ? "TRUE" : "FALSE" ) );
-    MBEDTLS_SSL_DEBUG_MSG( 3, ( "- PRE_SHARED_KEY_EXTENSION ( %s )", ( ( ssl->handshake->extensions_present & PRE_SHARED_KEY_EXTENSION ) > 0 ) ? "TRUE" : "FALSE" ) );
-    MBEDTLS_SSL_DEBUG_MSG( 3, ( "- SIGNATURE_ALGORITHM_EXTENSION ( %s )", ( ( ssl->handshake->extensions_present & SIGNATURE_ALGORITHM_EXTENSION ) >0 ) ? "TRUE" : "FALSE" ) );
-    MBEDTLS_SSL_DEBUG_MSG( 3, ( "- SUPPORTED_GROUPS_EXTENSION ( %s )", ( ( ssl->handshake->extensions_present & SUPPORTED_GROUPS_EXTENSION ) >0 ) ? "TRUE" : "FALSE" ) );
-    MBEDTLS_SSL_DEBUG_MSG( 3, ( "- SUPPORTED_VERSION_EXTENSION ( %s )", ( ( ssl->handshake->extensions_present & SUPPORTED_VERSION_EXTENSION ) > 0 ) ? "TRUE" : "FALSE" ) );
-#if defined(MBEDTLS_CID)
-    MBEDTLS_SSL_DEBUG_MSG( 3, ( "- CID_EXTENSION  ( %s )", ( ( ssl->handshake->extensions_present & CID_EXTENSION ) > 0 ) ? "TRUE" : "FALSE" ) );
-#endif /* MBEDTLS_CID */
-#if defined ( MBEDTLS_SSL_SERVER_NAME_INDICATION )
-    MBEDTLS_SSL_DEBUG_MSG( 3, ( "- SERVERNAME_EXTENSION    ( %s )", ( ( ssl->handshake->extensions_present & SERVERNAME_EXTENSION ) > 0 ) ? "TRUE" : "FALSE" ) );
-#endif /* MBEDTLS_SSL_SERVER_NAME_INDICATION */
-#if defined ( MBEDTLS_SSL_ALPN )
-    MBEDTLS_SSL_DEBUG_MSG( 3, ( "- ALPN_EXTENSION   ( %s )", ( ( ssl->handshake->extensions_present & ALPN_EXTENSION ) > 0 ) ? "TRUE" : "FALSE" ) );
-#endif /* MBEDTLS_SSL_ALPN */
-#if defined ( MBEDTLS_SSL_MAX_FRAGMENT_LENGTH )
-    MBEDTLS_SSL_DEBUG_MSG( 3, ( "- MAX_FRAGMENT_LENGTH_EXTENSION  ( %s )", ( ( ssl->handshake->extensions_present & MAX_FRAGMENT_LENGTH_EXTENSION ) > 0 ) ? "TRUE" : "FALSE" ) );
-#endif /* MBEDTLS_SSL_MAX_FRAGMENT_LENGTH */
-#if defined ( MBEDTLS_SSL_COOKIE_C )
-    MBEDTLS_SSL_DEBUG_MSG( 3, ( "- COOKIE_EXTENSION ( %s )", ( ( ssl->handshake->extensions_present & COOKIE_EXTENSION ) >0 ) ? "TRUE" : "FALSE" ) );
-#endif /* MBEDTLS_SSL_COOKIE_C */
-#if defined(MBEDTLS_ZERO_RTT)
-    MBEDTLS_SSL_DEBUG_MSG( 3, ( "- EARLY_DATA_EXTENSION ( %s )", ( ( ssl->handshake->extensions_present & EARLY_DATA_EXTENSION ) >0 ) ? "TRUE" : "FALSE" ) );
-#endif /* MBEDTLS_ZERO_RTT*/
-
-/* Determine key exchange algorithm to use. There are three types of key exchanges
- * supported in TLS 1.3, namely ( EC )DH with ECDSA, ( EC )DH with PSK, and plain PSK.
- * Additionally, we need to consider the ZeroRTT exchange as well.
- */
-
-#if defined(MBEDTLS_ZERO_RTT)
     /*
-     * 0 ) Zero-RTT Exchange / Early Data
-     *    It requires early_data extension, at least key_exchange_modes and
-     *    the pre_shared_key extension. It may additionally provide key share
-     *    and supported_groups.
-     */
-    if( ssl->handshake->extensions_present & EARLY_DATA_EXTENSION )
-    {
-        /* Pure PSK mode */
-        if( ( ssl->conf->early_data == MBEDTLS_SSL_EARLY_DATA_ENABLED ) &&
-            ( ssl->handshake->extensions_present & PRE_SHARED_KEY_EXTENSION ) &&
-            ( ssl->handshake->extensions_present & PSK_KEY_EXCHANGE_MODES_EXTENSION ) )
-        {
-            /* Test whether we are allowed to use this mode ( server-side check ) */
-            if( ( ssl->conf->key_exchange_modes ==
-                    MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_KE )  ||
-                ( ssl->conf->key_exchange_modes ==
-                    MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_ALL ) ||
-                ( ssl->conf->key_exchange_modes ==
-                    MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_ALL ) )
-            {
-                /* Test whether we are allowed to use this mode ( client-side check ) */
-                if( ( ssl->session_negotiate->key_exchange_modes ==
-                        MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_KE ) ||
-                    ( ssl->session_negotiate->key_exchange_modes ==
-                        MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_ALL ) )
-                {
-                    ret = mbedtls_ssl_parse_client_psk_identity_ext( ssl,
-                            ext_psk_ptr,
-                            ext_len_psk_ext );
-                    if( ret != 0 )
-                    {
-                        MBEDTLS_SSL_DEBUG_RET( 1, ( "ssl_parse_client_psk_identity" ),
-                                               ret );
-                        return( ret );
-                    }
-                    MBEDTLS_SSL_DEBUG_MSG( 3, ( "Using a PSK key exchange" ) );
-                    ssl->session_negotiate->key_exchange = MBEDTLS_KEY_EXCHANGE_PSK;
-                    ssl->handshake->early_data = MBEDTLS_SSL_EARLY_DATA_ON;
-                    goto end_client_hello;
-                }
-            }
-        }
-        /* ECDHE-PSK mode */
-        if( ( ssl->conf->early_data == MBEDTLS_SSL_EARLY_DATA_ENABLED )       &&
-            ( ssl->handshake->extensions_present & PRE_SHARED_KEY_EXTENSION ) &&
-            ( ssl->handshake->extensions_present & KEY_SHARE_EXTENSION )      &&
-            ( ssl->handshake->extensions_present & PSK_KEY_EXCHANGE_MODES_EXTENSION ) )
-        {
-            /* Test whether we are allowed to use this mode ( server-side check ) */
-            if( ssl->conf->key_exchange_modes ==
-                  MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_DHE_KE ||
-                ssl->conf->key_exchange_modes ==
-                  MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_ALL ||
-                ssl->conf->key_exchange_modes ==
-                MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_ALL )
-            {
-                /* Test whether we are allowed to use this mode ( client-side check ) */
-                if( ssl->session_negotiate->key_exchange_modes ==
-                      MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_DHE_KE ||
-                    ssl->session_negotiate->key_exchange_modes ==
-                      MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_ALL )
-                {
-                    ret = mbedtls_ssl_parse_client_psk_identity_ext( ssl,
-                            ext_psk_ptr,
-                            ext_len_psk_ext );
-                    if( ret != 0 )
-                    {
-                        MBEDTLS_SSL_DEBUG_RET( 1, ( "ssl_parse_client_psk_identity" ),
-                                               ret );
-                        return( ret );
-                    }
-
-                    MBEDTLS_SSL_DEBUG_MSG( 3, ( "Using a ECDHE-PSK key exchange" ) );
-                    ssl->session_negotiate->key_exchange = MBEDTLS_KEY_EXCHANGE_ECDHE_PSK;
-                    ssl->handshake->early_data = MBEDTLS_SSL_EARLY_DATA_ON;
-                    goto end_client_hello;
-                }
-            }
-        }
-    }
-#endif /* MBEDTLS_ZERO_RTT*/
-
-    /* The order of preference is
+     * Determine the key exchange algorithm to use.
+     * There are three types of key exchanges supported in TLS 1.3:
+     * - (EC)DH with ECDSA,
+     * - (EC)DH with PSK,
+     * - plain PSK.
+     *
+     * The PSK-based key exchanges may additionally be used with 0-RTT.
+     *
+     * Our built-in order of preference is
      *  1 ) Plain PSK Mode
-     *  2 ) ( EC )DHE-PSK Mode
+     *  2 ) (EC)DHE-PSK Mode
      *  3 ) Certificate Mode
-     *
-     * Currently, the preference order is hard-coded - not configurable.
      */
-    /*
-     * 1 ) Plain PSK-based key exchange
-     *    Requires key_exchange_modes and the pre_shared_key extension
-     *
-     */
-    if( ( ssl->handshake->extensions_present & PRE_SHARED_KEY_EXTENSION ) &&
-        ( ssl->handshake->extensions_present & PSK_KEY_EXCHANGE_MODES_EXTENSION ) )
+
+    ssl->session_negotiate->key_exchange = 0;
+
+    if( !ssl_check_psk_key_exchange( ssl ) &&
+        !ssl_check_certificate_key_exchange( ssl ) )
     {
-        /* Test whether we are allowed to use this mode ( server-side check ) */
-        if( ssl->conf->key_exchange_modes ==
-              MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_KE ||
-            ssl->conf->key_exchange_modes ==
-              MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_ALL ||
-            ssl->conf->key_exchange_modes ==
-              MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_ALL )
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "ClientHello message misses mandatory extensions." ) );
+        return( MBEDTLS_ERR_SSL_BAD_HS_MISSING_EXTENSION_EXT );
+    }
+
+#if defined(MBEDTLS_ZERO_RTT)
+    ret = ssl_check_use_0rtt_handshake( ssl );
+    if( ret != 0 )
+        return( ret );
+#endif /* MBEDTLS_ZERO_RTT */
+
+    /* If we've settled on a PSK-based exchange, parse PSK identity ext */
+    if( mbedtls_ssl_tls13_key_exchange_with_psk( ssl ) )
+    {
+        ret = mbedtls_ssl_parse_client_psk_identity_ext( ssl,
+                                                         ext_psk_ptr,
+                                                         ext_len_psk_ext );
+        if( ret != 0 )
         {
-            /* Test whether we are allowed to use this mode ( client-side check ) */
-            if( ssl->session_negotiate->key_exchange_modes ==
-                  MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_KE   ||
-                ssl->session_negotiate->key_exchange_modes ==
-                  MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_ALL )
-            {
-                if( ( ret = mbedtls_ssl_parse_client_psk_identity_ext( ssl,
-                                ext_psk_ptr,
-                                ext_len_psk_ext ) ) != 0 )
-                {
-                    MBEDTLS_SSL_DEBUG_RET( 1, ( "ssl_parse_client_psk_identity" ), ret );
-                    return( ret );
-                }
-                MBEDTLS_SSL_DEBUG_MSG( 3, ( "Using a PSK key exchange" ) );
-                ssl->session_negotiate->key_exchange = MBEDTLS_KEY_EXCHANGE_PSK;
-                goto end_client_hello;
-            }
+            MBEDTLS_SSL_DEBUG_RET( 1, ( "ssl_parse_client_psk_identity" ),
+                                   ret );
+            return( ret );
         }
     }
-
-    /*
-     * 2 ) ( EC )DHE-PSK-based key exchange
-     *    Requires key share, supported_groups, key_exchange_modes and
-     *    the pre_shared_key extension.
-     */
-    if( ( ssl->handshake->extensions_present & PRE_SHARED_KEY_EXTENSION ) &&
-        ( ssl->handshake->extensions_present & KEY_SHARE_EXTENSION )      &&
-        ( ssl->handshake->extensions_present & PSK_KEY_EXCHANGE_MODES_EXTENSION ) )
-    {
-        /* Test whether we are allowed to use this mode ( server-side check ) */
-        if( ssl->conf->key_exchange_modes ==
-              MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_DHE_KE ||
-            ssl->conf->key_exchange_modes ==
-              MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_ALL    ||
-            ssl->conf->key_exchange_modes ==
-              MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_ALL )
-        {
-            /* Test whether we are allowed to use this mode ( client-side check ) */
-            if( ssl->session_negotiate->key_exchange_modes ==
-                  MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_DHE_KE ||
-                ssl->session_negotiate->key_exchange_modes ==
-                  MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_ALL )
-            {
-                if( ( ret = mbedtls_ssl_parse_client_psk_identity_ext( ssl,
-                                ext_psk_ptr,
-                                ext_len_psk_ext ) ) != 0 )
-                {
-                    MBEDTLS_SSL_DEBUG_RET( 1, ( "ssl_parse_client_psk_identity" ), ret );
-                    return( ret );
-                }
-
-                MBEDTLS_SSL_DEBUG_MSG( 3, ( "Using a ECDHE-PSK key exchange" ) );
-                ssl->session_negotiate->key_exchange = MBEDTLS_KEY_EXCHANGE_ECDHE_PSK;
-                goto end_client_hello;
-            }
-        }
-    }
-
-    /*
-     * 3 ) Certificate-based key exchange
-     *    It requires supported_groups, supported_signature extensions, and key share
-     *
-     */
-    if( ( ssl->handshake->extensions_present & SUPPORTED_GROUPS_EXTENSION )    &&
-        ( ssl->handshake->extensions_present & SIGNATURE_ALGORITHM_EXTENSION ) &&
-        ( ssl->handshake->extensions_present & KEY_SHARE_EXTENSION ) )
-    {
-        /* Test whether we are allowed to use this mode ( server-side check ) */
-        if( ssl->conf->key_exchange_modes ==
-              MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_ECDHE_ECDSA ||
-            ssl->conf->key_exchange_modes ==
-              MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_ALL )
-        {
-            MBEDTLS_SSL_DEBUG_MSG( 3, ( "Using a ECDSA-ECDHE key exchange" ) );
-            ssl->session_negotiate->key_exchange = MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA;
-            goto end_client_hello;
-        }
-    }
-
-    if( ssl->session_negotiate->key_exchange == 0 ) {
-      MBEDTLS_SSL_DEBUG_MSG( 1, ( "ClientHello message misses mandatory extensions." ) );
-      return( MBEDTLS_ERR_SSL_BAD_HS_MISSING_EXTENSION_EXT );
-    }
-
-    /* If we previously determined that an HRR is needed then
-     * we will send it now.
-     */
-    if( final_ret == MBEDTLS_ERR_SSL_BAD_HS_WRONG_KEY_SHARE )
-        return( MBEDTLS_ERR_SSL_BAD_HS_WRONG_KEY_SHARE );
-
-    end_client_hello:
 
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
     if( ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_DATAGRAM )
@@ -3096,7 +3069,8 @@ static int ssl_client_hello_parse( mbedtls_ssl_context* ssl,
     }
 #endif /* MBEDTLS_SSL_COOKIE_C */
 
-    if( final_ret == MBEDTLS_ERR_SSL_BAD_HS_WRONG_KEY_SHARE || final_ret == MBEDTLS_ERR_SSL_BAD_HS_MISSING_COOKIE_EXT )
+    if( final_ret == MBEDTLS_ERR_SSL_BAD_HS_WRONG_KEY_SHARE ||
+        final_ret == MBEDTLS_ERR_SSL_BAD_HS_MISSING_COOKIE_EXT )
     {
         /* create stateless transcript hash for HRR */
 
