@@ -1182,6 +1182,8 @@ void mbedtls_ssl_handshake_wrapup(mbedtls_ssl_context* ssl);
 
 int mbedtls_ssl_send_fatal_handshake_failure(mbedtls_ssl_context* ssl);
 int mbedtls_ssl_write_handshake_msg( mbedtls_ssl_context *ssl );
+int mbedtls_ssl_write_handshake_msg_ext( mbedtls_ssl_context *ssl,
+                                         int update_checksum );
 
 /**
  * \brief       Update record layer
