@@ -1153,8 +1153,8 @@ int mbedtls_ssl_write_signature_algorithms_ext( mbedtls_ssl_context *ssl,
 
     if( sig_alg_len == 0 )
     {
-            MBEDTLS_SSL_DEBUG_MSG( 1, ( "No signature algorithms defined." ) );
-            return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "No signature algorithms defined." ) );
+        return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
     }
 
     if( end < p || (size_t)( end - p ) < sig_alg_len + 6 )

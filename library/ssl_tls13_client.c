@@ -934,17 +934,21 @@ static int ssl_write_supported_groups_ext( mbedtls_ssl_context *ssl,
 #if defined(MBEDTLS_ECP_C)
     const mbedtls_ecp_group_id *grp_id;
 #else
-    ( ( void )ssl );
+    ((void) ssl);
 #endif
 
     *olen = 0;
 
 #if defined(MBEDTLS_ECP_C)
-    for ( grp_id = ssl->conf->curve_list; *grp_id != MBEDTLS_ECP_DP_NONE; grp_id++ )
+    for ( grp_id = ssl->conf->curve_list;
+          *grp_id != MBEDTLS_ECP_DP_NONE;
+          grp_id++ )
     {
 /*		info = mbedtls_ecp_curve_info_from_grp_id( *grp_id ); */
 #else
-    for ( info = mbedtls_ecp_curve_list(); info->grp_id != MBEDTLS_ECP_DP_NONE; info++ )
+    for ( info = mbedtls_ecp_curve_list();
+          info->grp_id != MBEDTLS_ECP_DP_NONE;
+          info++ )
     {
 #endif
         elliptic_curve_len += 2;
@@ -968,19 +972,25 @@ static int ssl_write_supported_groups_ext( mbedtls_ssl_context *ssl,
     elliptic_curve_len = 0;
 
 #if defined(MBEDTLS_ECP_C)
-    for ( grp_id = ssl->conf->curve_list; *grp_id != MBEDTLS_ECP_DP_NONE; grp_id++ )
+    for ( grp_id = ssl->conf->curve_list;
+          *grp_id != MBEDTLS_ECP_DP_NONE;
+          grp_id++ )
     {
         info = mbedtls_ecp_curve_info_from_grp_id( *grp_id );
 
         if( info == NULL )
             return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
 #else
-    for ( info = mbedtls_ecp_curve_list(); info->grp_id != MBEDTLS_ECP_DP_NONE; info++ )
+    for ( info = mbedtls_ecp_curve_list();
+          info->grp_id != MBEDTLS_ECP_DP_NONE;
+          info++ )
     {
 #endif
         elliptic_curve_list[elliptic_curve_len++] = info->tls_id >> 8;
         elliptic_curve_list[elliptic_curve_len++] = info->tls_id & 0xFF;
-        MBEDTLS_SSL_DEBUG_MSG( 5, ( "Named Curve: %s ( %x )", mbedtls_ecp_curve_info_from_tls_id( info->tls_id )->name, info->tls_id ) );
+        MBEDTLS_SSL_DEBUG_MSG( 5, ( "Named Curve: %s ( %x )",
+                  mbedtls_ecp_curve_info_from_tls_id( info->tls_id )->name,
+                  info->tls_id ) );
     }
 
     *p++ = (unsigned char)( ( MBEDTLS_TLS_EXT_SUPPORTED_GROUPS >> 8 ) & 0xFF );
@@ -996,7 +1006,7 @@ static int ssl_write_supported_groups_ext( mbedtls_ssl_context *ssl,
 
     *olen = 6 + elliptic_curve_len;
     return( 0 );
-    }
+}
 #endif /* defined(MBEDTLS_ECDH_C) */
 
 /*
