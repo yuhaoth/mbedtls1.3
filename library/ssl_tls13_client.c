@@ -1652,6 +1652,9 @@ static int ssl_client_hello_write( mbedtls_ssl_context* ssl,
     /* Add the psk_key_exchange_modes extension.
      */
     ret = ssl_write_psk_key_exchange_modes_ext( ssl, buf, end, &cur_ext_len );
+    if( ret != 0 )
+        return( ret );
+
     total_ext_len += cur_ext_len;
     buf += cur_ext_len;
 #endif /* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED */
@@ -1661,12 +1664,18 @@ static int ssl_client_hello_write( mbedtls_ssl_context* ssl,
      * REQUIRED for ECDHE ciphersuites.
      */
     ret = ssl_write_supported_groups_ext( ssl, buf, end, &cur_ext_len );
+    if( ret != 0 )
+        return( ret );
+
     total_ext_len += cur_ext_len;
     buf += cur_ext_len;
 
     /* The supported_signature_algorithms extension is REQUIRED for
      * certificate authenticated ciphersuites. */
     ret = mbedtls_ssl_write_signature_algorithms_ext( ssl, buf, end, &cur_ext_len );
+    if( ret != 0 )
+        return( ret );
+
     total_ext_len += cur_ext_len;
     buf += cur_ext_len;
 
@@ -1679,6 +1688,9 @@ static int ssl_client_hello_write( mbedtls_ssl_context* ssl,
      */
 
     ret = ssl_write_key_shares_ext( ssl, buf, end, &cur_ext_len );
+    if( ret != 0 )
+        return( ret );
+
     total_ext_len += cur_ext_len;
     buf += cur_ext_len;
 #endif /* MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED */
@@ -1689,6 +1701,9 @@ static int ssl_client_hello_write( mbedtls_ssl_context* ssl,
      */
     ssl->handshake->ptr_to_psk_ext = buf;
     ret = mbedtls_ssl_write_pre_shared_key_ext( ssl, buf, end, &cur_ext_len, 0 );
+    if( ret != 0 )
+        return( ret );
+
     total_ext_len += cur_ext_len;
     buf += cur_ext_len;
 #endif /* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED */
