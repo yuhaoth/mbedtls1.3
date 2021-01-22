@@ -690,6 +690,9 @@ int mbedtls_ssl_write_pre_shared_key_ext( mbedtls_ssl_context *ssl,
 
     *olen = 0;
 
+    if( !mbedtls_ssl_conf_tls13_some_psk_enabled( ssl ) )
+        return( 0 );
+
     /* Check whether we have any PSK credentials configured. */
     if( mbedtls_ssl_get_psk( ssl, NULL, NULL ) != 0 )
     {
@@ -1065,6 +1068,11 @@ static int ssl_write_key_shares_ext( mbedtls_ssl_context *ssl,
     /* TODO: Add bounds checks! Only then remove the next line. */
     ( (void ) end );
 
+    *olen = 0;
+
+    if( !mbedtls_ssl_conf_tls13_some_ecdhe_enabled( ssl ) )
+        return( 0 );
+
 #if defined(MBEDTLS_SSL_TLS13_CTLS)
     if( ssl->handshake->ctls == MBEDTLS_SSL_TLS13_CTLS_USE )
     {
@@ -1080,8 +1088,6 @@ static int ssl_write_key_shares_ext( mbedtls_ssl_context *ssl,
     const mbedtls_ecp_group_id *grp_id;
     /* int max_size = 0; */
     /*const mbedtls_ssl_ciphersuite_t *suite_info; */
-
-    *olen = 0;
 
     if( ssl->conf->curve_list == NULL )
     {
@@ -1191,6 +1197,7 @@ static int ssl_write_key_shares_ext( mbedtls_ssl_context *ssl,
         *olen += 4; /* 4 bytes for fixed header */
     }
 
+    ssl->handshake->extensions_present |= KEY_SHARE_EXTENSION;
     return( 0 );
 }
 
@@ -1670,39 +1677,20 @@ static int ssl_client_hello_write( mbedtls_ssl_context* ssl,
      *    psk_key_exchange_modes has been added as the last extension.
      * 3 ) Or, in case all ciphers are supported ( which includes #1 and #2 from above )
      */
-    if( mbedtls_ssl_conf_tls13_some_ecdhe_enabled( ssl ) )
-    {
-        /* We are using a PSK-based key exchange with DHE */
-        ret = ssl_write_key_shares_ext( ssl, buf, end, &cur_ext_len );
-        total_ext_len += cur_ext_len;
-        buf += cur_ext_len;
 
-        if( ret == 0 ) ssl->handshake->extensions_present |= KEY_SHARE_EXTENSION;
-    }
-    else if( ssl->handshake->extensions_present & SUPPORTED_GROUPS_EXTENSION &&
-             ssl->handshake->extensions_present & SIGNATURE_ALGORITHM_EXTENSION )
-    {
-        /* We are using a certificate-based key exchange */
-        ret = ssl_write_key_shares_ext( ssl, buf, end, &cur_ext_len );
-        total_ext_len += cur_ext_len;
-        buf += cur_ext_len;
-
-        if( ret == 0 ) ssl->handshake->extensions_present |= KEY_SHARE_EXTENSION;
-    }
+    ret = ssl_write_key_shares_ext( ssl, buf, end, &cur_ext_len );
+    total_ext_len += cur_ext_len;
+    buf += cur_ext_len;
 #endif /* MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED */
 
 #if defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
-
-    if( mbedtls_ssl_conf_tls13_some_psk_enabled( ssl ) )
-    {
-        /* We need to save the pointer to the pre-shared key extension
-         * because it has to be updated later.
-         */
-        ssl->handshake->ptr_to_psk_ext = buf;
-        ret = mbedtls_ssl_write_pre_shared_key_ext( ssl, buf, end, &cur_ext_len, 0 );
-        total_ext_len += cur_ext_len;
-        buf += cur_ext_len;
-    }
+    /* We need to save the pointer to the pre-shared key extension
+     * because it has to be updated later.
+     */
+    ssl->handshake->ptr_to_psk_ext = buf;
+    ret = mbedtls_ssl_write_pre_shared_key_ext( ssl, buf, end, &cur_ext_len, 0 );
+    total_ext_len += cur_ext_len;
+    buf += cur_ext_len;
 #endif /* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED */
 
     MBEDTLS_SSL_DEBUG_MSG( 3, ( "client hello, total extension length: %d",
