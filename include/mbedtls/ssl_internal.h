@@ -1408,6 +1408,7 @@ int mbedtls_ssl_tls13_build_transform( mbedtls_ssl_context* ssl,
 
 #if defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
 int mbedtls_ssl_create_binder( mbedtls_ssl_context *ssl,
+                               int is_external,
                                unsigned char *psk, size_t psk_len,
                                const mbedtls_md_info_t *md,
                                const mbedtls_ssl_ciphersuite_t *suite_info,

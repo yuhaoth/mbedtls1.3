@@ -172,6 +172,7 @@ static uint32_t get_varint_value( const uint32_t input )
  */
 
 int mbedtls_ssl_create_binder( mbedtls_ssl_context *ssl,
+                               int is_external,
                                unsigned char *psk, size_t psk_len,
                                const mbedtls_md_info_t *md,
                                const mbedtls_ssl_ciphersuite_t *suite_info,
@@ -238,7 +239,7 @@ int mbedtls_ssl_create_binder( mbedtls_ssl_context *ssl,
                         hash, 1 /* for SHA384 */ );
     }
 
-    if( ssl->conf->resumption_mode == 1 )
+    if( !is_external )
     {
         ret = mbedtls_ssl_tls1_3_derive_secret( mbedtls_md_get_type( md ),
                             ssl->handshake->early_secret, hash_length,

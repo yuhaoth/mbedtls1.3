@@ -759,6 +759,8 @@ int mbedtls_ssl_write_pre_shared_key_ext( mbedtls_ssl_context *ssl,
     }
     else
     {
+        int external_psk;
+
         /* Extension Type */
         *p++ = (unsigned char)( ( MBEDTLS_TLS_EXT_PRE_SHARED_KEY >> 8 ) & 0xFF );
         *p++ = (unsigned char)( ( MBEDTLS_TLS_EXT_PRE_SHARED_KEY ) & 0xFF );
@@ -827,8 +829,14 @@ int mbedtls_ssl_write_pre_shared_key_ext( mbedtls_ssl_context *ssl,
                       truncated_clienthello_start,
                       truncated_clienthello_end - truncated_clienthello_start );
 
-        ret = mbedtls_ssl_create_binder( ssl, ssl->conf->psk,
-                  ssl->conf->psk_len,
+        if( ssl->conf->resumption_mode )
+            external_psk = 0;
+        else
+            external_psk = 1;
+
+        ret = mbedtls_ssl_create_binder( ssl,
+                  external_psk,
+                  ssl->conf->psk, ssl->conf->psk_len,
                   mbedtls_md_info_from_type( suite_info->mac ),
                   suite_info, truncated_clienthello_start,
                   truncated_clienthello_end - truncated_clienthello_start, p );
