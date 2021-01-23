@@ -151,6 +151,271 @@ static uint32_t get_varint_value( const uint32_t input )
 }
 #endif /* MBEDTLS_SSL_TLS13_CTLS */
 
+#if defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
+/* mbedtls_ssl_create_binder():
+ *
+ *                0
+ *                |
+ *                v
+ *   PSK ->  HKDF-Extract = Early Secret
+ *                |
+ *                +------> Derive-Secret( .,
+ *                |                      "ext binder" |
+ *                |                      "res binder",
+ *                |                      "" )
+ *                |                     = binder_key
+ *                |
+ *                +-----> Derive-Secret( ., "c e traffic",
+ *                |                     ClientHello )
+ *                |                     = client_early_traffic_secret
+ *               ...
+ */
+
+int mbedtls_ssl_create_binder( mbedtls_ssl_context *ssl,
+                               int is_external,
+                               unsigned char *psk, size_t psk_len,
+                               const mbedtls_md_info_t *md,
+                               const mbedtls_ssl_ciphersuite_t *suite_info,
+                               unsigned char *buffer, size_t blen,
+                               unsigned char *result )
+{
+    int ret = 0;
+    int hash_length;
+    unsigned char salt[MBEDTLS_MD_MAX_SIZE];
+    unsigned char padbuf[MBEDTLS_MD_MAX_SIZE];
+    unsigned char hash[MBEDTLS_MD_MAX_SIZE];
+    unsigned char binder_key[MBEDTLS_MD_MAX_SIZE];
+    unsigned char finished_key[MBEDTLS_MD_MAX_SIZE];
+
+    hash_length = mbedtls_hash_size_for_ciphersuite( suite_info );
+    if( hash_length == -1 )
+    {
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "should never happen" ) );
+        return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
+    }
+
+    /*
+     * Compute Early Secret with HKDF-Extract( 0, PSK )
+     */
+    memset( salt, 0x0, hash_length );
+    ret = mbedtls_hkdf_extract( md, salt, hash_length,
+                                psk, psk_len,
+                                ssl->handshake->early_secret );
+    if( ret != 0 )
+    {
+        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_hkdf_extract", ret );
+        return( ret );
+    }
+
+    MBEDTLS_SSL_DEBUG_MSG( 5, ( "HKDF Extract -- early_secret" ) );
+    MBEDTLS_SSL_DEBUG_BUF( 5, "Salt", salt, hash_length );
+    MBEDTLS_SSL_DEBUG_BUF( 5, "Input", psk, psk_len );
+    MBEDTLS_SSL_DEBUG_BUF( 5, "Output", ssl->handshake->early_secret,
+                           hash_length );
+
+    /*
+     * Compute binder_key with
+     *
+     *    Derive-Secret( early_secret, "ext binder" | "res binder", "" )
+     */
+
+    /* Create hash of empty message first.
+     * TBD: replace by constant.
+     *
+     * For SHA256 the constant is
+     * e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+     *
+     * For SHA384 the constant is
+     * 38b060a751ac96384cd9327eb1b1e36a21fdb71114be07434c0cc7bf63f6e1da274edebfe76f65fbd51ad2f14898b95b
+     */
+
+    if( suite_info->mac == MBEDTLS_MD_SHA256 )
+    {
+        mbedtls_sha256( (const unsigned char *) "", 0, hash, 0 );
+    }
+    else if( suite_info->mac == MBEDTLS_MD_SHA384 )
+    {
+        mbedtls_sha512( (const unsigned char *) "", 0,
+                        hash, 1 /* for SHA384 */ );
+    }
+
+    if( !is_external )
+    {
+        ret = mbedtls_ssl_tls1_3_derive_secret( mbedtls_md_get_type( md ),
+                            ssl->handshake->early_secret, hash_length,
+                            MBEDTLS_SSL_TLS1_3_LBL_WITH_LEN( res_binder ),
+                            NULL, 0, MBEDTLS_SSL_TLS1_3_CONTEXT_UNHASHED,
+                            binder_key, hash_length );
+        MBEDTLS_SSL_DEBUG_MSG( 5, ( "Derive Early Secret with 'res binder'" ) );
+    }
+    else
+    {
+        ret = mbedtls_ssl_tls1_3_derive_secret( mbedtls_md_get_type( md ),
+                            ssl->handshake->early_secret, hash_length,
+                            MBEDTLS_SSL_TLS1_3_LBL_WITH_LEN( ext_binder ),
+                            NULL, 0, MBEDTLS_SSL_TLS1_3_CONTEXT_UNHASHED,
+                            binder_key, hash_length );
+        MBEDTLS_SSL_DEBUG_MSG( 5, ( "Derive Early Secret with 'ext binder'" ) );
+    }
+
+    if( ret != 0 )
+    {
+        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_tls1_3_derive_secret", ret );
+        return( ret );
+    }
+
+#if defined(MBEDTLS_SHA256_C)
+    if( suite_info->mac == MBEDTLS_MD_SHA256 )
+    {
+        mbedtls_sha256_context sha256;
+        mbedtls_sha256_init( &sha256 );
+
+        if( ( ret = mbedtls_sha256_starts_ret( &sha256, 0 ) ) != 0 )
+        {
+            MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_sha256_starts_ret", ret );
+            goto sha256_done;
+        }
+
+        MBEDTLS_SSL_DEBUG_BUF( 5, "input buffer for psk binder", buffer, blen );
+        if( ( ret = mbedtls_sha256_update_ret( &sha256, buffer, blen ) ) != 0 )
+        {
+            MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_sha256_update_ret", ret );
+            goto sha256_done;
+        }
+
+        if( ( ret = mbedtls_sha256_finish_ret( &sha256, padbuf ) ) != 0 )
+        {
+            MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_sha256_finish_ret", ret );
+            goto sha256_done;
+        }
+        MBEDTLS_SSL_DEBUG_BUF( 5, "handshake hash for psk binder", padbuf, 32 );
+
+    sha256_done:
+
+        mbedtls_sha256_free( &sha256 );
+        if( ret != 0 )
+            goto exit;
+    }
+    else
+#endif /* MBEDTLS_SHA256_C */
+#if defined(MBEDTLS_SHA512_C)
+    if( suite_info->mac == MBEDTLS_MD_SHA384 )
+    {
+        mbedtls_sha512_context sha512;
+        mbedtls_sha512_init( &sha512 );
+
+        if( ( ret = mbedtls_sha512_starts_ret( &sha512, 1 ) ) != 0 )
+        {
+            MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_sha512_starts_ret", ret );
+            goto sha384_done;
+        }
+        mbedtls_sha512_clone( &sha512, &ssl->handshake->fin_sha512 );
+
+        MBEDTLS_SSL_DEBUG_BUF( 5, "input buffer for psk binder", buffer, blen );
+        if( ( ret = mbedtls_sha512_update_ret( &sha512, buffer, blen ) ) != 0 )
+        {
+            MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_sha512_update_ret", ret );
+            mbedtls_sha512_free( &sha512 );
+            goto sha384_done;
+        }
+
+        if( ( ret = mbedtls_sha512_finish_ret( &sha512, padbuf ) ) != 0 )
+        {
+            MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_sha512_finish_ret", ret );
+            goto sha384_done;
+        }
+        MBEDTLS_SSL_DEBUG_BUF( 5, "handshake hash for psk binder", padbuf, 48 );
+
+    sha384_done:
+
+        mbedtls_sha512_free( &sha512 );
+        if( ret != 0 )
+            goto exit;
+
+    }
+    else if( suite_info->mac == MBEDTLS_MD_SHA512 )
+    {
+        mbedtls_sha512_context sha512;
+        mbedtls_sha512_init( &sha512 );
+
+        if( ( ret = mbedtls_sha512_starts_ret( &sha512, 0 ) ) != 0 )
+        {
+            MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_sha512_starts_ret", ret );
+            goto sha512_done;
+        }
+
+        mbedtls_sha512_clone( &sha512, &ssl->handshake->fin_sha512 );
+
+        MBEDTLS_SSL_DEBUG_BUF( 5, "input buffer for psk binder", buffer, blen );
+        if( ( ret = mbedtls_sha512_update_ret( &sha512, buffer, blen ) ) != 0 )
+        {
+            MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_sha512_update_ret", ret );
+            goto sha512_done;
+        }
+
+        if( ( ret = mbedtls_sha512_finish_ret( &sha512, padbuf ) ) != 0 )
+        {
+            MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_sha512_finish_ret", ret );
+            goto sha512_done;
+        }
+        MBEDTLS_SSL_DEBUG_BUF( 5, "handshake hash for psk binder", padbuf, 64 );
+
+    sha512_done:
+
+        mbedtls_sha512_free( &sha512 );
+        if( ret != 0 )
+            goto exit;
+    }
+    else
+#endif /* MBEDTLS_SHA512_C */
+    {
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "should never happen" ) );
+        return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
+    }
+
+    /*
+     * finished_key =
+     *    HKDF-Expand-Label( BaseKey, "finished", "", Hash.length )
+     *
+     * The binding_value is computed in the same way as the Finished message
+     * but with the BaseKey being the binder_key.
+     */
+
+    ret = mbedtls_ssl_tls1_3_hkdf_expand_label( suite_info->mac, binder_key,
+                            hash_length,
+                            MBEDTLS_SSL_TLS1_3_LBL_WITH_LEN( finished ),
+                            NULL, 0,
+                            finished_key, hash_length );
+
+    if( ret != 0 )
+    {
+        MBEDTLS_SSL_DEBUG_RET( 2, "Creating the finished_key failed", ret );
+        goto exit;
+    }
+
+    MBEDTLS_SSL_DEBUG_BUF( 3, "finished_key", finished_key, hash_length );
+
+    /* compute mac and write it into the buffer */
+    ret = mbedtls_md_hmac( md, finished_key, hash_length, padbuf, hash_length, result );
+
+    if( ret != 0 )
+    {
+        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_md_hmac", ret );
+        goto exit;
+    }
+
+    MBEDTLS_SSL_DEBUG_MSG( 3, ( "verify_data of psk binder" ) );
+    MBEDTLS_SSL_DEBUG_BUF( 3, "Input", padbuf, hash_length );
+    MBEDTLS_SSL_DEBUG_BUF( 3, "Key", finished_key, hash_length );
+    MBEDTLS_SSL_DEBUG_BUF( 3, "Output", result, hash_length );
+
+exit:
+
+    mbedtls_platform_zeroize( finished_key, hash_length );
+    return( ret );
+}
+#endif /* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED */
+
 #if defined(MBEDTLS_SHA256_C)
 static int ssl_calc_finished_tls_sha256(
     mbedtls_ssl_context* ssl, unsigned char* buf, int from )
