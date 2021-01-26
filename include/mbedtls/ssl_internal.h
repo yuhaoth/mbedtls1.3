@@ -694,7 +694,6 @@ struct mbedtls_ssl_handshake_params
              * but excluding the outgoing finished message. */
             unsigned char digest[MBEDTLS_MD_MAX_SIZE];
             size_t digest_len;
-            mbedtls_ssl_key_set* traffic_keys;
         } finished_out;
 
         /* Incoming Finished message */

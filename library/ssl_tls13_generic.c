@@ -4132,13 +4132,8 @@ static int ssl_finished_out_postprocess( mbedtls_ssl_context* ssl );
 int mbedtls_ssl_finished_out_process( mbedtls_ssl_context* ssl )
 {
     int ret;
-    mbedtls_ssl_key_set traffic_keys;
 
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> write finished" ) );
-
-    memset( ( void* )&traffic_keys, 0, sizeof( mbedtls_ssl_key_set ) );
-
-    ssl->handshake->state_local.finished_out.traffic_keys = &traffic_keys;
 
     if( !ssl->handshake->state_local.finished_out.preparation_done )
     {
