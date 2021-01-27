@@ -3507,13 +3507,12 @@ static int ssl_server_hello_process( mbedtls_ssl_context* ssl ) {
     ssl->out_msgtype = MBEDTLS_SSL_MSG_HANDSHAKE;
     ssl->out_msg[0] = MBEDTLS_SSL_HS_SERVER_HELLO;
 
-    /* Postprocess */
-
-    MBEDTLS_SSL_PROC_CHK( ssl_server_hello_postprocess( ssl ) );
-
     /* Dispatch */
 
     MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_write_handshake_msg( ssl ) );
+
+    /* Postprocess */
+    MBEDTLS_SSL_PROC_CHK( ssl_server_hello_postprocess( ssl ) );
 
     /* NOTE: For the new messaging layer, the postprocessing step
      *       might come after the dispatching step if the latter
