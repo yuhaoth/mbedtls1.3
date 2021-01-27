@@ -709,6 +709,7 @@ static void ssl_update_checksum_sha256( mbedtls_ssl_context *, const unsigned ch
 static void ssl_update_checksum_sha384( mbedtls_ssl_context *, const unsigned char *, size_t );
 #endif
 
+#if defined(MBEDTLS_SHA256_C)
 static int ssl_get_handshake_transcript_sha256( mbedtls_ssl_context *ssl,
                                                 unsigned char *dst,
                                                 size_t dst_len,
@@ -736,7 +737,9 @@ exit:
     mbedtls_sha256_free( &sha256 );
     return( ret );
 }
+#endif /* MBEDTLS_SHA256_C */
 
+#if defined(MBEDTLS_SHA512_C)
 static int ssl_get_handshake_transcript_sha384( mbedtls_ssl_context *ssl,
                                                 unsigned char *dst,
                                                 size_t dst_len,
@@ -764,6 +767,7 @@ exit:
     mbedtls_sha512_free( &sha512 );
     return( ret );
 }
+#endif /* MBEDTLS_SHA512_C */
 
 static int ssl_hash_transcript_core( mbedtls_ssl_context *ssl,
                                      mbedtls_md_type_t md,
