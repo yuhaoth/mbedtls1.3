@@ -1414,9 +1414,16 @@ int mbedtls_ssl_create_binder( mbedtls_ssl_context *ssl,
                                unsigned char *psk, size_t psk_len,
                                const mbedtls_md_info_t *md,
                                const mbedtls_ssl_ciphersuite_t *suite_info,
-                               unsigned char *buffer, size_t blen,
                                unsigned char *result );
 #endif /* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED */
+
+int mbedtls_ssl_get_handshake_transcript( mbedtls_ssl_context *ssl,
+                                          const mbedtls_md_type_t md,
+                                          unsigned char *dst,
+                                          size_t dst_len,
+                                          size_t *olen );
+
+int mbedtls_ssl_hash_transcript( mbedtls_ssl_context *ssl );
 
 void mbedtls_ssl_set_inbound_transform( mbedtls_ssl_context *ssl,
                                         mbedtls_ssl_transform *transform );
@@ -1440,7 +1447,11 @@ int mbedtls_ssl_write_change_cipher_spec(mbedtls_ssl_context* ssl);
 #endif /* MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE */
 
 #if defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
-int mbedtls_ssl_write_pre_shared_key_ext(mbedtls_ssl_context* ssl, unsigned char* buf, unsigned char* end, size_t* olen, int dummy_run);
+int mbedtls_ssl_write_pre_shared_key_ext(mbedtls_ssl_context* ssl,
+                                         unsigned char* buf, unsigned char* end,
+                                         size_t* olen,
+                                         size_t* binder_list_length,
+                                         int part );
 #endif /* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED */
 #if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
 int mbedtls_ssl_write_signature_algorithms_ext(mbedtls_ssl_context* ssl, unsigned char* buf, unsigned char* end, size_t* olen);
