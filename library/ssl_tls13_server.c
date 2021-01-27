@@ -3516,18 +3516,8 @@ static int ssl_server_hello_process( mbedtls_ssl_context* ssl ) {
     MBEDTLS_SSL_PROC_CHK( ssl_server_hello_write( ssl, buf, buf_len,
                                                   &msg_len ) );
 
-    {
-        unsigned char hs_hdr[4];
-
-        /* Build HS header for checksum update. */
-        hs_hdr[0] = MBEDTLS_SSL_HS_SERVER_HELLO;
-        hs_hdr[1] = (unsigned char)( msg_len >> 16 );
-        hs_hdr[2] = (unsigned char)( msg_len >>  8 );
-        hs_hdr[3] = (unsigned char)( msg_len >>  0 );
-
-        ssl->handshake->update_checksum( ssl, hs_hdr, sizeof( hs_hdr ) );
-        ssl->handshake->update_checksum( ssl, buf, msg_len );
-    }
+    mbedtls_ssl_add_hs_msg_to_checksum( ssl, MBEDTLS_SSL_HS_SERVER_HELLO,
+                                        buf, msg_len );
 
     /* Commit message */
     MBEDTLS_SSL_PROC_CHK( mbedtls_writer_commit_partial_ext( msg.handle,

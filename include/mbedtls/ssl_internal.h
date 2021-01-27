@@ -1423,6 +1423,15 @@ int mbedtls_ssl_get_handshake_transcript( mbedtls_ssl_context *ssl,
                                           size_t dst_len,
                                           size_t *olen );
 
+
+void mbedtls_ssl_add_hs_msg_to_checksum( mbedtls_ssl_context *ssl,
+                                         unsigned hs_type,
+                                         unsigned char const *msg,
+                                         size_t msg_len );
+void mbedtls_ssl_add_hs_hdr_to_checksum( mbedtls_ssl_context *ssl,
+                                         unsigned hs_type,
+                                         size_t total_hs_len );
+
 int mbedtls_ssl_hash_transcript( mbedtls_ssl_context *ssl );
 
 void mbedtls_ssl_set_inbound_transform( mbedtls_ssl_context *ssl,

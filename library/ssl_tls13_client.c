@@ -1270,20 +1270,9 @@ static int ssl_client_hello_process( mbedtls_ssl_context* ssl )
                                                   &len_without_binders,
                                                   &msg_len ) );
 
-    {
-        unsigned char hs_hdr[4];
-
-        /* Build HS header for checksum update. */
-        hs_hdr[0] = MBEDTLS_SSL_HS_CLIENT_HELLO;
-        hs_hdr[1] = (unsigned char)( msg_len >> 16 );
-        hs_hdr[2] = (unsigned char)( msg_len >>  8 );
-        hs_hdr[3] = (unsigned char)( msg_len >>  0 );
-
-        ssl->handshake->update_checksum( ssl, hs_hdr, sizeof( hs_hdr ) );
-
-        /* Manually update the checksum with ClientHello using dummy PSK binders. */
-        ssl->handshake->update_checksum( ssl, buf, len_without_binders );
-    }
+    mbedtls_ssl_add_hs_hdr_to_checksum( ssl, MBEDTLS_SSL_HS_CLIENT_HELLO,
+                                        msg_len );
+    ssl->handshake->update_checksum( ssl, buf, len_without_binders );
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && \
     defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
