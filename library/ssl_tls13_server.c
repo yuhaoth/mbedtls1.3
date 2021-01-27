@@ -2478,6 +2478,15 @@ static int ssl_client_hello_parse( mbedtls_ssl_context* ssl,
         unsigned int ext_size = ( ( ext[2] << 8 )
                                  | ( ext[3] ) );
 
+        /* The PSK extension must be the last in the ClientHello.
+         * Fail if we've found it already but haven't yet reached
+         * the end of the extension block. */
+        if( ext_psk_ptr != NULL )
+        {
+            MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad client hello message" ) );
+            return( MBEDTLS_ERR_SSL_BAD_HS_CLIENT_HELLO );
+        }
+
         if( ext_size + 4 > ext_len )
         {
             MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad client hello message" ) );

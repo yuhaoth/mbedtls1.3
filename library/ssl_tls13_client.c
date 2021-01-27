@@ -1233,6 +1233,34 @@ static int ssl_client_hello_process( mbedtls_ssl_context* ssl )
                                                   MBEDTLS_SSL_MAX_CONTENT_LEN,
                                                   &ssl->out_msglen ) );
 
+    {
+        unsigned char hs_hdr[4];
+        size_t const hs_len = ssl->out_msglen - 4;
+
+        /* Build HS header for checksum update. */
+        hs_hdr[0] = MBEDTLS_SSL_HS_CLIENT_HELLO;
+        hs_hdr[1] = (unsigned char)( hs_len >> 16 );
+        hs_hdr[2] = (unsigned char)( hs_len >>  8 );
+        hs_hdr[3] = (unsigned char)( hs_len >>  0 );
+
+        ssl->handshake->update_checksum( ssl, hs_hdr, sizeof( hs_hdr ) );
+
+        /* Manually update the checksum with ClientHello using dummy PSK binders. */
+        ssl->handshake->update_checksum( ssl, ssl->out_msg + 4, hs_len );
+    }
+
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && \
+    defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
+    /* Patch the PSK binder after updating the HS checksum. */
+    {
+        size_t len = ssl->out_msglen;
+        size_t dummy_length;
+        mbedtls_ssl_write_pre_shared_key_ext( ssl, ssl->handshake->ptr_to_psk_ext,
+                                              &ssl->out_msg[len], &dummy_length, 1 );
+    }
+#endif /* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED &&
+          MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+
     ssl->out_msgtype = MBEDTLS_SSL_MSG_HANDSHAKE;
     ssl->out_msg[0] = MBEDTLS_SSL_HS_CLIENT_HELLO;
 
@@ -1245,7 +1273,8 @@ static int ssl_client_hello_process( mbedtls_ssl_context* ssl )
 #endif
 
     /* Dispatch message */
-    MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_write_handshake_msg( ssl ) );
+    MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_write_handshake_msg_ext(
+                              ssl, 0 /* no checksum update */ ) );
 
     /* NOTE: With the new messaging layer, the postprocessing
      *       step might come after the dispatching step if the
