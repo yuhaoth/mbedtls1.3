@@ -229,14 +229,24 @@ int mbedtls_ssl_create_binder( mbedtls_ssl_context *ssl,
      * 38b060a751ac96384cd9327eb1b1e36a21fdb71114be07434c0cc7bf63f6e1da274edebfe76f65fbd51ad2f14898b95b
      */
 
+#if defined(MBEDTLS_SHA256_C)
     if( suite_info->mac == MBEDTLS_MD_SHA256 )
     {
         mbedtls_sha256( (const unsigned char *) "", 0, hash, 0 );
     }
-    else if( suite_info->mac == MBEDTLS_MD_SHA384 )
+    else
+#endif /* MBEDTLS_SHA256_C */
+#if defined(MBEDTLS_SHA512_C)
+    if( suite_info->mac == MBEDTLS_MD_SHA384 )
     {
         mbedtls_sha512( (const unsigned char *) "", 0,
                         hash, 1 /* for SHA384 */ );
+    }
+    else
+#endif /* MBEDTLS_SHA512_C */
+    {
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "mbedtls_ssl_create_binder: Unknow hash function." ) );
+        return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
     }
 
     if( !is_external )
