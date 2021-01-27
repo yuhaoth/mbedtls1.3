@@ -3499,7 +3499,8 @@ static int ssl_server_hello_process( mbedtls_ssl_context* ssl ) {
 
     /* Make sure we can write a new message. */
     MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_flush_output( ssl ) );
-    MBEDTLS_SSL_PROC_CHK( ssl_server_hello_write( ssl, ssl->out_msg, MBEDTLS_SSL_MAX_CONTENT_LEN, &ssl->out_msglen ) );
+    MBEDTLS_SSL_PROC_CHK( ssl_server_hello_write( ssl, ssl->out_msg,
+                            MBEDTLS_SSL_MAX_CONTENT_LEN, &ssl->out_msglen ) );
 
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= write server hello" ) );
 
