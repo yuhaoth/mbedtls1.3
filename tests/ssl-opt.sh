@@ -62,6 +62,7 @@ guess_config_name() {
 : ${MBEDTLS_TEST_PLATFORM:="$(uname -s | tr -c \\n0-9A-Za-z _)-$(uname -m | tr -c \\n0-9A-Za-z _)"}
 
 O_SRV="$OPENSSL_CMD s_server -www -cert data_files/server5.crt -key data_files/server5.key"
+O_SRV_RSA="$OPENSSL_CMD s_server -www -cert data_files/server2.crt -key data_files/server2.key"
 O_CLI="echo 'GET / HTTP/1.0' | $OPENSSL_CMD s_client"
 G_SRV="$GNUTLS_SERV --x509certfile data_files/server5.crt --x509keyfile data_files/server5.key"
 G_CLI="echo 'GET / HTTP/1.0' | $GNUTLS_CLI --x509cafile data_files/test-ca_cat12.crt"
@@ -291,6 +292,20 @@ requires_gnutls() {
         fi
     fi
     if [ "$GNUTLS_AVAILABLE" = "NO" ]; then
+        SKIP_NEXT="YES"
+    fi
+}
+
+# skip next test if OpenSSL isn't available
+requires_openssl() {
+    if [ -z "${OPENSSL_AVAILABLE:-}" ]; then
+        if ( which "$OPENSSL_CMD" ) >/dev/null 2>&1; then
+            OPENSSL_AVAILABLE="YES"
+        else
+            OPENSSL_AVAILABLE="NO"
+        fi
+    fi
+    if [ "$OPENSSL_AVAILABLE" = "NO" ]; then
         SKIP_NEXT="YES"
     fi
 }
@@ -1074,6 +1089,7 @@ P_SRV="$P_SRV server_addr=127.0.0.1 server_port=$SRV_PORT"
 P_CLI="$P_CLI server_addr=127.0.0.1 server_port=+SRV_PORT"
 P_PXY="$P_PXY server_addr=127.0.0.1 server_port=$SRV_PORT listen_addr=127.0.0.1 listen_port=$PXY_PORT ${SEED:+"seed=$SEED"}"
 O_SRV="$O_SRV -accept $SRV_PORT -dhparam data_files/dhparams.pem"
+O_SRV_RSA="$O_SRV_RSA -accept $SRV_PORT -dhparam data_files/dhparams.pem"
 O_CLI="$O_CLI -connect localhost:+SRV_PORT"
 G_SRV="$G_SRV -p $SRV_PORT"
 G_CLI="$G_CLI -p +SRV_PORT"
@@ -1539,7 +1555,17 @@ run_test    "TLS 1.3, TLS_AES_128_CCM_8_SHA256, ClientHello message misses manda
 	    -s "ClientHello message misses mandatory extensions."                 \
 	    -s "send alert message"                                               \
 	    -C "received HelloRetryRequest message"                               \
-      -c "got an alert message, type: \\[2:109]"
+            -c "got an alert message, type: \\[2:109]"
+
+# Test OpenSSL server using RSA certificate
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
+requires_openssl
+run_test    "TLS 1.3, TLS_AES_128_GCM_SHA256, RSA-certificate, OpenSSL server" \
+            "$O_SRV_RSA" \
+            "$P_CLI debug_level=5 force_version=tls1_3 server_name=localhost force_ciphersuite=TLS_AES_128_GCM_SHA256" \
+            0 \
+            -c "Certificate Verify: using RSA"
 
 #
 # TLS 1.2 specific tests
