@@ -2424,9 +2424,11 @@ static int ssl_read_certificate_verify_parse( mbedtls_ssl_context* ssl,
     mbedtls_md_type_t md_alg;
     unsigned char verify_hash[ MBEDTLS_MD_MAX_SIZE ];
     size_t verify_hash_len;
-    mbedtls_pk_rsassa_pss_options* opts_ptr = NULL;
+
+    void const *opts_ptr = NULL;
+#if defined(MBEDTLS_X509_RSASSA_PSS_SUPPORT)
     mbedtls_pk_rsassa_pss_options opts;
-    const mbedtls_md_info_t* md_info;
+#endif /* MBEDTLS_X509_RSASSA_PSS_SUPPORT */
 
     if( buflen < mbedtls_ssl_hs_hdr_len( ssl ) )
     {
@@ -2543,31 +2545,34 @@ static int ssl_read_certificate_verify_parse( mbedtls_ssl_context* ssl,
     else
 #endif /* MBEDTLS_SHA512_C */
     {
-       MBEDTLS_SSL_DEBUG_MSG( 1, ( "Certificate Verify: Unknown signature algorithm." ) );
-       return( MBEDTLS_ERR_SSL_BAD_HS_CERTIFICATE_VERIFY );
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "Certificate Verify: Unknown signature algorithm." ) );
+        return( MBEDTLS_ERR_SSL_BAD_HS_CERTIFICATE_VERIFY );
     }
 
     MBEDTLS_SSL_DEBUG_BUF( 3, "verify hash", verify_hash, verify_hash_len );
+#if defined(MBEDTLS_X509_RSASSA_PSS_SUPPORT)
     if ( sig_alg == MBEDTLS_PK_RSASSA_PSS )
     {
-      opts.mgf1_hash_id = md_alg;
-      if ( ( md_info = mbedtls_md_info_from_type( md_alg ) ) == NULL )
-      {
-        return ( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
-      }
-      opts.expected_salt_len = mbedtls_md_get_size( md_info );
-      opts_ptr = &opts;
+        const mbedtls_md_info_t* md_info;
+        opts.mgf1_hash_id = md_alg;
+        if( ( md_info = mbedtls_md_info_from_type( md_alg ) ) == NULL )
+        {
+            return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
+        }
+        opts.expected_salt_len = mbedtls_md_get_size( md_info );
+        opts_ptr = (const void*) &opts;
     }
+#endif /* MBEDTLS_X509_RSASSA_PSS_SUPPORT */
 
-    if ( ( ret = mbedtls_pk_verify_ext(
-            sig_alg,
-            opts_ptr,
-            &ssl->session_negotiate->peer_cert->pk,
-            md_alg,
-            verify_hash,
-            verify_hash_len,
-            buf,
-            sig_len ) ) != 0 )
+    if( ( ret = mbedtls_pk_verify_ext(
+              sig_alg,
+              opts_ptr,
+              &ssl->session_negotiate->peer_cert->pk,
+              md_alg,
+              verify_hash,
+              verify_hash_len,
+              buf,
+              sig_len ) ) != 0 )
     {
       MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_pk_verify_ext", ret );
       return( ret );
