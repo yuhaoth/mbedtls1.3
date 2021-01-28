@@ -2469,6 +2469,7 @@ static int ssl_read_certificate_verify_parse( mbedtls_ssl_context* ssl,
             break;
 #if defined(MBEDTLS_X509_RSASSA_PSS_SUPPORT)
         case SIGNATURE_RSA_PSS_RSAE_SHA256:
+            MBEDTLS_SSL_DEBUG_MSG( 4, ( "Certificate Verify: using RSA" ) );
             md_alg = MBEDTLS_MD_SHA256;
             sig_alg = MBEDTLS_PK_RSASSA_PSS;
             break;
