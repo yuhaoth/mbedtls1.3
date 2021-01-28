@@ -2472,7 +2472,7 @@ static int ssl_read_certificate_verify_parse( mbedtls_ssl_context* ssl,
             md_alg = MBEDTLS_MD_SHA256;
             sig_alg = MBEDTLS_PK_RSASSA_PSS;
             break;
-#endif
+#endif /* MBEDTLS_X509_RSASSA_PSS_SUPPORT */
         default:
             MBEDTLS_SSL_DEBUG_MSG( 1, ( "Certificate Verify: Unknown signature algorithm." ) );
             return( MBEDTLS_ERR_SSL_BAD_HS_CERTIFICATE_VERIFY );
