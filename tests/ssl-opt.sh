@@ -62,6 +62,7 @@ guess_config_name() {
 : ${MBEDTLS_TEST_PLATFORM:="$(uname -s | tr -c \\n0-9A-Za-z _)-$(uname -m | tr -c \\n0-9A-Za-z _)"}
 
 O_SRV="$OPENSSL_CMD s_server -www -cert data_files/server5.crt -key data_files/server5.key"
+O_SRV_RSA="$OPENSSL_CMD s_server -www -cert data_files/server2.crt -key data_files/server2.key"
 O_CLI="echo 'GET / HTTP/1.0' | $OPENSSL_CMD s_client"
 G_SRV="$GNUTLS_SERV --x509certfile data_files/server5.crt --x509keyfile data_files/server5.key"
 G_CLI="echo 'GET / HTTP/1.0' | $GNUTLS_CLI --x509cafile data_files/test-ca_cat12.crt"
@@ -291,6 +292,20 @@ requires_gnutls() {
         fi
     fi
     if [ "$GNUTLS_AVAILABLE" = "NO" ]; then
+        SKIP_NEXT="YES"
+    fi
+}
+
+# skip next test if OpenSSL isn't available
+requires_openssl() {
+    if [ -z "${OPENSSL_AVAILABLE:-}" ]; then
+        if ( which "$OPENSSL_CMD" ) >/dev/null 2>&1; then
+            OPENSSL_AVAILABLE="YES"
+        else
+            OPENSSL_AVAILABLE="NO"
+        fi
+    fi
+    if [ "$OPENSSL_AVAILABLE" = "NO" ]; then
         SKIP_NEXT="YES"
     fi
 }
@@ -1074,6 +1089,7 @@ P_SRV="$P_SRV server_addr=127.0.0.1 server_port=$SRV_PORT"
 P_CLI="$P_CLI server_addr=127.0.0.1 server_port=+SRV_PORT"
 P_PXY="$P_PXY server_addr=127.0.0.1 server_port=$SRV_PORT listen_addr=127.0.0.1 listen_port=$PXY_PORT ${SEED:+"seed=$SEED"}"
 O_SRV="$O_SRV -accept $SRV_PORT -dhparam data_files/dhparams.pem"
+O_SRV_RSA="$O_SRV_RSA -accept $SRV_PORT -dhparam data_files/dhparams.pem"
 O_CLI="$O_CLI -connect localhost:+SRV_PORT"
 G_SRV="$G_SRV -p $SRV_PORT"
 G_CLI="$G_CLI -p +SRV_PORT"
@@ -1110,6 +1126,7 @@ trap cleanup INT TERM HUP
 #
 
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+requires_config_disabled MBEDTLS_RSA_C
 run_test    "TLS 1.3, default suite, PSK" \
             "$P_SRV debug_level=5 force_version=tls1_3 psk=010203 psk_identity=0a0b0c key_exchange_modes=psk" \
             "$P_CLI debug_level=5 force_version=tls1_3 psk=010203 psk_identity=0a0b0c key_exchange_modes=psk" \
@@ -1117,6 +1134,7 @@ run_test    "TLS 1.3, default suite, PSK" \
             -s "Protocol is TLSv1.3"
 
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+requires_config_disabled MBEDTLS_RSA_C
 run_test    "TLS 1.3, default suite, ECDHE-ECDSA, SRV auth" \
             "$P_SRV debug_level=5 force_version=tls1_3  key_exchange_modes=ecdhe_ecdsa" \
             "$P_CLI debug_level=5 force_version=tls1_3 server_name=localhost key_exchange_modes=ecdhe_ecdsa" \
@@ -1127,6 +1145,7 @@ run_test    "TLS 1.3, default suite, ECDHE-ECDSA, SRV auth" \
 	    -c "Verifying peer X.509 certificate... ok"
 
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+requires_config_disabled MBEDTLS_RSA_C
 run_test    "TLS 1.3, TLS_AES_128_CCM_SHA256, PSK" \
             "$P_SRV debug_level=5 force_version=tls1_3 psk=010203 psk_identity=0a0b0c key_exchange_modes=psk" \
             "$P_CLI debug_level=5 force_version=tls1_3 force_ciphersuite=TLS_AES_128_CCM_SHA256 psk=010203 psk_identity=0a0b0c key_exchange_modes=psk" \
@@ -1135,6 +1154,7 @@ run_test    "TLS 1.3, TLS_AES_128_CCM_SHA256, PSK" \
             -s "Ciphersuite is TLS_AES_128_CCM_SHA256"
 
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+requires_config_disabled MBEDTLS_RSA_C
 run_test    "TLS 1.3, TLS_AES_128_GCM_SHA256, PSK" \
             "$P_SRV debug_level=5 force_version=tls1_3 psk=010203 psk_identity=0a0b0c key_exchange_modes=psk" \
             "$P_CLI debug_level=5 force_version=tls1_3 force_ciphersuite=TLS_AES_128_GCM_SHA256 psk=010203 psk_identity=0a0b0c key_exchange_modes=psk" \
@@ -1143,6 +1163,7 @@ run_test    "TLS 1.3, TLS_AES_128_GCM_SHA256, PSK" \
             -s "Ciphersuite is TLS_AES_128_GCM_SHA256"
 
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+requires_config_disabled MBEDTLS_RSA_C
 run_test    "TLS 1.3, TLS_AES_128_CCM_8_SHA256, PSK" \
             "$P_SRV debug_level=5 force_version=tls1_3 psk=010203 psk_identity=0a0b0c key_exchange_modes=psk" \
             "$P_CLI debug_level=5 force_version=tls1_3 force_ciphersuite=TLS_AES_128_CCM_8_SHA256 psk=010203 psk_identity=0a0b0c key_exchange_modes=psk" \
@@ -1151,6 +1172,7 @@ run_test    "TLS 1.3, TLS_AES_128_CCM_8_SHA256, PSK" \
             -s "Ciphersuite is TLS_AES_128_CCM_8_SHA256"
 
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+requires_config_disabled MBEDTLS_RSA_C
 run_test    "TLS 1.3, TLS_AES_256_GCM_SHA384, PSK" \
             "$P_SRV debug_level=5 force_version=tls1_3 psk=010203 psk_identity=0a0b0c key_exchange_modes=psk" \
             "$P_CLI debug_level=5 force_version=tls1_3 force_ciphersuite=TLS_AES_256_GCM_SHA384 psk=010203 psk_identity=0a0b0c key_exchange_modes=psk" \
@@ -1159,6 +1181,7 @@ run_test    "TLS 1.3, TLS_AES_256_GCM_SHA384, PSK" \
             -s "Ciphersuite is TLS_AES_256_GCM_SHA384"
 
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+requires_config_disabled MBEDTLS_RSA_C
 run_test    "TLS 1.3, TLS_AES_128_CCM_SHA256, PSK-ECDHE" \
             "$P_SRV debug_level=5 force_version=tls1_3 psk=010203 psk_identity=0a0b0c key_exchange_modes=psk_dhe" \
             "$P_CLI debug_level=5 force_version=tls1_3 force_ciphersuite=TLS_AES_128_CCM_SHA256 psk=010203 psk_identity=0a0b0c key_exchange_modes=psk_dhe" \
@@ -1167,6 +1190,7 @@ run_test    "TLS 1.3, TLS_AES_128_CCM_SHA256, PSK-ECDHE" \
             -s "Ciphersuite is TLS_AES_128_CCM_SHA256"
 
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+requires_config_disabled MBEDTLS_RSA_C
 run_test    "TLS 1.3, TLS_AES_128_GCM_SHA256, PSK-ECDHE" \
             "$P_SRV debug_level=5 force_version=tls1_3 psk=010203 psk_identity=0a0b0c key_exchange_modes=psk_dhe" \
             "$P_CLI debug_level=5 force_version=tls1_3 force_ciphersuite=TLS_AES_128_GCM_SHA256 psk=010203 psk_identity=0a0b0c key_exchange_modes=psk_dhe" \
@@ -1175,6 +1199,7 @@ run_test    "TLS 1.3, TLS_AES_128_GCM_SHA256, PSK-ECDHE" \
             -s "Ciphersuite is TLS_AES_128_GCM_SHA256"
 
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+requires_config_disabled MBEDTLS_RSA_C
 run_test    "TLS 1.3, TLS_AES_128_CCM_8_SHA256, PSK-ECDHE" \
             "$P_SRV debug_level=5 force_version=tls1_3 psk=010203 psk_identity=0a0b0c key_exchange_modes=psk_dhe" \
             "$P_CLI debug_level=5 force_version=tls1_3 force_ciphersuite=TLS_AES_128_CCM_8_SHA256 psk=010203 psk_identity=0a0b0c key_exchange_modes=psk_dhe" \
@@ -1183,6 +1208,7 @@ run_test    "TLS 1.3, TLS_AES_128_CCM_8_SHA256, PSK-ECDHE" \
             -s "Ciphersuite is TLS_AES_128_CCM_8_SHA256"
 
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+requires_config_disabled MBEDTLS_RSA_C
 run_test    "TLS 1.3, TLS_AES_256_GCM_SHA384, PSK-ECDHE" \
             "$P_SRV debug_level=5 force_version=tls1_3 psk=010203 psk_identity=0a0b0c key_exchange_modes=psk_dhe" \
             "$P_CLI debug_level=5 force_version=tls1_3 force_ciphersuite=TLS_AES_256_GCM_SHA384 psk=010203 psk_identity=0a0b0c key_exchange_modes=psk_dhe" \
@@ -1191,6 +1217,7 @@ run_test    "TLS 1.3, TLS_AES_256_GCM_SHA384, PSK-ECDHE" \
             -s "Ciphersuite is TLS_AES_256_GCM_SHA384"
 
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+requires_config_disabled MBEDTLS_RSA_C
 run_test    "TLS 1.3, TLS_AES_128_CCM_SHA256, ECDHE-ECDSA, SRV auth" \
             "$P_SRV debug_level=5 force_version=tls1_3  key_exchange_modes=ecdhe_ecdsa" \
             "$P_CLI debug_level=5 force_version=tls1_3 server_name=localhost force_ciphersuite=TLS_AES_128_CCM_SHA256 key_exchange_modes=ecdhe_ecdsa" \
@@ -1202,6 +1229,7 @@ run_test    "TLS 1.3, TLS_AES_128_CCM_SHA256, ECDHE-ECDSA, SRV auth" \
 	    -c "Verifying peer X.509 certificate... ok"
 
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+requires_config_disabled MBEDTLS_RSA_C
 run_test    "TLS 1.3, TLS_AES_128_GCM_SHA256, ECDHE-ECDSA, SRV auth" \
             "$P_SRV debug_level=5 force_version=tls1_3 key_exchange_modes=ecdhe_ecdsa" \
             "$P_CLI debug_level=5 force_version=tls1_3 server_name=localhost force_ciphersuite=TLS_AES_128_GCM_SHA256 key_exchange_modes=ecdhe_ecdsa" \
@@ -1213,6 +1241,7 @@ run_test    "TLS 1.3, TLS_AES_128_GCM_SHA256, ECDHE-ECDSA, SRV auth" \
 	    -c "Verifying peer X.509 certificate... ok"
 
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+requires_config_disabled MBEDTLS_RSA_C
 run_test    "TLS 1.3, TLS_AES_128_CCM_8_SHA256, ECDHE-ECDSA, SRV auth" \
             "$P_SRV debug_level=5 force_version=tls1_3  key_exchange_modes=ecdhe_ecdsa" \
             "$P_CLI debug_level=5 force_version=tls1_3 server_name=localhost force_ciphersuite=TLS_AES_128_CCM_8_SHA256 key_exchange_modes=ecdhe_ecdsa" \
@@ -1224,6 +1253,7 @@ run_test    "TLS 1.3, TLS_AES_128_CCM_8_SHA256, ECDHE-ECDSA, SRV auth" \
 	    -c "Verifying peer X.509 certificate... ok"
 
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+requires_config_disabled MBEDTLS_RSA_C
 run_test    "TLS 1.3, TLS_AES_256_GCM_SHA384, ECDHE-ECDSA, SRV auth" \
             "$P_SRV debug_level=5 force_version=tls1_3 key_exchange_modes=ecdhe_ecdsa" \
             "$P_CLI debug_level=5 force_version=tls1_3 server_name=localhost force_ciphersuite=TLS_AES_256_GCM_SHA384 key_exchange_modes=ecdhe_ecdsa" \
@@ -1235,6 +1265,7 @@ run_test    "TLS 1.3, TLS_AES_256_GCM_SHA384, ECDHE-ECDSA, SRV auth" \
 	    -c "Verifying peer X.509 certificate... ok"
 
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+requires_config_disabled MBEDTLS_RSA_C
 run_test    "TLS 1.3, TLS_AES_128_CCM_SHA256, ECDHE-ECDSA, CLI+SRV auth" \
             "$P_SRV debug_level=5 force_version=tls1_3 auth_mode=required key_exchange_modes=ecdhe_ecdsa" \
             "$P_CLI debug_level=5 force_version=tls1_3 server_name=localhost force_ciphersuite=TLS_AES_128_CCM_SHA256 key_exchange_modes=ecdhe_ecdsa" \
@@ -1247,6 +1278,7 @@ run_test    "TLS 1.3, TLS_AES_128_CCM_SHA256, ECDHE-ECDSA, CLI+SRV auth" \
 	    -c "Verifying peer X.509 certificate... ok"
 
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+requires_config_disabled MBEDTLS_RSA_C
 run_test    "TLS 1.3, TLS_AES_128_GCM_SHA256, ECDHE-ECDSA, CLI+SRV auth" \
             "$P_SRV debug_level=5 force_version=tls1_3 auth_mode=required key_exchange_modes=ecdhe_ecdsa" \
             "$P_CLI debug_level=5 force_version=tls1_3 server_name=localhost force_ciphersuite=TLS_AES_128_GCM_SHA256 key_exchange_modes=ecdhe_ecdsa" \
@@ -1259,6 +1291,7 @@ run_test    "TLS 1.3, TLS_AES_128_GCM_SHA256, ECDHE-ECDSA, CLI+SRV auth" \
 	    -c "Verifying peer X.509 certificate... ok"
 
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+requires_config_disabled MBEDTLS_RSA_C
 run_test    "TLS 1.3, TLS_AES_128_CCM_8_SHA256, ECDHE-ECDSA, CLI+SRV auth" \
             "$P_SRV debug_level=5 force_version=tls1_3 auth_mode=required key_exchange_modes=ecdhe_ecdsa" \
             "$P_CLI debug_level=5 force_version=tls1_3 server_name=localhost force_ciphersuite=TLS_AES_128_CCM_8_SHA256 key_exchange_modes=ecdhe_ecdsa" \
@@ -1271,6 +1304,7 @@ run_test    "TLS 1.3, TLS_AES_128_CCM_8_SHA256, ECDHE-ECDSA, CLI+SRV auth" \
 	    -c "Verifying peer X.509 certificate... ok"
 
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+requires_config_disabled MBEDTLS_RSA_C
 run_test    "TLS_AES_256_GCM_SHA384 with ECDHE-ECDSA (mutual auth)" \
             "$P_SRV debug_level=5 force_version=tls1_3 auth_mode=required key_exchange_modes=ecdhe_ecdsa" \
             "$P_CLI debug_level=5 force_version=tls1_3 server_name=localhost force_ciphersuite=TLS_AES_256_GCM_SHA384 key_exchange_modes=ecdhe_ecdsa" \
@@ -1286,6 +1320,7 @@ run_test    "TLS_AES_256_GCM_SHA384 with ECDHE-ECDSA (mutual auth)" \
 # client responds with empty certificate
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_disabled MBEDTLS_RSA_C
 run_test    "TLS 1.3, TLS_AES_128_GCM_SHA256, ECDHE-ECDSA, empty client certificate, accepted" \
             "$P_SRV debug_level=5 force_version=tls1_3 auth_mode=optional key_exchange_modes=ecdhe_ecdsa" \
             "$P_CLI debug_level=5 force_version=tls1_3 server_name=localhost force_ciphersuite=TLS_AES_128_GCM_SHA256 key_exchange_modes=ecdhe_ecdsa auth_mode=none" \
@@ -1300,6 +1335,7 @@ run_test    "TLS 1.3, TLS_AES_128_GCM_SHA256, ECDHE-ECDSA, empty client certific
 # - Server does NOT accept the lack of client authentication
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_disabled MBEDTLS_RSA_C
 run_test    "TLS 1.3, TLS_AES_128_CCM_SHA256, ECDHE-ECDSA, empty client certificate, rejected" \
             "$P_SRV debug_level=5 force_version=tls1_3 auth_mode=required key_exchange_modes=ecdhe_ecdsa" \
             "$P_CLI debug_level=5 force_version=tls1_3 server_name=localhost force_ciphersuite=TLS_AES_128_CCM_SHA256 key_exchange_modes=ecdhe_ecdsa auth_mode=none" \
@@ -1313,6 +1349,7 @@ run_test    "TLS 1.3, TLS_AES_128_CCM_SHA256, ECDHE-ECDSA, empty client certific
 	    -c "write empty client certificate"
 
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+requires_config_disabled MBEDTLS_RSA_C
 run_test    "TLS 1.3 TLS_AES_256_GCM_SHA384, ECDHE-ECDSA, SRV auth" \
             "$P_SRV debug_level=5 force_version=tls1_3 key_exchange_modes=ecdhe_ecdsa" \
             "$P_CLI debug_level=5 force_version=tls1_3 server_name=localhost force_ciphersuite=TLS_AES_256_GCM_SHA384 key_exchange_modes=ecdhe_ecdsa" \
@@ -1326,6 +1363,7 @@ run_test    "TLS 1.3 TLS_AES_256_GCM_SHA384, ECDHE-ECDSA, SRV auth" \
 
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_disabled MBEDTLS_RSA_C
 run_test    "TLS 1.3, TLS_AES_128_CCM_SHA256, ECDHE-ECDSA, CLI+SRV auth, with ticket" \
             "$P_SRV debug_level=5 force_version=tls1_3 auth_mode=required key_exchange_modes=all tickets=1" \
             "$P_CLI debug_level=5 force_version=tls1_3 server_name=localhost force_ciphersuite=TLS_AES_128_CCM_SHA256 key_exchange_modes=all reconnect=1 tickets=1" \
@@ -1344,6 +1382,7 @@ run_test    "TLS 1.3, TLS_AES_128_CCM_SHA256, ECDHE-ECDSA, CLI+SRV auth, with ti
 
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_disabled MBEDTLS_RSA_C
 run_test    "TLS 1.3, TLS_AES_128_GCM_SHA256, ECDHE-ECDSA, CLI+SRV auth, with ticket" \
             "$P_SRV debug_level=5 force_version=tls1_3 auth_mode=required key_exchange_modes=all tickets=1" \
             "$P_CLI debug_level=5 force_version=tls1_3 server_name=localhost force_ciphersuite=TLS_AES_128_GCM_SHA256 key_exchange_modes=all reconnect=1 tickets=1" \
@@ -1362,6 +1401,7 @@ run_test    "TLS 1.3, TLS_AES_128_GCM_SHA256, ECDHE-ECDSA, CLI+SRV auth, with ti
 
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_disabled MBEDTLS_RSA_C
 run_test    "TLS 1.3, TLS_AES_128_CCM_8_SHA256, ECDHE-ECDSA, CLI+SRV auth, with ticket" \
             "$P_SRV debug_level=5 force_version=tls1_3 auth_mode=required key_exchange_modes=all tickets=1" \
             "$P_CLI debug_level=5 force_version=tls1_3 server_name=localhost force_ciphersuite=TLS_AES_128_CCM_8_SHA256 key_exchange_modes=all reconnect=1 tickets=1" \
@@ -1380,6 +1420,7 @@ run_test    "TLS 1.3, TLS_AES_128_CCM_8_SHA256, ECDHE-ECDSA, CLI+SRV auth, with 
 
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_disabled MBEDTLS_RSA_C
 run_test    "TLS 1.3, TLS_AES_256_GCM_SHA384, ECDHE-ECDSA, CLI+SRV auth, with ticket" \
             "$P_SRV debug_level=5 force_version=tls1_3 auth_mode=required key_exchange_modes=all tickets=1" \
             "$P_CLI debug_level=5 force_version=tls1_3 server_name=localhost force_ciphersuite=TLS_AES_256_GCM_SHA384 key_exchange_modes=all reconnect=1 tickets=1" \
@@ -1398,6 +1439,7 @@ run_test    "TLS 1.3, TLS_AES_256_GCM_SHA384, ECDHE-ECDSA, CLI+SRV auth, with ti
 
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_disabled MBEDTLS_RSA_C
 run_test    "TLS 1.3, TLS_AES_256_GCM_SHA384 with ECDHE-ECDSA (server auth only) with ticket" \
             "$P_SRV debug_level=5 force_version=tls1_3 key_exchange_modes=all tickets=1" \
             "$P_CLI debug_level=5 force_version=tls1_3 server_name=localhost force_ciphersuite=TLS_AES_256_GCM_SHA384 key_exchange_modes=all reconnect=1 tickets=1" \
@@ -1416,6 +1458,7 @@ run_test    "TLS 1.3, TLS_AES_256_GCM_SHA384 with ECDHE-ECDSA (server auth only)
 
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_disabled MBEDTLS_RSA_C
 run_test    "TLS 1.3, TLS_AES_256_GCM_SHA384, ext PSK, early data" \
             "$P_SRV debug_level=5 force_version=tls1_3 early_data=1 key_exchange_modes=psk psk=010203 psk_identity=0a0b0c" \
             "$P_CLI debug_level=5 force_version=tls1_3 force_ciphersuite=TLS_AES_256_GCM_SHA384 key_exchange_modes=psk early_data=1 psk=010203 psk_identity=0a0b0c" \
@@ -1432,6 +1475,7 @@ run_test    "TLS 1.3, TLS_AES_256_GCM_SHA384, ext PSK, early data" \
 
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_disabled MBEDTLS_RSA_C
 run_test    "TLS 1.3, TLS_AES_128_CCM_SHA256, ext PSK, early data" \
             "$P_SRV debug_level=5 force_version=tls1_3 early_data=1 key_exchange_modes=psk psk=010203 psk_identity=0a0b0c" \
             "$P_CLI debug_level=5 force_version=tls1_3 force_ciphersuite=TLS_AES_128_CCM_SHA256 key_exchange_modes=psk early_data=1 psk=010203 psk_identity=0a0b0c" \
@@ -1448,6 +1492,7 @@ run_test    "TLS 1.3, TLS_AES_128_CCM_SHA256, ext PSK, early data" \
 
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_disabled MBEDTLS_RSA_C
 run_test    "TLS 1.3, TLS_AES_128_GCM_SHA256, ext PSK, early data" \
             "$P_SRV debug_level=5 force_version=tls1_3 early_data=1 key_exchange_modes=psk psk=010203 psk_identity=0a0b0c" \
             "$P_CLI debug_level=5 force_version=tls1_3 force_ciphersuite=TLS_AES_128_GCM_SHA256 key_exchange_modes=psk early_data=1 psk=010203 psk_identity=0a0b0c" \
@@ -1464,6 +1509,7 @@ run_test    "TLS 1.3, TLS_AES_128_GCM_SHA256, ext PSK, early data" \
 
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_disabled MBEDTLS_RSA_C
 run_test    "TLS 1.3, TLS_AES_128_CCM_8_SHA256, ext PSK, early data" \
             "$P_SRV debug_level=5 force_version=tls1_3 early_data=1 key_exchange_modes=psk psk=010203 psk_identity=0a0b0c" \
             "$P_CLI debug_level=5 force_version=tls1_3 force_ciphersuite=TLS_AES_128_CCM_8_SHA256 key_exchange_modes=psk early_data=1 psk=010203 psk_identity=0a0b0c" \
@@ -1480,6 +1526,7 @@ run_test    "TLS 1.3, TLS_AES_128_CCM_8_SHA256, ext PSK, early data" \
 
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_disabled MBEDTLS_RSA_C
 run_test    "TLS 1.3, TLS_AES_128_CCM_8_SHA256, ECDHE-ECDSA, CLI+SRV auth, HRR enforcing cookie" \
             "$P_SRV debug_level=5 force_version=tls1_3 auth_mode=required key_exchange_modes=ecdhe_ecdsa tickets=0 cookies=2" \
             "$P_CLI debug_level=5 force_version=tls1_3 server_name=localhost force_ciphersuite=TLS_AES_128_CCM_8_SHA256 key_exchange_modes=ecdhe_ecdsa" \
@@ -1498,6 +1545,7 @@ run_test    "TLS 1.3, TLS_AES_128_CCM_8_SHA256, ECDHE-ECDSA, CLI+SRV auth, HRR e
 # configure client to initially sent incorrect group, which will be corrected with HRR from the server
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_disabled MBEDTLS_RSA_C
 run_test    "TLS 1.3, TLS_AES_128_CCM_SHA256 with ECDHE-ECDSA, SRV auth, HRR enforcing group" \
             "$P_SRV debug_level=5 force_version=tls1_3 key_exchange_modes=ecdhe_ecdsa named_groups=secp256r1 cookies=1 tickets=0" \
             "$P_CLI debug_level=5 force_version=tls1_3 server_name=localhost force_ciphersuite=TLS_AES_128_CCM_SHA256 key_exchange_modes=ecdhe_ecdsa named_groups=secp256r1,secp384r1 key_share_named_groups=secp384r1" \
@@ -1515,6 +1563,7 @@ run_test    "TLS 1.3, TLS_AES_128_CCM_SHA256 with ECDHE-ECDSA, SRV auth, HRR enf
 # test early data status - not sent
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_disabled MBEDTLS_RSA_C
 run_test    "TLS 1.3, TLS_AES_256_GCM_SHA384, ext PSK, early data status - not sent" \
             "$P_SRV debug_level=5 force_version=tls1_3 psk=010203 psk_identity=0a0b0c" \
             "$P_CLI debug_level=5 force_version=tls1_3 force_ciphersuite=TLS_AES_256_GCM_SHA384 psk=010203 psk_identity=0a0b0c" \
@@ -1524,6 +1573,7 @@ run_test    "TLS 1.3, TLS_AES_256_GCM_SHA384, ext PSK, early data status - not s
 # test early data status - accepted
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_disabled MBEDTLS_RSA_C
 run_test    "TLS 1.3, TLS_AES_256_GCM_SHA384, ext PSK, early data status - accepted" \
             "$P_SRV debug_level=5 force_version=tls1_3 early_data=1 key_exchange_modes=psk psk=010203 psk_identity=0a0b0c" \
             "$P_CLI debug_level=5 force_version=tls1_3 force_ciphersuite=TLS_AES_256_GCM_SHA384 key_exchange_modes=psk early_data=1 psk=010203 psk_identity=0a0b0c" \
@@ -1532,6 +1582,7 @@ run_test    "TLS 1.3, TLS_AES_256_GCM_SHA384, ext PSK, early data status - accep
 
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_disabled MBEDTLS_RSA_C
 run_test    "TLS 1.3, TLS_AES_128_CCM_8_SHA256, ClientHello message misses mandatory extensions" \
             "$P_SRV debug_level=5 force_version=tls1_3 key_exchange_modes=psk" \
             "$P_CLI debug_level=5 force_version=tls1_3 server_name=localhost force_ciphersuite=TLS_AES_128_CCM_8_SHA256 key_exchange_modes=psk" \
@@ -1539,7 +1590,17 @@ run_test    "TLS 1.3, TLS_AES_128_CCM_8_SHA256, ClientHello message misses manda
 	    -s "ClientHello message misses mandatory extensions."                 \
 	    -s "send alert message"                                               \
 	    -C "received HelloRetryRequest message"                               \
-      -c "got an alert message, type: \\[2:109]"
+            -c "got an alert message, type: \\[2:109]"
+
+# Test OpenSSL server using RSA certificate
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
+requires_openssl
+run_test    "TLS 1.3, TLS_AES_128_GCM_SHA256, RSA-certificate, OpenSSL server" \
+            "$O_SRV_RSA" \
+            "$P_CLI debug_level=5 force_version=tls1_3 server_name=localhost force_ciphersuite=TLS_AES_128_GCM_SHA256" \
+            0 \
+            -c "Certificate Verify: using RSA"
 
 #
 # TLS 1.2 specific tests
