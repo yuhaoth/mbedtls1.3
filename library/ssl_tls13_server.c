@@ -543,37 +543,38 @@ int mbedtls_ssl_parse_new_session_ticket_server(
 #endif /* MBEDTLS_SSL_NEW_SESSION_TICKET */
 
 #if defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
-int mbedtls_ssl_parse_client_psk_identity_ext( mbedtls_ssl_context *ssl,
-                                               const unsigned char *buf,
-                                               size_t len )
+int mbedtls_ssl_parse_client_psk_identity_ext(
+    mbedtls_ssl_context *ssl,
+    const unsigned char *buf,
+    size_t len )
 {
     int ret = 0;
-    unsigned char *truncated_clienthello_end;
-    unsigned char  *truncated_clienthello_start = ssl->in_msg;
     unsigned int item_array_length, item_length, sum, length_so_far;
     unsigned char server_computed_binder[MBEDTLS_MD_MAX_SIZE];
     uint32_t obfuscated_ticket_age;
     mbedtls_ssl_ticket ticket;
     const unsigned char *psk = NULL;
+    unsigned char const * const start = buf;
     size_t psk_len = 0;
 #if defined(MBEDTLS_HAVE_TIME)
     time_t now;
     int64_t diff;
 #endif /* MBEDTLS_HAVE_TIME */
+    unsigned char const *end_of_psk_identities;
 
     /* Read length of array of identities */
     item_array_length = ( buf[0] << 8 ) | buf[1];
-
     length_so_far = item_array_length + 2;
-    buf += 2;
     if( length_so_far > len )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad psk_identity extension in client hello message" ) );
         return( MBEDTLS_ERR_SSL_BAD_HS_CLIENT_HELLO );
     }
+    end_of_psk_identities = buf + length_so_far;
+    buf += 2;
     sum = 2;
-    while ( sum < item_array_length+2 ) {
-
+    while( sum < item_array_length + 2 )
+    {
         /* Read to psk identity length */
         item_length = ( buf[0] << 8 ) | buf[1];
         sum = sum + 2 + item_length;
@@ -610,7 +611,8 @@ int mbedtls_ssl_parse_client_psk_identity_ext( mbedtls_ssl_context *ssl,
             {
                 ret = MBEDTLS_ERR_SSL_UNKNOWN_IDENTITY;
             }
-            else {
+            else
+            {
                 /* skip obfuscated ticket age */
                 /* TBD: Process obfuscated ticket age ( zero for externally configured PSKs?! ) */
                 buf = buf + item_length + 4; /* 4 for obfuscated ticket age */;
@@ -797,10 +799,12 @@ int mbedtls_ssl_parse_client_psk_identity_ext( mbedtls_ssl_context *ssl,
 
 psk_parsing_successful:
 
-    /* Store this pointer since we need it to compute
-     *  the psk binder.
-     */
-    truncated_clienthello_end = (unsigned char*) buf;
+    /* Update the handshake transcript with the CH content up to
+     * but excluding the PSK binder list. */
+    ssl->handshake->update_checksum( ssl, start,
+                                     (size_t)( end_of_psk_identities - start ) );
+
+    buf = end_of_psk_identities;
 
     /* read length of psk binder array */
     item_array_length = ( buf[0] << 8 ) | buf[1];
@@ -808,8 +812,8 @@ psk_parsing_successful:
     buf += 2;
 
     sum = 0;
-    while ( sum < item_array_length ) {
-
+    while( sum < item_array_length )
+    {
         /* Read to psk binder length */
         item_length = buf[0];
         sum = sum + 1 + item_length;
@@ -825,10 +829,6 @@ psk_parsing_successful:
             return( MBEDTLS_ERR_SSL_BAD_HS_CLIENT_HELLO );
         }
 
-        MBEDTLS_SSL_DEBUG_BUF( 3, "ssl_calc_binder computed over ",
-             truncated_clienthello_start,
-             truncated_clienthello_end - truncated_clienthello_start );
-
         if( ssl->handshake->resume == 1 )
         {
             /* Case 1: We are using the PSK from a ticket */
@@ -839,8 +839,6 @@ psk_parsing_successful:
                         mbedtls_md_info_from_type(
                             ssl->handshake->ciphersuite_info->mac ),
                         ssl->handshake->ciphersuite_info,
-                        truncated_clienthello_start,
-                        truncated_clienthello_end - truncated_clienthello_start,
                         server_computed_binder );
         }
         else
@@ -855,15 +853,13 @@ psk_parsing_successful:
                      mbedtls_md_info_from_type(
                          ssl->handshake->ciphersuite_info->mac ),
                      ssl->handshake->ciphersuite_info,
-                     truncated_clienthello_start,
-                     truncated_clienthello_end - truncated_clienthello_start,
                      server_computed_binder );
         }
 
         /* We do not check for multiple binders */
         if( ret != 0 )
         {
-            MBEDTLS_SSL_DEBUG_MSG( 1, ( "Psk binder calculation failed." ) );
+            MBEDTLS_SSL_DEBUG_MSG( 1, ( "PSK binder calculation failed." ) );
             return( MBEDTLS_ERR_SSL_BAD_HS_CLIENT_HELLO );
         }
 
@@ -885,11 +881,23 @@ psk_parsing_successful:
         }
 
         buf += item_length;
-        return( 0 );
+
+        ret = 0;
+        goto done;
     }
 
     /* No valid PSK binder value found */
-    return( MBEDTLS_ERR_SSL_BAD_HS_CLIENT_HELLO );
+    /* TODO: Shouldn't we just fall back to a full handshake in this case? */
+    ret = MBEDTLS_ERR_SSL_BAD_HS_CLIENT_HELLO;
+
+done:
+
+    /* Update the handshake transcript with the binder list. */
+    ssl->handshake->update_checksum( ssl,
+                                     end_of_psk_identities,
+                                     (size_t)( buf - end_of_psk_identities ) );
+
+    return( ret );
 }
 #endif /* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED*/
 
@@ -2217,21 +2225,16 @@ static int ssl_client_hello_parse( mbedtls_ssl_context* ssl,
 {
     int ret, final_ret = 0, got_common_suite;
     size_t i, j;
-    size_t  comp_len, sess_len;
-    size_t orig_msg_len, ciph_len, ext_len, ext_len_psk_ext = 0;
+    size_t comp_len, sess_len;
+    size_t ciph_len, ext_len, ext_len_psk_ext = 0;
     unsigned char *orig_buf, *end = buf + buflen;
     unsigned char *ciph_offset;
 #if defined(MBEDTLS_SSL_COOKIE_C) && defined(MBEDTLS_SSL_PROTO_DTLS)
     size_t cookie_offset, cookie_len;
 #endif /* MBEDTLS_SSL_COOKIE_C && MBEDTLS_SSL_PROTO_DTLS */
-    unsigned char* p, * ext, * ext_psk_ptr = NULL;
-#if defined(MBEDTLS_SHA256_C)
-    mbedtls_sha256_context sha256;
-#endif /* MBEDTLS_SHA256_C */
-
-#if defined(MBEDTLS_SHA512_C)
-    mbedtls_sha512_context sha512;
-#endif /* MBEDTLS_SHA512_C */
+    unsigned char *p = NULL;
+    unsigned char *ext = NULL;
+    unsigned char *ext_psk_ptr = NULL;
 
     const int* ciphersuites;
     const mbedtls_ssl_ciphersuite_t* ciphersuite_info;
@@ -2241,7 +2244,6 @@ static int ssl_client_hello_parse( mbedtls_ssl_context* ssl,
 
     /* TBD: Refactor */
     orig_buf = buf;
-    orig_msg_len = mbedtls_ssl_hs_hdr_len( ssl ) + ( ( ssl->in_msg[2] << 8 ) | ssl->in_msg[3] );
 
     /*
      * ClientHello layer:
@@ -2471,18 +2473,34 @@ static int ssl_client_hello_parse( mbedtls_ssl_context* ssl,
     ext = buf;
     MBEDTLS_SSL_DEBUG_BUF( 3, "client hello extensions", ext, ext_len );
 
-    while ( ext_len != 0 )
+    while( ext_len != 0 )
     {
-        unsigned int ext_id = ( ( ext[0] << 8 )
-                               | ( ext[1] ) );
-        unsigned int ext_size = ( ( ext[2] << 8 )
-                                 | ( ext[3] ) );
+        unsigned int ext_id, ext_size;
+
+        if( ext_len < 4 )
+        {
+            MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad client hello message" ) );
+            return( MBEDTLS_ERR_SSL_BAD_HS_CLIENT_HELLO );
+        }
+
+        /* The PSK extension must be the last in the ClientHello.
+         * Fail if we've found it already but haven't yet reached
+         * the end of the extension block. */
+        if( ext_psk_ptr != NULL )
+        {
+            MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad client hello message" ) );
+            return( MBEDTLS_ERR_SSL_BAD_HS_CLIENT_HELLO );
+        }
+
+        ext_id   = ( ( (size_t) ext[0] << 8 ) | ( (size_t) ext[1] << 0 ) );
+        ext_size = ( ( (size_t) ext[2] << 8 ) | ( (size_t) ext[3] << 0 ) );
 
         if( ext_size + 4 > ext_len )
         {
             MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad client hello message" ) );
             return( MBEDTLS_ERR_SSL_BAD_HS_CLIENT_HELLO );
         }
+
         switch ( ext_id )
         {
 #if defined(MBEDTLS_SSL_SERVER_NAME_INDICATION)
@@ -2694,13 +2712,23 @@ static int ssl_client_hello_parse( mbedtls_ssl_context* ssl,
         }
 
         ext_len -= 4 + ext_size;
-        ext += 4 + ext_size;
+        ext     += 4 + ext_size;
+    }
 
-        if( ext_len > 0 && ext_len < 4 )
-        {
-            MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad client hello message" ) );
-            return( MBEDTLS_ERR_SSL_BAD_HS_CLIENT_HELLO );
-        }
+    /* Update checksum with either
+     * - The entire content of the CH message, if no PSK extension is present
+     * - The content up to but excluding the PSK extension, if present.
+     */
+    {
+        unsigned char *ch_without_psk;
+        if( ext_psk_ptr == NULL )
+            ch_without_psk = ext;
+        else
+            ch_without_psk = ext_psk_ptr;
+
+        ssl->handshake->update_checksum( ssl,
+                                         orig_buf,
+                                         ch_without_psk - orig_buf );
     }
 
     /*
@@ -2834,170 +2862,16 @@ static int ssl_client_hello_parse( mbedtls_ssl_context* ssl,
     if( final_ret == MBEDTLS_ERR_SSL_BAD_HS_WRONG_KEY_SHARE ||
         final_ret == MBEDTLS_ERR_SSL_BAD_HS_MISSING_COOKIE_EXT )
     {
-        /* create stateless transcript hash for HRR */
-
-        unsigned char transcript[MBEDTLS_MD_MAX_SIZE + 4]; /* used to store the ClientHello1 msg */
-        int hash_length;
-
-        MBEDTLS_SSL_DEBUG_MSG( 5, ( "--- Checksum ( ssl_parse_client_hello, stateless transcript hash for HRR )" ) );
-
         /*
-         *  Transcript-Hash( ClientHello1, HelloRetryRequest, ... MN ) =
-         *     Hash( message_hash         ||
-         *           00 00 Hash.length    ||
-         *	         Hash( ClientHello1 ) ||
-         *           HelloRetryRequest ... MN )
-         *
+         * Create stateless transcript hash for HRR
          */
-        transcript[0] = MBEDTLS_SSL_HS_MESSAGE_HASH;
-        transcript[1] = 0;
-        transcript[2] = 0;
-
-        hash_length = mbedtls_hash_size_for_ciphersuite( ssl->handshake->ciphersuite_info );
-
-        if( hash_length == -1 )
+        MBEDTLS_SSL_DEBUG_MSG( 4, ( "Compress transcript hash for stateless HRR" ) );
+        ret = mbedtls_ssl_hash_transcript( ssl );
+        if( ret != 0 )
         {
-            MBEDTLS_SSL_DEBUG_MSG( 1, ( "mbedtls_hash_size_for_ciphersuite == -1" ) );
-            return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
+            MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_hash_transcript", ret );
+            return( ret );
         }
-
-        transcript[3] = ( uint8_t )hash_length;
-
-
-        if( ssl->handshake->ciphersuite_info->mac == MBEDTLS_MD_SHA256 )
-        {
-#if defined(MBEDTLS_SHA256_C)
-            mbedtls_sha256_init( &sha256 );
-
-            if( ( ret = mbedtls_sha256_starts_ret( &sha256, 0 ) ) != 0 )
-            {
-                MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_sha256_starts_ret", ret );
-                final_ret = ret;
-                goto cleanup;
-            }
-
-            /* Hash ClientHello message */
-            if( ( ret = mbedtls_sha256_update_ret( &sha256,
-                                                   orig_buf,
-                                                   orig_msg_len ) ) != 0 )
-            {
-                MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_sha256_update_ret", ret );
-                final_ret = ret;
-                goto cleanup;
-            }
-
-            if( ( ret = mbedtls_sha256_finish_ret( &sha256,
-                                                   &transcript[4]) ) != 0 )
-            {
-                MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_sha256_finish_ret", ret );
-                final_ret = ret;
-                goto cleanup;
-            }
-            MBEDTLS_SSL_DEBUG_BUF( 5, "Transcript-Hash( ClientHello1, HelloRetryRequest, ... MN )", &transcript[0], 32+4 );
-#else
-            MBEDTLS_SSL_DEBUG_MSG( 1, ( "mbedtls_ssl_tls1_3_derive_master_secret: Unknow hash function." ) );
-            return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
-#endif /* MBEDTLS_SHA256_C */
-        }
-        else if( ssl->handshake->ciphersuite_info->mac == MBEDTLS_MD_SHA384 )
-        {
-#if defined(MBEDTLS_SHA512_C)
-            mbedtls_sha512_init( &sha512 );
-
-            if( ( ret = mbedtls_sha512_starts_ret( &sha512, 1 ) ) != 0 )
-            {
-                MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_sha512_starts_ret", ret );
-                final_ret = ret;
-                goto cleanup;
-            }
-
-            /* Hash ClientHello message */
-            if( ( ret = mbedtls_sha512_update_ret( &sha512,
-                                                   orig_buf,
-                                                   orig_msg_len ) ) != 0 )
-            {
-                MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_sha512_update_ret", ret );
-                final_ret = ret;
-                goto cleanup;
-            }
-
-            if( ( ret = mbedtls_sha512_finish_ret( &sha512,
-                                                   &transcript[4] ) ) != 0 )
-            {
-                MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_sha512_finish_ret", ret );
-                goto cleanup;
-            }
-            MBEDTLS_SSL_DEBUG_BUF( 5, "Transcript-Hash( ClientHello1, HelloRetryRequest, ... MN )", &transcript[0], 48+4 );
-#else
-            MBEDTLS_SSL_DEBUG_MSG( 1, ( "mbedtls_ssl_tls1_3_derive_master_secret: Unknow hash function." ) );
-            return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
-#endif /* MBEDTLS_SHA512_C */
-        }
-        else if( ssl->handshake->ciphersuite_info->mac == MBEDTLS_MD_SHA512 )
-        {
-#if defined(MBEDTLS_SHA512_C)
-            mbedtls_sha512_init( &sha512 );
-
-            if( ( ret = mbedtls_sha512_starts_ret( &sha512, 0 ) ) != 0 )
-            {
-                MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_sha512_starts_ret", ret );
-                final_ret = ret;
-                goto cleanup;
-            }
-
-            /* Hash ClientHello message */
-            if( ( ret = mbedtls_sha512_update_ret( &sha512,
-                                                   orig_buf,
-                                                   orig_msg_len ) ) != 0 )
-            {
-                MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_sha512_update_ret", ret );
-                final_ret = ret;
-                goto cleanup;
-            }
-
-            if( ( ret = mbedtls_sha512_finish_ret( &sha512,
-                                                   &transcript[4] ) ) != 0 )
-            {
-                MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_sha512_finish_ret", ret );
-                final_ret = ret;
-                goto cleanup;
-            }
-            MBEDTLS_SSL_DEBUG_BUF( 5, "ClientHello hash", &transcript[4], 64 );
-        }
-        else {
-#else
-            MBEDTLS_SSL_DEBUG_MSG( 1, ( "mbedtls_ssl_tls1_3_derive_master_secret: Unknow hash function." ) );
-            return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
-#endif  /* MBEDTLS_SHA512_C */
-        }
-        ssl->handshake->update_checksum( ssl, &transcript[0], hash_length + 4 );
-    }
-    else {
-        /* create normal transcript hash */
-        MBEDTLS_SSL_DEBUG_MSG( 5, ( "--- Checksum ( ssl_parse_client_hello, normal transcript hash )" ) );
-        ssl->handshake->update_checksum( ssl, orig_buf, orig_msg_len );
-    }
-    mbedtls_ssl_optimize_checksum( ssl, ssl->handshake->ciphersuite_info );
-
-cleanup:
-#if defined(MBEDTLS_SHA256_C)
-    if( ssl->handshake->ciphersuite_info->mac == MBEDTLS_MD_SHA256 )
-    {
-        mbedtls_sha256_free( &sha256 );
-    }
-    else
-#endif
-#if defined(MBEDTLS_SHA512_C)
-    if( ssl->handshake->ciphersuite_info->mac == MBEDTLS_MD_SHA384 ||
-        ssl->handshake->ciphersuite_info->mac == MBEDTLS_MD_SHA512 )
-    {
-        mbedtls_sha512_free( &sha512 );
-    }
-    else
-#endif
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "mbedtls_ssl_tls1_3_derive_master_secret: Unknow hash function." ) );
-        return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
     }
 
     return( final_ret );
