@@ -295,9 +295,12 @@ mbedtls_mps_l1_get_mode( mps_l1 *l1 )
  *                 - #MPS_L1_MODE_DGRAM, if the underlying Layer 0
  *                   transport is a datagram transport.
  * \param alloc    The allocator context to use to acquire and release
- *                 the read and write buffers used by Layer 1.
+ * \param send_ctx The opaque context pointer to be passed to the
+ *                 sending function \p send.
  * \param send     The callback to the sending function of the underlying
  *                 Layer 0 transport.
+ * \param recv_ctx The opaque context pointer to be passed to the
+ *                 receiving function \p recv.
  * \param recv     The callback to the receiving function of the underlying
  *                 Layer 0 transport.
  *
@@ -323,6 +326,41 @@ mbedtls_mps_l1_get_mode( mps_l1 *l1 )
 MBEDTLS_MPS_PUBLIC int mps_l1_init( mps_l1 *ctx, uint8_t mode, mps_alloc *alloc,
                                     void* send_ctx, mps_l0_send_t *send,
                                     void* recv_ctx, mps_l0_recv_t *recv );
+
+/**
+ * \brief          Set the callbacks to the underlying transport.
+ *
+ * \param ctx      The pointer to the Layer 1 context to configure.
+ * \param send_ctx The opaque context pointer to be passed to the
+ *                 sending function \p send.
+ * \param send     The callback to the sending function of the underlying
+ *                 Layer 0 transport.
+ * \param recv_ctx The opaque context pointer to be passed to the
+ *                 receiving function \p recv.
+ * \param recv     The callback to the receiving function of the underlying
+ *                 Layer 0 transport.
+ *
+ * \warning        The preconditions listed below are *not* checked in
+ *                 a production build. The function's behavior is undefined
+ *                 if they are violated.
+ *
+ * \pre            \p ctx must point to a writable ::mps_l1 instance;
+ *                 in particular, it must not be \c NULL.
+ * \pre            \p mode must be either #MPS_L1_MODE_STREAM or
+ *                 #MPS_L1_MODE_STREAM.
+ * \pre            \p alloc must point to an initalized allocator context.
+ * \pre            \p send must be a valid function pointer;
+ *                 in particular, it must not be \c NULL.
+ * \pre            \p recv must be a valid function pointer;
+ *                 in particular, it must not be \c NULL.
+ *
+ * \return         \c 0 on success.
+ * \return         A negative error code on failure.
+ *
+ */
+MBEDTLS_MPS_PUBLIC int mps_l1_set_bio( mps_l1 *ctx,
+                                       void* send_ctx, mps_l0_send_t *send,
+                                       void* recv_ctx, mps_l0_recv_t *recv );
 
 /**
  * \brief          Free a Layer 1 context.

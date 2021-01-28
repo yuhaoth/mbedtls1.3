@@ -4254,6 +4254,127 @@ void mbedtls_ssl_init( mbedtls_ssl_context *ssl )
     memset( ssl, 0, sizeof( mbedtls_ssl_context ) );
 }
 
+#if defined(MBEDTLS_SSL_USE_MPS)
+static int ssl_mps_init( mbedtls_ssl_context *ssl )
+{
+    int ret;
+
+    /* Allocator */
+    {
+        /* TODO: At the moment, the allocator doesn't support
+         * different sizes for the in/out buffers. That's a
+         * trivial change to the API, but for now, just
+         * overapproximate. */
+        size_t max_size;
+        if( MBEDTLS_SSL_IN_BUFFER_LEN > MBEDTLS_SSL_OUT_BUFFER_LEN )
+            max_size = MBEDTLS_SSL_IN_BUFFER_LEN;
+        else
+            max_size = MBEDTLS_SSL_OUT_BUFFER_LEN;
+
+        ret = mps_alloc_init( &ssl->mps.alloc,
+                              (mbedtls_mps_size_t) max_size );
+        if( ret != 0 )
+            goto exit;
+    }
+
+    /* Layer 1 */
+    ret = mps_l1_init( &ssl->mps.l1, ssl->conf->transport,
+                       &ssl->mps.alloc,
+                       ssl->p_bio, ssl->f_send,
+                       ssl->p_bio, ssl->f_recv );
+    if( ret != 0 )
+        goto exit;
+
+    /* Layer 2 */
+    ret = mps_l2_init( &ssl->mps.l2, &ssl->mps.l1,
+                       ssl->conf->transport,
+                       /* TODO: Use suitable config option */ 4096,
+                       /* TODO: Use suitable config option */ 4096,
+                       /* TODO: Add RNG for < TLS 1.3      */ NULL,
+                       /* TODO: Add RNG for < TLS 1.3      */ NULL );
+    if( ret != 0 )
+        goto exit;
+
+    /* Layer 3 */
+    ret = mps_l3_init( &ssl->mps.l3, &ssl->mps.l2,
+                       ssl->conf->transport );
+    if( ret != 0 )
+        goto exit;
+
+    /* Layer 4 */
+    ret = mbedtls_mps_init( &ssl->mps.l4, &ssl->mps.l3,
+                            ssl->conf->transport,
+                            /* TODO: Use suitable config option */ 4096 );
+    if( ret != 0 )
+        goto exit;
+
+    /* Register TLS 1.3 content types.
+     *
+     * TODO: In a TLS-1.3-only configuration, this could be hardcoded.
+     */
+    ret = mps_l2_config_add_type( &ssl->mps.l2, MBEDTLS_MPS_MSG_HS,
+                                  MBEDTLS_MPS_SPLIT_ENABLED,
+                                  MBEDTLS_MPS_PACK_ENABLED,
+                                  MBEDTLS_MPS_EMPTY_FORBIDDEN );
+    if( ret != 0 )
+        goto exit;
+
+    ret = mps_l2_config_add_type( &ssl->mps.l2, MBEDTLS_MPS_MSG_ALERT,
+                                  MBEDTLS_MPS_SPLIT_DISABLED,
+                                  MBEDTLS_MPS_PACK_DISABLED,
+                                  MBEDTLS_MPS_EMPTY_FORBIDDEN );
+    if( ret != 0 )
+        goto exit;
+
+    ret = mps_l2_config_add_type( &ssl->mps.l2, MBEDTLS_MPS_MSG_CCS,
+                                  MBEDTLS_MPS_SPLIT_DISABLED,
+                                  MBEDTLS_MPS_PACK_DISABLED,
+                                  MBEDTLS_MPS_EMPTY_FORBIDDEN );
+    if( ret != 0 )
+        goto exit;
+
+    ret = mps_l2_config_add_type( &ssl->mps.l2, MBEDTLS_MPS_MSG_APP,
+                                  MBEDTLS_MPS_SPLIT_ENABLED,
+                                  MBEDTLS_MPS_PACK_ENABLED,
+                                  MBEDTLS_MPS_EMPTY_ALLOWED );
+    if( ret != 0 )
+        goto exit;
+
+    /* Register initial epoch
+     *
+     * TODO: This will go away once MPS is setup with a NULL-epoch by default.
+     */
+    {
+        mbedtls_mps_epoch_id initial_epoch;
+        ret = mbedtls_mps_add_key_material( &ssl->mps.l4, NULL, &initial_epoch );
+        if( ret != 0 )
+            goto exit;
+
+        ret = mbedtls_mps_set_incoming_keys( &ssl->mps.l4, initial_epoch );
+        if( ret != 0 )
+            goto exit;
+
+        ret = mbedtls_mps_set_outgoing_keys( &ssl->mps.l4, initial_epoch );
+        if( ret != 0 )
+            goto exit;
+    }
+
+#if defined(MBEDTLS_SSL_USE_MPS)
+    mbedtls_mps_transform_free = mbedtls_mps_transform_free_default;
+    mbedtls_mps_transform_encrypt = mbedtls_mps_transform_encrypt_default;
+    mbedtls_mps_transform_decrypt = mbedtls_mps_transform_decrypt_default;
+    mbedtls_mps_transform_get_expansion = mbedtls_mps_transform_get_expansion_default;
+#endif /* MBEDTLS_SSL_USE_MPS */
+
+exit:
+
+    if( ret != 0 )
+        ret = MBEDTLS_ERR_SSL_INTERNAL_ERROR;
+
+    return( ret );
+}
+#endif /* MEDTLS_SSL_USE_MPS */
+
 /*
  * Setup an SSL context
  */
@@ -4341,6 +4462,11 @@ int mbedtls_ssl_setup( mbedtls_ssl_context *ssl,
     ssl->session_negotiate->ticket_nonce_len = 0;
 #endif /* ( MBEDTLS_SSL_NEW_SESSION_TICKET && MBEDTLS_SSL_CLI_C && MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 
+#if defined(MBEDTLS_SSL_USE_MPS)
+    ret = ssl_mps_init( ssl );
+    if( ret != 0 )
+        goto error;
+#endif /* MBEDTLS_SSL_USE_MPS */
 
     return( 0 );
 
@@ -4602,6 +4728,13 @@ void mbedtls_ssl_set_bio( mbedtls_ssl_context *ssl,
     ssl->f_send         = f_send;
     ssl->f_recv         = f_recv;
     ssl->f_recv_timeout = f_recv_timeout;
+
+#if defined(MBEDTLS_SSL_USE_MPS)
+    /* Update MPS callbacks. */
+    mps_l1_set_bio( &ssl->mps.l1,
+                    p_bio, f_send,
+                    p_bio, f_recv );
+#endif /* MBEDTLS_SSL_USE_MPS */
 }
 
 #if defined(MBEDTLS_SSL_PROTO_DTLS)

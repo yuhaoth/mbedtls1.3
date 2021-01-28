@@ -1423,6 +1423,15 @@ int mbedtls_ssl_get_handshake_transcript( mbedtls_ssl_context *ssl,
                                           size_t dst_len,
                                           size_t *olen );
 
+
+void mbedtls_ssl_add_hs_msg_to_checksum( mbedtls_ssl_context *ssl,
+                                         unsigned hs_type,
+                                         unsigned char const *msg,
+                                         size_t msg_len );
+void mbedtls_ssl_add_hs_hdr_to_checksum( mbedtls_ssl_context *ssl,
+                                         unsigned hs_type,
+                                         size_t total_hs_len );
+
 int mbedtls_ssl_hash_transcript( mbedtls_ssl_context *ssl );
 
 void mbedtls_ssl_set_inbound_transform( mbedtls_ssl_context *ssl,
@@ -1809,6 +1818,19 @@ int mbedtls_ssl_encrypt_buf( mbedtls_ssl_context *ssl,
 int mbedtls_ssl_decrypt_buf( mbedtls_ssl_context const *ssl,
                              mbedtls_ssl_transform *transform,
                              mbedtls_record *rec );
+
+#if defined(MBEDTLS_SSL_USE_MPS)
+int mbedtls_mps_transform_free_default( void *transform );
+int mbedtls_mps_transform_encrypt_default(
+    void *transform, mps_rec *rec,
+    int (*f_rng)(void *, unsigned char *, size_t),
+    void *p_rng );
+int mbedtls_mps_transform_decrypt_default( void *transform,
+                                           mps_rec *rec );
+int mbedtls_mps_transform_get_expansion_default( void *transform,
+                                                 size_t *pre_exp,
+                                                 size_t *post_exp );
+#endif /* MBEDTLS_SSL_USE_MPS */
 
 /* Length of the "epoch" field in the record header */
 static inline size_t mbedtls_ssl_ep_len( const mbedtls_ssl_context *ssl )

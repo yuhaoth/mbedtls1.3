@@ -1534,7 +1534,7 @@ struct mbedtls_mps_handshake_out
     mbedtls_mps_stored_hs_type type;
 
    /*! The length of the handshake message to be written, or
-    *  #MBEDTLS_MPS_LENGTH_UNKNOWN if the length is determined at write-time.
+    *  #MBEDTLS_MPS_SIZE_UNKNOWN if the length is determined at write-time.
     *  In this case, pausing is not possible for the handshake message
     *  (because the headers for handshake fragments include the total
     *  length of the handshake message).

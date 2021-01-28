@@ -46,16 +46,27 @@ MBEDTLS_MPS_INLINE void l1_init_stream_read( mps_l1_stream_read *p,
                                         mps_alloc *ctx,
                                         void *recv_ctx,
                                         mps_l0_recv_t *recv );
+MBEDTLS_MPS_INLINE void l1_set_bio_stream_read( mps_l1_stream_read *p,
+                                                void *recv_ctx,
+                                                mps_l0_recv_t *recv );
 MBEDTLS_MPS_INLINE void l1_init_stream_write( mps_l1_stream_write *p,
                                          mps_alloc *ctx,
                                          void *send_ctx,
                                          mps_l0_send_t *send );
+MBEDTLS_MPS_INLINE void l1_set_bio_stream_write( mps_l1_stream_write *p,
+                                                 void *send_ctx,
+                                                 mps_l0_send_t *send );
 MBEDTLS_MPS_INLINE void l1_init_stream( mps_l1_stream *p,
                                    mps_alloc *ctx,
                                    void *send_ctx,
                                    mps_l0_send_t *send,
                                    void *recv_ctx,
                                    mps_l0_recv_t *recv );
+MBEDTLS_MPS_INLINE void l1_set_bio_stream( mps_l1_stream *p,
+                                           void *send_ctx,
+                                           mps_l0_send_t *send,
+                                           void *recv_ctx,
+                                           mps_l0_recv_t *recv );
 MBEDTLS_MPS_INLINE void l1_free_stream_read( mps_l1_stream_read *p );
 MBEDTLS_MPS_INLINE void l1_free_stream_write( mps_l1_stream_write *p );
 MBEDTLS_MPS_INLINE void l1_free_stream( mps_l1_stream *p );
@@ -78,16 +89,27 @@ MBEDTLS_MPS_INLINE void l1_init_dgram_read( mps_l1_dgram_read *p,
                                        mps_alloc *ctx,
                                        void *recv_ctx,
                                        mps_l0_recv_t *recv );
+MBEDTLS_MPS_INLINE void l1_set_bio_dgram_read( mps_l1_dgram_read *p,
+                                               void *recv_ctx,
+                                               mps_l0_recv_t *recv );
 MBEDTLS_MPS_INLINE void l1_init_dgram_write( mps_l1_dgram_write *p,
                                         mps_alloc *ctx,
                                         void *send_ctx,
                                         mps_l0_send_t *send );
+MBEDTLS_MPS_INLINE void l1_set_bio_dgram_write( mps_l1_dgram_write *p,
+                                                void *send_ctx,
+                                                mps_l0_send_t *send );
 MBEDTLS_MPS_INLINE void l1_init_dgram( mps_l1_dgram *p,
                                   mps_alloc *ctx,
                                   void *send_ctx,
                                   mps_l0_send_t *send,
                                   void *recv_ctx,
                                   mps_l0_recv_t *recv );
+MBEDTLS_MPS_INLINE void l1_set_bio_dgram( mps_l1_dgram *p,
+                                          void *send_ctx,
+                                          mps_l0_send_t *send,
+                                          void *recv_ctx,
+                                          mps_l0_recv_t *recv );
 MBEDTLS_MPS_INLINE void l1_free_dgram_read( mps_l1_dgram_read *p );
 MBEDTLS_MPS_INLINE void l1_free_dgram_write( mps_l1_dgram_write *p );
 MBEDTLS_MPS_INLINE void l1_free_dgram( mps_l1_dgram *p );
@@ -183,10 +205,17 @@ void l1_init_stream_read( mps_l1_stream_read *p,
                                       .bytes_read    = 0,
                                       .bytes_fetched = 0 };
     *p = zero;
+    p->alloc = ctx;
+    l1_set_bio_stream_read( p, recv_ctx, recv );
+}
 
+MBEDTLS_MPS_INLINE
+void l1_set_bio_stream_read( mps_l1_stream_read *p,
+                             void* recv_ctx,
+                             mps_l0_recv_t *recv )
+{
     p->recv     = recv;
     p->recv_ctx = recv_ctx;
-    p->alloc    = ctx;
 }
 
 /*@
@@ -212,10 +241,17 @@ void l1_init_stream_write( mps_l1_stream_write *p,
         };
 
     *p = zero;
+    p->alloc = ctx;
+    l1_set_bio_stream_write( p, send_ctx, send );
+}
 
+MBEDTLS_MPS_INLINE
+void l1_set_bio_stream_write( mps_l1_stream_write *p,
+                             void* send_ctx,
+                             mps_l0_send_t *send )
+{
     p->send     = send;
     p->send_ctx = send_ctx;
-    p->alloc    = ctx;
 }
 
 MBEDTLS_MPS_INLINE
@@ -225,6 +261,15 @@ void l1_init_stream( mps_l1_stream *p, mps_alloc *ctx,
 {
     l1_init_stream_read ( &p->rd, ctx, recv_ctx, recv );
     l1_init_stream_write( &p->wr, ctx, send_ctx, send );
+}
+
+MBEDTLS_MPS_INLINE
+void l1_set_bio_stream( mps_l1_stream *p,
+                        void *send_ctx, mps_l0_send_t *send,
+                        void *recv_ctx, mps_l0_recv_t *recv )
+{
+    l1_set_bio_stream_read ( &p->rd, recv_ctx, recv );
+    l1_set_bio_stream_write( &p->wr, send_ctx, send );
 }
 
 /*@
@@ -677,10 +722,19 @@ void l1_init_dgram_read( mps_l1_dgram_read *p,
                                      .msg_len     = 0 };
     *p = zero;
 
+    p->alloc = ctx;
+    l1_set_bio_dgram_read( p, recv_ctx, recv );
+}
+
+MBEDTLS_MPS_INLINE
+void l1_set_bio_dgram_read( mps_l1_dgram_read *p,
+                            void* recv_ctx,
+                            mps_l0_recv_t *recv )
+{
     p->recv     = recv;
     p->recv_ctx = recv_ctx;
-    p->alloc    = ctx;
 }
+
 
 MBEDTLS_MPS_INLINE
 void l1_init_dgram_write( mps_l1_dgram_write *p,
@@ -697,9 +751,17 @@ void l1_init_dgram_write( mps_l1_dgram_write *p,
                                       .flush = 0 };
     *p = zero;
 
+    p->alloc    = ctx;
+    l1_set_bio_dgram_write( p, send_ctx, send );
+}
+
+MBEDTLS_MPS_INLINE
+void l1_set_bio_dgram_write( mps_l1_dgram_write *p,
+                             void* send_ctx,
+                             mps_l0_send_t *send )
+{
     p->send     = send;
     p->send_ctx = send_ctx;
-    p->alloc    = ctx;
 }
 
 MBEDTLS_MPS_INLINE
@@ -710,6 +772,15 @@ void l1_init_dgram( mps_l1_dgram *p,
 {
     l1_init_dgram_read ( &p->rd, ctx, recv_ctx, recv );
     l1_init_dgram_write( &p->wr, ctx, send_ctx, send );
+}
+
+MBEDTLS_MPS_INLINE
+void l1_set_bio_dgram( mps_l1_dgram *p,
+                       void *send_ctx, mps_l0_send_t *send,
+                       void *recv_ctx, mps_l0_recv_t *recv )
+{
+    l1_set_bio_dgram_read ( &p->rd, recv_ctx, recv );
+    l1_set_bio_dgram_write( &p->wr, send_ctx, send );
 }
 
 MBEDTLS_MPS_INLINE
@@ -1125,6 +1196,32 @@ int mps_l1_init( mps_l1 *ctx, uint8_t mode,
 #else
     ((void) mode);
 #endif /* MBEDTLS_MPS_PROTO_BOTH */
+    RETURN( 0 );
+}
+
+int mps_l1_set_bio( mps_l1 *ctx,
+                    void *send_ctx, mps_l0_send_t *send,
+                    void *recv_ctx, mps_l0_recv_t *recv )
+{
+    TRACE_INIT( "mps_l1_set_bio" );
+
+#if defined(MBEDTLS_MPS_PROTO_TLS)
+    MBEDTLS_MPS_IF_TLS( ctx->mode )
+    {
+        l1_set_bio_stream( &ctx->raw.stream,
+                           send_ctx, send,
+                           recv_ctx, recv );
+    }
+#endif /* MBEDTLS_MPS_PROTO_TLS */
+#if defined(MBEDTLS_MPS_PROTO_DTLS)
+    MBEDTLS_MPS_ELSE_IF_DTLS( ctx->mode )
+    {
+        l1_set_bio_dgram( &ctx->raw.dgram,
+                          send_ctx, send,
+                          recv_ctx, recv );
+    }
+#endif /* MBEDTLS_MPS_PROTO_DTLS */
+
     RETURN( 0 );
 }
 

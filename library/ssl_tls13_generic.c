@@ -151,6 +151,30 @@ static uint32_t get_varint_value( const uint32_t input )
 }
 #endif /* MBEDTLS_SSL_TLS13_CTLS */
 
+void mbedtls_ssl_add_hs_msg_to_checksum( mbedtls_ssl_context *ssl,
+                                         unsigned hs_type,
+                                         unsigned char const *msg,
+                                         size_t msg_len )
+{
+    mbedtls_ssl_add_hs_hdr_to_checksum( ssl, hs_type, msg_len );
+    ssl->handshake->update_checksum( ssl, msg, msg_len );
+}
+
+void mbedtls_ssl_add_hs_hdr_to_checksum( mbedtls_ssl_context *ssl,
+                                         unsigned hs_type,
+                                         size_t total_hs_len )
+{
+    unsigned char hs_hdr[4];
+
+    /* Build HS header for checksum update. */
+    hs_hdr[0] = hs_type;
+    hs_hdr[1] = (unsigned char)( total_hs_len >> 16 );
+    hs_hdr[2] = (unsigned char)( total_hs_len >>  8 );
+    hs_hdr[3] = (unsigned char)( total_hs_len >>  0 );
+
+    ssl->handshake->update_checksum( ssl, hs_hdr, sizeof( hs_hdr ) );
+}
+
 #if defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
 /* mbedtls_ssl_create_binder():
  *
