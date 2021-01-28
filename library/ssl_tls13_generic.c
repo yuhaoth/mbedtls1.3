@@ -2551,7 +2551,7 @@ static int ssl_read_certificate_verify_parse( mbedtls_ssl_context* ssl,
 
     MBEDTLS_SSL_DEBUG_BUF( 3, "verify hash", verify_hash, verify_hash_len );
 #if defined(MBEDTLS_X509_RSASSA_PSS_SUPPORT)
-    if ( sig_alg == MBEDTLS_PK_RSASSA_PSS )
+    if( sig_alg == MBEDTLS_PK_RSASSA_PSS )
     {
         const mbedtls_md_info_t* md_info;
         opts.mgf1_hash_id = md_alg;
@@ -2574,8 +2574,8 @@ static int ssl_read_certificate_verify_parse( mbedtls_ssl_context* ssl,
               buf,
               sig_len ) ) != 0 )
     {
-      MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_pk_verify_ext", ret );
-      return( ret );
+        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_pk_verify_ext", ret );
+        return( ret );
     }
 
     return( 0 );
