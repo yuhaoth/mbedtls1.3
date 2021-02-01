@@ -3918,6 +3918,48 @@ static int ssl_certificate_request_process( mbedtls_ssl_context* ssl )
 #if defined(MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED)
     if( ret == SSL_CERTIFICATE_REQUEST_SEND )
     {
+#if defined(MBEDTLS_SSL_USE_MPS)
+        mbedtls_mps_handshake_out msg;
+        unsigned char *buf;
+        mbedtls_mps_size_t buf_len, msg_len;
+
+        /* Make sure we can write a new message. */
+        MBEDTLS_SSL_PROC_CHK( mbedtls_mps_flush( &ssl->mps.l4 ) );
+
+        msg.type   = MBEDTLS_SSL_HS_CERTIFICATE_REQUEST;
+        msg.length = MBEDTLS_MPS_SIZE_UNKNOWN;
+        MBEDTLS_SSL_PROC_CHK( mbedtls_mps_write_handshake( &ssl->mps.l4,
+                                                           &msg, NULL, NULL ) );
+
+        /* Request write-buffer */
+        MBEDTLS_SSL_PROC_CHK( mbedtls_writer_get_ext( msg.handle, MBEDTLS_MPS_SIZE_MAX,
+                                                      &buf, &buf_len ) );
+
+        MBEDTLS_SSL_PROC_CHK( ssl_certificate_request_write(
+                                  ssl, buf, buf_len, &msg_len ) );
+
+        mbedtls_ssl_add_hs_msg_to_checksum( ssl, MBEDTLS_SSL_HS_CERTIFICATE_REQUEST,
+                                            buf, msg_len );
+
+        /* Commit message */
+        MBEDTLS_SSL_PROC_CHK( mbedtls_writer_commit_partial_ext( msg.handle,
+                                                                 buf_len - msg_len ) );
+
+        MBEDTLS_SSL_PROC_CHK( mbedtls_mps_dispatch( &ssl->mps.l4 ) );
+        MBEDTLS_SSL_PROC_CHK( mbedtls_mps_flush( &ssl->mps.l4 ) );
+
+        /* TEMPORARY:
+         * As long as we don't write _all_ messages through MPS, we manually
+         * need to keep the sequence numbers in sync. */
+        {
+            unsigned i;
+            for( i = 8; i > mbedtls_ssl_ep_len( ssl ); i-- )
+                if( ++ssl->cur_out_ctr[i - 1] != 0 )
+                    break;
+        }
+
+#else  /* MBEDTLS_SSL_USE_MPS */
+
         /* Make sure we can write a new message. */
         MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_flush_output( ssl ) );
 
@@ -3929,24 +3971,13 @@ static int ssl_certificate_request_process( mbedtls_ssl_context* ssl )
         ssl->out_msgtype = MBEDTLS_SSL_MSG_HANDSHAKE;
         ssl->out_msg[0] = MBEDTLS_SSL_HS_CERTIFICATE_REQUEST;
 
-        /* Update state */
-        MBEDTLS_SSL_PROC_CHK( ssl_certificate_request_postprocess( ssl ) );
-
         /* Dispatch message */
         MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_write_handshake_msg( ssl ) );
 
-        /* NOTE: With the new messaging layer, the postprocessing
-         *       step might come after the dispatching step if the
-         *       latter doesn't send the message immediately.
-         *       At the moment, we must do the postprocessing
-         *       prior to the dispatching because if the latter
-         *       returns WANT_WRITE, we want the handshake state
-         *       to be updated in order to not enter
-         *       this function again on retry.
-         *
-         *       Further, once the two calls can be re-ordered, the two
-         *       calls to ssl_certificate_request_postprocess( ) can be
-         *       consolidated. */
+#endif /* MBEDTLS_SSL_USE_MPS */
+
+        /* Update state */
+        MBEDTLS_SSL_PROC_CHK( ssl_certificate_request_postprocess( ssl ) );
     }
     else
 #endif /* MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED */
@@ -4005,11 +4036,13 @@ static int ssl_certificate_request_write( mbedtls_ssl_context* ssl,
                                           size_t* olen )
 {
     int ret;
+    size_t ext_size;
     unsigned char* p;
     unsigned char* end = buf + buflen;
-    size_t const tls_hs_hdr_len = 4;
 
+    p = buf;
 
+#if !defined(MBEDTLS_SSL_USE_MPS)
     /* Skip over handshake header.
      *
      * NOTE:
@@ -4017,9 +4050,10 @@ static int ssl_certificate_request_write( mbedtls_ssl_context* ssl,
      * header. The actual DTLS handshake header is inserted in
      * the record writing routine mbedtls_ssl_write_record( ).
      */
-    p = buf + tls_hs_hdr_len;
+    p += 4;
+#endif /* MBEDTLS_SSL_USE_MPS */
 
-    if( p + tls_hs_hdr_len + 1 + 2 > end )
+    if( p + 1 + 2 > end )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "buffer too small" ) );
         return ( MBEDTLS_ERR_SSL_ALLOC_FAILED );
@@ -4056,13 +4090,15 @@ static int ssl_certificate_request_write( mbedtls_ssl_context* ssl,
 
     /* The extensions must contain the signature_algorithms. */
     /* Currently we don't use any other extension */
-    ret = mbedtls_ssl_write_signature_algorithms_ext( ssl, p+2, end, olen );
-    if( ret != 0 ) return( ret );
+    ret = mbedtls_ssl_write_signature_algorithms_ext( ssl, p + 2,
+                                                      end, &ext_size );
+    if( ret != 0 )
+        return( ret );
 
     /* length field for all extensions */
-    *p++ = (unsigned char)( ( *olen >> 8 ) & 0xFF );
-    *p++ = (unsigned char)( ( *olen ) & 0xFF );
-    p += *olen;
+    *p++ = (unsigned char)( ( ext_size >> 8 ) & 0xFF );
+    *p++ = (unsigned char)( ( ext_size >> 0 ) & 0xFF );
+    p += ext_size;
 
     *olen = p - buf;
 
