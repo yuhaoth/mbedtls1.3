@@ -2575,6 +2575,48 @@ int mbedtls_ssl_write_certificate_process( mbedtls_ssl_context* ssl )
 #if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
     if( ret == SSL_WRITE_CERTIFICATE_AVAILABLE )
     {
+#if defined(MBEDTLS_SSL_USE_MPS)
+        mbedtls_mps_handshake_out msg;
+        unsigned char *buf;
+        mbedtls_mps_size_t buf_len, msg_len;
+
+        /* Make sure we can write a new message. */
+        MBEDTLS_SSL_PROC_CHK( mbedtls_mps_flush( &ssl->mps.l4 ) );
+
+        msg.type   = MBEDTLS_SSL_HS_CERTIFICATE;
+        msg.length = MBEDTLS_MPS_SIZE_UNKNOWN;
+        MBEDTLS_SSL_PROC_CHK( mbedtls_mps_write_handshake( &ssl->mps.l4,
+                                                           &msg, NULL, NULL ) );
+
+        /* Request write-buffer */
+        MBEDTLS_SSL_PROC_CHK( mbedtls_writer_get_ext( msg.handle, MBEDTLS_MPS_SIZE_MAX,
+                                                      &buf, &buf_len ) );
+
+        MBEDTLS_SSL_PROC_CHK( ssl_write_certificate_write(
+                                  ssl, buf, buf_len, &msg_len ) );
+
+        mbedtls_ssl_add_hs_msg_to_checksum( ssl, MBEDTLS_SSL_HS_CERTIFICATE,
+                                            buf, msg_len );
+
+        /* Commit message */
+        MBEDTLS_SSL_PROC_CHK( mbedtls_writer_commit_partial_ext( msg.handle,
+                                                                 buf_len - msg_len ) );
+
+        MBEDTLS_SSL_PROC_CHK( mbedtls_mps_dispatch( &ssl->mps.l4 ) );
+        MBEDTLS_SSL_PROC_CHK( mbedtls_mps_flush( &ssl->mps.l4 ) );
+
+        /* TEMPORARY:
+         * As long as we don't write _all_ messages through MPS, we manually
+         * need to keep the sequence numbers in sync. */
+        {
+            unsigned i;
+            for( i = 8; i > mbedtls_ssl_ep_len( ssl ); i-- )
+                if( ++ssl->cur_out_ctr[i - 1] != 0 )
+                    break;
+        }
+
+#else  /* MBEDTLS_SSL_USE_MPS */
+
         /* Make sure we can write a new message. */
         MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_flush_output( ssl ) );
 
@@ -2588,6 +2630,8 @@ int mbedtls_ssl_write_certificate_process( mbedtls_ssl_context* ssl )
 
         /* Dispatch message */
         MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_write_handshake_msg( ssl ) );
+
+#endif /* MBEDTLS_SSL_USE_MPS */
 
         /* Update state */
         MBEDTLS_SSL_PROC_CHK( ssl_write_certificate_postprocess( ssl ) );
@@ -2625,6 +2669,18 @@ static int ssl_write_certificate_coordinate( mbedtls_ssl_context* ssl )
     if( ssl->conf->endpoint == MBEDTLS_SSL_IS_CLIENT )
     {
         mbedtls_ssl_set_outbound_transform( ssl, ssl->transform_handshake );
+
+#if defined(MBEDTLS_SSL_USE_MPS)
+        {
+            int ret;
+
+            /* Use new transform for outgoing data. */
+            ret = mbedtls_mps_set_outgoing_keys( &ssl->mps.l4,
+                                                 ssl->epoch_handshake );
+            if( ret != 0 )
+                return( ret );
+        }
+#endif /* MBEDTLS_SSL_USE_MPS */
     }
 #endif /* MBEDTLS_SSL_CLI_C */
 
@@ -2686,8 +2742,9 @@ static int ssl_write_certificate_write( mbedtls_ssl_context* ssl,
     unsigned char* start;
 
     /* TODO: Add bounds checks! Only then remove the next line. */
-    ( (void ) buflen );
+    ((void) buflen );
 
+#if !defined(MBEDTLS_SSL_USE_MPS)
     /*
      *  Handshake Header is 4 ( before adding DTLS-specific fields, which is done later )
      *  Certificate Request Context: 1 byte
@@ -2698,6 +2755,9 @@ static int ssl_write_certificate_write( mbedtls_ssl_context* ssl,
      *     Extension value: m bytes
      */
     i = 4;
+#else /* MBEDTLS_SSL_USE_MPS */
+    i = 0;
+#endif /* MBEDTLS_SSL_USE_MPS */
 
     /* empty certificate_request_context with length 0 */
     buf[i] = 0;
@@ -2764,7 +2824,8 @@ static int ssl_write_certificate_write( mbedtls_ssl_context* ssl,
 #if defined(MBEDTLS_SSL_CLI_C)
 empty_cert:
 #endif /* MBEDTLS_SSL_CLI_C */
-    * olen = i;
+
+    *olen = i;
 
     return( 0 );
 }
