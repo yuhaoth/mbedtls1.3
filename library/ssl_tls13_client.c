@@ -715,15 +715,6 @@ int mbedtls_ssl_write_pre_shared_key_ext( mbedtls_ssl_context *ssl,
         /* In this implementation we only add one pre-shared-key extension. */
         ssl->session_negotiate->ciphersuite = ciphersuites[i];
         ssl->handshake->ciphersuite_info = suite_info;
-#if defined(MBEDTLS_ZERO_RTT)
-        /* Even if we include a key_share extension in the ClientHello
-         * message it will not be used at this stage for the key derivation.
-         */
-        if( ssl->handshake->early_data == MBEDTLS_SSL_EARLY_DATA_ON )
-        {
-            ssl->session_negotiate->key_exchange = MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_KE;
-        }
-#endif
         break;
     }
 
