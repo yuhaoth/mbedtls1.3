@@ -624,6 +624,7 @@ int mbedtls_mps_transform_encrypt_default(
 
     rec->buf.data_offset = rec_alt.data_offset;
     rec->buf.data_len = rec_alt.data_len;
+    rec->type = rec_alt.type;
 
     return( 0 );
 }
