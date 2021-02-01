@@ -693,6 +693,7 @@ int mbedtls_mps_transform_get_expansion_default( void *transform_,
     {
     case MBEDTLS_MODE_GCM:
     case MBEDTLS_MODE_CCM:
+    case MBEDTLS_MODE_CHACHAPOLY:
         *post_exp = transform->taglen;
         break;
 
