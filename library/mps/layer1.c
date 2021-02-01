@@ -162,6 +162,9 @@ MBEDTLS_MPS_STATIC void l1_release_if_set( unsigned char **buf_ptr,
                               mps_alloc *ctx,
                               mps_alloc_type purpose )
 {
+    if( *buf_ptr == NULL )
+        return;
+
     *buf_ptr = NULL;
     mps_alloc_release( ctx, purpose );
 }
@@ -171,8 +174,7 @@ MBEDTLS_MPS_STATIC int l1_acquire_if_unset( unsigned char **buf_ptr,
                                             mps_alloc *ctx,
                                             mps_alloc_type purpose )
 {
-    unsigned char *buf = *buf_ptr;
-    if( buf != NULL )
+    if( *buf_ptr != NULL )
         return( 0 );
 
     return( mps_alloc_acquire( ctx, purpose, buf_ptr, buflen ) );
