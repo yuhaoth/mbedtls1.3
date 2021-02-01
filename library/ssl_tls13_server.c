@@ -3014,12 +3014,56 @@ static int ssl_encrypted_extensions_process( mbedtls_ssl_context* ssl )
 {
     int ret;
 
+#if defined(MBEDTLS_SSL_USE_MPS)
+    mbedtls_mps_handshake_out msg;
+    unsigned char *buf;
+    mbedtls_mps_size_t buf_len, msg_len;
+#endif /* MBEDTLS_SSL_USE_MPS */
+
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> write encrypted extension" ) );
+
+    MBEDTLS_SSL_PROC_CHK( ssl_encrypted_extensions_prepare( ssl ) );
+
+#if defined(MBEDTLS_SSL_USE_MPS)
+    /* Make sure we can write a new message. */
+    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_flush( &ssl->mps.l4 ) );
+
+    msg.type   = MBEDTLS_SSL_HS_ENCRYPTED_EXTENSION;
+    msg.length = MBEDTLS_MPS_SIZE_UNKNOWN;
+    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_write_handshake( &ssl->mps.l4,
+                                                       &msg, NULL, NULL ) );
+
+    /* Request write-buffer */
+    MBEDTLS_SSL_PROC_CHK( mbedtls_writer_get_ext( msg.handle, MBEDTLS_MPS_SIZE_MAX,
+                                                  &buf, &buf_len ) );
+
+    MBEDTLS_SSL_PROC_CHK( ssl_encrypted_extensions_write(
+                              ssl, buf, buf_len, &msg_len ) );
+
+    mbedtls_ssl_add_hs_msg_to_checksum( ssl, MBEDTLS_SSL_HS_ENCRYPTED_EXTENSION,
+                                        buf, msg_len );
+
+    /* Commit message */
+    MBEDTLS_SSL_PROC_CHK( mbedtls_writer_commit_partial_ext( msg.handle,
+                                                             buf_len - msg_len ) );
+
+    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_dispatch( &ssl->mps.l4 ) );
+    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_flush( &ssl->mps.l4 ) );
+
+    /* TEMPORARY:
+     * As long as we don't write _all_ messages through MPS, we manually
+     * need to keep the sequence numbers in sync. */
+    {
+        unsigned i;
+        for( i = 8; i > mbedtls_ssl_ep_len( ssl ); i-- )
+            if( ++ssl->cur_out_ctr[i - 1] != 0 )
+                break;
+    }
+
+#else  /* MBEDTLS_SSL_USE_MPS */
 
     /* Make sure we can write a new message. */
     MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_flush_output( ssl ) );
-
-    MBEDTLS_SSL_PROC_CHK( ssl_encrypted_extensions_prepare( ssl ) );
 
     MBEDTLS_SSL_PROC_CHK( ssl_encrypted_extensions_write( ssl, ssl->out_msg,
                                                           MBEDTLS_SSL_MAX_CONTENT_LEN,
@@ -3029,9 +3073,6 @@ static int ssl_encrypted_extensions_process( mbedtls_ssl_context* ssl )
     ssl->out_msg[0] = MBEDTLS_SSL_HS_ENCRYPTED_EXTENSION;
 
     MBEDTLS_SSL_DEBUG_BUF( 3, "EncryptedExtensions", ssl->out_msg, ssl->out_msglen );
-
-    /* Update state */
-    MBEDTLS_SSL_PROC_CHK( ssl_encrypted_extensions_postprocess( ssl ) );
 
     /* Dispatch message */
     MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_write_handshake_msg( ssl ) );
@@ -3044,6 +3085,11 @@ static int ssl_encrypted_extensions_process( mbedtls_ssl_context* ssl )
      *       returns WANT_WRITE, we want the handshake state
      *       to be updated in order to not enter
      *       this function again on retry. */
+
+#endif /* MBEDTLS_SSL_USE_MPS */
+
+    /* Update state */
+    MBEDTLS_SSL_PROC_CHK( ssl_encrypted_extensions_postprocess( ssl ) );
 
 cleanup:
 
@@ -3072,6 +3118,32 @@ static int ssl_encrypted_extensions_prepare( mbedtls_ssl_context* ssl )
         return( ret );
     }
     mbedtls_ssl_set_outbound_transform( ssl, ssl->transform_handshake );
+
+#if defined(MBEDTLS_SSL_USE_MPS)
+    /* We're not yet using MPS for all outgoing encrypted handshake messages,
+     * so we cannot yet remove the old transform generation code in case
+     * MBEDTLS_SSL_USE_MPS is set. */
+    {
+        mbedtls_ssl_transform *transform_handshake =
+            mbedtls_calloc( 1, sizeof( mbedtls_ssl_transform ) );
+        if( transform_handshake == NULL )
+            return( MBEDTLS_ERR_SSL_ALLOC_FAILED );
+
+        ret = mbedtls_ssl_tls13_build_transform( ssl, &traffic_keys,
+                                                 transform_handshake, 0 );
+
+        /* Register transform with MPS. */
+        ret = mbedtls_mps_add_key_material( &ssl->mps.l4,
+                                            transform_handshake,
+                                            &ssl->epoch_handshake );
+        if( ret != 0 )
+            return( ret );
+
+        /* Use new transform for outgoing data. */
+        ret = mbedtls_mps_set_outgoing_keys( &ssl->mps.l4,
+                                             ssl->epoch_handshake );
+    }
+#endif /* MBEDTLS_SSL_USE_MPS */
 
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
     if( ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_DATAGRAM )
@@ -3149,22 +3221,25 @@ static int ssl_encrypted_extensions_write( mbedtls_ssl_context* ssl,
                                            size_t* olen )
 {
     int ret;
-    size_t n;
-    unsigned char *p, *end;
+    size_t n, enc_ext_len;
+    unsigned char *p, *end, *len;
 
     /* If all extensions are disabled then olen is 0. */
     *olen = 0;
 
     end = buf + buflen;
+    p = buf;
 
-    if( buflen < ( 4 ) )
+#if !defined(MBEDTLS_SSL_USE_MPS)
+    if( buflen < 4 )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "buffer too small" ) );
         return( MBEDTLS_ERR_SSL_BUFFER_TOO_SMALL );
     }
 
     /* Skip HS header */
-    p = buf + 4;
+    p += 4;
+#endif /* MBEDTLS_SSL_USE_MPS */
 
     /*
      * struct {
@@ -3174,6 +3249,7 @@ static int ssl_encrypted_extensions_write( mbedtls_ssl_context* ssl,
      */
 
     /* Skip extension length; first write extensions, then update length */
+    len = p;
     p += 2;
 
 #if defined(MBEDTLS_SSL_SERVER_NAME_INDICATION)
@@ -3205,9 +3281,10 @@ static int ssl_encrypted_extensions_write( mbedtls_ssl_context* ssl,
 #endif /* MBEDTLS_ZERO_RTT */
 
     *olen = p - buf;
+    enc_ext_len = (size_t)( ( p - len ) - 2 );
 
-    *( buf + 4 ) = (unsigned char)( ( ( *olen - 4 - 2 ) >> 8 ) & 0xFF );
-    *( buf + 5 ) = (unsigned char)( ( *olen - 4 - 2 ) & 0xFF );
+    len[0] = (unsigned char)( ( enc_ext_len >> 8 ) & 0xFF );
+    len[1] = (unsigned char)( ( enc_ext_len >> 0 ) & 0xFF );
 
     return( 0 );
 }
