@@ -4375,6 +4375,15 @@ exit:
 
     return( ret );
 }
+
+static void ssl_mps_free( mbedtls_ssl_context *ssl )
+{
+    mbedtls_mps_free( &ssl->mps.l4 );
+    mps_l3_free( &ssl->mps.l3 );
+    mps_l2_free( &ssl->mps.l2 );
+    mps_l1_free( &ssl->mps.l1 );
+    mps_alloc_free( &ssl->mps.alloc );
+}
 #endif /* MEDTLS_SSL_USE_MPS */
 
 /*
@@ -7454,6 +7463,10 @@ void mbedtls_ssl_free( mbedtls_ssl_context *ssl )
         return;
 
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> free" ) );
+
+#if defined(MBEDTLS_SSL_USE_MPS)
+    ssl_mps_free( ssl );
+#endif /* MBEDTLS_SSL_USE_MPS */
 
     if( ssl->out_buf != NULL )
     {
