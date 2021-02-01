@@ -4628,7 +4628,13 @@ int mbedtls_ssl_session_reset_int( mbedtls_ssl_context *ssl, int partial )
     ssl->transform_handshake   = NULL;
     ssl->transform_earlydata   = NULL;
     ssl->transform_application = NULL;
-#endif
+
+#if defined(MBEDTLS_SSL_USE_MPS)
+    ssl_mps_free( ssl );
+    ssl_mps_init( ssl );
+#endif /* MBEDTLS_SSL_USE_MPS */
+
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 
     if( ssl->session )
     {
