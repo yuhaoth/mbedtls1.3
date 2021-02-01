@@ -607,14 +607,14 @@ int mbedtls_mps_transform_encrypt_default(
     rec_alt.data_len = rec->buf.data_len;
     rec_alt.data_offset = rec->buf.data_offset;
     rec_alt.type = rec->type;
-    rec_alt.ctr[0] = ( rec->ctr[1] >> 24 ) & 0xFF;
-    rec_alt.ctr[1] = ( rec->ctr[1] >> 16 ) & 0xFF;
-    rec_alt.ctr[2] = ( rec->ctr[1] >>  8 ) & 0xFF;
-    rec_alt.ctr[3] = ( rec->ctr[1] >>  0 ) & 0xFF;
-    rec_alt.ctr[4] = ( rec->ctr[0] >> 24 ) & 0xFF;
-    rec_alt.ctr[5] = ( rec->ctr[0] >> 16 ) & 0xFF;
-    rec_alt.ctr[6] = ( rec->ctr[0] >>  8 ) & 0xFF;
-    rec_alt.ctr[7] = ( rec->ctr[0] >>  0 ) & 0xFF;
+    rec_alt.ctr[0] = ( rec->ctr[0] >> 24 ) & 0xFF;
+    rec_alt.ctr[1] = ( rec->ctr[0] >> 16 ) & 0xFF;
+    rec_alt.ctr[2] = ( rec->ctr[0] >>  8 ) & 0xFF;
+    rec_alt.ctr[3] = ( rec->ctr[0] >>  0 ) & 0xFF;
+    rec_alt.ctr[4] = ( rec->ctr[1] >> 24 ) & 0xFF;
+    rec_alt.ctr[5] = ( rec->ctr[1] >> 16 ) & 0xFF;
+    rec_alt.ctr[6] = ( rec->ctr[1] >>  8 ) & 0xFF;
+    rec_alt.ctr[7] = ( rec->ctr[1] >>  0 ) & 0xFF;
     mbedtls_ssl_write_version( rec->major_ver, rec->minor_ver,
                    MBEDTLS_MPS_MODE_STREAM, &rec_alt.ver[0] );
 
@@ -652,14 +652,14 @@ int mbedtls_mps_transform_decrypt_default( void *transform_, mps_rec *rec )
     rec_alt.data_len = rec->buf.data_len;
     rec_alt.data_offset = rec->buf.data_offset;
     rec_alt.type = rec->type;
-    rec_alt.ctr[0] = ( rec->ctr[1] >> 24 ) & 0xFF;
-    rec_alt.ctr[1] = ( rec->ctr[1] >> 16 ) & 0xFF;
-    rec_alt.ctr[2] = ( rec->ctr[1] >>  8 ) & 0xFF;
-    rec_alt.ctr[3] = ( rec->ctr[1] >>  0 ) & 0xFF;
-    rec_alt.ctr[4] = ( rec->ctr[0] >> 24 ) & 0xFF;
-    rec_alt.ctr[5] = ( rec->ctr[0] >> 16 ) & 0xFF;
-    rec_alt.ctr[6] = ( rec->ctr[0] >>  8 ) & 0xFF;
-    rec_alt.ctr[7] = ( rec->ctr[0] >>  0 ) & 0xFF;
+    rec_alt.ctr[0] = ( rec->ctr[0] >> 24 ) & 0xFF;
+    rec_alt.ctr[1] = ( rec->ctr[0] >> 16 ) & 0xFF;
+    rec_alt.ctr[2] = ( rec->ctr[0] >>  8 ) & 0xFF;
+    rec_alt.ctr[3] = ( rec->ctr[0] >>  0 ) & 0xFF;
+    rec_alt.ctr[4] = ( rec->ctr[1] >> 24 ) & 0xFF;
+    rec_alt.ctr[5] = ( rec->ctr[1] >> 16 ) & 0xFF;
+    rec_alt.ctr[6] = ( rec->ctr[1] >>  8 ) & 0xFF;
+    rec_alt.ctr[7] = ( rec->ctr[1] >>  0 ) & 0xFF;
     mbedtls_ssl_write_version( rec->major_ver, rec->minor_ver,
                                MBEDTLS_MPS_MODE_STREAM, &rec_alt.ver[0] );
 
