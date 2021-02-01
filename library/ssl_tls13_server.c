@@ -3726,6 +3726,31 @@ static int ssl_server_hello_write( mbedtls_ssl_context* ssl,
         return( MBEDTLS_ERR_SSL_BUFFER_TOO_SMALL );
     }
 
+#if !defined(MBEDTLS_SSL_USE_MPS)
+    /*
+     *  TLS 1.3
+     *     0  .   0   handshake type
+     *     1  .   3   handshake length
+     *
+     *  cTLS
+     *     0  .   0   handshake type
+     *
+     * The header is set by ssl_write_record.
+     * For DTLS 1.3 the other fields are adjusted.
+     */
+#if defined(MBEDTLS_SSL_TLS13_CTLS)
+    if( ssl->handshake->ctls == MBEDTLS_SSL_TLS13_CTLS_USE )
+    {
+        buf++; /* skip handshake type */
+        buflen--;
+    } else
+#endif /* MBEDTLS_SSL_TLS13_CTLS */
+    {
+        buf += 4; /* skip handshake type + length */
+        buflen -=4;
+    }
+#endif /* MBEDTLS_SSL_USE_MPS */
+
     /* Version */
 #if defined(MBEDTLS_SSL_TLS13_CTLS)
     if( ssl->handshake->ctls == MBEDTLS_SSL_TLS13_CTLS_DO_NOT_USE )
