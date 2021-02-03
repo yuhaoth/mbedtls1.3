@@ -4171,12 +4171,14 @@ static int ssl_handshake_init( mbedtls_ssl_context *ssl )
 #endif
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+        mbedtls_ssl_transform_free( ssl->transform_handshake   );
+        mbedtls_ssl_transform_free( ssl->transform_earlydata   );
+        mbedtls_ssl_transform_free( ssl->transform_application );
         mbedtls_free( ssl->transform_handshake   );
         mbedtls_free( ssl->transform_earlydata   );
         mbedtls_free( ssl->transform_application );
         ssl->transform_handshake   = NULL;
         ssl->transform_earlydata   = NULL;
-
         ssl->transform_application = NULL;
 #endif
 
@@ -4372,6 +4374,15 @@ exit:
         ret = MBEDTLS_ERR_SSL_INTERNAL_ERROR;
 
     return( ret );
+}
+
+static void ssl_mps_free( mbedtls_ssl_context *ssl )
+{
+    mbedtls_mps_free( &ssl->mps.l4 );
+    mps_l3_free( &ssl->mps.l3 );
+    mps_l2_free( &ssl->mps.l2 );
+    mps_l1_free( &ssl->mps.l1 );
+    mps_alloc_free( &ssl->mps.alloc );
 }
 #endif /* MEDTLS_SSL_USE_MPS */
 
@@ -4606,6 +4617,24 @@ int mbedtls_ssl_session_reset_int( mbedtls_ssl_context *ssl, int partial )
         ssl->transform = NULL;
     }
 #endif /* MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER */
+
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+    mbedtls_ssl_transform_free( ssl->transform_handshake   );
+    mbedtls_ssl_transform_free( ssl->transform_earlydata   );
+    mbedtls_ssl_transform_free( ssl->transform_application );
+    mbedtls_free( ssl->transform_handshake   );
+    mbedtls_free( ssl->transform_earlydata   );
+    mbedtls_free( ssl->transform_application );
+    ssl->transform_handshake   = NULL;
+    ssl->transform_earlydata   = NULL;
+    ssl->transform_application = NULL;
+
+#if defined(MBEDTLS_SSL_USE_MPS)
+    ssl_mps_free( ssl );
+    ssl_mps_init( ssl );
+#endif /* MBEDTLS_SSL_USE_MPS */
+
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 
     if( ssl->session )
     {
@@ -7441,6 +7470,10 @@ void mbedtls_ssl_free( mbedtls_ssl_context *ssl )
 
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> free" ) );
 
+#if defined(MBEDTLS_SSL_USE_MPS)
+    ssl_mps_free( ssl );
+#endif /* MBEDTLS_SSL_USE_MPS */
+
     if( ssl->out_buf != NULL )
     {
 #if defined(MBEDTLS_SSL_VARIABLE_BUFFER_LENGTH)
@@ -7483,6 +7516,18 @@ void mbedtls_ssl_free( mbedtls_ssl_context *ssl )
     }
 #endif
 
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+    mbedtls_ssl_transform_free( ssl->transform_handshake   );
+    mbedtls_ssl_transform_free( ssl->transform_earlydata   );
+    mbedtls_ssl_transform_free( ssl->transform_application );
+    mbedtls_free( ssl->transform_handshake   );
+    mbedtls_free( ssl->transform_earlydata   );
+    mbedtls_free( ssl->transform_application );
+    ssl->transform_handshake   = NULL;
+    ssl->transform_earlydata   = NULL;
+    ssl->transform_application = NULL;
+#endif
+
     if( ssl->handshake )
     {
         mbedtls_ssl_handshake_free( ssl );
@@ -7500,6 +7545,9 @@ void mbedtls_ssl_free( mbedtls_ssl_context *ssl )
         mbedtls_free( ssl->transform_handshake   );
         mbedtls_free( ssl->transform_earlydata   );
         mbedtls_free( ssl->transform_application );
+        ssl->transform_handshake   = NULL;
+        ssl->transform_earlydata   = NULL;
+        ssl->transform_application = NULL;
 #endif
 
         mbedtls_ssl_session_free( ssl->session_negotiate );

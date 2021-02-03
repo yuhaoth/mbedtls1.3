@@ -719,9 +719,12 @@ int l2_out_prepare_record( mbedtls_mps_l2 *ctx,
     if( ret != 0 )
         RETURN( ret );
 
+    TRACE( trace_comment, "Transform expansion:" );
     mbedtls_mps_transform_get_expansion( epoch->transform,
                                          &pre_expansion,
                                          &post_expansion );
+    TRACE( trace_comment, "* Pre:  %u", (unsigned) pre_expansion  );
+    TRACE( trace_comment, "* Post: %u", (unsigned) post_expansion );
 
 #if defined(MBEDTLS_MPS_TRANSFORM_VALIDATION)
     {
@@ -745,7 +748,9 @@ int l2_out_prepare_record( mbedtls_mps_l2 *ctx,
     {
         mbedtls_mps_size_t bytes_pending;
         TRACE( trace_comment, "Not enough space for to hold a non-empty record." );
-        TRACE( trace_comment, "Need at least %u ( %u header + %u pre-expansion + %u post-expansion + 1 plaintext ) byte, but have only %u bytes available.",
+        TRACE( trace_comment, "Need at least %u ( %u header + %u pre-expansion + "
+                              "%u post-expansion + 1 plaintext ) byte, but have only "
+                              "%u bytes available.",
                (unsigned)( hdr_len + pre_expansion + post_expansion + 1 ),
                (unsigned) hdr_len,
                (unsigned) pre_expansion,
@@ -883,6 +888,8 @@ int l2_out_dispatch_record( mbedtls_mps_l2 *ctx )
             TRACE( trace_comment, "The record encryption failed with %d", ret );
             RETURN( ret );
         }
+        TRACE( trace_comment, "Record type after encryption: %u",
+               (unsigned) rec.type );
 
 #if defined(MBEDTLS_MPS_TRANSFORM_VALIDATION)
         /* Double-check that we have calculated the offset of the
@@ -1031,7 +1038,8 @@ int l2_out_write_protected_record_tls( mbedtls_mps_l2 *ctx, mps_rec *rec )
     /* Write ciphertext length. */
     MPS_WRITE_UINT16_BE( &rec->buf.data_len, hdr + tls_rec_len_offset );
 
-    TRACE( trace_comment, "Write protected record -- DISPATCH" );
+    TRACE( trace_comment, "* Type:    %u", (unsigned) rec->type );
+    TRACE( trace_comment, "* Version: %u", (unsigned) rec->minor_ver );
     RETURN( mps_l1_dispatch( l1, hdr_len + rec->buf.data_len, NULL ) );
 }
 #endif /* MBEDTLS_MPS_PROTO_TLS */

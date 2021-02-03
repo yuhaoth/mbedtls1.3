@@ -3195,6 +3195,28 @@ static int ssl_server_hello_postprocess( mbedtls_ssl_context* ssl )
         return( ret );
     }
 
+#if defined(MBEDTLS_SSL_USE_MPS)
+    /* We're not yet using MPS for all outgoing encrypted handshake messages,
+     * so we cannot yet remove the old transform generation code in case
+     * MBEDTLS_SSL_USE_MPS is set. */
+    {
+        mbedtls_ssl_transform *transform_handshake =
+            mbedtls_calloc( 1, sizeof( mbedtls_ssl_transform ) );
+        if( transform_handshake == NULL )
+            return( MBEDTLS_ERR_SSL_ALLOC_FAILED );
+
+        ret = mbedtls_ssl_tls13_build_transform( ssl, &traffic_keys,
+                                                 transform_handshake, 0 );
+
+        /* Register transform with MPS. */
+        ret = mbedtls_mps_add_key_material( &ssl->mps.l4,
+                                            transform_handshake,
+                                            &ssl->epoch_handshake );
+        if( ret != 0 )
+            return( ret );
+    }
+#endif /* MBEDTLS_SSL_USE_MPS */
+
     /* Switch to new keys for inbound traffic. */
     mbedtls_ssl_set_inbound_transform( ssl, ssl->transform_handshake );
     ssl->session_in = ssl->session_negotiate;
