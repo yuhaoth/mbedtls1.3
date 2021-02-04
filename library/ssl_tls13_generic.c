@@ -1803,9 +1803,50 @@ int mbedtls_ssl_certificate_verify_process( mbedtls_ssl_context* ssl )
     /* Coordination step: Check if we need to send a CertificateVerify */
     MBEDTLS_SSL_PROC_CHK( ssl_certificate_verify_coordinate( ssl ) );
 
-#if defined(MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED)
     if( ret == SSL_CERTIFICATE_VERIFY_SEND )
     {
+#if defined(MBEDTLS_SSL_USE_MPS)
+        mbedtls_mps_handshake_out msg;
+        unsigned char *buf;
+        mbedtls_mps_size_t buf_len, msg_len;
+
+        /* Make sure we can write a new message. */
+        MBEDTLS_SSL_PROC_CHK( mbedtls_mps_flush( &ssl->mps.l4 ) );
+
+        msg.type   = MBEDTLS_SSL_HS_CERTIFICATE_VERIFY;
+        msg.length = MBEDTLS_MPS_SIZE_UNKNOWN;
+        MBEDTLS_SSL_PROC_CHK( mbedtls_mps_write_handshake( &ssl->mps.l4,
+                                                           &msg, NULL, NULL ) );
+
+        /* Request write-buffer */
+        MBEDTLS_SSL_PROC_CHK( mbedtls_writer_get_ext( msg.handle, MBEDTLS_MPS_SIZE_MAX,
+                                                      &buf, &buf_len ) );
+
+        MBEDTLS_SSL_PROC_CHK( ssl_certificate_verify_write(
+                                  ssl, buf, buf_len, &msg_len ) );
+
+        mbedtls_ssl_add_hs_msg_to_checksum( ssl, MBEDTLS_SSL_HS_CERTIFICATE_VERIFY,
+                                            buf, msg_len );
+
+        /* Commit message */
+        MBEDTLS_SSL_PROC_CHK( mbedtls_writer_commit_partial_ext( msg.handle,
+                                                                 buf_len - msg_len ) );
+
+        MBEDTLS_SSL_PROC_CHK( mbedtls_mps_dispatch( &ssl->mps.l4 ) );
+        MBEDTLS_SSL_PROC_CHK( mbedtls_mps_flush( &ssl->mps.l4 ) );
+
+        /* TEMPORARY:
+         * As long as we don't write _all_ messages through MPS, we manually
+         * need to keep the sequence numbers in sync. */
+        {
+            unsigned i;
+            for( i = 8; i > mbedtls_ssl_ep_len( ssl ); i-- )
+                if( ++ssl->cur_out_ctr[i - 1] != 0 )
+                    break;
+        }
+
+#else  /* MBEDTLS_SSL_USE_MPS */
+
         /* Make sure we can write a new message. */
         MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_flush_output( ssl ) );
 
@@ -1816,9 +1857,6 @@ int mbedtls_ssl_certificate_verify_process( mbedtls_ssl_context* ssl )
 
         ssl->out_msgtype = MBEDTLS_SSL_MSG_HANDSHAKE;
         ssl->out_msg[0] = MBEDTLS_SSL_HS_CERTIFICATE_VERIFY;
-
-        /* Update state */
-        MBEDTLS_SSL_PROC_CHK( ssl_certificate_verify_postprocess( ssl ) );
 
         /* Dispatch message */
         MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_write_handshake_msg( ssl ) );
@@ -1835,21 +1873,12 @@ int mbedtls_ssl_certificate_verify_process( mbedtls_ssl_context* ssl )
          *       Further, once the two calls can be re-ordered, the two
          *       calls to ssl_certificate_verify_postprocess( ) can be
          *       consolidated. */
-    }
-    else
-#endif /* MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED */
-        if( ret == SSL_CERTIFICATE_VERIFY_SKIP )
-        {
-            MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= skip write certificate verify" ) );
 
-            /* Update state */
-            MBEDTLS_SSL_PROC_CHK( ssl_certificate_verify_postprocess( ssl ) );
-        }
-        else
-        {
-            MBEDTLS_SSL_DEBUG_MSG( 1, ( "should never happen" ) );
-            return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
-        }
+#endif /* MBEDTLS_SSL_USE_MPS */
+    }
+
+    /* Update state */
+    MBEDTLS_SSL_PROC_CHK( ssl_certificate_verify_postprocess( ssl ) );
 
 cleanup:
 
@@ -1975,7 +2004,7 @@ static int ssl_certificate_verify_write( mbedtls_ssl_context* ssl,
                                          size_t* olen )
 {
     int ret;
-    size_t n = 0, offset = 0;
+    size_t n = 0;
     unsigned char verify_buffer[ MBEDTLS_SSL_VERIFY_STRUCT_MAX_SIZE ];
     const int *sig_scheme; /* iterate through configured signature schemes */
     size_t verify_buffer_len;
@@ -1985,13 +2014,25 @@ static int ssl_certificate_verify_write( mbedtls_ssl_context* ssl,
     int sig_alg;
     unsigned char verify_hash[ MBEDTLS_MD_MAX_SIZE ];
     size_t verify_hash_len;
+    unsigned char *p;
 
+#if defined(MBEDTLS_SSL_USE_MPS)
+    p = buf;
+    if( buflen < 2 + MBEDTLS_MD_MAX_SIZE )
+    {
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "buffer too short" ) );
+        return( MBEDTLS_ERR_SSL_BUFFER_TOO_SMALL );
+    }
+
+#else
+    p = buf + 4;
     /* TBD: Check whether the signature fits into the buffer. */
     if( buflen < ( mbedtls_ssl_hs_hdr_len( ssl ) + 2 + MBEDTLS_MD_MAX_SIZE ) )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "buffer too short" ) );
         return( MBEDTLS_ERR_SSL_BUFFER_TOO_SMALL );
     }
+#endif /* MBEDTLS_SSL_USE_MPS */
 
     /* Create verify structure */
     mbedtls_ssl_create_verify_structure(
@@ -2040,7 +2081,8 @@ static int ssl_certificate_verify_write( mbedtls_ssl_context* ssl,
 
     if( ssl->handshake->received_signature_schemes_list != NULL )
     {
-        for( sig_scheme = ssl->handshake->received_signature_schemes_list; *sig_scheme != SIGNATURE_NONE; sig_scheme++ )
+        for( sig_scheme = ssl->handshake->received_signature_schemes_list;
+             *sig_scheme != SIGNATURE_NONE; sig_scheme++ )
         {
             if( *sig_scheme == sig_alg )
             {
@@ -2056,9 +2098,8 @@ static int ssl_certificate_verify_write( mbedtls_ssl_context* ssl,
             return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
     }
 
-    buf[4] = (unsigned char)( ( ssl->handshake->signature_scheme_client >> 8 ) & 0xFF );
-    buf[5] = (unsigned char)( ( ssl->handshake->signature_scheme_client ) & 0xFF );
-    offset = 2;
+    *(p++) = (unsigned char)( ( ssl->handshake->signature_scheme_client >> 8 ) & 0xFF );
+    *(p++) = (unsigned char)( ( ssl->handshake->signature_scheme_client >> 0 ) & 0xFF );
 
     /* Hash verify buffer with indicated hash function */
 #if defined(MBEDTLS_SHA256_C)
@@ -2099,18 +2140,19 @@ static int ssl_certificate_verify_write( mbedtls_ssl_context* ssl,
     if( ( ret = mbedtls_pk_sign( mbedtls_ssl_own_key( ssl ),
                                  md_alg,
                                  verify_hash, verify_hash_len,
-                                 buf + 6 + offset, &n,
+                                 p + 2, &n,
                                  ssl->conf->f_rng, ssl->conf->p_rng ) ) != 0 )
     {
         MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_pk_sign", ret );
         return( ret );
     }
 
-    buf[4 + offset] = (unsigned char)( n >> 8 );
-    buf[5 + offset] = (unsigned char)( n );
+    p[0] = (unsigned char)( n >> 8 );
+    p[1] = (unsigned char)( n >> 0 );
 
-    *olen = 6 + n + offset;
+    p += 2 + n;
 
+    *olen = (size_t)( p - buf );
     return( ret );
 }
 #endif /* MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED */
