@@ -1414,6 +1414,46 @@ static int ssl_write_new_session_ticket_process( mbedtls_ssl_context *ssl )
 
     if( ret == SSL_NEW_SESSION_TICKET_WRITE )
     {
+#if defined(MBEDTLS_SSL_USE_MPS)
+        mbedtls_mps_handshake_out msg;
+        unsigned char *buf;
+        mbedtls_mps_size_t buf_len, msg_len;
+
+        /* Make sure we can write a new message. */
+        MBEDTLS_SSL_PROC_CHK( mbedtls_mps_flush( &ssl->mps.l4 ) );
+
+        msg.type   = MBEDTLS_SSL_HS_NEW_SESSION_TICKET;
+        msg.length = MBEDTLS_MPS_SIZE_UNKNOWN;
+        MBEDTLS_SSL_PROC_CHK( mbedtls_mps_write_handshake( &ssl->mps.l4,
+                                                           &msg, NULL, NULL ) );
+
+        /* Request write-buffer */
+        MBEDTLS_SSL_PROC_CHK( mbedtls_writer_get_ext( msg.handle,
+                                                      MBEDTLS_MPS_SIZE_MAX,
+                                                      &buf, &buf_len ) );
+
+        MBEDTLS_SSL_PROC_CHK( ssl_write_new_session_ticket_write(
+                                  ssl, buf, buf_len, &msg_len ) );
+
+        /* Commit message */
+        MBEDTLS_SSL_PROC_CHK( mbedtls_writer_commit_partial_ext( msg.handle,
+                                                         buf_len - msg_len ) );
+
+        MBEDTLS_SSL_PROC_CHK( mbedtls_mps_dispatch( &ssl->mps.l4 ) );
+        MBEDTLS_SSL_PROC_CHK( mbedtls_mps_flush( &ssl->mps.l4 ) );
+
+        /* TEMPORARY:
+         * As long as we don't write _all_ messages through MPS, we manually
+         * need to keep the sequence numbers in sync. */
+        {
+            unsigned i;
+            for( i = 8; i > mbedtls_ssl_ep_len( ssl ); i-- )
+                if( ++ssl->cur_out_ctr[i - 1] != 0 )
+                    break;
+        }
+
+#else /* MBEDTLS_SSL_USE_MPS */
+
         ssl->out_msgtype = MBEDTLS_SSL_MSG_HANDSHAKE;
         ssl->out_msg[0] = MBEDTLS_SSL_HS_NEW_SESSION_TICKET;
         MBEDTLS_SSL_PROC_CHK( ssl_write_new_session_ticket_write( ssl,
@@ -1422,6 +1462,8 @@ static int ssl_write_new_session_ticket_process( mbedtls_ssl_context *ssl )
                                         &ssl->out_msglen ) );
 
         MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_write_handshake_msg( ssl ) );
+
+#endif /* MBEDTLS_SSL_USE_MPS */
     }
 
     MBEDTLS_SSL_PROC_CHK( ssl_write_new_session_ticket_postprocess( ssl ) );
@@ -1495,7 +1537,13 @@ static int ssl_write_new_session_ticket_write( mbedtls_ssl_context* ssl,
     mbedtls_ssl_ticket ticket;
     mbedtls_ssl_ticket_context *ctx = ssl->conf->p_ticket;
 
+#if defined(MBEDTLS_SSL_USE_MPS)
+    size_t const total_length = 12 + MBEDTLS_SSL_TICKET_NONCE_LENGTH;
+    p = buf;
+#else
     size_t const total_length = 16 + MBEDTLS_SSL_TICKET_NONCE_LENGTH;
+    p = buf + 4;
+#endif /* MBEDTLS_SSL_USE_MPS */
 
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> write NewSessionTicket msg" ) );
 
@@ -1505,8 +1553,6 @@ static int ssl_write_new_session_ticket_write( mbedtls_ssl_context* ssl,
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "Buffer for ticket too small" ) );
         return( MBEDTLS_ERR_SSL_BUFFER_TOO_SMALL );
     }
-
-    p = buf + 4;
 
     suite_info = (mbedtls_ssl_ciphersuite_t *) ssl->handshake->ciphersuite_info;
     hash_length = mbedtls_hash_size_for_ciphersuite( suite_info );
@@ -1802,6 +1848,13 @@ static int ssl_read_early_data_coordinate( mbedtls_ssl_context* ssl )
     MBEDTLS_SSL_DEBUG_MSG( 1, ( "Switch to 0-RTT keys for inbound traffic" ) );
     mbedtls_ssl_set_inbound_transform( ssl, ssl->transform_earlydata );
 
+#if defined(MBEDTLS_SSL_USE_MPS)
+    ret = mbedtls_mps_set_incoming_keys( &ssl->mps.l4,
+                                         ssl->epoch_earlydata );
+    if( ret != 0 )
+        return( ret );
+#endif /* MBEDTLS_SSL_USE_MPS */
+
     /* Fetching step */
     if ( ( ret = mbedtls_ssl_read_record( ssl, 0 ) ) != 0 )
     {
@@ -1916,7 +1969,6 @@ static int ssl_client_hello_parse( mbedtls_ssl_context* ssl,
 /* TODO: At the moment, this doesn't update the state machine - why? */
 static int ssl_client_hello_postprocess( mbedtls_ssl_context* ssl );
 
-
 /*
  * Implementation
  */
@@ -1933,6 +1985,7 @@ static int ssl_client_hello_process( mbedtls_ssl_context* ssl )
 
     MBEDTLS_SSL_PROC_CHK( ssl_client_hello_parse( ssl, buf, buflen ) );
 
+    MBEDTLS_SSL_DEBUG_MSG( 1, ( "postprocess" ) );
     MBEDTLS_SSL_PROC_CHK( ssl_client_hello_postprocess( ssl ) );
 
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
@@ -2996,11 +3049,20 @@ static int ssl_client_hello_parse( mbedtls_ssl_context* ssl,
 static int ssl_client_hello_postprocess( mbedtls_ssl_context* ssl )
 {
     int ret = 0;
+
+#if defined(MBEDTLS_SSL_USE_MPS)
+    MBEDTLS_SSL_DEBUG_MSG( 3, ( "Disable unencrypted inbound traffic" ) );
+    ret = mbedtls_mps_set_incoming_keys( &ssl->mps.l4, MBEDTLS_MPS_EPOCH_NONE );
+    if( ret != 0 )
+        return( ret );
+#endif /* MBEDTLS_SSL_USE_MPS */
+
 #if defined(MBEDTLS_ZERO_RTT)
     mbedtls_ssl_key_set traffic_keys;
 
     if( ssl->handshake->early_data == MBEDTLS_SSL_EARLY_DATA_ON )
     {
+        MBEDTLS_SSL_DEBUG_MSG( 3, ( "Generate 0-RTT keys" ) );
 
         ret = mbedtls_ssl_generate_early_data_keys( ssl, &traffic_keys );
         if( ret != 0 )
@@ -3015,6 +3077,25 @@ static int ssl_client_hello_postprocess( mbedtls_ssl_context* ssl )
             MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_tls13_build_transform", ret );
             goto cleanup;
         }
+
+#if defined(MBEDTLS_SSL_USE_MPS)
+        {
+            mbedtls_ssl_transform *transform_earlydata =
+                mbedtls_calloc( 1, sizeof( mbedtls_ssl_transform ) );
+            if( transform_earlydata == NULL )
+                return( MBEDTLS_ERR_SSL_ALLOC_FAILED );
+
+            ret = mbedtls_ssl_tls13_build_transform( ssl, &traffic_keys,
+                                                     transform_earlydata, 0 );
+
+            /* Register transform with MPS. */
+            ret = mbedtls_mps_add_key_material( &ssl->mps.l4,
+                                                transform_earlydata,
+                                                &ssl->epoch_earlydata );
+            if( ret != 0 )
+                return( ret );
+        }
+#endif /* MBEDTLS_SSL_USE_MPS */
     }
 
 cleanup:
@@ -3022,7 +3103,7 @@ cleanup:
 
 #endif /* MBEDTLS_ZERO_RTT */
 
-    return ( ret );
+    return( ret );
 }
 
 
@@ -4737,8 +4818,21 @@ int mbedtls_ssl_handshake_server_step( mbedtls_ssl_context *ssl )
             MBEDTLS_SSL_DEBUG_MSG( 2, ( "handshake: done" ) );
 
             MBEDTLS_SSL_DEBUG_MSG( 1, ( "Switch to application keys for all traffic" ) );
+
             mbedtls_ssl_set_inbound_transform ( ssl, ssl->transform_application );
             mbedtls_ssl_set_outbound_transform( ssl, ssl->transform_application );
+
+#if defined(MBEDTLS_SSL_USE_MPS)
+            ret = mbedtls_mps_set_incoming_keys( &ssl->mps.l4,
+                                                 ssl->epoch_application );
+            if( ret != 0 )
+                return( ret );
+
+            ret = mbedtls_mps_set_outgoing_keys( &ssl->mps.l4,
+                                                 ssl->epoch_application );
+            if( ret != 0 )
+                return( ret );
+#endif /* MBEDTLS_SSL_USE_MPS */
 
             mbedtls_ssl_handshake_wrapup( ssl );
             mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_SERVER_NEW_SESSION_TICKET );

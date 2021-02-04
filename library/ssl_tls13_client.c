@@ -3351,8 +3351,16 @@ static int ssl_server_hello_postprocess( mbedtls_ssl_context* ssl )
 #endif /* MBEDTLS_SSL_USE_MPS */
 
     /* Switch to new keys for inbound traffic. */
+    MBEDTLS_SSL_DEBUG_MSG( 1, ( "Switch to handshake keys for inbound traffic" ) );
     mbedtls_ssl_set_inbound_transform( ssl, ssl->transform_handshake );
     ssl->session_in = ssl->session_negotiate;
+
+#if defined(MBEDTLS_SSL_USE_MPS)
+    ret = mbedtls_mps_set_incoming_keys( &ssl->mps.l4,
+                                         ssl->epoch_handshake );
+    if( ret != 0 )
+        return( ret );
+#endif /* MBEDTLS_SSL_USE_MPS */
 
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
     traffic_keys.epoch = 2;
@@ -4337,9 +4345,22 @@ int mbedtls_ssl_handshake_client_step( mbedtls_ssl_context *ssl )
 
         case MBEDTLS_SSL_HANDSHAKE_WRAPUP:
 
+            MBEDTLS_SSL_DEBUG_MSG( 1, ( "Switch to application keys for inbound traffic" ) );
             mbedtls_ssl_set_inbound_transform ( ssl, ssl->transform_application );
-            MBEDTLS_SSL_DEBUG_MSG( 1, ( "Switch to application keys for all traffic" ) );
+            MBEDTLS_SSL_DEBUG_MSG( 1, ( "Switch to application keys for outbound traffic" ) );
             mbedtls_ssl_set_outbound_transform( ssl, ssl->transform_application );
+
+#if defined(MBEDTLS_SSL_USE_MPS)
+            ret = mbedtls_mps_set_incoming_keys( &ssl->mps.l4,
+                                                 ssl->epoch_application );
+            if( ret != 0 )
+                return( ret );
+
+            ret = mbedtls_mps_set_outgoing_keys( &ssl->mps.l4,
+                                                 ssl->epoch_application );
+            if( ret != 0 )
+                return( ret );
+#endif /* MBEDTLS_SSL_USE_MPS */
 
             mbedtls_ssl_handshake_wrapup( ssl );
             mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_HANDSHAKE_OVER );

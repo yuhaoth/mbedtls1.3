@@ -2993,6 +2993,16 @@ static int ssl_read_certificate_coordinate( mbedtls_ssl_context* ssl )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "Switch to handshake keys for inbound traffic" ) );
         mbedtls_ssl_set_inbound_transform( ssl, ssl->transform_handshake );
+
+#if defined(MBEDTLS_SSL_USE_MPS)
+        {
+            int ret;
+            ret = mbedtls_mps_set_incoming_keys( &ssl->mps.l4,
+                                                 ssl->epoch_handshake );
+            if( ret != 0 )
+                return( ret );
+        }
+#endif /* MBEDTLS_SSL_USE_MPS */
     }
 #endif /* MBEDTLS_SSL_SRV_C */
 
@@ -4294,6 +4304,25 @@ static int ssl_finished_out_postprocess( mbedtls_ssl_context* ssl )
             return( ret );
         }
 
+#if defined(MBEDTLS_SSL_USE_MPS)
+        {
+            mbedtls_ssl_transform *transform_application =
+                mbedtls_calloc( 1, sizeof( mbedtls_ssl_transform ) );
+            if( transform_application == NULL )
+                return( MBEDTLS_ERR_SSL_ALLOC_FAILED );
+
+            ret = mbedtls_ssl_tls13_build_transform( ssl, &traffic_keys,
+                                                     transform_application, 0 );
+
+            /* Register transform with MPS. */
+            ret = mbedtls_mps_add_key_material( &ssl->mps.l4,
+                                                transform_application,
+                                                &ssl->epoch_application );
+            if( ret != 0 )
+                return( ret );
+        }
+#endif /* MBEDTLS_SSL_USE_MPS */
+
         mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_EARLY_APP_DATA );
     }
     else
@@ -4575,6 +4604,25 @@ static int ssl_finished_in_postprocess_cli( mbedtls_ssl_context *ssl )
         MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_tls13_build_transform", ret );
         return( ret );
     }
+
+#if defined(MBEDTLS_SSL_USE_MPS)
+    {
+        mbedtls_ssl_transform *transform_application =
+            mbedtls_calloc( 1, sizeof( mbedtls_ssl_transform ) );
+        if( transform_application == NULL )
+            return( MBEDTLS_ERR_SSL_ALLOC_FAILED );
+
+        ret = mbedtls_ssl_tls13_build_transform( ssl, &traffic_keys,
+                                                 transform_application, 0 );
+
+        /* Register transform with MPS. */
+        ret = mbedtls_mps_add_key_material( &ssl->mps.l4,
+                                            transform_application,
+                                            &ssl->epoch_application );
+        if( ret != 0 )
+            return( ret );
+    }
+#endif /* MBEDTLS_SSL_USE_MPS */
 
 exit:
 
