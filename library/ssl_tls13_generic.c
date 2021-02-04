@@ -1171,6 +1171,9 @@ int mbedtls_ssl_parse_signature_algorithms_ext( mbedtls_ssl_context *ssl,
 void mbedtls_ssl_set_inbound_transform( mbedtls_ssl_context *ssl,
                                        mbedtls_ssl_transform *transform )
 {
+    if( ssl->transform_in == transform )
+        return;
+
     ssl->transform_in = transform;
     memset( ssl->in_ctr, 0, 8 );
 
@@ -2668,6 +2671,7 @@ static int ssl_write_certificate_coordinate( mbedtls_ssl_context* ssl )
 #if defined(MBEDTLS_SSL_CLI_C)
     if( ssl->conf->endpoint == MBEDTLS_SSL_IS_CLIENT )
     {
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "Switch to handshake keys for outbound traffic" ) );
         mbedtls_ssl_set_outbound_transform( ssl, ssl->transform_handshake );
 
 #if defined(MBEDTLS_SSL_USE_MPS)
@@ -2986,6 +2990,7 @@ static int ssl_read_certificate_coordinate( mbedtls_ssl_context* ssl )
 #if defined(MBEDTLS_SSL_SRV_C)
     if( ssl->conf->endpoint == MBEDTLS_SSL_IS_SERVER )
     {
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "Switch to handshake keys for inbound traffic" ) );
         mbedtls_ssl_set_inbound_transform( ssl, ssl->transform_handshake );
     }
 #endif /* MBEDTLS_SSL_SRV_C */
@@ -4251,20 +4256,6 @@ static int ssl_finished_out_postprocess( mbedtls_ssl_context* ssl )
     {
         size_t transcript_len;
 
-#if defined(MBEDTLS_ZERO_RTT)
-        if( ssl->handshake->early_data == MBEDTLS_SSL_EARLY_DATA_ON )
-        {
-            /* Activate early data transform */
-            MBEDTLS_SSL_DEBUG_MSG( 3, ( "switching to new transform spec for inbound 0-RTT data" ) );
-            mbedtls_ssl_set_inbound_transform( ssl, ssl->transform_earlydata );
-            mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_EARLY_APP_DATA );
-        }
-        else
-#endif /* MBEDTLS_ZERO_RTT */
-        {
-            mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_CLIENT_CERTIFICATE );
-        }
-
         ret = mbedtls_ssl_get_handshake_transcript( ssl,
                               ssl->handshake->ciphersuite_info->mac,
                               ssl->handshake->server_finished_digest,
@@ -4301,6 +4292,8 @@ static int ssl_finished_out_postprocess( mbedtls_ssl_context* ssl )
             MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_tls13_build_transform", ret );
             return( ret );
         }
+
+        mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_EARLY_APP_DATA );
     }
     else
 #endif /* MBEDTLS_SSL_SRV_C */
@@ -4455,13 +4448,15 @@ static int ssl_finished_in_parse( mbedtls_ssl_context* ssl,
     MBEDTLS_SSL_DEBUG_MSG( 5, ( "Verify finished message" ) );
 
     MBEDTLS_SSL_DEBUG_BUF( 5, "Hash ( self-computed ):",
-                           ssl->handshake->state_local.finished_in.digest, ssl->handshake->state_local.finished_in.digest_len );
-    MBEDTLS_SSL_DEBUG_BUF( 5, "Hash ( received message ):", buf, ssl->handshake->state_local.finished_in.digest_len );
+                           ssl->handshake->state_local.finished_in.digest,
+                           ssl->handshake->state_local.finished_in.digest_len );
+    MBEDTLS_SSL_DEBUG_BUF( 5, "Hash ( received message ):", buf,
+                           ssl->handshake->state_local.finished_in.digest_len );
 
     /* Semantic validation */
     if( mbedtls_ssl_safer_memcmp( buf,
-                                  ssl->handshake->state_local.finished_in.digest,
-                                  ssl->handshake->state_local.finished_in.digest_len ) != 0 )
+                   ssl->handshake->state_local.finished_in.digest,
+                   ssl->handshake->state_local.finished_in.digest_len ) != 0 )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad finished message" ) );
 

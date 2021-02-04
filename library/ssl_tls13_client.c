@@ -97,11 +97,12 @@ static int check_ecdh_params( const mbedtls_ssl_context *ssl )
   * Overview
   */
 
-#if defined(MBEDTLS_ZERO_RTT)
-
   /* Main state-handling entry point; orchestrates the other functions. */
 int ssl_write_early_data_process( mbedtls_ssl_context* ssl );
 
+#define SSL_EARLY_DATA_WRITE 0
+#define SSL_EARLY_DATA_SKIP  1
+static int ssl_write_early_data_coordinate( mbedtls_ssl_context* ssl );
 static int ssl_write_early_data_prepare( mbedtls_ssl_context* ssl );
 
 /* Write early-data message */
@@ -122,33 +123,48 @@ int ssl_write_early_data_process( mbedtls_ssl_context* ssl )
     int ret;
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> write early data" ) );
 
-    MBEDTLS_SSL_PROC_CHK( ssl_write_early_data_prepare( ssl ) );
-
-    if ( ret == 0 )
+    MBEDTLS_SSL_PROC_CHK( ssl_write_early_data_coordinate( ssl ) );
+    if( ret == SSL_EARLY_DATA_WRITE )
     {
+        MBEDTLS_SSL_PROC_CHK( ssl_write_early_data_prepare( ssl ) );
+
         /* Make sure we can write a new message. */
         MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_flush_output( ssl ) );
 
         /* Write early-data to message buffer. */
         MBEDTLS_SSL_PROC_CHK( ssl_write_early_data_write( ssl, ssl->out_msg,
-            MBEDTLS_SSL_MAX_CONTENT_LEN,
-            &ssl->out_msglen ) );
+                                                          MBEDTLS_SSL_MAX_CONTENT_LEN,
+                                                          &ssl->out_msglen ) );
 
         ssl->out_msgtype = MBEDTLS_SSL_MSG_APPLICATION_DATA;
 
         /* Dispatch message */
         MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_write_record( ssl, SSL_FORCE_FLUSH ) );
-
-        /* Update state */
-        MBEDTLS_SSL_PROC_CHK( ssl_write_early_data_postprocess( ssl ) );
-
     }
+
+    /* Update state */
+    MBEDTLS_SSL_PROC_CHK( ssl_write_early_data_postprocess( ssl ) );
 
 cleanup:
 
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= write early data" ) );
     return( ret );
 }
+
+#if defined(MBEDTLS_ZERO_RTT)
+static int ssl_write_early_data_coordinate( mbedtls_ssl_context* ssl )
+{
+    if( ssl->handshake->early_data != MBEDTLS_SSL_EARLY_DATA_ON )
+        return( SSL_EARLY_DATA_SKIP );
+
+    return( SSL_EARLY_DATA_WRITE );
+}
+#else /* MBEDTLS_ZERO_RTT */
+static int ssl_write_early_data_coordinate( mbedtls_ssl_context* ssl )
+{
+    return( SSL_EARLY_DATA_SKIP );
+}
+#endif /* MBEDTLS_ZERO_RTT */
 
 static int ssl_write_early_data_prepare( mbedtls_ssl_context* ssl )
 {
@@ -174,6 +190,7 @@ static int ssl_write_early_data_prepare( mbedtls_ssl_context* ssl )
     }
 
     /* Activate transform */
+    MBEDTLS_SSL_DEBUG_MSG( 1, ( "Switch to 0-RTT keys for outbound traffic" ) );
     mbedtls_ssl_set_outbound_transform( ssl, ssl->transform_earlydata );
 
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
@@ -224,8 +241,6 @@ static int ssl_write_early_data_postprocess( mbedtls_ssl_context* ssl )
     return ( 0 );
 }
 
-#endif /* MBEDTLS_ZERO_RTT */
-
 
 /*
  *
@@ -237,12 +252,12 @@ static int ssl_write_early_data_postprocess( mbedtls_ssl_context* ssl )
   * Overview
   */
 
-#if defined(MBEDTLS_ZERO_RTT)
-
   /* Main state-handling entry point; orchestrates the other functions. */
 int ssl_write_end_of_early_data_process( mbedtls_ssl_context* ssl );
 
-static int ssl_write_end_of_early_data_prepare( mbedtls_ssl_context* ssl );
+#define SSL_END_OF_EARLY_DATA_WRITE 0
+#define SSL_END_OF_EARLY_DATA_SKIP  1
+static int ssl_write_end_of_early_data_coordinate( mbedtls_ssl_context* ssl );
 
 /* Write nd-of-early-data message */
 static int ssl_write_end_of_early_data_write( mbedtls_ssl_context* ssl,
@@ -262,28 +277,28 @@ int ssl_write_end_of_early_data_process( mbedtls_ssl_context* ssl )
     int ret;
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> write EndOfEarlyData" ) );
 
-    MBEDTLS_SSL_PROC_CHK( ssl_write_end_of_early_data_prepare( ssl ) );
+    MBEDTLS_SSL_PROC_CHK( ssl_write_end_of_early_data_coordinate( ssl ) );
 
-    if ( ret == 0 )
+    if( ret == SSL_END_OF_EARLY_DATA_WRITE )
     {
         /* Make sure we can write a new message. */
         MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_flush_output( ssl ) );
 
         /* Write end-of-early-data to message buffer. */
-        MBEDTLS_SSL_PROC_CHK( ssl_write_end_of_early_data_write( ssl, ssl->out_msg,
-            MBEDTLS_SSL_MAX_CONTENT_LEN,
-            &ssl->out_msglen ) );
+        MBEDTLS_SSL_PROC_CHK( ssl_write_end_of_early_data_write(
+                                  ssl, ssl->out_msg,
+                                  MBEDTLS_SSL_MAX_CONTENT_LEN,
+                                  &ssl->out_msglen ) );
 
         ssl->out_msgtype = MBEDTLS_SSL_MSG_HANDSHAKE;
         ssl->out_msg[0] = MBEDTLS_SSL_HS_END_OF_EARLY_DATA;
 
         /* Dispatch message */
         MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_write_handshake_msg( ssl ) );
-
-        /* Update state */
-        MBEDTLS_SSL_PROC_CHK( ssl_write_end_of_early_data_postprocess( ssl ) );
-
     }
+
+    /* Update state */
+    MBEDTLS_SSL_PROC_CHK( ssl_write_end_of_early_data_postprocess( ssl ) );
 
 cleanup:
 
@@ -291,10 +306,16 @@ cleanup:
     return( ret );
 }
 
-static int ssl_write_end_of_early_data_prepare( mbedtls_ssl_context* ssl )
+static int ssl_write_end_of_early_data_coordinate( mbedtls_ssl_context* ssl )
 {
     ((void) ssl);
-    return( 0 );
+
+#if defined(MBEDTLS_ZERO_RTT)
+    if( ssl->handshake->early_data == MBEDTLS_SSL_EARLY_DATA_ON )
+        return( SSL_END_OF_EARLY_DATA_WRITE );
+#endif /* MBEDTLS_ZERO_RTT */
+
+    return( SSL_END_OF_EARLY_DATA_SKIP );
 }
 
 static int ssl_write_end_of_early_data_write( mbedtls_ssl_context* ssl,
@@ -317,18 +338,21 @@ static int ssl_write_end_of_early_data_write( mbedtls_ssl_context* ssl,
     return( 0 );
 }
 
-
-
 static int ssl_write_end_of_early_data_postprocess( mbedtls_ssl_context* ssl )
 {
+#if defined(MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE)
+#if defined(MBEDTLS_ZERO_RTT)
+    if( ssl->handshake->early_data != MBEDTLS_SSL_EARLY_DATA_ON )
+#endif /* MBEDTLS_ZERO_RTT */
+    {
+        mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_CLIENT_CCS_AFTER_SERVER_FINISHED );
+        return( 0 );
+    }
+#endif /* MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE */
 
-    mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_CLIENT_FINISHED );
-
+    mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_CLIENT_CERTIFICATE );
     return ( 0 );
 }
-
-
-#endif /* MBEDTLS_ZERO_RTT */
 
 
 #if defined(MBEDTLS_SSL_SERVER_NAME_INDICATION)
@@ -3858,20 +3882,11 @@ int mbedtls_ssl_handshake_client_step( mbedtls_ssl_context *ssl )
                 mbedtls_ack_add_record( ssl, MBEDTLS_SSL_HS_CLIENT_HELLO, MBEDTLS_SSL_ACK_RECORDS_SENT );
 #endif /* MBEDTLS_SSL_PROTO_DTLS */
 
-#if defined(MBEDTLS_ZERO_RTT)
-            if( ssl->handshake->early_data == MBEDTLS_SSL_EARLY_DATA_ON )
-            {
 #if defined(MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE)
-                mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_CLIENT_CCS_AFTER_CLIENT_HELLO );
+            mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_CLIENT_CCS_AFTER_CLIENT_HELLO );
 #else
-                mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_EARLY_APP_DATA );
+            mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_EARLY_APP_DATA );
 #endif /* MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE */
-            }
-            else
-#endif /* MBEDTLS_ZERO_RTT */
-            {
-                mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_SERVER_HELLO );
-            }
 
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
             if( ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_DATAGRAM )
@@ -3887,7 +3902,6 @@ int mbedtls_ssl_handshake_client_step( mbedtls_ssl_context *ssl )
         case MBEDTLS_SSL_CLIENT_CCS_AFTER_CLIENT_HELLO:
 
             ret = mbedtls_ssl_write_change_cipher_spec_process( ssl );
-
             if( ret != 0 )
             {
                 MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_write_change_cipher_spec_process", ret );
@@ -4104,28 +4118,13 @@ int mbedtls_ssl_handshake_client_step( mbedtls_ssl_context *ssl )
                 mbedtls_ack_add_record( ssl, MBEDTLS_SSL_HS_FINISHED, MBEDTLS_SSL_ACK_RECORDS_RECEIVED );
 #endif /* MBEDTLS_SSL_PROTO_DTLS */
 
-#if defined(MBEDTLS_ZERO_RTT)
-            if( ssl->handshake->early_data == MBEDTLS_SSL_EARLY_DATA_ON )
-            {
-                mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_EARLY_DATA );
-            }
-            else
-#endif /* MBEDTLS_ZERO_RTT */
-            {
-#if defined(MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE)
-                mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_CLIENT_CCS_AFTER_SERVER_FINISHED );
-#else
-                mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_CLIENT_CERTIFICATE );
-#endif /* MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE */
-
-            }
-            break;
+            mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_END_OF_EARLY_DATA );
 
 #if defined(MBEDTLS_ZERO_RTT)
 
             /* ----- WRITE END-OF-EARLY-DATA ----*/
 
-        case MBEDTLS_SSL_EARLY_DATA:
+        case MBEDTLS_SSL_END_OF_EARLY_DATA:
 
             ret = ssl_write_end_of_early_data_process( ssl );
 
@@ -4221,6 +4220,7 @@ int mbedtls_ssl_handshake_client_step( mbedtls_ssl_context *ssl )
         case MBEDTLS_SSL_HANDSHAKE_WRAPUP:
 
             mbedtls_ssl_set_inbound_transform ( ssl, ssl->transform_application );
+            MBEDTLS_SSL_DEBUG_MSG( 1, ( "Switch to application keys for all traffic" ) );
             mbedtls_ssl_set_outbound_transform( ssl, ssl->transform_application );
 
             mbedtls_ssl_handshake_wrapup( ssl );
