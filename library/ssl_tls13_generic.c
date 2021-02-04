@@ -4256,21 +4256,6 @@ static int ssl_finished_out_postprocess( mbedtls_ssl_context* ssl )
     {
         size_t transcript_len;
 
-#if defined(MBEDTLS_ZERO_RTT)
-        if( ssl->handshake->early_data == MBEDTLS_SSL_EARLY_DATA_ON )
-        {
-            /* Activate early data transform */
-            MBEDTLS_SSL_DEBUG_MSG( 3, ( "switching to new transform spec for inbound 0-RTT data" ) );
-            MBEDTLS_SSL_DEBUG_MSG( 1, ( "Switch to 0-RTT keys for inbound traffic" ) );
-            mbedtls_ssl_set_inbound_transform( ssl, ssl->transform_earlydata );
-            mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_EARLY_APP_DATA );
-        }
-        else
-#endif /* MBEDTLS_ZERO_RTT */
-        {
-            mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_CLIENT_CERTIFICATE );
-        }
-
         ret = mbedtls_ssl_get_handshake_transcript( ssl,
                               ssl->handshake->ciphersuite_info->mac,
                               ssl->handshake->server_finished_digest,
@@ -4307,6 +4292,8 @@ static int ssl_finished_out_postprocess( mbedtls_ssl_context* ssl )
             MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_tls13_build_transform", ret );
             return( ret );
         }
+
+        mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_EARLY_APP_DATA );
     }
     else
 #endif /* MBEDTLS_SSL_SRV_C */
