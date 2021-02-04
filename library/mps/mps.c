@@ -2015,6 +2015,13 @@ int mbedtls_mps_set_incoming_keys( mbedtls_mps *mps,
     MBEDTLS_MPS_STATE_VALIDATE( mps->in.state == MBEDTLS_MPS_MSG_NONE,
           "Refuse to change incoming keys while reading a message." );
 
+    if( mps->in_epoch == id )
+    {
+        TRACE( trace_comment, "Epoch %u is already the current incoming epoch",
+               (unsigned) id );
+        RETURN( 0 );
+    }
+
     /* Clear 'active epoch' usage for old epoch and set it for new. */
     if( mps->in_epoch != MBEDTLS_MPS_EPOCH_NONE )
     {

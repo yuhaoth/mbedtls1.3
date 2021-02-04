@@ -2763,6 +2763,8 @@ int mps_l2_epoch_add( mbedtls_mps_l2 *ctx,
     epoch->usage = MPS_EPOCH_USAGE_INTERNAL_OUT_PROTECTED;
 
     ctx->epochs.next++;
+
+    TRACE( trace_comment, "New epoch: %u", (unsigned) *epoch_id );
     RETURN( 0 );
 }
 
