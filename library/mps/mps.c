@@ -2029,11 +2029,15 @@ int mbedtls_mps_set_incoming_keys( mbedtls_mps *mps,
                                      MPS_EPOCH_USAGE_READ(
                                          MPS_READ_ACTIVE ), 0 ) );
     }
-    MPS_CHK( mps_l3_epoch_usage( l3, id, 0,
-                                 MPS_EPOCH_USAGE_READ(
-                                     MPS_READ_ACTIVE ) ) );
-    mps->in_epoch = id;
 
+    if( id != MBEDTLS_MPS_EPOCH_NONE )
+    {
+        MPS_CHK( mps_l3_epoch_usage( l3, id, 0,
+                                     MPS_EPOCH_USAGE_READ(
+                                         MPS_READ_ACTIVE ) ) );
+    }
+
+    mps->in_epoch = id;
     MPS_API_BOUNDARY_FAILURE_HANDLER
 }
 
@@ -2047,6 +2051,13 @@ int mbedtls_mps_set_outgoing_keys( mbedtls_mps *mps,
     MBEDTLS_MPS_STATE_VALIDATE( mps->in.state == MBEDTLS_MPS_MSG_NONE,
           "Refuse to change outgoing keys while writing a message." );
 
+    if( mps->out_epoch == id )
+    {
+        TRACE( trace_comment, "Epoch %u is already the current incoming epoch",
+               (unsigned) id );
+        RETURN( 0 );
+    }
+
     /* Clear 'active epoch' usage for old epoch and set it for new. */
     if( mps->out_epoch != MBEDTLS_MPS_EPOCH_NONE )
     {
@@ -2054,9 +2065,14 @@ int mbedtls_mps_set_outgoing_keys( mbedtls_mps *mps,
                                      MPS_EPOCH_USAGE_WRITE(
                                          MPS_WRITE_ACTIVE ), 0 ) );
     }
-    MPS_CHK( mps_l3_epoch_usage( l3, id, 0,
-                                 MPS_EPOCH_USAGE_WRITE(
-                                     MPS_WRITE_ACTIVE ) ) );
+
+    if( id != MBEDTLS_MPS_EPOCH_NONE )
+    {
+        MPS_CHK( mps_l3_epoch_usage( l3, id, 0,
+                                     MPS_EPOCH_USAGE_WRITE(
+                                         MPS_WRITE_ACTIVE ) ) );
+    }
+
     mps->out_epoch = id;
 
     MPS_API_BOUNDARY_FAILURE_HANDLER
