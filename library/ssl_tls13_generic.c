@@ -1171,6 +1171,9 @@ int mbedtls_ssl_parse_signature_algorithms_ext( mbedtls_ssl_context *ssl,
 void mbedtls_ssl_set_inbound_transform( mbedtls_ssl_context *ssl,
                                        mbedtls_ssl_transform *transform )
 {
+    if( ssl->transform_in == transform )
+        return;
+
     ssl->transform_in = transform;
     memset( ssl->in_ctr, 0, 8 );
 
