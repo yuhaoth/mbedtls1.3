@@ -124,25 +124,21 @@ int ssl_write_early_data_process( mbedtls_ssl_context* ssl )
 
     MBEDTLS_SSL_PROC_CHK( ssl_write_early_data_prepare( ssl ) );
 
-    if ( ret == 0 )
-    {
-        /* Make sure we can write a new message. */
-        MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_flush_output( ssl ) );
+    /* Make sure we can write a new message. */
+    MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_flush_output( ssl ) );
 
-        /* Write early-data to message buffer. */
-        MBEDTLS_SSL_PROC_CHK( ssl_write_early_data_write( ssl, ssl->out_msg,
-            MBEDTLS_SSL_MAX_CONTENT_LEN,
-            &ssl->out_msglen ) );
+    /* Write early-data to message buffer. */
+    MBEDTLS_SSL_PROC_CHK( ssl_write_early_data_write( ssl, ssl->out_msg,
+                                                      MBEDTLS_SSL_MAX_CONTENT_LEN,
+                                                      &ssl->out_msglen ) );
 
-        ssl->out_msgtype = MBEDTLS_SSL_MSG_APPLICATION_DATA;
+    ssl->out_msgtype = MBEDTLS_SSL_MSG_APPLICATION_DATA;
 
-        /* Dispatch message */
-        MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_write_record( ssl, SSL_FORCE_FLUSH ) );
+    /* Dispatch message */
+    MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_write_record( ssl, SSL_FORCE_FLUSH ) );
 
-        /* Update state */
-        MBEDTLS_SSL_PROC_CHK( ssl_write_early_data_postprocess( ssl ) );
-
-    }
+    /* Update state */
+    MBEDTLS_SSL_PROC_CHK( ssl_write_early_data_postprocess( ssl ) );
 
 cleanup:
 
@@ -265,26 +261,22 @@ int ssl_write_end_of_early_data_process( mbedtls_ssl_context* ssl )
 
     MBEDTLS_SSL_PROC_CHK( ssl_write_end_of_early_data_prepare( ssl ) );
 
-    if ( ret == 0 )
-    {
-        /* Make sure we can write a new message. */
-        MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_flush_output( ssl ) );
+    /* Make sure we can write a new message. */
+    MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_flush_output( ssl ) );
 
-        /* Write end-of-early-data to message buffer. */
-        MBEDTLS_SSL_PROC_CHK( ssl_write_end_of_early_data_write( ssl, ssl->out_msg,
-            MBEDTLS_SSL_MAX_CONTENT_LEN,
-            &ssl->out_msglen ) );
+    /* Write end-of-early-data to message buffer. */
+    MBEDTLS_SSL_PROC_CHK( ssl_write_end_of_early_data_write( ssl, ssl->out_msg,
+                                                             MBEDTLS_SSL_MAX_CONTENT_LEN,
+                                                             &ssl->out_msglen ) );
 
-        ssl->out_msgtype = MBEDTLS_SSL_MSG_HANDSHAKE;
-        ssl->out_msg[0] = MBEDTLS_SSL_HS_END_OF_EARLY_DATA;
+    ssl->out_msgtype = MBEDTLS_SSL_MSG_HANDSHAKE;
+    ssl->out_msg[0] = MBEDTLS_SSL_HS_END_OF_EARLY_DATA;
 
-        /* Dispatch message */
-        MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_write_handshake_msg( ssl ) );
+    /* Dispatch message */
+    MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_write_handshake_msg( ssl ) );
 
-        /* Update state */
-        MBEDTLS_SSL_PROC_CHK( ssl_write_end_of_early_data_postprocess( ssl ) );
-
-    }
+    /* Update state */
+    MBEDTLS_SSL_PROC_CHK( ssl_write_end_of_early_data_postprocess( ssl ) );
 
 cleanup:
 
