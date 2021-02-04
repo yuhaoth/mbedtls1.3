@@ -174,6 +174,7 @@ static int ssl_write_early_data_prepare( mbedtls_ssl_context* ssl )
     }
 
     /* Activate transform */
+    MBEDTLS_SSL_DEBUG_MSG( 1, ( "Switch to 0-RTT keys for outbound traffic" ) );
     mbedtls_ssl_set_outbound_transform( ssl, ssl->transform_earlydata );
 
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
@@ -4221,6 +4222,7 @@ int mbedtls_ssl_handshake_client_step( mbedtls_ssl_context *ssl )
         case MBEDTLS_SSL_HANDSHAKE_WRAPUP:
 
             mbedtls_ssl_set_inbound_transform ( ssl, ssl->transform_application );
+            MBEDTLS_SSL_DEBUG_MSG( 1, ( "Switch to application keys for all traffic" ) );
             mbedtls_ssl_set_outbound_transform( ssl, ssl->transform_application );
 
             mbedtls_ssl_handshake_wrapup( ssl );

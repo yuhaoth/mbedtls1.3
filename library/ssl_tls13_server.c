@@ -4521,6 +4521,7 @@ int mbedtls_ssl_handshake_server_step( mbedtls_ssl_context *ssl )
         case MBEDTLS_SSL_HANDSHAKE_WRAPUP:
             MBEDTLS_SSL_DEBUG_MSG( 2, ( "handshake: done" ) );
 
+            MBEDTLS_SSL_DEBUG_MSG( 1, ( "Switch to application keys for all traffic" ) );
             mbedtls_ssl_set_inbound_transform ( ssl, ssl->transform_application );
             mbedtls_ssl_set_outbound_transform( ssl, ssl->transform_application );
 
