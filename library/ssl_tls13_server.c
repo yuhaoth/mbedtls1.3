@@ -3184,6 +3184,8 @@ static int ssl_encrypted_extensions_prepare( mbedtls_ssl_context* ssl )
         /* Use new transform for outgoing data. */
         ret = mbedtls_mps_set_outgoing_keys( &ssl->mps.l4,
                                              ssl->epoch_handshake );
+        if( ret != 0 )
+            return( ret );
     }
 #endif /* MBEDTLS_SSL_USE_MPS */
 

@@ -2671,7 +2671,8 @@ static int ssl_write_certificate_coordinate( mbedtls_ssl_context* ssl )
 #if defined(MBEDTLS_SSL_CLI_C)
     if( ssl->conf->endpoint == MBEDTLS_SSL_IS_CLIENT )
     {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "Switch to handshake keys for outbound traffic" ) );
+        MBEDTLS_SSL_DEBUG_MSG( 1,
+                  ( "Switch to handshake traffic keys for outbound traffic" ) );
         mbedtls_ssl_set_outbound_transform( ssl, ssl->transform_handshake );
 
 #if defined(MBEDTLS_SSL_USE_MPS)

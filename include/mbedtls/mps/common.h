@@ -190,9 +190,21 @@
  *
  *  A value of \c 2 should be sufficient for all versions
  *  of TLS and DTLS.
+ *
+ * TODO: Currently, TLS 1.3 needs an epoch window of 3:
+ *       By the time the client parses the SH and creates
+ *       the handshake traffic keys, it uses the
+ *       - initial epoch for incoming traffic
+ *       - the 0-RTT epoch for outgoing traffic
+ *       - trying to register a new one for handshake traffic.
+ *       The resolution here is to allow to somehow mark the
+ *       initial epoch as no longer used without at the same
+ *       time registering a new epoch for incoming traffic.
+ *       One could temporarily register the 0-RTT keys for
+ *       incoming traffic, but that seems wrong.
  */
 typedef uint8_t mbedtls_mps_epoch_offset_t;
-#define MBEDTLS_MPS_L2_EPOCH_WINDOW_SIZE ( (mbedtls_mps_epoch_offset_t) 2 )
+#define MBEDTLS_MPS_L2_EPOCH_WINDOW_SIZE ( (mbedtls_mps_epoch_offset_t) 3 )
 
 /*! Whether MPS should support epoch window shifting.
  *
