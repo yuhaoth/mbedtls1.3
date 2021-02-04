@@ -4459,6 +4459,8 @@ int mbedtls_ssl_renegotiate( mbedtls_ssl_context *ssl );
  * \return         The (positive) number of bytes read if successful.
  * \return         \c 0 if the read end of the underlying transport was closed
  *                 - in this case you must stop using the context (see below).
+ * \return         #MBEDTLS_ERR_SSL_WANT_READ if a non-fatal, non-closure alert
+                   is received.
  * \return         #MBEDTLS_ERR_SSL_WANT_READ or #MBEDTLS_ERR_SSL_WANT_WRITE
  *                 if the handshake is incomplete and waiting for data to
  *                 be available for reading from or writing to the underlying
