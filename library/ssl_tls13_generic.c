@@ -4458,13 +4458,15 @@ static int ssl_finished_in_parse( mbedtls_ssl_context* ssl,
     MBEDTLS_SSL_DEBUG_MSG( 5, ( "Verify finished message" ) );
 
     MBEDTLS_SSL_DEBUG_BUF( 5, "Hash ( self-computed ):",
-                           ssl->handshake->state_local.finished_in.digest, ssl->handshake->state_local.finished_in.digest_len );
-    MBEDTLS_SSL_DEBUG_BUF( 5, "Hash ( received message ):", buf, ssl->handshake->state_local.finished_in.digest_len );
+                           ssl->handshake->state_local.finished_in.digest,
+                           ssl->handshake->state_local.finished_in.digest_len );
+    MBEDTLS_SSL_DEBUG_BUF( 5, "Hash ( received message ):", buf,
+                           ssl->handshake->state_local.finished_in.digest_len );
 
     /* Semantic validation */
     if( mbedtls_ssl_safer_memcmp( buf,
-                                  ssl->handshake->state_local.finished_in.digest,
-                                  ssl->handshake->state_local.finished_in.digest_len ) != 0 )
+                   ssl->handshake->state_local.finished_in.digest,
+                   ssl->handshake->state_local.finished_in.digest_len ) != 0 )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad finished message" ) );
 
