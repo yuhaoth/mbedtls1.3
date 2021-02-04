@@ -4108,7 +4108,7 @@ int mbedtls_ssl_handshake_client_step( mbedtls_ssl_context *ssl )
 #if defined(MBEDTLS_ZERO_RTT)
             if( ssl->handshake->early_data == MBEDTLS_SSL_EARLY_DATA_ON )
             {
-                mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_EARLY_DATA );
+                mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_END_OF_EARLY_DATA );
             }
             else
 #endif /* MBEDTLS_ZERO_RTT */
@@ -4126,7 +4126,7 @@ int mbedtls_ssl_handshake_client_step( mbedtls_ssl_context *ssl )
 
             /* ----- WRITE END-OF-EARLY-DATA ----*/
 
-        case MBEDTLS_SSL_EARLY_DATA:
+        case MBEDTLS_SSL_END_OF_EARLY_DATA:
 
             ret = ssl_write_end_of_early_data_process( ssl );
 
