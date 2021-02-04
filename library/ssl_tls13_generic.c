@@ -4208,19 +4208,6 @@ static int ssl_finished_out_prepare( mbedtls_ssl_context* ssl )
 static int ssl_finished_out_postprocess( mbedtls_ssl_context* ssl )
 {
     int ret = 0;
-#if defined(MBEDTLS_SSL_SRV_C)
-    const mbedtls_ssl_ciphersuite_t *suite_info =
-        mbedtls_ssl_ciphersuite_from_id( ssl->session_negotiate->ciphersuite );
-    const mbedtls_cipher_info_t *cipher_info;
-
-#if defined(MBEDTLS_SHA256_C)
-    mbedtls_sha256_context sha256;
-#endif /* MBEDTLS_SHA256_C */
-
-#if defined(MBEDTLS_SHA512_C)
-    mbedtls_sha512_context sha512;
-#endif /* MBEDTLS_SHA512_C */
-#endif /* MBEDTLS_SSL_SRV_C */
 
 #if defined(MBEDTLS_SSL_CLI_C)
     if( ssl->conf->endpoint == MBEDTLS_SSL_IS_CLIENT )
@@ -4257,11 +4244,13 @@ static int ssl_finished_out_postprocess( mbedtls_ssl_context* ssl )
             mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_FLUSH_BUFFERS );
 
     }
+    else
 #endif /* MBEDTLS_SSL_CLI_C */
-
 #if defined(MBEDTLS_SSL_SRV_C)
     if( ssl->conf->endpoint == MBEDTLS_SSL_IS_SERVER )
     {
+        size_t transcript_len;
+
 #if defined(MBEDTLS_ZERO_RTT)
         if( ssl->handshake->early_data == MBEDTLS_SSL_EARLY_DATA_ON )
         {
@@ -4276,114 +4265,51 @@ static int ssl_finished_out_postprocess( mbedtls_ssl_context* ssl )
             mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_CLIENT_CERTIFICATE );
         }
 
-        /* Compute hash over transcript of all messages sent up to the Finished message
-         * sent by the server and store it in the digest variable of the handshake state.
-         * This digest will be needed later when computing the application traffic secrets.
-         */
-        cipher_info = mbedtls_cipher_info_from_type(ssl->handshake->ciphersuite_info->cipher );
-        if( cipher_info == NULL )
+        ret = mbedtls_ssl_get_handshake_transcript( ssl,
+                              ssl->handshake->ciphersuite_info->mac,
+                              ssl->handshake->server_finished_digest,
+                              sizeof(ssl->handshake->server_finished_digest),
+                              &transcript_len );
+        if( ret != 0 )
         {
-            MBEDTLS_SSL_DEBUG_MSG( 1, ( "cipher info for %d not found",
-                                        ssl->handshake->ciphersuite_info->cipher ) );
-            return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
+            MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_get_handshake_transcript",
+                                   ret );
+            return( ret );
         }
 
-        if( suite_info == NULL )
-        {
-            MBEDTLS_SSL_DEBUG_MSG( 1, ( "mbedtls_ssl_ciphersuite_from_id in mbedtls_ssl_generate_handshake_traffic_keys failed" ) );
-            return( MBEDTLS_ERR_SSL_BAD_HS_SERVER_HELLO );
-        }
+        MBEDTLS_SSL_DEBUG_BUF( 3, "Transcript hash (incl. Server.Finished):",
+                               ssl->handshake->server_finished_digest,
+                               transcript_len );
 
-        if( mbedtls_hash_size_for_ciphersuite( suite_info ) == 32 )
-        {
-#if defined(MBEDTLS_SHA256_C)
-            mbedtls_sha256_init( &sha256 );
-
-            if( ( ret = mbedtls_sha256_starts_ret( &sha256, 0 ) ) != 0 )
-            {
-                MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_sha256_starts_ret", ret );
-                goto exit;
-            }
-
-            mbedtls_sha256_clone( &sha256, &ssl->handshake->fin_sha256 );
-
-            if( ( ret = mbedtls_sha256_finish_ret( &sha256, ssl->handshake->server_finished_digest ) ) != 0 )
-            {
-                MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_sha256_finish_ret", ret );
-                goto exit;
-            }
-            MBEDTLS_SSL_DEBUG_BUF( 3, "Transcript hash (including Server.Finished):", ssl->handshake->server_finished_digest , 32 );
-#else
-            MBEDTLS_SSL_DEBUG_MSG( 1, ( "MBEDTLS_SHA256_C not set but ciphersuite with SHA256 negotiated" ) );
-            return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
-#endif /* MBEDTLS_SHA256_C */
-        }
-
-        if( mbedtls_hash_size_for_ciphersuite( suite_info ) == 48 )
-        {
-#if defined(MBEDTLS_SHA512_C)
-            mbedtls_sha512_init( &sha512 );
-
-            if( ( ret = mbedtls_sha512_starts_ret( &sha512, 1 ) ) != 0 )
-            {
-                MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_sha512_starts_ret", ret );
-                goto exit;
-            }
-
-            mbedtls_sha512_clone( &sha512, &ssl->handshake->fin_sha512 );
-
-            if( ( ret = mbedtls_sha512_finish_ret( &sha512, ssl->handshake->server_finished_digest ) ) != 0 )
-            {
-                MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_sha512_finish_ret", ret );
-                goto exit;
-            }
-            MBEDTLS_SSL_DEBUG_BUF( 3, "Transcript hash (including Server.Finished):", ssl->handshake->server_finished_digest , 48 );
-#else
-            MBEDTLS_SSL_DEBUG_MSG( 1, ( "MBEDTLS_SHA512_C not set but ciphersuite with SHA384 negotiated" ) );
-            return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
-#endif /* MBEDTLS_SHA512_C */
-        }
 
         mbedtls_ssl_key_set traffic_keys;
-        ret = mbedtls_ssl_generate_application_traffic_keys( ssl, &traffic_keys );
+        ret = mbedtls_ssl_generate_application_traffic_keys( ssl,
+                                                             &traffic_keys );
 
         if( ret != 0 )
         {
-            MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_generate_application_traffic_keys", ret );
+            MBEDTLS_SSL_DEBUG_RET( 1,
+                    "mbedtls_ssl_generate_application_traffic_keys", ret );
             return( ret );
         }
 
         ret = mbedtls_ssl_tls13_build_transform( ssl, &traffic_keys,
-                                                 ssl->transform_application, 0 );
+                                                 ssl->transform_application,
+                                                 0 );
         if( ret != 0 )
         {
             MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_tls13_build_transform", ret );
             return( ret );
         }
     }
-
-exit:
-#if defined(MBEDTLS_SHA256_C)
-    if( mbedtls_hash_size_for_ciphersuite( suite_info ) == 32 )
-    {
-        mbedtls_sha256_free( &sha256 );
-    }
     else
-#endif
-#if defined(MBEDTLS_SHA512_C)
-    if( mbedtls_hash_size_for_ciphersuite( suite_info ) == 48 )
+#endif /* MBEDTLS_SSL_SRV_C */
     {
-        mbedtls_sha512_free( &sha512 );
-    }
-    else
-#endif
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "mbedtls_ssl_tls1_3_derive_master_secret: Unknow hash function." ) );
+        /* Should never happen */
         return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
     }
-#endif /* MBEDTLS_SSL_SRV_C */
 
-    return( ret );
+    return( 0 );
 }
 
 static int ssl_finished_out_write( mbedtls_ssl_context* ssl,
