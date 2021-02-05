@@ -1311,10 +1311,10 @@ typedef struct
  * \param mps   The MPS context to use.
  *
  * \return      A negative error code on failure.
- * \return      #MBEDTLS_MPS_APPLICATION, or
- *              #MBEDTLS_MPS_HANDSHAKE, or
- *              #MBEDTLS_MPS_ALERT, or
- *              #MBEDTLS_MPS_CCS
+ * \return      #MBEDTLS_MPS_MSG_APP,   or
+ *              #MBEDTLS_MPS_MSG_HS,    or
+ *              #MBEDTLS_MPS_MSG_ALERT, or
+ *              #MBEDTLS_MPS_MSG_CCS
  *              otherwise, indicating which content type was fetched.
  *
  * \note        On success, you can query the type-specific message contents
@@ -1330,8 +1330,8 @@ int mbedtls_mps_read( mbedtls_mps *mps );
  *
  * \return      #MBEDTLS_ERR_MPS_BLOCKED if MPS is blocked.
  * \return      #MBEDTLS_MPS_MSG_NONE if no message is available.
- * \return      #MBEDTLS_MPS_MSG_APPLICATION, or
- *              #MBEDTLS_MPS_MSG_HANDSHAKE, or
+ * \return      #MBEDTLS_MPS_MSG_APP,   or
+ *              #MBEDTLS_MPS_MSG_HS,    or
  *              #MBEDTLS_MPS_MSG_ALERT, or
  *              #MBEDTLS_MPS_MSG_CCS,
  *              otherwise, indicating the message's record content type.
@@ -1353,7 +1353,7 @@ int mbedtls_mps_read_check( mbedtls_mps const *mps );
  *
  * \note        This function should only be called after a successful
  *              call to mbedtls_mps_read() or mbedtls_mps_check() returning
- *              #MBEDTLS_MPS_MSG_HANDSHAKE. Otherwise, the function
+ *              #MBEDTLS_MPS_MSG_HS. Otherwise, the function
  *              will silently fail.
  */
 int mbedtls_mps_read_handshake( mbedtls_mps *mps,
@@ -1371,7 +1371,7 @@ int mbedtls_mps_read_handshake( mbedtls_mps *mps,
  *
  * \note        This function should only be called after a successful
  *              call to mbedtls_mps_read() or mbedtls_mps_check() returning
- *              #MBEDTLS_MPS_MSG_APPLICATION. Otherwise, the function
+ *              #MBEDTLS_MPS_MSG_APP. Otherwise, the function
  *              will silently fail.
  */
 int mbedtls_mps_read_application( mbedtls_mps *mps,
