@@ -1878,12 +1878,6 @@ static int ssl_certificate_verify_coordinate( mbedtls_ssl_context* ssl )
 #if defined(MBEDTLS_SHA256_C) || defined(MBEDTLS_SHA512_C)
     int ret;
 #endif /* MBEDTLS_SHA256_C || MBEDTLS_SHA512_C */
-#if defined(MBEDTLS_SHA256_C)
-    mbedtls_sha256_context sha256;
-#endif /* MBEDTLS_SHA256_C */
-#if defined(MBEDTLS_SHA512_C)
-    mbedtls_sha512_context sha384;
-#endif /* MBEDTLS_SHA512_C */
 
     if( ssl->session_negotiate->key_exchange != MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA )
     {
@@ -1922,57 +1916,13 @@ static int ssl_certificate_verify_coordinate( mbedtls_ssl_context* ssl )
     }
 
     /* Calculate the transcript hash */
-#if defined(MBEDTLS_SHA256_C)
-    if( ssl->handshake->ciphersuite_info->mac == MBEDTLS_MD_SHA256 )
-    {
-        mbedtls_sha256_init( &sha256 );
-
-        mbedtls_sha256_clone( &sha256, &ssl->handshake->fin_sha256 );
-
-        if( ( ret = mbedtls_sha256_finish_ret(
-                         &sha256,
-                          ssl->handshake->state_local.certificate_verify_out.handshake_hash ) ) != 0 )
-        {
-            MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_sha256_finish_ret", ret );
-            return( ret );
-        }
-
-        ssl->handshake->state_local.certificate_verify_out.handshake_hash_len = 32;
-        mbedtls_sha256_free( &sha256 );
-    }
-    else
-#endif /* MBEDTLS_SHA256_C */
-
-#if defined(MBEDTLS_SHA512_C)
-    if( ssl->handshake->ciphersuite_info->mac == MBEDTLS_MD_SHA384 )
-    {
-        mbedtls_sha512_init( &sha384 );
-
-        if( ( ret = mbedtls_sha512_starts_ret( &sha384, 1 ) ) != 0 )
-        {
-            MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_sha512_starts_ret", ret );
-            return( ret );
-        }
-
-        mbedtls_sha512_clone( &sha384, &ssl->handshake->fin_sha512 );
-
-        if( ( ret = mbedtls_sha512_finish_ret(
-                         &sha384,
-                         ssl->handshake->state_local.certificate_verify_out.handshake_hash ) ) != 0 )
-        {
-            MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_sha512_finish_ret", ret );
-            return( ret );
-        }
-
-        ssl->handshake->state_local.certificate_verify_out.handshake_hash_len = 48;
-        mbedtls_sha512_free( &sha384 );
-    }
-    else
-#endif /* MBEDTLS_SHA512_C */
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "should never happen" ) );
-        return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
-    }
+    ret = mbedtls_ssl_get_handshake_transcript( ssl,
+      ssl->handshake->ciphersuite_info->mac,
+      ssl->handshake->state_local.certificate_verify_out.handshake_hash,
+      sizeof( ssl->handshake->state_local.certificate_verify_out.handshake_hash ),
+      &ssl->handshake->state_local.certificate_verify_out.handshake_hash_len );
+    if( ret != 0 )
+        return( ret );
 
     MBEDTLS_SSL_DEBUG_BUF( 3, "handshake hash",
         ssl->handshake->state_local.certificate_verify_out.handshake_hash,
