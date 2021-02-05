@@ -2829,19 +2829,11 @@ static int ssl_server_hello_process( mbedtls_ssl_context* ssl )
     {
         MBEDTLS_SSL_PROC_CHK( ssl_server_hello_parse( ssl, ssl->in_msg,
                                                       ssl->in_hslen ) );
-    }
-    else
-    {
-        MBEDTLS_SSL_PROC_CHK( ssl_hrr_parse( ssl, ssl->in_msg, ssl->in_hslen ) );
-    }
-
-    /* Post-processing step */
-    if( msg_expect == SSL_SERVER_HELLO_COORDINATE_HELLO )
-    {
         MBEDTLS_SSL_PROC_CHK( ssl_server_hello_postprocess( ssl ) );
     }
     else
     {
+        MBEDTLS_SSL_PROC_CHK( ssl_hrr_parse( ssl, ssl->in_msg, ssl->in_hslen ) );
         MBEDTLS_SSL_PROC_CHK( ssl_hrr_postprocess( ssl, ssl->in_msg, ssl->in_hslen ) );
     }
 
