@@ -5945,6 +5945,44 @@ int mbedtls_ssl_read( mbedtls_ssl_context *ssl, unsigned char *buf, size_t len )
  * Therefore, it is possible that the input message length is 0 and the
  * corresponding return code is 0 on success.
  */
+#if defined(MBEDTLS_SSL_USE_MPS)
+static int ssl_write_real( mbedtls_ssl_context *ssl,
+                           const unsigned char *buf, size_t len )
+{
+    int ret;
+    mbedtls_writer *msg;
+    unsigned char *wr_buf;
+    mbedtls_mps_size_t wr_buf_len;
+
+    /* Make sure we can write a new message. */
+    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_flush( &ssl->mps.l4 ) );
+
+    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_write_application( &ssl->mps.l4,
+                                                         &msg ) );
+
+    /* Request write-buffer */
+    MBEDTLS_SSL_PROC_CHK( mbedtls_writer_get( msg, MBEDTLS_MPS_SIZE_MAX,
+                                              &wr_buf, &wr_buf_len ) );
+
+    if( wr_buf_len < len )
+        len = wr_buf_len;
+
+    memcpy( wr_buf, buf, len );
+
+    /* Commit message */
+    MBEDTLS_SSL_PROC_CHK( mbedtls_writer_commit_partial( msg,
+                                               wr_buf_len - len ) );
+
+    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_dispatch( &ssl->mps.l4 ) );
+    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_flush( &ssl->mps.l4 ) );
+
+    ret = len;
+
+cleanup:
+
+    return( ret );
+}
+#else
 static int ssl_write_real( mbedtls_ssl_context *ssl,
                            const unsigned char *buf, size_t len )
 {
@@ -6006,6 +6044,7 @@ static int ssl_write_real( mbedtls_ssl_context *ssl,
 
     return( (int) len );
 }
+#endif /* MBEDTLS_SSL_USE_MPS */
 
 /*
  * Write application data, doing 1/n-1 splitting if necessary.
