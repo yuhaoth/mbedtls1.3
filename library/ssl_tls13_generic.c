@@ -2678,24 +2678,15 @@ int mbedtls_ssl_write_certificate_process( mbedtls_ssl_context* ssl )
 
 #endif /* MBEDTLS_SSL_USE_MPS */
 
-        /* Update state */
-        MBEDTLS_SSL_PROC_CHK( ssl_write_certificate_postprocess( ssl ) );
-
     }
     else
 #endif /* MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED */
-        if( ret == SSL_WRITE_CERTIFICATE_SKIP )
-        {
-            MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= skip write certificate" ) );
+    {
+        MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= skip write certificate" ) );
+    }
 
-            /* Update state */
-            MBEDTLS_SSL_PROC_CHK( ssl_write_certificate_postprocess( ssl ) );
-        }
-        else
-        {
-            MBEDTLS_SSL_DEBUG_MSG( 1, ( "should never happen" ) );
-            return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
-        }
+    /* Update state */
+    MBEDTLS_SSL_PROC_CHK( ssl_write_certificate_postprocess( ssl ) );
 
 cleanup:
 
