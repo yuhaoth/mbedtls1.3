@@ -1391,8 +1391,12 @@ static inline int mbedtls_ssl_tls13_key_exchange_with_psk( mbedtls_ssl_context *
  */
 static inline int mbedtls_ssl_conf_tls13_0rtt_enabled( mbedtls_ssl_context *ssl )
 {
+#if defined(MBEDTLS_ZERO_RTT)
     if( ssl->conf->early_data == MBEDTLS_SSL_EARLY_DATA_ENABLED )
         return( 1 );
+#else
+    ((void) ssl);
+#endif /* MBEDTLS_ZERO_RTT */
 
     return( 0 );
 }
