@@ -2162,13 +2162,7 @@ int mbedtls_ssl_read_certificate_verify_process( mbedtls_ssl_context* ssl )
     unsigned char verify_buffer[ MBEDTLS_SSL_VERIFY_STRUCT_MAX_SIZE ];
     size_t verify_buffer_len;
     unsigned char transcript[ MBEDTLS_MD_MAX_SIZE ];
-    unsigned int transcript_len;
-#if defined(MBEDTLS_SHA256_C)
-    mbedtls_sha256_context sha256;
-#endif
-#if defined(MBEDTLS_SHA512_C)
-    mbedtls_sha512_context sha384;
-#endif
+    size_t transcript_len;
 
     /* Coordination step */
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> parse certificate verify" ) );
@@ -2182,55 +2176,15 @@ int mbedtls_ssl_read_certificate_verify_process( mbedtls_ssl_context* ssl )
          * before reading the message since otherwise it gets
          *included in the transcript
          */
-#if defined(MBEDTLS_SHA256_C)
-        if( ssl->handshake->ciphersuite_info->mac == MBEDTLS_MD_SHA256 )
-        {
-            transcript_len=32;
-            mbedtls_sha256_init( &sha256 );
+        ret = mbedtls_ssl_get_handshake_transcript( ssl,
+                               ssl->handshake->ciphersuite_info->mac,
+                               transcript, sizeof( transcript ),
+                               &transcript_len );
+        if( ret != 0 )
+            return( ret );
 
-            mbedtls_sha256_clone( &sha256, &ssl->handshake->fin_sha256 );
-
-            if( ( ret = mbedtls_sha256_finish_ret( &sha256, transcript ) ) != 0 )
-            {
-                MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_sha256_finish_ret", ret );
-                return( ret );
-            }
-
-            mbedtls_sha256_free( &sha256 );
-        }
-        else
-#endif /* MBEDTLS_SHA256_C */
-
-#if defined(MBEDTLS_SHA512_C)
-        if( ssl->handshake->ciphersuite_info->mac == MBEDTLS_MD_SHA384 )
-        {
-            transcript_len=48;
-            mbedtls_sha512_init( &sha384 );
-
-            if( ( ret = mbedtls_sha512_starts_ret( &sha384, 1 ) ) != 0 )
-            {
-                MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_sha512_starts_ret", ret );
-                return( ret );
-            }
-
-            mbedtls_sha512_clone( &sha384, &ssl->handshake->fin_sha512 );
-
-            if( ( ret = mbedtls_sha512_finish_ret( &sha384, transcript ) ) != 0 )
-            {
-                MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_sha512_finish_ret", ret );
-                return( ret );
-            }
-
-            mbedtls_sha512_free( &sha384 );
-        }
-        else
-#endif /* MBEDTLS_SHA512_C */
-        {
-            MBEDTLS_SSL_DEBUG_MSG( 1, ( "should never happen" ) );
-            return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
-        }
-
-        MBEDTLS_SSL_DEBUG_BUF( 3, "handshake hash", transcript, transcript_len );
+        MBEDTLS_SSL_DEBUG_BUF( 3, "handshake hash", transcript,
+                               transcript_len );
 
         /* Create verify structure */
         mbedtls_ssl_create_verify_structure( transcript,
