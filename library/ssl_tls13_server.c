@@ -1674,7 +1674,7 @@ int ssl_read_end_of_early_data_process( mbedtls_ssl_context* ssl );
 
 static int ssl_read_end_of_early_data_coordinate( mbedtls_ssl_context* ssl );
 
-/* There is no parse function for the end_of_early_data message. */
+static int ssl_end_of_early_data_fetch( mbedtls_ssl_context* ssl );
 
 /* Update the state after handling the incoming end of early data message. */
 static int ssl_read_end_of_early_data_postprocess( mbedtls_ssl_context* ssl );
@@ -1691,20 +1691,16 @@ int ssl_read_end_of_early_data_process( mbedtls_ssl_context* ssl )
     MBEDTLS_SSL_PROC_CHK( ssl_read_end_of_early_data_coordinate( ssl ) );
     if( ret == SSL_END_OF_EARLY_DATA_EXPECT )
     {
-        /* Fetching step */
-        if ( ( ret = mbedtls_ssl_read_record( ssl, 0 ) ) != 0 )
-        {
-            MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_read_record", ret );
-            goto cleanup;
-        }
+#if defined(MBEDTLS_SSL_USE_MPS)
+        MBEDTLS_SSL_PROC_CHK( ssl_end_of_early_data_fetch( ssl ) );
+        MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read_consume( &ssl->mps.l4 ) );
 
-        if ( ssl->in_msgtype != MBEDTLS_SSL_MSG_HANDSHAKE ||
-             ssl->in_msg[0] != MBEDTLS_SSL_HS_END_OF_EARLY_DATA )
-        {
-            MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad end_of_early_data message" ) );
-            ret = MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE;
-            goto cleanup;
-        }
+        mbedtls_ssl_add_hs_hdr_to_checksum(
+            ssl, MBEDTLS_SSL_HS_END_OF_EARLY_DATA, 0 );
+
+#else /* MBEDTLS_SSL_USE_MPS */
+        MBEDTLS_SSL_PROC_CHK( ssl_end_of_early_data_fetch( ssl ) );
+#endif /* MBEDTLS_SSL_USE_MPS */
     }
 
     /* Postprocessing step: Update state machine */
@@ -1716,6 +1712,61 @@ cleanup:
     return( ret );
 
 }
+
+#if defined(MBEDTLS_SSL_USE_MPS)
+static int ssl_end_of_early_data_fetch( mbedtls_ssl_context *ssl )
+{
+    int ret;
+    mbedtls_mps_handshake_in msg;
+
+    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read( &ssl->mps.l4 ) );
+
+    if( ret != MBEDTLS_MPS_MSG_HS )
+        return( MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE );
+
+    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read_handshake( &ssl->mps.l4,
+                                                      &msg ) );
+
+    if( msg.type != MBEDTLS_SSL_HS_END_OF_EARLY_DATA ||
+        msg.length != 0 )
+    {
+        MBEDTLS_SSL_DEBUG_MSG( 1, (
+             "Bad EndOfEarlyData message: Type %u (expect %u), "
+             "Length %u (expect %u)",
+             (unsigned) msg.type, MBEDTLS_SSL_HS_END_OF_EARLY_DATA,
+             (unsigned) msg.length, 0 ) );
+        return( MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE );
+    }
+
+cleanup:
+
+    return( ret );
+}
+#else /* MBEDTLS_SSL_USE_MPS */
+static int ssl_end_of_early_data_fetch( mbedtls_ssl_context *ssl )
+{
+    int ret;
+
+    if( ( ret = mbedtls_ssl_read_record( ssl, 0 ) ) != 0 )
+    {
+        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_read_record", ret );
+        goto cleanup;
+    }
+
+    if( ssl->in_msgtype != MBEDTLS_SSL_MSG_HANDSHAKE        ||
+        ssl->in_msg[0]  != MBEDTLS_SSL_HS_END_OF_EARLY_DATA ||
+        ssl->in_hslen   != 4 )
+    {
+        SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_UNEXPECTED_MESSAGE );
+        ret = MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE;
+        goto cleanup;
+    }
+
+cleanup:
+
+    return( ret );
+}
+#endif /* MBEDTLS_SSL_USE_MPS */
 
 #if !defined(MBEDTLS_ZERO_RTT)
 static int ssl_read_end_of_early_data_coordinate( mbedtls_ssl_context* ssl )
@@ -1755,6 +1806,15 @@ int ssl_read_early_data_process( mbedtls_ssl_context* ssl );
 #define SSL_EARLY_DATA_SKIP   0
 #define SSL_EARLY_DATA_EXPECT 1
 
+#if defined(MBEDTLS_SSL_USE_MPS)
+static int ssl_early_data_fetch( mbedtls_ssl_context* ssl,
+                                 mbedtls_reader **reader );
+#else
+static int ssl_early_data_fetch( mbedtls_ssl_context* ssl,
+                                 unsigned char** buf,
+                                 size_t* buflen );
+#endif /* MBEDTLS_SSL_USE_MPS */
+
 static int ssl_read_early_data_coordinate( mbedtls_ssl_context* ssl );
 
 /* Parse early data send by the peer. */
@@ -1778,22 +1838,28 @@ int ssl_read_early_data_process( mbedtls_ssl_context* ssl )
 
     if( ret == SSL_EARLY_DATA_EXPECT )
     {
-        /* Fetching step */
-        if ( ( ret = mbedtls_ssl_read_record( ssl, 0 ) ) != 0 )
-        {
-            MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_read_record", ret );
-            goto cleanup;
-        }
+        unsigned char *buf;
+        size_t buflen;
+#if defined(MBEDTLS_SSL_USE_MPS)
+        mbedtls_reader *rd;
+#endif /* MBEDTLS_SSL_USE_MPS */
 
-        if( ssl->in_msgtype != MBEDTLS_SSL_MSG_APPLICATION_DATA )
-        {
-            ret = MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE;
-            goto cleanup;
-        }
+#if defined(MBEDTLS_SSL_USE_MPS)
+        MBEDTLS_SSL_PROC_CHK( ssl_early_data_fetch( ssl, &rd ) );
+        MBEDTLS_SSL_PROC_CHK( mbedtls_reader_get( rd,
+                                                  MBEDTLS_MPS_SIZE_MAX,
+                                                  &buf,
+                                                  &buflen ) );
+        MBEDTLS_SSL_PROC_CHK( ssl_read_early_data_parse( ssl, buf, buflen ) );
+        MBEDTLS_SSL_PROC_CHK( mbedtls_reader_commit( rd ) );
+        MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read_consume( &ssl->mps.l4 ) );
 
-        /* Parsing step */
-        MBEDTLS_SSL_PROC_CHK( ssl_read_early_data_parse( ssl,
-                                      ssl->in_msg, ssl->in_msglen ) );
+#else /* MBEDTLS_SSL_USE_MPS */
+
+        MBEDTLS_SSL_PROC_CHK( ssl_early_data_fetch( ssl, &buf, &buflen ) );
+        MBEDTLS_SSL_PROC_CHK( ssl_read_early_data_parse( ssl, buf, buflen ) );
+
+#endif /* MBEDTLS_SSL_USE_MPS */
 
         /* No state machine update at this point -- we might receive
          * multiple 0-RTT messages. */
@@ -1808,6 +1874,52 @@ cleanup:
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= parse early data" ) );
     return( ret );
 }
+
+#if defined(MBEDTLS_SSL_USE_MPS)
+static int ssl_early_data_fetch( mbedtls_ssl_context *ssl,
+                                 mbedtls_reader **rd )
+{
+    int ret;
+    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read( &ssl->mps.l4 ) );
+
+    if( ret != MBEDTLS_MPS_MSG_APP )
+        return( MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE );
+
+    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read_application( &ssl->mps.l4, rd ) );
+
+cleanup:
+
+    return( ret );
+}
+#else /* MBEDTLS_SSL_USE_MPS */
+static int ssl_early_data_fetch( mbedtls_ssl_context *ssl,
+                                 unsigned char **buf,
+                                 size_t *buflen )
+{
+    int ret;
+
+    if( ( ret = mbedtls_ssl_read_record( ssl, 0 ) ) != 0 )
+    {
+        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_read_record", ret );
+        goto cleanup;
+    }
+
+    if( ssl->in_msgtype != MBEDTLS_SSL_MSG_APPLICATION_DATA )
+    {
+        SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_UNEXPECTED_MESSAGE );
+        ret = MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE;
+        goto cleanup;
+    }
+
+    *buf    = ssl->in_msg;
+    *buflen = ssl->in_hslen;
+
+cleanup:
+
+    return( ret );
+}
+#endif /* MBEDTLS_SSL_USE_MPS */
+
 
 #if !defined(MBEDTLS_ZERO_RTT)
 static int ssl_read_early_data_coordinate( mbedtls_ssl_context* ssl )
@@ -1827,11 +1939,20 @@ static int ssl_read_early_data_coordinate( mbedtls_ssl_context* ssl )
     mbedtls_ssl_set_inbound_transform( ssl, ssl->transform_earlydata );
 
 #if defined(MBEDTLS_SSL_USE_MPS)
-    ret = mbedtls_mps_set_incoming_keys( &ssl->mps.l4,
-                                         ssl->epoch_earlydata );
-    if( ret != 0 )
-        return( ret );
-#endif /* MBEDTLS_SSL_USE_MPS */
+    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_set_incoming_keys( &ssl->mps.l4,
+                                                   ssl->epoch_earlydata ) );
+
+    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read( &ssl->mps.l4 ) );
+    if( ret != MBEDTLS_MPS_MSG_APP )
+        return( SSL_EARLY_DATA_SKIP );
+
+    return( SSL_EARLY_DATA_EXPECT );
+
+cleanup:
+
+    return( ret );
+
+#else /* MBEDTLS_SSL_USE_MPS */
 
     /* Fetching step */
     if ( ( ret = mbedtls_ssl_read_record( ssl, 0 ) ) != 0 )
@@ -1844,11 +1965,11 @@ static int ssl_read_early_data_coordinate( mbedtls_ssl_context* ssl )
 
     /* Check for EndOfEarlyData */
     if( ssl->in_msgtype == MBEDTLS_SSL_MSG_HANDSHAKE )
-    {
         return( SSL_EARLY_DATA_SKIP );
-    }
 
     return( SSL_EARLY_DATA_EXPECT );
+
+#endif /* MBEDTLS_SSL_USE_MPS */
 }
 #endif /* MBEDTLS_ZERO_RTT */
 
@@ -1857,7 +1978,7 @@ static int ssl_read_early_data_parse( mbedtls_ssl_context* ssl,
                                       size_t buflen )
 {
     /* Check whether we have enough buffer space. */
-    if ( buflen <= ssl->conf->early_data_len )
+    if( buflen <= ssl->conf->early_data_len )
     {
         /* TODO: We need to check that we're not receiving more 0-RTT
          * than what the ticket allows. */
