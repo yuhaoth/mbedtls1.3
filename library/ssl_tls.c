@@ -6441,9 +6441,27 @@ int mbedtls_ssl_handshake( mbedtls_ssl_context *ssl )
     while( ssl->state != MBEDTLS_SSL_HANDSHAKE_OVER )
     {
         ret = mbedtls_ssl_handshake_step( ssl );
-
         if( ret != 0 )
+        {
+#if defined(MBEDTLS_SSL_USE_MPS)
+            mbedtls_mps_blocking_reason_t blocking_reason;
+            mbedtls_mps_blocking_info_t     blocking_info;
+            if( mbedtls_mps_connection_state( &ssl->mps.l4,
+                                              &blocking_reason,
+                                              &blocking_info )
+                == MBEDTLS_MPS_STATE_BLOCKED )
+            {
+                if( blocking_reason == MBEDTLS_MPS_ERROR_ALERT_RECEIVED )
+                {
+                    MBEDTLS_SSL_DEBUG_MSG( 2,
+                                ( "got an alert message, type: [%u:%u]",
+                                  (unsigned) MBEDTLS_SSL_ALERT_LEVEL_FATAL,
+                                  blocking_info.alert ) );
+                }
+            }
+#endif /* MBEDTLS_SSL_USE_MPS */
             break;
+        }
     }
 
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= handshake" ) );
