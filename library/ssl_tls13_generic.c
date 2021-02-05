@@ -4194,6 +4194,11 @@ static int ssl_finished_out_postprocess( mbedtls_ssl_context* ssl );
 int mbedtls_ssl_finished_out_process( mbedtls_ssl_context* ssl )
 {
     int ret;
+#if defined(MBEDTLS_SSL_USE_MPS)
+    mbedtls_mps_handshake_out msg;
+    unsigned char *buf;
+    mbedtls_mps_size_t buf_len, msg_len;
+#endif /* MBEDTLS_SSL_USE_MPS */
 
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> write finished" ) );
 
@@ -4202,6 +4207,45 @@ int mbedtls_ssl_finished_out_process( mbedtls_ssl_context* ssl )
         MBEDTLS_SSL_PROC_CHK( ssl_finished_out_prepare( ssl ) );
         ssl->handshake->state_local.finished_out.preparation_done = 1;
     }
+
+#if defined(MBEDTLS_SSL_USE_MPS)
+
+    /* Make sure we can write a new message. */
+    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_flush( &ssl->mps.l4 ) );
+
+    msg.type   = MBEDTLS_SSL_HS_FINISHED;
+    msg.length = MBEDTLS_MPS_SIZE_UNKNOWN;
+    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_write_handshake( &ssl->mps.l4,
+                                                       &msg, NULL, NULL ) );
+
+    /* Request write-buffer */
+    MBEDTLS_SSL_PROC_CHK( mbedtls_writer_get_ext( msg.handle, MBEDTLS_MPS_SIZE_MAX,
+                                                  &buf, &buf_len ) );
+
+    MBEDTLS_SSL_PROC_CHK( ssl_finished_out_write(
+                              ssl, buf, buf_len, &msg_len ) );
+
+    mbedtls_ssl_add_hs_msg_to_checksum( ssl, MBEDTLS_SSL_HS_FINISHED,
+                                        buf, msg_len );
+
+    /* Commit message */
+    MBEDTLS_SSL_PROC_CHK( mbedtls_writer_commit_partial_ext( msg.handle,
+                                                             buf_len - msg_len ) );
+
+    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_dispatch( &ssl->mps.l4 ) );
+    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_flush( &ssl->mps.l4 ) );
+
+    /* TEMPORARY:
+     * As long as we don't write _all_ messages through MPS, we manually
+     * need to keep the sequence numbers in sync. */
+    {
+        unsigned i;
+        for( i = 8; i > mbedtls_ssl_ep_len( ssl ); i-- )
+            if( ++ssl->cur_out_ctr[i - 1] != 0 )
+                break;
+    }
+
+#else /* MBEDTLS_SSL_USE_MPS */
 
     /* Make sure we can write a new message. */
     MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_flush_output( ssl ) );
@@ -4213,6 +4257,8 @@ int mbedtls_ssl_finished_out_process( mbedtls_ssl_context* ssl )
     ssl->out_msg[0] = MBEDTLS_SSL_HS_FINISHED;
 
     MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_write_handshake_msg( ssl ) );
+
+#endif /* MBEDTLS_SSL_USE_MPS */
 
     MBEDTLS_SSL_PROC_CHK( ssl_finished_out_postprocess( ssl ) );
 
@@ -4382,24 +4428,37 @@ static int ssl_finished_out_write( mbedtls_ssl_context* ssl,
                                    size_t buflen,
                                    size_t* olen )
 {
+    unsigned char *p;
+    size_t finished_len;
+
+#if defined(MBEDTLS_SSL_USE_MPS)
+
+    p = buf;
+    finished_len = ssl->handshake->state_local.finished_out.digest_len;
+
+#else /* MBEDTLS_SSL_USE_MPS */
+
     size_t const tls_hs_hdr_len = 4;
+    finished_len = tls_hs_hdr_len +
+        ssl->handshake->state_local.finished_out.digest_len;
+    p = buf + 4;
+
+#endif /* MBEDTLS_SSL_USE_MPS */
 
     /* Note: Even if DTLS is used, the current message writing functions
      * write TLS headers, and it is only at sending time that the actual
      * DTLS header is generated. That's why we unconditionally shift by
      * 4 bytes here as opposed to mbedtls_ssl_hs_hdr_len( ssl ). */
 
-    if( buflen < tls_hs_hdr_len
-        + ssl->handshake->state_local.finished_out.digest_len )
-    {
+    if( buflen < finished_len )
         return( MBEDTLS_ERR_SSL_BUFFER_TOO_SMALL );
-    }
 
-    memcpy( buf + tls_hs_hdr_len,
+    memcpy( p,
             ssl->handshake->state_local.finished_out.digest,
             ssl->handshake->state_local.finished_out.digest_len );
+    p += ssl->handshake->state_local.finished_out.digest_len;
 
-    *olen = tls_hs_hdr_len + ssl->handshake->state_local.finished_out.digest_len;
+    *olen = (size_t)( p - buf );
 
     return( 0 );
 }
