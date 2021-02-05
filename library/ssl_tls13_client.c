@@ -2783,7 +2783,17 @@ static int ssl_server_hello_process( mbedtls_ssl_context* ssl );
  * to indicate which message is expected and to be parsed next. */
 #define SSL_SERVER_HELLO_COORDINATE_HELLO  0
 #define SSL_SERVER_HELLO_COORDINATE_HRR 1
-static int ssl_server_hello_coordinate( mbedtls_ssl_context* ssl );
+
+#if defined(MBEDTLS_SSL_USE_MPS)
+static int ssl_server_hello_coordinate( mbedtls_ssl_context* ssl,
+                                        mbedtls_mps_handshake_in *msg,
+                                        unsigned char **buf,
+                                        size_t *buflen );
+#else
+static int ssl_server_hello_coordinate( mbedtls_ssl_context* ssl,
+                                        unsigned char **buf,
+                                        size_t *buflen );
+#endif
 
 /* Parse ServerHello */
 static int ssl_server_hello_parse( mbedtls_ssl_context* ssl,
@@ -2807,7 +2817,11 @@ static int ssl_hrr_postprocess( mbedtls_ssl_context* ssl,
 static int ssl_server_hello_process( mbedtls_ssl_context* ssl )
 {
     int ret = 0;
-    int msg_expect;
+#if defined(MBEDTLS_SSL_USE_MPS)
+    mbedtls_mps_handshake_in msg;
+#endif
+    unsigned char *buf;
+    size_t buflen;
 
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> parse server hello" ) );
 
@@ -2817,44 +2831,142 @@ static int ssl_server_hello_process( mbedtls_ssl_context* ssl )
      * - Switch processing routine in case of HRR
      */
 
-    MBEDTLS_SSL_PROC_CHK( ssl_server_hello_coordinate( ssl ) );
-    msg_expect = ret;
+#if defined(MBEDTLS_SSL_USE_MPS)
+    MBEDTLS_SSL_PROC_CHK( ssl_server_hello_coordinate( ssl, &msg,
+                                                 &buf, &buflen ) );
+#else /* MBEDTLS_SSL_USE_MPS */
+    MBEDTLS_SSL_PROC_CHK( ssl_server_hello_coordinate( ssl,
+                                                 &buf, &buflen ) );
+#endif /* MBEDTLS_SSL_USE_MPS */
 
     /* Parsing step
      * We know what message to expect by now and call
      * the respective parsing function.
      */
 
-    if( msg_expect == SSL_SERVER_HELLO_COORDINATE_HELLO )
+    if( ret == SSL_SERVER_HELLO_COORDINATE_HELLO )
     {
-        MBEDTLS_SSL_PROC_CHK( ssl_server_hello_parse( ssl, ssl->in_msg,
-                                                      ssl->in_hslen ) );
+        MBEDTLS_SSL_PROC_CHK( ssl_server_hello_parse( ssl, buf, buflen ) );
+
+#if defined(MBEDTLS_SSL_USE_MPS)
+        mbedtls_ssl_add_hs_msg_to_checksum( ssl, MBEDTLS_SSL_HS_SERVER_HELLO,
+                                            buf, buflen );
+
+        MBEDTLS_SSL_PROC_CHK( mbedtls_reader_commit_ext( msg.handle ) );
+        MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read_consume( &ssl->mps.l4  ) );
+#endif /* MBEDTLS_SSL_USE_MPS */
+
         MBEDTLS_SSL_PROC_CHK( ssl_server_hello_postprocess( ssl ) );
     }
     else
     {
-        MBEDTLS_SSL_PROC_CHK( ssl_hrr_parse( ssl, ssl->in_msg, ssl->in_hslen ) );
-        MBEDTLS_SSL_PROC_CHK( ssl_hrr_postprocess( ssl, ssl->in_msg, ssl->in_hslen ) );
+        MBEDTLS_SSL_PROC_CHK( ssl_hrr_parse( ssl, buf, buflen ) );
+
+#if defined(MBEDTLS_SSL_USE_MPS)
+        MBEDTLS_SSL_PROC_CHK( mbedtls_reader_commit_ext( msg.handle ) );
+        MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read_consume( &ssl->mps.l4  ) );
+#endif /* MBEDTLS_SSL_USE_MPS */
+
+        MBEDTLS_SSL_PROC_CHK( ssl_hrr_postprocess( ssl, buf, buflen ) );
     }
 
-cleanup:
 
-    /* In the MPS one would close the read-port here to
-     * ensure there's no overlap of reading and writing. */
+cleanup:
 
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= parse server hello" ) );
     return( ret );
 }
 
-static int ssl_server_hello_coordinate( mbedtls_ssl_context* ssl )
+static int ssl_server_hello_is_hrr( unsigned const char *buf )
+{
+    const char magic_hrr_string[32] =
+        { 0xCF, 0x21, 0xAD, 0x74, 0xE5, 0x9A, 0x61, 0x11,
+          0xBE, 0x1D, 0x8C, 0x02, 0x1E, 0x65, 0xB8, 0x91,
+          0xC2, 0xA2, 0x11, 0x16, 0x7A, 0xBB, 0x8C, 0x5E,
+          0x07, 0x9E, 0x09, 0xE2, 0xC8, 0xA8, 0x33 ,0x9C };
+
+    /* Check whether this message is a HelloRetryRequest ( HRR ) message.
+     *
+     * ServerHello and HRR are only distinguished by Random set to the
+     * special value of the SHA-256 of "HelloRetryRequest".
+     *
+     * struct {
+     * 	  ProtocolVersion legacy_version = 0x0303;
+     *    Random random;
+     *    opaque legacy_session_id_echo<0..32>;
+     *    CipherSuite cipher_suite;
+     *    uint8 legacy_compression_method = 0;
+     *    Extension extensions<6..2 ^ 16 - 1>;
+     * } ServerHello;
+     *
+     */
+
+    if( memcmp( buf + 2, magic_hrr_string,
+                sizeof( magic_hrr_string ) ) == 0 )
+    {
+        return( 1 );
+    }
+
+    return( 0 );
+}
+
+
+#if defined(MBEDTLS_SSL_USE_MPS)
+static int ssl_server_hello_coordinate( mbedtls_ssl_context* ssl,
+                                        mbedtls_mps_handshake_in *msg,
+                                        unsigned char **buf,
+                                        size_t *buflen )
 {
     int ret;
-    /* SHA-256 of "HelloRetryRequest" stored in magic_hrr_string
-     * to distinguish HRR from regular ServerHello */
-    const char magic_hrr_string[32] = { 0xCF, 0x21, 0xAD, 0x74, 0xE5, 0x9A, 0x61, 0x11,
-                                        0xBE, 0x1D, 0x8C, 0x02, 0x1E, 0x65, 0xB8, 0x91,
-                                        0xC2, 0xA2, 0x11, 0x16, 0x7A, 0xBB, 0x8C, 0x5E,
-                                        0x07, 0x9E, 0x09, 0xE2, 0xC8, 0xA8, 0x33 ,0x9C };
+    unsigned char *peak;
+
+    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read( &ssl->mps.l4 ) );
+
+#if defined(MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE)
+    if( ret == MBEDTLS_MPS_MSG_CCS )
+    {
+        MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read_consume( &ssl->mps.l4 ) );
+        return( MBEDTLS_ERR_SSL_WANT_READ );
+    }
+#endif /* MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE */
+
+    if( ret != MBEDTLS_MPS_MSG_HS )
+        return( MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE );
+
+    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read_handshake( &ssl->mps.l4,
+                                                      msg ) );
+
+    if( msg->type != MBEDTLS_SSL_HS_SERVER_HELLO )
+        return( MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE );
+
+    /* TODO: Handle the case of incoming record fragmentation. */
+    MBEDTLS_SSL_PROC_CHK( mbedtls_reader_get_ext( msg->handle,
+                                                  msg->length,
+                                                  &peak,
+                                                  NULL ) );
+    if( ssl_server_hello_is_hrr( peak ) )
+    {
+        MBEDTLS_SSL_DEBUG_MSG( 2, ( "received HelloRetryRequest message" ) );
+        ret = SSL_SERVER_HELLO_COORDINATE_HRR;
+    }
+    else
+    {
+        ret = SSL_SERVER_HELLO_COORDINATE_HELLO;
+    }
+
+    *buf = peak;
+    *buflen = msg->length;
+
+cleanup:
+
+    return( ret );
+}
+#else /* MBEDTLS_SSL_USE_MPS */
+static int ssl_server_hello_coordinate( mbedtls_ssl_context* ssl,
+                                        unsigned char **buf,
+                                        size_t *buflen )
+{
+    int ret;
 
     if( ( ret = mbedtls_ssl_read_record( ssl, 0 ) ) != 0 )
     {
@@ -2876,42 +2988,22 @@ static int ssl_server_hello_coordinate( mbedtls_ssl_context* ssl )
         return( MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE );
     }
 
-    /* Check whether this message is a HelloRetryRequest ( HRR ) message.
-     *
-     * ServerHello and HRR are only distinguished by Random set to the
-     * special value of the SHA-256 of "HelloRetryRequest".
-     *
-     * struct {
-     * 	  ProtocolVersion legacy_version = 0x0303;
-     *    Random random;
-     *    opaque legacy_session_id_echo<0..32>;
-     *    CipherSuite cipher_suite;
-     *    uint8 legacy_compression_method = 0;
-     *    Extension extensions<6..2 ^ 16 - 1>;
-     * } ServerHello;
-     *
-     */
-    if( memcmp( &ssl->in_msg[0] + mbedtls_ssl_hs_hdr_len( ssl ) + 2, &magic_hrr_string[0], 32 ) == 0 )
+    *buf = ssl->in_msg;
+    *buflen = ssl->in_hslen;
+
+    if( ssl_server_hello_is_hrr( ssl->in_msg + 4 ) )
     {
         MBEDTLS_SSL_DEBUG_MSG( 2, ( "received HelloRetryRequest message" ) );
         ret = SSL_SERVER_HELLO_COORDINATE_HRR;
     }
     else
     {
-        /*
-          TBD: When we made it through a cookie exchange we need to delete the state again.
-
-          mbedtls_free( ssl->handshake->verify_cookie );
-          ssl->handshake->verify_cookie = NULL;
-          ssl->handshake->verify_cookie_len = 0;
-        */
-
         ret = SSL_SERVER_HELLO_COORDINATE_HELLO;
     }
 
     return( ret );
 }
-
+#endif /* MBEDTLS_SSL_USE_MPS */
 
 static int ssl_server_hello_parse( mbedtls_ssl_context* ssl,
                                    const unsigned char* buf,
@@ -2929,6 +3021,11 @@ static int ssl_server_hello_parse( mbedtls_ssl_context* ssl,
 
     const mbedtls_ssl_ciphersuite_t* suite_info; /* pointer to ciphersuite */
 
+#if defined(MBEDTLS_SSL_USE_MPS)
+    size_t hs_hdr_add = 4;
+#else
+    size_t hs_hdr_add = 4;
+#endif /* MBEDTLS_SSL_USE_MPS */
 
     /* Check for minimal length */
 #if defined(MBEDTLS_SSL_TLS13_CTLS)
@@ -2936,7 +3033,7 @@ static int ssl_server_hello_parse( mbedtls_ssl_context* ssl,
     {
         /* TBD: Add message header figure here. */
         /* 18 = 16 ( random bytes ) + 1 ( ciphersuite ) + 1 ( version ) + */
-        if( buflen < 18 + mbedtls_ssl_hs_hdr_len( ssl ) )
+        if( buflen < 18 + hs_hdr_add )
         {
             MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad server hello message - min size not reached" ) );
             SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_DECODE_ERROR );
@@ -2959,8 +3056,8 @@ static int ssl_server_hello_parse( mbedtls_ssl_context* ssl,
          * 38 = 32 ( random bytes ) + 2 ( ciphersuite ) + 2 ( version ) +
          *       1 ( legacy_compression_method ) + 1 ( minimum for legacy_session_id_echo )
          */
-        if( ( buflen < 38 + mbedtls_ssl_hs_hdr_len( ssl ) ) ||
-            buf[0] != MBEDTLS_SSL_HS_SERVER_HELLO ) {
+        if( buflen < 38 + hs_hdr_add )
+        {
             MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad server hello message - min size not reached" ) );
             SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_DECODE_ERROR );
             return( MBEDTLS_ERR_SSL_BAD_HS_SERVER_HELLO );
@@ -2969,8 +3066,10 @@ static int ssl_server_hello_parse( mbedtls_ssl_context* ssl,
 
     MBEDTLS_SSL_DEBUG_BUF( 5, "server hello", buf, buflen );
 
+#if !defined(MBEDTLS_SSL_USE_MPS)
     /* skip header */
     buf += mbedtls_ssl_hs_hdr_len( ssl );
+#endif /* MBEDTLS_SSL_USE_MPS */
 
 #if defined(MBEDTLS_SSL_TLS13_CTLS)
     if( ssl->handshake->ctls == MBEDTLS_SSL_TLS13_CTLS_DO_NOT_USE )
@@ -3379,13 +3478,19 @@ static int ssl_hrr_parse( mbedtls_ssl_context* ssl,
     unsigned char *cookie;
 #endif /* MBEDTLS_SSL_COOKIE_C */
 
+#if defined(MBEDTLS_SSL_USE_MPS)
+    size_t hs_hdr_add = 0;
+#else
+    size_t hs_hdr_add = 4;
+#endif /* MBEDTLS_SSL_USE_MPS */
+
     /* Check for minimal length */
 #if defined(MBEDTLS_SSL_TLS13_CTLS)
     if( ssl->handshake->ctls == MBEDTLS_SSL_TLS13_CTLS_USE )
     {
         /* TBD: Add message header figure here. */
         /* 18 = 16 ( random bytes ) + 1 ( ciphersuite ) + 1 ( version ) + */
-        if( buflen < 18 + mbedtls_ssl_hs_hdr_len( ssl ) )
+        if( buflen < 18 + hs_hdr_add )
         {
             MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad hello retry request - min size not reached" ) );
             SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_DECODE_ERROR );
@@ -3408,8 +3513,7 @@ static int ssl_hrr_parse( mbedtls_ssl_context* ssl,
          * 38 = 32 ( random bytes ) + 2 ( ciphersuite ) + 2 ( version ) +
          *       1 ( legacy_compression_method ) + 1 ( minimum for legacy_session_id_echo )
          */
-        if( ( buflen < 38 + mbedtls_ssl_hs_hdr_len( ssl ) ) ||
-            buf[0] != MBEDTLS_SSL_HS_SERVER_HELLO )
+        if( buflen < 38 + hs_hdr_add )
         {
             MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad hello retry request message - min size not reached" ) );
             SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_DECODE_ERROR );
@@ -3419,8 +3523,10 @@ static int ssl_hrr_parse( mbedtls_ssl_context* ssl,
 
     MBEDTLS_SSL_DEBUG_BUF( 5, "hello retry request", buf, buflen );
 
+#if !defined(MBEDTLS_SSL_USE_MPS)
     /* skip header */
     buf += mbedtls_ssl_hs_hdr_len( ssl );
+#endif /* MBEDTLS_SSL_USE_MPS */
 
 #if defined(MBEDTLS_SSL_TLS13_CTLS)
     if( ssl->handshake->ctls == MBEDTLS_SSL_TLS13_CTLS_DO_NOT_USE )
@@ -3808,8 +3914,13 @@ static int ssl_hrr_postprocess( mbedtls_ssl_context* ssl,
         return( ret );
     }
 
+#if defined(MBEDTLS_SSL_USE_MPS)
+    mbedtls_ssl_add_hs_msg_to_checksum( ssl, MBEDTLS_SSL_HS_SERVER_HELLO,
+                                        orig_buf, orig_msg_len );
+#else /* MBEDTLS_SSL_USE_MPS */
     /* Add transcript for HRR */
     ssl->handshake->update_checksum( ssl, orig_buf, orig_msg_len );
+#endif /* MBEDTLS_SSL_USE_MPS */
 
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
     mbedtls_ssl_recv_flight_completed( ssl );
