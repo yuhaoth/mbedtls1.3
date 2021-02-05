@@ -1810,9 +1810,6 @@ int mbedtls_ssl_certificate_verify_process( mbedtls_ssl_context* ssl )
         unsigned char *buf;
         mbedtls_mps_size_t buf_len, msg_len;
 
-        /* Make sure we can write a new message. */
-        MBEDTLS_SSL_PROC_CHK( mbedtls_mps_flush( &ssl->mps.l4 ) );
-
         msg.type   = MBEDTLS_SSL_HS_CERTIFICATE_VERIFY;
         msg.length = MBEDTLS_MPS_SIZE_UNKNOWN;
         MBEDTLS_SSL_PROC_CHK( mbedtls_mps_write_handshake( &ssl->mps.l4,
@@ -1833,7 +1830,6 @@ int mbedtls_ssl_certificate_verify_process( mbedtls_ssl_context* ssl )
                                                                  buf_len - msg_len ) );
 
         MBEDTLS_SSL_PROC_CHK( mbedtls_mps_dispatch( &ssl->mps.l4 ) );
-        MBEDTLS_SSL_PROC_CHK( mbedtls_mps_flush( &ssl->mps.l4 ) );
 
 #else  /* MBEDTLS_SSL_USE_MPS */
 
@@ -2638,8 +2634,6 @@ int mbedtls_ssl_write_certificate_process( mbedtls_ssl_context* ssl )
                                                                  buf_len - msg_len ) );
 
         MBEDTLS_SSL_PROC_CHK( mbedtls_mps_dispatch( &ssl->mps.l4 ) );
-        MBEDTLS_SSL_PROC_CHK( mbedtls_mps_flush( &ssl->mps.l4 ) );
-
 
 #else  /* MBEDTLS_SSL_USE_MPS */
 
@@ -4181,9 +4175,6 @@ int mbedtls_ssl_finished_out_process( mbedtls_ssl_context* ssl )
     }
 
 #if defined(MBEDTLS_SSL_USE_MPS)
-
-    /* Make sure we can write a new message. */
-    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_flush( &ssl->mps.l4 ) );
 
     msg.type   = MBEDTLS_SSL_HS_FINISHED;
     msg.length = MBEDTLS_MPS_SIZE_UNKNOWN;
