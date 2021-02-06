@@ -5955,16 +5955,16 @@ void mbedtls_mps_l2_random( int allocator_buffer_sz,
                     TEST_ASSERT( epoch == latest_epoch[self] );
                 }
 
+                /* Set usage for new epoch */
+                TEST_ASSERT( mps_l2_epoch_usage( endpoint[self],
+                                                 epoch, 0,
+                                                 MPS_EPOCH_USAGE_READ( 0 ) ) == 0 );
+
                 /* Clear read flag for old epoch. */
                 TEST_ASSERT( mps_l2_epoch_usage( endpoint[self],
                                                  read_epoch[self],
                                                  MPS_EPOCH_USAGE_READ( 0 ),
                                                  0 ) == 0 );
-
-                /* Set usage for new epoch */
-                TEST_ASSERT( mps_l2_epoch_usage( endpoint[self],
-                                                 epoch, 0,
-                                                 MPS_EPOCH_USAGE_READ( 0 ) ) == 0 );
 
                 printf( "[%u] SWITCHED TO READ EPOCH %u\n",
                         (unsigned) self, (unsigned) epoch );
@@ -6113,16 +6113,16 @@ void mbedtls_mps_l2_random( int allocator_buffer_sz,
                     TEST_ASSERT( epoch == latest_epoch[self] );
                 }
 
+                /* Set write usage for new epoch */
+                TEST_ASSERT( mps_l2_epoch_usage( endpoint[self],
+                                                 epoch, 0,
+                                                 MPS_EPOCH_USAGE_WRITE( 0 ) ) == 0 );
+
                 /* Clear write flag for old epoch. */
                 TEST_ASSERT( mps_l2_epoch_usage( endpoint[self],
                                                  write_epoch[self],
                                                  MPS_EPOCH_USAGE_WRITE( 0 ),
                                                  0 ) == 0 );
-
-                /* Set write usage for new epoch */
-                TEST_ASSERT( mps_l2_epoch_usage( endpoint[self],
-                                                 epoch, 0,
-                                                 MPS_EPOCH_USAGE_WRITE( 0 ) ) == 0 );
 
                 printf( "[%u] SWITCHED TO WRITE EPOCH %u\n",
                         (unsigned) self, (unsigned) epoch );
