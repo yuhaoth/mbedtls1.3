@@ -2763,6 +2763,8 @@ int mps_l2_epoch_add( mbedtls_mps_l2 *ctx,
     epoch->usage = MPS_EPOCH_USAGE_INTERNAL_OUT_PROTECTED;
 
     ctx->epochs.next++;
+
+    TRACE( trace_comment, "New epoch: %u", (unsigned) *epoch_id );
     RETURN( 0 );
 }
 
@@ -2885,6 +2887,35 @@ int l2_epoch_cleanup( mbedtls_mps_l2 *ctx )
 #else /* MBEDTLS_MPS_L2_EPOCH_WINDOW_SHIFTING */
 
 MBEDTLS_MPS_STATIC
+void l2_print_usage( unsigned usage )
+{
+#if defined(MBEDTLS_MPS_TRACE)
+    if( ( usage & MPS_EPOCH_READ_MASK ) != 0 )
+    {
+        TRACE( trace_comment,
+               "* epoch can be used for reading." );
+    }
+    if( ( usage & MPS_EPOCH_WRITE_MASK ) != 0 )
+    {
+        TRACE( trace_comment,
+               "* epoch can be used for writing." );
+    }
+    if( ( usage & MPS_EPOCH_USAGE_INTERNAL_OUT_PROTECTED ) != 0 )
+    {
+        TRACE( trace_comment,
+               "* Epoch has been added but not yet configured." );
+    }
+    if( ( usage & MPS_EPOCH_USAGE_INTERNAL_OUT_RECORD_OPEN ) != 0 )
+    {
+        TRACE( trace_comment,
+               "* epoch has an outgoing record open." );
+    }
+#else
+    ((void) usage);
+#endif /* MBEDTLS_MPS_TRACE */
+}
+
+MBEDTLS_MPS_STATIC
 int l2_epoch_cleanup( mbedtls_mps_l2 *ctx )
 {
     uint8_t shift = 0, offset;
@@ -2895,41 +2926,20 @@ int l2_epoch_cleanup( mbedtls_mps_l2 *ctx )
     /* An epoch is in use if its flags are not empty. */
     for( offset = 0; offset < ctx->epochs.next; offset++ )
     {
+        unsigned usage = ctx->epochs.window[offset].usage;
+
         TRACE( trace_comment, "Checking epoch %u at window offset %u, usage %s",
                (unsigned)( ctx->epochs.base + offset ), (unsigned) offset,
-               l2_epoch_usage_to_string( ctx->epochs.window[offset].usage ) );
-        if( ctx->epochs.window[offset].usage == 0 )
+               l2_epoch_usage_to_string( usage ) );
+
+        if( usage == 0 )
         {
-            TRACE( trace_comment, "No longer needed" );
+            TRACE( trace_comment, "* no longer needed" );
             l2_epoch_free( &ctx->epochs.window[offset] );
         }
         else
         {
-#if defined(MBEDTLS_MPS_TRACE)
-            mbedtls_mps_epoch_id epoch = ctx->epochs.base + offset;
-            if( ctx->epochs.window[offset].usage & MPS_EPOCH_READ_MASK )
-            {
-                TRACE( trace_comment, "Epoch %d can be used for reading.",
-                       epoch );
-            }
-            if( ctx->epochs.window[offset].usage & MPS_EPOCH_WRITE_MASK )
-            {
-                TRACE( trace_comment, "Epoch %d can be used for writing.",
-                       epoch );
-            }
-            if( ctx->epochs.window[offset].usage &
-                MPS_EPOCH_USAGE_INTERNAL_OUT_PROTECTED )
-            {
-                TRACE( trace_comment, "Epoch %d has been added but not yet configured.",
-                       epoch );
-            }
-            if( ctx->epochs.window[offset].usage &
-                MPS_EPOCH_USAGE_INTERNAL_OUT_RECORD_OPEN )
-            {
-                TRACE( trace_comment, "Epoch %d has an outgoing record open.",
-                       epoch );
-            }
-#endif /* MBEDTLS_MPS_TRACE */
+            l2_print_usage( usage );
             break;
         }
     }

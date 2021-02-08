@@ -1803,9 +1803,36 @@ int mbedtls_ssl_certificate_verify_process( mbedtls_ssl_context* ssl )
     /* Coordination step: Check if we need to send a CertificateVerify */
     MBEDTLS_SSL_PROC_CHK( ssl_certificate_verify_coordinate( ssl ) );
 
-#if defined(MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED)
     if( ret == SSL_CERTIFICATE_VERIFY_SEND )
     {
+#if defined(MBEDTLS_SSL_USE_MPS)
+        mbedtls_mps_handshake_out msg;
+        unsigned char *buf;
+        mbedtls_mps_size_t buf_len, msg_len;
+
+        msg.type   = MBEDTLS_SSL_HS_CERTIFICATE_VERIFY;
+        msg.length = MBEDTLS_MPS_SIZE_UNKNOWN;
+        MBEDTLS_SSL_PROC_CHK( mbedtls_mps_write_handshake( &ssl->mps.l4,
+                                                           &msg, NULL, NULL ) );
+
+        /* Request write-buffer */
+        MBEDTLS_SSL_PROC_CHK( mbedtls_writer_get_ext( msg.handle, MBEDTLS_MPS_SIZE_MAX,
+                                                      &buf, &buf_len ) );
+
+        MBEDTLS_SSL_PROC_CHK( ssl_certificate_verify_write(
+                                  ssl, buf, buf_len, &msg_len ) );
+
+        mbedtls_ssl_add_hs_msg_to_checksum( ssl, MBEDTLS_SSL_HS_CERTIFICATE_VERIFY,
+                                            buf, msg_len );
+
+        /* Commit message */
+        MBEDTLS_SSL_PROC_CHK( mbedtls_writer_commit_partial_ext( msg.handle,
+                                                                 buf_len - msg_len ) );
+
+        MBEDTLS_SSL_PROC_CHK( mbedtls_mps_dispatch( &ssl->mps.l4 ) );
+
+#else  /* MBEDTLS_SSL_USE_MPS */
+
         /* Make sure we can write a new message. */
         MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_flush_output( ssl ) );
 
@@ -1816,9 +1843,6 @@ int mbedtls_ssl_certificate_verify_process( mbedtls_ssl_context* ssl )
 
         ssl->out_msgtype = MBEDTLS_SSL_MSG_HANDSHAKE;
         ssl->out_msg[0] = MBEDTLS_SSL_HS_CERTIFICATE_VERIFY;
-
-        /* Update state */
-        MBEDTLS_SSL_PROC_CHK( ssl_certificate_verify_postprocess( ssl ) );
 
         /* Dispatch message */
         MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_write_handshake_msg( ssl ) );
@@ -1835,21 +1859,12 @@ int mbedtls_ssl_certificate_verify_process( mbedtls_ssl_context* ssl )
          *       Further, once the two calls can be re-ordered, the two
          *       calls to ssl_certificate_verify_postprocess( ) can be
          *       consolidated. */
-    }
-    else
-#endif /* MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED */
-        if( ret == SSL_CERTIFICATE_VERIFY_SKIP )
-        {
-            MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= skip write certificate verify" ) );
 
-            /* Update state */
-            MBEDTLS_SSL_PROC_CHK( ssl_certificate_verify_postprocess( ssl ) );
-        }
-        else
-        {
-            MBEDTLS_SSL_DEBUG_MSG( 1, ( "should never happen" ) );
-            return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
-        }
+#endif /* MBEDTLS_SSL_USE_MPS */
+    }
+
+    /* Update state */
+    MBEDTLS_SSL_PROC_CHK( ssl_certificate_verify_postprocess( ssl ) );
 
 cleanup:
 
@@ -1975,7 +1990,7 @@ static int ssl_certificate_verify_write( mbedtls_ssl_context* ssl,
                                          size_t* olen )
 {
     int ret;
-    size_t n = 0, offset = 0;
+    size_t n = 0;
     unsigned char verify_buffer[ MBEDTLS_SSL_VERIFY_STRUCT_MAX_SIZE ];
     const int *sig_scheme; /* iterate through configured signature schemes */
     size_t verify_buffer_len;
@@ -1985,13 +2000,25 @@ static int ssl_certificate_verify_write( mbedtls_ssl_context* ssl,
     int sig_alg;
     unsigned char verify_hash[ MBEDTLS_MD_MAX_SIZE ];
     size_t verify_hash_len;
+    unsigned char *p;
 
+#if defined(MBEDTLS_SSL_USE_MPS)
+    p = buf;
+    if( buflen < 2 + MBEDTLS_MD_MAX_SIZE )
+    {
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "buffer too short" ) );
+        return( MBEDTLS_ERR_SSL_BUFFER_TOO_SMALL );
+    }
+
+#else
+    p = buf + 4;
     /* TBD: Check whether the signature fits into the buffer. */
     if( buflen < ( mbedtls_ssl_hs_hdr_len( ssl ) + 2 + MBEDTLS_MD_MAX_SIZE ) )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "buffer too short" ) );
         return( MBEDTLS_ERR_SSL_BUFFER_TOO_SMALL );
     }
+#endif /* MBEDTLS_SSL_USE_MPS */
 
     /* Create verify structure */
     mbedtls_ssl_create_verify_structure(
@@ -2040,7 +2067,8 @@ static int ssl_certificate_verify_write( mbedtls_ssl_context* ssl,
 
     if( ssl->handshake->received_signature_schemes_list != NULL )
     {
-        for( sig_scheme = ssl->handshake->received_signature_schemes_list; *sig_scheme != SIGNATURE_NONE; sig_scheme++ )
+        for( sig_scheme = ssl->handshake->received_signature_schemes_list;
+             *sig_scheme != SIGNATURE_NONE; sig_scheme++ )
         {
             if( *sig_scheme == sig_alg )
             {
@@ -2056,9 +2084,8 @@ static int ssl_certificate_verify_write( mbedtls_ssl_context* ssl,
             return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
     }
 
-    buf[4] = (unsigned char)( ( ssl->handshake->signature_scheme_client >> 8 ) & 0xFF );
-    buf[5] = (unsigned char)( ( ssl->handshake->signature_scheme_client ) & 0xFF );
-    offset = 2;
+    *(p++) = (unsigned char)( ( ssl->handshake->signature_scheme_client >> 8 ) & 0xFF );
+    *(p++) = (unsigned char)( ( ssl->handshake->signature_scheme_client >> 0 ) & 0xFF );
 
     /* Hash verify buffer with indicated hash function */
 #if defined(MBEDTLS_SHA256_C)
@@ -2099,18 +2126,19 @@ static int ssl_certificate_verify_write( mbedtls_ssl_context* ssl,
     if( ( ret = mbedtls_pk_sign( mbedtls_ssl_own_key( ssl ),
                                  md_alg,
                                  verify_hash, verify_hash_len,
-                                 buf + 6 + offset, &n,
+                                 p + 2, &n,
                                  ssl->conf->f_rng, ssl->conf->p_rng ) ) != 0 )
     {
         MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_pk_sign", ret );
         return( ret );
     }
 
-    buf[4 + offset] = (unsigned char)( n >> 8 );
-    buf[5 + offset] = (unsigned char)( n );
+    p[0] = (unsigned char)( n >> 8 );
+    p[1] = (unsigned char)( n >> 0 );
 
-    *olen = 6 + n + offset;
+    p += 2 + n;
 
+    *olen = (size_t)( p - buf );
     return( ret );
 }
 #endif /* MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED */
@@ -2606,17 +2634,6 @@ int mbedtls_ssl_write_certificate_process( mbedtls_ssl_context* ssl )
                                                                  buf_len - msg_len ) );
 
         MBEDTLS_SSL_PROC_CHK( mbedtls_mps_dispatch( &ssl->mps.l4 ) );
-        MBEDTLS_SSL_PROC_CHK( mbedtls_mps_flush( &ssl->mps.l4 ) );
-
-        /* TEMPORARY:
-         * As long as we don't write _all_ messages through MPS, we manually
-         * need to keep the sequence numbers in sync. */
-        {
-            unsigned i;
-            for( i = 8; i > mbedtls_ssl_ep_len( ssl ); i-- )
-                if( ++ssl->cur_out_ctr[i - 1] != 0 )
-                    break;
-        }
 
 #else  /* MBEDTLS_SSL_USE_MPS */
 
@@ -2636,24 +2653,15 @@ int mbedtls_ssl_write_certificate_process( mbedtls_ssl_context* ssl )
 
 #endif /* MBEDTLS_SSL_USE_MPS */
 
-        /* Update state */
-        MBEDTLS_SSL_PROC_CHK( ssl_write_certificate_postprocess( ssl ) );
-
     }
     else
 #endif /* MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED */
-        if( ret == SSL_WRITE_CERTIFICATE_SKIP )
-        {
-            MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= skip write certificate" ) );
+    {
+        MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= skip write certificate" ) );
+    }
 
-            /* Update state */
-            MBEDTLS_SSL_PROC_CHK( ssl_write_certificate_postprocess( ssl ) );
-        }
-        else
-        {
-            MBEDTLS_SSL_DEBUG_MSG( 1, ( "should never happen" ) );
-            return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
-        }
+    /* Update state */
+    MBEDTLS_SSL_PROC_CHK( ssl_write_certificate_postprocess( ssl ) );
 
 cleanup:
 
@@ -2671,7 +2679,8 @@ static int ssl_write_certificate_coordinate( mbedtls_ssl_context* ssl )
 #if defined(MBEDTLS_SSL_CLI_C)
     if( ssl->conf->endpoint == MBEDTLS_SSL_IS_CLIENT )
     {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "Switch to handshake keys for outbound traffic" ) );
+        MBEDTLS_SSL_DEBUG_MSG( 1,
+                  ( "Switch to handshake traffic keys for outbound traffic" ) );
         mbedtls_ssl_set_outbound_transform( ssl, ssl->transform_handshake );
 
 #if defined(MBEDTLS_SSL_USE_MPS)
@@ -2992,6 +3001,16 @@ static int ssl_read_certificate_coordinate( mbedtls_ssl_context* ssl )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "Switch to handshake keys for inbound traffic" ) );
         mbedtls_ssl_set_inbound_transform( ssl, ssl->transform_handshake );
+
+#if defined(MBEDTLS_SSL_USE_MPS)
+        {
+            int ret;
+            ret = mbedtls_mps_set_incoming_keys( &ssl->mps.l4,
+                                                 ssl->epoch_handshake );
+            if( ret != 0 )
+                return( ret );
+        }
+#endif /* MBEDTLS_SSL_USE_MPS */
     }
 #endif /* MBEDTLS_SSL_SRV_C */
 
@@ -4141,6 +4160,11 @@ static int ssl_finished_out_postprocess( mbedtls_ssl_context* ssl );
 int mbedtls_ssl_finished_out_process( mbedtls_ssl_context* ssl )
 {
     int ret;
+#if defined(MBEDTLS_SSL_USE_MPS)
+    mbedtls_mps_handshake_out msg;
+    unsigned char *buf;
+    mbedtls_mps_size_t buf_len, msg_len;
+#endif /* MBEDTLS_SSL_USE_MPS */
 
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> write finished" ) );
 
@@ -4149,6 +4173,32 @@ int mbedtls_ssl_finished_out_process( mbedtls_ssl_context* ssl )
         MBEDTLS_SSL_PROC_CHK( ssl_finished_out_prepare( ssl ) );
         ssl->handshake->state_local.finished_out.preparation_done = 1;
     }
+
+#if defined(MBEDTLS_SSL_USE_MPS)
+
+    msg.type   = MBEDTLS_SSL_HS_FINISHED;
+    msg.length = MBEDTLS_MPS_SIZE_UNKNOWN;
+    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_write_handshake( &ssl->mps.l4,
+                                                       &msg, NULL, NULL ) );
+
+    /* Request write-buffer */
+    MBEDTLS_SSL_PROC_CHK( mbedtls_writer_get_ext( msg.handle, MBEDTLS_MPS_SIZE_MAX,
+                                                  &buf, &buf_len ) );
+
+    MBEDTLS_SSL_PROC_CHK( ssl_finished_out_write(
+                              ssl, buf, buf_len, &msg_len ) );
+
+    mbedtls_ssl_add_hs_msg_to_checksum( ssl, MBEDTLS_SSL_HS_FINISHED,
+                                        buf, msg_len );
+
+    /* Commit message */
+    MBEDTLS_SSL_PROC_CHK( mbedtls_writer_commit_partial_ext( msg.handle,
+                                                             buf_len - msg_len ) );
+
+    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_dispatch( &ssl->mps.l4 ) );
+    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_flush( &ssl->mps.l4 ) );
+
+#else /* MBEDTLS_SSL_USE_MPS */
 
     /* Make sure we can write a new message. */
     MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_flush_output( ssl ) );
@@ -4160,6 +4210,8 @@ int mbedtls_ssl_finished_out_process( mbedtls_ssl_context* ssl )
     ssl->out_msg[0] = MBEDTLS_SSL_HS_FINISHED;
 
     MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_write_handshake_msg( ssl ) );
+
+#endif /* MBEDTLS_SSL_USE_MPS */
 
     MBEDTLS_SSL_PROC_CHK( ssl_finished_out_postprocess( ssl ) );
 
@@ -4293,6 +4345,25 @@ static int ssl_finished_out_postprocess( mbedtls_ssl_context* ssl )
             return( ret );
         }
 
+#if defined(MBEDTLS_SSL_USE_MPS)
+        {
+            mbedtls_ssl_transform *transform_application =
+                mbedtls_calloc( 1, sizeof( mbedtls_ssl_transform ) );
+            if( transform_application == NULL )
+                return( MBEDTLS_ERR_SSL_ALLOC_FAILED );
+
+            ret = mbedtls_ssl_tls13_build_transform( ssl, &traffic_keys,
+                                                     transform_application, 0 );
+
+            /* Register transform with MPS. */
+            ret = mbedtls_mps_add_key_material( &ssl->mps.l4,
+                                                transform_application,
+                                                &ssl->epoch_application );
+            if( ret != 0 )
+                return( ret );
+        }
+#endif /* MBEDTLS_SSL_USE_MPS */
+
         mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_EARLY_APP_DATA );
     }
     else
@@ -4310,24 +4381,37 @@ static int ssl_finished_out_write( mbedtls_ssl_context* ssl,
                                    size_t buflen,
                                    size_t* olen )
 {
+    unsigned char *p;
+    size_t finished_len;
+
+#if defined(MBEDTLS_SSL_USE_MPS)
+
+    p = buf;
+    finished_len = ssl->handshake->state_local.finished_out.digest_len;
+
+#else /* MBEDTLS_SSL_USE_MPS */
+
     size_t const tls_hs_hdr_len = 4;
+    finished_len = tls_hs_hdr_len +
+        ssl->handshake->state_local.finished_out.digest_len;
+    p = buf + 4;
+
+#endif /* MBEDTLS_SSL_USE_MPS */
 
     /* Note: Even if DTLS is used, the current message writing functions
      * write TLS headers, and it is only at sending time that the actual
      * DTLS header is generated. That's why we unconditionally shift by
      * 4 bytes here as opposed to mbedtls_ssl_hs_hdr_len( ssl ). */
 
-    if( buflen < tls_hs_hdr_len
-        + ssl->handshake->state_local.finished_out.digest_len )
-    {
+    if( buflen < finished_len )
         return( MBEDTLS_ERR_SSL_BUFFER_TOO_SMALL );
-    }
 
-    memcpy( buf + tls_hs_hdr_len,
+    memcpy( p,
             ssl->handshake->state_local.finished_out.digest,
             ssl->handshake->state_local.finished_out.digest_len );
+    p += ssl->handshake->state_local.finished_out.digest_len;
 
-    *olen = tls_hs_hdr_len + ssl->handshake->state_local.finished_out.digest_len;
+    *olen = (size_t)( p - buf );
 
     return( 0 );
 }
@@ -4574,6 +4658,25 @@ static int ssl_finished_in_postprocess_cli( mbedtls_ssl_context *ssl )
         MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_tls13_build_transform", ret );
         return( ret );
     }
+
+#if defined(MBEDTLS_SSL_USE_MPS)
+    {
+        mbedtls_ssl_transform *transform_application =
+            mbedtls_calloc( 1, sizeof( mbedtls_ssl_transform ) );
+        if( transform_application == NULL )
+            return( MBEDTLS_ERR_SSL_ALLOC_FAILED );
+
+        ret = mbedtls_ssl_tls13_build_transform( ssl, &traffic_keys,
+                                                 transform_application, 0 );
+
+        /* Register transform with MPS. */
+        ret = mbedtls_mps_add_key_material( &ssl->mps.l4,
+                                            transform_application,
+                                            &ssl->epoch_application );
+        if( ret != 0 )
+            return( ret );
+    }
+#endif /* MBEDTLS_SSL_USE_MPS */
 
 exit:
 
