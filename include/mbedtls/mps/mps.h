@@ -762,6 +762,12 @@ mbedtls_mps_conf_get_hs_timeout_max( mbedtls_mps_config *conf )
 }
 #endif /* MBEDTLS_MPS_CONF_HS_TIMEOUT_MAX */
 
+typedef union
+{
+    mbedtls_mps_alert_t alert;
+    int err;
+} mbedtls_mps_blocking_info_t;
+
 /**
  * MPS context
  */
@@ -804,22 +810,18 @@ struct mbedtls_mps
     /*! The reason for blocking MPS (if applicable). */
     mbedtls_mps_blocking_reason_t blocking_reason;
 
-    /*! This is a union indexed by \c reason giving
+    /*! This is a union indexed by \c blocking_reason giving
      *  more information about the reason for blocking MPS.
      *  Specifically:
-     * - If \c avail is #MBEDTLS_MPS_ERROR_ALERT_SENT or
+     * - If \c blocking_reason is #MBEDTLS_MPS_ERROR_ALERT_SENT or
      *   #MBEDTLS_MPS_ERROR_ALERT_RECEIVED, \c info.alert is valid.
      *   and contains the type of alert sent or received, respectively.
-     * - If \c avail is #MBEDTLS_MPS_ERROR_INTERNAL_ERROR,
+     * - If \c blocking_reason is #MBEDTLS_MPS_ERROR_INTERNAL_ERROR,
      *   \c avail.err is valid and contains the internal error
      *   code that lead to blocking MPS.
-     * - Otherwise, \c info is invalid.
+     * - Otherwise, \c blocking_info is invalid.
      */
-    union
-    {
-        mbedtls_mps_alert_t alert;
-        int err;
-    } blocking_info;
+    mbedtls_mps_blocking_info_t blocking_info;
 
     /* Read state */
     struct
@@ -1311,10 +1313,10 @@ typedef struct
  * \param mps   The MPS context to use.
  *
  * \return      A negative error code on failure.
- * \return      #MBEDTLS_MPS_APPLICATION, or
- *              #MBEDTLS_MPS_HANDSHAKE, or
- *              #MBEDTLS_MPS_ALERT, or
- *              #MBEDTLS_MPS_CCS
+ * \return      #MBEDTLS_MPS_MSG_APP,   or
+ *              #MBEDTLS_MPS_MSG_HS,    or
+ *              #MBEDTLS_MPS_MSG_ALERT, or
+ *              #MBEDTLS_MPS_MSG_CCS
  *              otherwise, indicating which content type was fetched.
  *
  * \note        On success, you can query the type-specific message contents
@@ -1330,8 +1332,8 @@ int mbedtls_mps_read( mbedtls_mps *mps );
  *
  * \return      #MBEDTLS_ERR_MPS_BLOCKED if MPS is blocked.
  * \return      #MBEDTLS_MPS_MSG_NONE if no message is available.
- * \return      #MBEDTLS_MPS_MSG_APPLICATION, or
- *              #MBEDTLS_MPS_MSG_HANDSHAKE, or
+ * \return      #MBEDTLS_MPS_MSG_APP,   or
+ *              #MBEDTLS_MPS_MSG_HS,    or
  *              #MBEDTLS_MPS_MSG_ALERT, or
  *              #MBEDTLS_MPS_MSG_CCS,
  *              otherwise, indicating the message's record content type.
@@ -1353,7 +1355,7 @@ int mbedtls_mps_read_check( mbedtls_mps const *mps );
  *
  * \note        This function should only be called after a successful
  *              call to mbedtls_mps_read() or mbedtls_mps_check() returning
- *              #MBEDTLS_MPS_MSG_HANDSHAKE. Otherwise, the function
+ *              #MBEDTLS_MPS_MSG_HS. Otherwise, the function
  *              will silently fail.
  */
 int mbedtls_mps_read_handshake( mbedtls_mps *mps,
@@ -1371,7 +1373,7 @@ int mbedtls_mps_read_handshake( mbedtls_mps *mps,
  *
  * \note        This function should only be called after a successful
  *              call to mbedtls_mps_read() or mbedtls_mps_check() returning
- *              #MBEDTLS_MPS_MSG_APPLICATION. Otherwise, the function
+ *              #MBEDTLS_MPS_MSG_APP. Otherwise, the function
  *              will silently fail.
  */
 int mbedtls_mps_read_application( mbedtls_mps *mps,
@@ -1909,9 +1911,9 @@ int mbedtls_mps_send_fatal( mbedtls_mps *mps, mbedtls_mps_alert_t alert_type );
  */
 int mbedtls_mps_close( mbedtls_mps *mps );
 
-mbedtls_mps_connection_state_t mbedtls_mps_connection_state( mbedtls_mps const *mps );
-
-/* int mbedtls_mps_error_state( mbedtls_mps const *mps, */
-/*                              mbedtls_mps_blocking_info_t *info ); */
+mbedtls_mps_connection_state_t mbedtls_mps_connection_state(
+                          mbedtls_mps const *mps,
+                          mbedtls_mps_blocking_reason_t *blocking_reason,
+                          mbedtls_mps_blocking_info_t *blocking_info );
 
 #endif /* MBEDTLS_MPS_H */

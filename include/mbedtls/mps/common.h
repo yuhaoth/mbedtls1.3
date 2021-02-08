@@ -202,9 +202,13 @@
  *       time registering a new epoch for incoming traffic.
  *       One could temporarily register the 0-RTT keys for
  *       incoming traffic, but that seems wrong.
+ *
+ * TODO: The setting of 4 is temporary as long as we don't
+ *       use MPS for reading. It should be possible to at
+ *       least reduce to 3 when perform the reading.
  */
 typedef uint8_t mbedtls_mps_epoch_offset_t;
-#define MBEDTLS_MPS_L2_EPOCH_WINDOW_SIZE ( (mbedtls_mps_epoch_offset_t) 3 )
+#define MBEDTLS_MPS_L2_EPOCH_WINDOW_SIZE ( (mbedtls_mps_epoch_offset_t) 4 )
 
 /*! Whether MPS should support epoch window shifting.
  *

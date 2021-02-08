@@ -669,6 +669,7 @@ int mbedtls_mps_transform_decrypt_default( void *transform_, mps_rec *rec )
 
     rec->buf.data_offset = rec_alt.data_offset;
     rec->buf.data_len = rec_alt.data_len;
+    rec->type = rec_alt.type;
 
     return( 0 );
 }
@@ -1471,7 +1472,9 @@ int mbedtls_ssl_decrypt_buf( mbedtls_ssl_context const *ssl,
         /* Check that there's space for the authentication tag. */
         if( rec->data_len < transform->taglen )
         {
-            MBEDTLS_SSL_DEBUG_MSG( 1, ( "msglen (%d) < taglen (%d) " ) );
+            MBEDTLS_SSL_DEBUG_MSG( 1, ( "msglen (%d) < taglen (%d) ",
+                                        (unsigned) rec->data_len,
+                                        (unsigned) transform->taglen ) );
             return( MBEDTLS_ERR_SSL_INVALID_MAC );
         }
 
@@ -2889,6 +2892,10 @@ int mbedtls_ssl_write_record( mbedtls_ssl_context *ssl, uint8_t force_flush )
 
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> write record" ) );
 
+#if defined(MBEDTLS_SSL_USE_MPS)
+    return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
+#endif
+
 #if defined(MBEDTLS_ZLIB_SUPPORT)
     if( ssl->transform_out != NULL &&
         ssl->session_out->compression == MBEDTLS_SSL_COMPRESS_DEFLATE )
@@ -3664,6 +3671,7 @@ static int ssl_handle_possible_reconnect( mbedtls_ssl_context *ssl )
 }
 #endif /* MBEDTLS_SSL_DTLS_CLIENT_PORT_REUSE && MBEDTLS_SSL_SRV_C */
 
+#if !defined(MBEDTLS_SSL_USE_MPS)
 static int ssl_check_record_type( uint8_t record_type )
 {
     if( record_type != MBEDTLS_SSL_MSG_HANDSHAKE &&
@@ -4134,6 +4142,10 @@ int mbedtls_ssl_read_record( mbedtls_ssl_context *ssl,
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
 
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> read record" ) );
+
+#if defined(MBEDTLS_SSL_USE_MPS)
+    return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
+#endif
 
     if( ssl->keep_current_message == 0 )
     {
@@ -5153,6 +5165,7 @@ int mbedtls_ssl_handle_message_type( mbedtls_ssl_context *ssl )
 
     return( 0 );
 }
+#endif /* MBEDTLS_SSL_USE_MPS */
 
 int mbedtls_ssl_send_fatal_handshake_failure( mbedtls_ssl_context *ssl )
 {
@@ -5627,26 +5640,50 @@ static int ssl_handle_hs_message_post_handshake( mbedtls_ssl_context *ssl )
 }
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+
+static int ssl_check_new_session_ticket( mbedtls_ssl_context *ssl )
+{
+    int ret;
+
+#if defined(MBEDTLS_SSL_USE_MPS)
+    mbedtls_mps_handshake_in msg;
+    ret = mbedtls_mps_read_handshake( &ssl->mps.l4, &msg );
+    if( ret != 0 )
+        return( ret );
+
+    if( msg.type != MBEDTLS_SSL_HS_NEW_SESSION_TICKET )
+        return( 0 );
+#else /* MBEDTLS_SSL_USE_MPS */
+    if( ( ssl->in_hslen == mbedtls_ssl_hs_hdr_len( ssl ) ) ||
+        ( ssl->in_msg[0] != MBEDTLS_SSL_HS_NEW_SESSION_TICKET ) )
+    {
+        return( 0 );
+    }
+#endif /* MBEDTLS_SSL_USE_MPS */
+
+    MBEDTLS_SSL_DEBUG_MSG( 3, ( "NewSessionTicket received" ) );
+
+    if( ( ret = mbedtls_ssl_new_session_ticket_process( ssl ) ) != 0 )
+    {
+        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_parse_new_session_ticket", ret );
+        return( ret );
+    }
+
+    return( MBEDTLS_ERR_SSL_RECEIVED_NEW_SESSION_TICKET );
+}
+
 static int ssl_handle_hs_message_post_handshake_tls13( mbedtls_ssl_context *ssl )
 {
+    int ret;
     MBEDTLS_SSL_DEBUG_MSG( 3, ( "received post-handshake message" ) );
 
 #if defined(MBEDTLS_SSL_NEW_SESSION_TICKET)
 #if defined(MBEDTLS_SSL_CLI_C)
-    if( ( ssl->conf->endpoint == MBEDTLS_SSL_IS_CLIENT ) &&
-        ( ssl->in_hslen != mbedtls_ssl_hs_hdr_len( ssl ) ) &&
-        ( ssl->in_msg[0] == MBEDTLS_SSL_HS_NEW_SESSION_TICKET ) )
+    if( ssl->conf->endpoint == MBEDTLS_SSL_IS_CLIENT )
     {
-        int ret;
-        MBEDTLS_SSL_DEBUG_MSG( 3, ( "NewSessionTicket received" ) );
-
-        if( ( ret = mbedtls_ssl_new_session_ticket_process( ssl ) ) != 0 )
-        {
-            MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_parse_new_session_ticket", ret );
+        ret = ssl_check_new_session_ticket( ssl );
+        if( ret != 0 )
             return( ret );
-        }
-
-        return( MBEDTLS_ERR_SSL_RECEIVED_NEW_SESSION_TICKET );
     }
 #endif /* MBEDTLS_SSL_CLI_C */
 #endif /* MBEDTLS_SSL_NEW_SESSION_TICKET */
@@ -5770,6 +5807,109 @@ static int ssl_handle_hs_message_post_handshake_tls12( mbedtls_ssl_context *ssl 
     return( 0 );
 }
 
+#if defined(MBEDTLS_SSL_USE_MPS)
+int mbedtls_ssl_read( mbedtls_ssl_context *ssl, unsigned char *buf, size_t len )
+{
+    int ret, msg_type;
+    size_t data_read;
+    unsigned char *src;
+    mbedtls_reader *rd;
+    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read( &ssl->mps.l4 ) );
+    msg_type = ret;
+
+    if( msg_type == MBEDTLS_MPS_MSG_HS )
+    {
+        ret = ssl_handle_hs_message_post_handshake( ssl );
+        if( ret != 0 )
+            return( ret );
+
+        return( MBEDTLS_ERR_SSL_WANT_READ );
+    }
+
+    if( msg_type == MBEDTLS_MPS_MSG_ALERT )
+    {
+        MBEDTLS_SSL_DEBUG_MSG( 2, ( "ignoring non-fatal non-closure alert" ) );
+        MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read_consume( &ssl->mps.l4 ) );
+
+        return( MBEDTLS_ERR_SSL_WANT_READ );
+    }
+
+    if( msg_type != MBEDTLS_MPS_MSG_APP )
+        return( MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE );
+
+    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read_application( &ssl->mps.l4, &rd ) );
+    MBEDTLS_SSL_PROC_CHK( mbedtls_reader_get( rd, len, &src, &data_read ) );
+    memcpy( buf, src, data_read );
+    MBEDTLS_SSL_PROC_CHK( mbedtls_reader_commit( rd ) );
+    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read_consume( &ssl->mps.l4 ) );
+    return( data_read );
+
+cleanup:
+
+    return( ret );
+}
+
+int mbedtls_ssl_write( mbedtls_ssl_context *ssl,
+                       const unsigned char *buf, size_t len )
+{
+    int ret;
+    mbedtls_writer *msg;
+    unsigned char *wr_buf;
+    mbedtls_mps_size_t wr_buf_len;
+
+    /* Make sure we can write a new message. */
+    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_flush( &ssl->mps.l4 ) );
+
+    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_write_application( &ssl->mps.l4,
+                                                         &msg ) );
+
+    /* Request write-buffer */
+    MBEDTLS_SSL_PROC_CHK( mbedtls_writer_get( msg, MBEDTLS_MPS_SIZE_MAX,
+                                              &wr_buf, &wr_buf_len ) );
+
+    if( wr_buf_len < len )
+        len = wr_buf_len;
+
+    memcpy( wr_buf, buf, len );
+
+    /* Commit message */
+    MBEDTLS_SSL_PROC_CHK( mbedtls_writer_commit_partial( msg,
+                                               wr_buf_len - len ) );
+
+    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_dispatch( &ssl->mps.l4 ) );
+    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_flush( &ssl->mps.l4 ) );
+
+    ret = len;
+
+cleanup:
+
+    return( ret );
+}
+
+/*
+ * Notify the peer that the connection is being closed
+ */
+int mbedtls_ssl_close_notify( mbedtls_ssl_context *ssl )
+{
+    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
+
+    if( ssl == NULL || ssl->conf == NULL )
+        return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
+
+    MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> write close notify" ) );
+
+    ret = mbedtls_mps_close( &ssl->mps.l4 );
+    if( ret != 0 )
+        return( ret );
+
+    MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= write close notify" ) );
+
+    return( 0 );
+}
+
+
+#else /* MBEDTLS_SSL_USE_MPS */
+
 /*
  * Receive application data decrypted from the SSL layer
  */
@@ -5796,7 +5936,7 @@ int mbedtls_ssl_read( mbedtls_ssl_context *ssl, unsigned char *buf, size_t len )
                 return( ret );
         }
     }
-#endif
+#endif /* MBEDTLS_SSL_PROTO_DTLS */
 
     /*
      * Check if renegotiation is necessary and/or handshake is
@@ -5972,44 +6112,6 @@ int mbedtls_ssl_read( mbedtls_ssl_context *ssl, unsigned char *buf, size_t len )
  * Therefore, it is possible that the input message length is 0 and the
  * corresponding return code is 0 on success.
  */
-#if defined(MBEDTLS_SSL_USE_MPS)
-static int ssl_write_real( mbedtls_ssl_context *ssl,
-                           const unsigned char *buf, size_t len )
-{
-    int ret;
-    mbedtls_writer *msg;
-    unsigned char *wr_buf;
-    mbedtls_mps_size_t wr_buf_len;
-
-    /* Make sure we can write a new message. */
-    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_flush( &ssl->mps.l4 ) );
-
-    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_write_application( &ssl->mps.l4,
-                                                         &msg ) );
-
-    /* Request write-buffer */
-    MBEDTLS_SSL_PROC_CHK( mbedtls_writer_get( msg, MBEDTLS_MPS_SIZE_MAX,
-                                              &wr_buf, &wr_buf_len ) );
-
-    if( wr_buf_len < len )
-        len = wr_buf_len;
-
-    memcpy( wr_buf, buf, len );
-
-    /* Commit message */
-    MBEDTLS_SSL_PROC_CHK( mbedtls_writer_commit_partial( msg,
-                                               wr_buf_len - len ) );
-
-    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_dispatch( &ssl->mps.l4 ) );
-    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_flush( &ssl->mps.l4 ) );
-
-    ret = len;
-
-cleanup:
-
-    return( ret );
-}
-#else
 static int ssl_write_real( mbedtls_ssl_context *ssl,
                            const unsigned char *buf, size_t len )
 {
@@ -6071,7 +6173,6 @@ static int ssl_write_real( mbedtls_ssl_context *ssl,
 
     return( (int) len );
 }
-#endif /* MBEDTLS_SSL_USE_MPS */
 
 /*
  * Write application data, doing 1/n-1 splitting if necessary.
@@ -6249,6 +6350,8 @@ static void ssl_buffering_free_slot( mbedtls_ssl_context *ssl,
 #endif /* MBEDTLS_SSL_PROTO_DTLS */
 
 #endif /* MBEDTLS_SSL_PROTO_TLS1_2 */
+
+#endif /* MBEDTLS_SSL_USE_MPS */
 
 void mbedtls_ssl_write_wire_version( int major, int minor, int transport,
                         unsigned char ver[2] )

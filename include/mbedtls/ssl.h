@@ -150,7 +150,7 @@
 #define MBEDTLS_ERR_SSL_BAD_HS_SERVERNAME_EXT             -0x6787  /**< Problem encountered with the ServerName extension provided by the client. */
 #define MBEDTLS_ERR_SSL_BAD_HS_PRE_SHARED_KEY_EXT         -0x6788  /**< Problem encountered with the Pre-Shared-Key extension provided by the client. */
 #define MBEDTLS_ERR_SSL_BAD_HS_COOKIE_EXT                 -0x6789  /**< Problem encountered with the cookie extension provided by the client. */
-#define MBEDTLS_ERR_SSL_BAD_HS_MISSING_COOKIE_EXT         -0x6790  /**< Missing cookie extension. */
+#define MBEDTLS_ERR_SSL_HRR_REQUIRED                      -0x6790  /**< Server needs to send a HelloRetryRequest */
 #define MBEDTLS_ERR_SSL_BAD_HS_UNKNOWN_MSG                -0x6791  /**< Case where an unknown handshake message was received */
 #define MBEDTLS_ERR_SSL_BAD_HS_TOO_MANY_HRR               -0x6792  /**< Too many Hello Retry Request messages received */
 #define MBEDTLS_ERR_SSL_BAD_HS_SUPPORTED_VERSIONS_EXT     -0x6793  /**< Problem encountered with the supported versions extension */

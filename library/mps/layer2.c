@@ -2819,15 +2819,29 @@ int mps_l2_epoch_usage( mbedtls_mps_l2 *ctx,
             ctx->epochs.window[offset].usage &= ~set;
         }
 
-        if( ( clear & MPS_EPOCH_READ_MASK )  != 0 )
+        if( ( clear & MPS_EPOCH_READ_MASK ) != 0 &&
+            ctx->epochs.default_in == epoch_id )
+        {
             ctx->epochs.default_in = MBEDTLS_MPS_EPOCH_NONE;
-        if( ( clear & MPS_EPOCH_WRITE_MASK ) != 0 )
+        }
+        if( ( clear & MPS_EPOCH_WRITE_MASK ) != 0 &&
+            ctx->epochs.default_out == epoch_id )
+        {
             ctx->epochs.default_out = MBEDTLS_MPS_EPOCH_NONE;
+        }
 
         if( ( set & MPS_EPOCH_READ_MASK )  != 0 )
+        {
+            TRACE( trace_comment, "Epoch %u the new incoming epoch",
+                   (unsigned) epoch_id );
             ctx->epochs.default_in = epoch_id;
+        }
         if( ( set & MPS_EPOCH_WRITE_MASK ) != 0 )
+        {
+            TRACE( trace_comment, "Epoch %u the new outgoing epoch",
+                   (unsigned) epoch_id );
             ctx->epochs.default_out = epoch_id;
+        }
     }
 #else
     ((void) mode);

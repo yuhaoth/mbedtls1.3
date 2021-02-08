@@ -578,8 +578,8 @@ MBEDTLS_MPS_PUBLIC int mps_l3_read( mps_l3 *l3 );
  * \param l3    The Layer 3 context to use.
  *
  * \return      #MBEDTLS_MPS_MSG_NONE if no message is available.
- * \return      #MBEDTLS_MPS_MSG_APPLICATION, or
- *              #MBEDTLS_MPS_MSG_HANDSHAKE, or
+ * \return      #MBEDTLS_MPS_MSG_APP,   or
+ *              #MBEDTLS_MPS_MSG_HS,    or
  *              #MBEDTLS_MPS_MSG_ALERT, or
  *              #MBEDTLS_MPS_MSG_CCS,
  *              otherwise, indicating the message's record content type.

@@ -674,11 +674,14 @@ MBEDTLS_MPS_STATIC int mps_generic_failure_handler( mbedtls_mps *mps, int ret )
 
 fatal:
 
-    /* Remember error and block MPS. */
-    TRACE( trace_error, "Blocking MPS after a fatal error" );
-    mps->blocking_reason = MBEDTLS_MPS_ERROR_INTERNAL_ERROR;
-    mps->blocking_info.err = ret;
-    mps_block( mps );
+    if( mps->state != MBEDTLS_MPS_STATE_BLOCKED )
+    {
+        /* Remember error and block MPS. */
+        TRACE( trace_error, "Blocking MPS after a fatal error" );
+        mps->blocking_reason = MBEDTLS_MPS_ERROR_INTERNAL_ERROR;
+        mps->blocking_info.err = ret;
+        mps_block( mps );
+    }
 
     return( ret );
 }
@@ -2079,8 +2082,20 @@ int mbedtls_mps_set_outgoing_keys( mbedtls_mps *mps,
 }
 
 mbedtls_mps_connection_state_t mbedtls_mps_connection_state(
-    mbedtls_mps const *mps )
+    mbedtls_mps const *mps,
+    mbedtls_mps_blocking_reason_t *blocking_reason,
+    mbedtls_mps_blocking_info_t *blocking_info )
 {
+    if( mps->state == MBEDTLS_MPS_STATE_BLOCKED )
+    {
+        if( blocking_reason != NULL )
+        {
+            *blocking_reason = mps->blocking_reason;
+            if( blocking_info != NULL )
+                *blocking_info = mps->blocking_info;
+        }
+    }
+
     return( mps->state );
 }
 
