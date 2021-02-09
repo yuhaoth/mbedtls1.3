@@ -322,10 +322,9 @@ mbedtls_mps_l1_get_mode( mps_l1 *l1 )
  * \return         A negative error code on failure.
  *
  */
-
-MBEDTLS_MPS_PUBLIC int mps_l1_init( mps_l1 *ctx, uint8_t mode, mps_alloc *alloc,
-                                    void* send_ctx, mps_l0_send_t *send,
-                                    void* recv_ctx, mps_l0_recv_t *recv );
+int mps_l1_init( mps_l1 *ctx, uint8_t mode, mps_alloc *alloc,
+                 void* send_ctx, mps_l0_send_t *send,
+                 void* recv_ctx, mps_l0_recv_t *recv );
 
 /**
  * \brief          Set the callbacks to the underlying transport.
@@ -358,9 +357,9 @@ MBEDTLS_MPS_PUBLIC int mps_l1_init( mps_l1 *ctx, uint8_t mode, mps_alloc *alloc,
  * \return         A negative error code on failure.
  *
  */
-MBEDTLS_MPS_PUBLIC int mps_l1_set_bio( mps_l1 *ctx,
-                                       void* send_ctx, mps_l0_send_t *send,
-                                       void* recv_ctx, mps_l0_recv_t *recv );
+int mps_l1_set_bio( mps_l1 *ctx,
+                    void* send_ctx, mps_l0_send_t *send,
+                    void* recv_ctx, mps_l0_recv_t *recv );
 
 /**
  * \brief          Free a Layer 1 context.
@@ -371,8 +370,11 @@ MBEDTLS_MPS_PUBLIC int mps_l1_set_bio( mps_l1 *ctx,
  *                 Layer 1 context.
  *
  */
+void mps_l1_free( mps_l1 *ctx );
 
-MBEDTLS_MPS_PUBLIC void mps_l1_free( mps_l1 *ctx );
+#if defined(MBEDTLS_MPS_SEPARATE_LAYERS)      ||       \
+    defined(MBEDTLS_MPS_TOP_TRANSLATION_UNIT) ||       \
+    defined(MBEDTLS_MPS_NO_STATIC_FUNCTIONS)
 
 /*
  * Read interface
@@ -397,8 +399,8 @@ MBEDTLS_MPS_PUBLIC void mps_l1_free( mps_l1 *ctx );
  *
  */
 
-MBEDTLS_MPS_PUBLIC int mps_l1_fetch( mps_l1 *ctx, unsigned char **buf,
-                                     mbedtls_mps_size_t desired );
+MBEDTLS_MPS_INTERNAL_API int mps_l1_fetch( mps_l1 *ctx, unsigned char **buf,
+                                           mbedtls_mps_size_t desired );
 
 /**
  * \brief          Mark the previously fetched data as consumed.
@@ -412,7 +414,7 @@ MBEDTLS_MPS_PUBLIC int mps_l1_fetch( mps_l1 *ctx, unsigned char **buf,
  *                 are invalid after this call and must not be accessed anymore.
  */
 
-MBEDTLS_MPS_PUBLIC int mps_l1_consume( mps_l1 *ctx );
+MBEDTLS_MPS_INTERNAL_API int mps_l1_consume( mps_l1 *ctx );
 
 #if defined(MBEDTLS_MPS_PROTO_DTLS)
 /**
@@ -429,7 +431,7 @@ MBEDTLS_MPS_PUBLIC int mps_l1_consume( mps_l1 *ctx );
  *                 it should ignore the currently processed datagram.
  */
 
-MBEDTLS_MPS_PUBLIC int mps_l1_skip( mps_l1 *ctx );
+MBEDTLS_MPS_INTERNAL_API int mps_l1_skip( mps_l1 *ctx );
 #endif /* MBEDTLS_MPS_PROTO_DTLS */
 
 /*
@@ -457,7 +459,7 @@ MBEDTLS_MPS_PUBLIC int mps_l1_skip( mps_l1 *ctx );
  *
  */
 
-MBEDTLS_MPS_PUBLIC int mps_l1_write( mps_l1 *ctx, unsigned char **buf,
+MBEDTLS_MPS_INTERNAL_API int mps_l1_write( mps_l1 *ctx, unsigned char **buf,
                                      mbedtls_mps_size_t *buflen );
 
 /**
@@ -477,7 +479,7 @@ MBEDTLS_MPS_PUBLIC int mps_l1_write( mps_l1 *ctx, unsigned char **buf,
  *
  */
 
-MBEDTLS_MPS_PUBLIC int mps_l1_dispatch( mps_l1 *ctx,
+MBEDTLS_MPS_INTERNAL_API int mps_l1_dispatch( mps_l1 *ctx,
                                         mbedtls_mps_size_t len,
                                         mbedtls_mps_size_t *pending );
 
@@ -503,7 +505,7 @@ MBEDTLS_MPS_PUBLIC int mps_l1_dispatch( mps_l1 *ctx,
  *
  */
 
-MBEDTLS_MPS_PUBLIC int mps_l1_flush( mps_l1 *ctx );
+MBEDTLS_MPS_INTERNAL_API int mps_l1_flush( mps_l1 *ctx );
 
 /**
  * \brief          Check if a read request will necessarily involve
@@ -523,7 +525,7 @@ MBEDTLS_MPS_PUBLIC int mps_l1_flush( mps_l1 *ctx );
  *
  */
 
-MBEDTLS_MPS_PUBLIC int mps_l1_read_dependency( mps_l1 *ctx );
+MBEDTLS_MPS_INTERNAL_API int mps_l1_read_dependency( mps_l1 *ctx );
 
 /**
  * \brief          Check if a write request can be potentially be served
@@ -549,7 +551,10 @@ MBEDTLS_MPS_PUBLIC int mps_l1_read_dependency( mps_l1 *ctx );
  *
  */
 
-MBEDTLS_MPS_PUBLIC int mps_l1_write_dependency( mps_l1 *ctx );
+MBEDTLS_MPS_INTERNAL_API int mps_l1_write_dependency( mps_l1 *ctx );
 
+#endif /* MBEDTLS_MPS_SEPARATE_LAYERS      ||
+          MBEDTLS_MPS_TOP_TRANSLATION_UNIT ||
+          MBEDTLS_MPS_NO_STATIC_FUNCTIONS  */
 
 #endif /* MBEDTLS_MPS_BUFFER_LAYER_H */

@@ -956,11 +956,11 @@ static inline mps_l1* mbedtls_mps_l2_get_l1( mbedtls_mps_l2 *l2 )
  *
  */
 
-MBEDTLS_MPS_PUBLIC int mps_l2_init( mbedtls_mps_l2 *ctx, mps_l1 *l1, uint8_t mode,
-                                    mbedtls_mps_size_t max_read,
-                                    mbedtls_mps_size_t max_write,
-                                    int (*f_rng)(void *, unsigned char *, size_t),
-                                    void *p_rng );
+int mps_l2_init( mbedtls_mps_l2 *ctx, mps_l1 *l1, uint8_t mode,
+                 mbedtls_mps_size_t max_read,
+                 mbedtls_mps_size_t max_write,
+                 int (*f_rng)(void *, unsigned char *, size_t),
+                 void *p_rng );
 
 /**
  * \brief          This functions frees a Layer 2 context.
@@ -971,8 +971,7 @@ MBEDTLS_MPS_PUBLIC int mps_l2_init( mbedtls_mps_l2 *ctx, mps_l1 *l1, uint8_t mod
  * \return         A negative error code on failure.
  *
  */
-
-MBEDTLS_MPS_PUBLIC int mps_l2_free( mbedtls_mps_l2 *ctx );
+int mps_l2_free( mbedtls_mps_l2 *ctx );
 
 typedef uint8_t mbedtls_mps_record_split_config_t;
 #define MBEDTLS_MPS_SPLIT_DISABLED ( (mbedtls_mps_record_split_config_t) 0 )
@@ -1062,6 +1061,10 @@ static inline int mps_l2_config_add_type( mbedtls_mps_l2 *ctx,
     return( 0 );
 }
 
+#if defined(MBEDTLS_MPS_SEPARATE_LAYERS)      ||       \
+    defined(MBEDTLS_MPS_TOP_TRANSLATION_UNIT) ||       \
+    defined(MBEDTLS_MPS_NO_STATIC_FUNCTIONS)
+
 /**
  * \brief          Configure the TLS/DTLS version to be used
  *                 by a Layer 2 context.
@@ -1075,7 +1078,7 @@ static inline int mps_l2_config_add_type( mbedtls_mps_l2 *ctx,
  *
  */
 
-MBEDTLS_MPS_PUBLIC int mps_l2_config_version( mbedtls_mps_l2 *ctx, uint8_t version );
+int mps_l2_config_version( mbedtls_mps_l2 *ctx, uint8_t version );
 
 /**
  * \brief          Query a Layer 2 context for incoming data.
@@ -1095,7 +1098,7 @@ MBEDTLS_MPS_PUBLIC int mps_l2_config_version( mbedtls_mps_l2 *ctx, uint8_t versi
  *
  */
 
-MBEDTLS_MPS_PUBLIC int mps_l2_read_start( mbedtls_mps_l2 *ctx, mps_l2_in *in );
+MBEDTLS_MPS_INTERNAL_API int mps_l2_read_start( mbedtls_mps_l2 *ctx, mps_l2_in *in );
 
 /**
  * \brief          Signal that incoming data previously
@@ -1109,7 +1112,7 @@ MBEDTLS_MPS_PUBLIC int mps_l2_read_start( mbedtls_mps_l2 *ctx, mps_l2_in *in );
  *
  */
 
-MBEDTLS_MPS_PUBLIC int mps_l2_read_done( mbedtls_mps_l2 *ctx );
+MBEDTLS_MPS_INTERNAL_API int mps_l2_read_done( mbedtls_mps_l2 *ctx );
 
 /**
  * \brief          Request to prepare the writing of data of
@@ -1128,7 +1131,7 @@ MBEDTLS_MPS_PUBLIC int mps_l2_read_done( mbedtls_mps_l2 *ctx );
  *
  */
 
-MBEDTLS_MPS_PUBLIC int mps_l2_write_start( mbedtls_mps_l2 *ctx, mps_l2_out *out );
+MBEDTLS_MPS_INTERNAL_API int mps_l2_write_start( mbedtls_mps_l2 *ctx, mps_l2_out *out );
 
 /**
  * \brief          Signal that the writing of outgoing data via
@@ -1147,7 +1150,7 @@ MBEDTLS_MPS_PUBLIC int mps_l2_write_start( mbedtls_mps_l2 *ctx, mps_l2_out *out 
  *
  */
 
-MBEDTLS_MPS_PUBLIC int mps_l2_write_done( mbedtls_mps_l2 *ctx );
+MBEDTLS_MPS_INTERNAL_API int mps_l2_write_done( mbedtls_mps_l2 *ctx );
 
 /**
  * \brief          Attempt to deliver all outgoing data previously
@@ -1165,7 +1168,7 @@ MBEDTLS_MPS_PUBLIC int mps_l2_write_done( mbedtls_mps_l2 *ctx );
  *
  */
 
-MBEDTLS_MPS_PUBLIC int mps_l2_write_flush( mbedtls_mps_l2 *ctx );
+MBEDTLS_MPS_INTERNAL_API int mps_l2_write_flush( mbedtls_mps_l2 *ctx );
 
 /**
  * \brief          Configure Layer 2 context to allow communication
@@ -1212,8 +1215,7 @@ MBEDTLS_MPS_PUBLIC int mps_l2_write_flush( mbedtls_mps_l2 *ctx );
  * \return         A negative error code on failure.
  *
  */
-
-MBEDTLS_MPS_PUBLIC int mps_l2_epoch_add( mbedtls_mps_l2 *ctx,
+MBEDTLS_MPS_INTERNAL_API int mps_l2_epoch_add( mbedtls_mps_l2 *ctx,
                                  mbedtls_mps_transform_t *transform,
                                  mbedtls_mps_epoch_id *epoch );
 
@@ -1233,11 +1235,12 @@ MBEDTLS_MPS_PUBLIC int mps_l2_epoch_add( mbedtls_mps_l2 *ctx,
  *
  */
 
-int mps_l2_epoch_usage( mbedtls_mps_l2 *ctx,
+MBEDTLS_MPS_INTERNAL_API int mps_l2_epoch_usage( mbedtls_mps_l2 *ctx,
                         mbedtls_mps_epoch_id epoch_id,
                         mbedtls_mps_epoch_usage clear,
                         mbedtls_mps_epoch_usage set );
 
+#if defined(MBEDTLS_MPS_PROTO_DTLS)
 /**
  * \brief          Enforce that the next outgoing record of the
  *                 specified epoch uses a particular record sequence number.
@@ -1259,7 +1262,7 @@ int mps_l2_epoch_usage( mbedtls_mps_l2 *ctx,
  * \return         \c 0 on success.
  *
  */
-MBEDTLS_MPS_PUBLIC int mps_l2_force_next_sequence_number( mbedtls_mps_l2 *ctx,
+MBEDTLS_MPS_INTERNAL_API int mps_l2_force_next_sequence_number( mbedtls_mps_l2 *ctx,
                                                   mbedtls_mps_epoch_id epoch_id,
                                                   uint64_t ctr );
 
@@ -1284,8 +1287,12 @@ MBEDTLS_MPS_PUBLIC int mps_l2_force_next_sequence_number( mbedtls_mps_l2 *ctx,
  * \return         \c 0 on success.
  *
  */
-MBEDTLS_MPS_PUBLIC int mps_l2_get_last_sequence_number( mbedtls_mps_l2 *ctx,
+MBEDTLS_MPS_INTERNAL_API int mps_l2_get_last_sequence_number( mbedtls_mps_l2 *ctx,
                                                 mbedtls_mps_epoch_id epoch_id,
                                                 uint64_t *ctr );
+#endif /* MBEDTLS_MPS_PROTO_DTLS */
+
+#endif /* MBEDTLS_MPS_SEPARATE_LAYERS) ||
+          MBEDTLS_MPS_TOP_TRANSLATION_UNIT */
 
 #endif /* MBEDTLS_MPS_RECORD_LAYER_H */

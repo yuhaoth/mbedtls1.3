@@ -1398,7 +1398,7 @@ static int ssl_write_new_session_ticket_process( mbedtls_ssl_context *ssl )
 {
     int ret = 0;
 
-    MBEDTLS_SSL_PROC_CHK( ssl_write_new_session_ticket_coordinate( ssl ) );
+    MBEDTLS_SSL_PROC_CHK_NEG( ssl_write_new_session_ticket_coordinate( ssl ) );
 
     if( ret == SSL_NEW_SESSION_TICKET_WRITE )
     {
@@ -1686,7 +1686,7 @@ int ssl_read_end_of_early_data_process( mbedtls_ssl_context* ssl )
     int ret;
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> parse end_of_early_data" ) );
 
-    MBEDTLS_SSL_PROC_CHK( ssl_read_end_of_early_data_coordinate( ssl ) );
+    MBEDTLS_SSL_PROC_CHK_NEG( ssl_read_end_of_early_data_coordinate( ssl ) );
     if( ret == SSL_END_OF_EARLY_DATA_EXPECT )
     {
 #if defined(MBEDTLS_ZERO_RTT)
@@ -1729,7 +1729,7 @@ static int ssl_end_of_early_data_fetch( mbedtls_ssl_context *ssl )
     int ret;
     mbedtls_mps_handshake_in msg;
 
-    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read( &ssl->mps.l4 ) );
+    MBEDTLS_SSL_PROC_CHK_NEG( mbedtls_mps_read( &ssl->mps.l4 ) );
 
     if( ret != MBEDTLS_MPS_MSG_HS )
         return( MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE );
@@ -1848,7 +1848,7 @@ int ssl_read_early_data_process( mbedtls_ssl_context* ssl )
     int ret;
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> parse early data" ) );
 
-    MBEDTLS_SSL_PROC_CHK( ssl_read_early_data_coordinate( ssl ) );
+    MBEDTLS_SSL_PROC_CHK_NEG( ssl_read_early_data_coordinate( ssl ) );
 
     if( ret == SSL_EARLY_DATA_EXPECT )
     {
@@ -1902,7 +1902,7 @@ static int ssl_early_data_fetch( mbedtls_ssl_context *ssl,
                                  mbedtls_reader **rd )
 {
     int ret;
-    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read( &ssl->mps.l4 ) );
+    MBEDTLS_SSL_PROC_CHK_NEG( mbedtls_mps_read( &ssl->mps.l4 ) );
 
     if( ret != MBEDTLS_MPS_MSG_APP )
         return( MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE );
@@ -1965,7 +1965,7 @@ static int ssl_read_early_data_coordinate( mbedtls_ssl_context* ssl )
     MBEDTLS_SSL_PROC_CHK( mbedtls_mps_set_incoming_keys( &ssl->mps.l4,
                                                    ssl->epoch_earlydata ) );
 
-    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read( &ssl->mps.l4 ) );
+    MBEDTLS_SSL_PROC_CHK_NEG( mbedtls_mps_read( &ssl->mps.l4 ) );
     if( ret != MBEDTLS_MPS_MSG_APP )
         return( SSL_EARLY_DATA_SKIP );
 
@@ -2099,16 +2099,21 @@ static int ssl_client_hello_process( mbedtls_ssl_context* ssl )
 #if defined(MBEDTLS_SSL_USE_MPS)
 
     MBEDTLS_SSL_PROC_CHK( ssl_client_hello_fetch( ssl, &msg ) );
-    MBEDTLS_SSL_PROC_CHK( mbedtls_reader_get_ext( msg.handle,
-                                                  msg.length,
-                                                  &buf,
-                                                  NULL ) );
+    ret = mbedtls_reader_get_ext( msg.handle, msg.length,
+                                  &buf, NULL );
+    if( ret == MBEDTLS_ERR_READER_OUT_OF_DATA )
+    {
+        MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read_pause( &ssl->mps.l4 ) );
+        return( MBEDTLS_ERR_SSL_WANT_READ );
+    }
+    MBEDTLS_SSL_PROC_CHK( ret );
+
     buflen = msg.length;
 
     mbedtls_ssl_add_hs_hdr_to_checksum( ssl,
                   MBEDTLS_SSL_HS_CLIENT_HELLO, msg.length );
 
-    MBEDTLS_SSL_PROC_CHK( ssl_client_hello_parse( ssl, buf, buflen ) );
+    MBEDTLS_SSL_PROC_CHK_NEG( ssl_client_hello_parse( ssl, buf, buflen ) );
     hrr_required = ret;
 
     MBEDTLS_SSL_PROC_CHK( mbedtls_reader_commit_ext( msg.handle ) );
@@ -2143,7 +2148,7 @@ static int ssl_client_hello_fetch( mbedtls_ssl_context* ssl,
 {
     int ret;
 
-    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read( &ssl->mps.l4 ) );
+    MBEDTLS_SSL_PROC_CHK_NEG( mbedtls_mps_read( &ssl->mps.l4 ) );
 
 #if defined(MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE)
     if( ret == MBEDTLS_MPS_MSG_CCS )
@@ -4406,7 +4411,7 @@ static int ssl_certificate_request_process( mbedtls_ssl_context* ssl )
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> write certificate request" ) );
 
     /* Coordination step: Check if we need to send a CertificateRequest */
-    MBEDTLS_SSL_PROC_CHK( ssl_certificate_request_coordinate( ssl ) );
+    MBEDTLS_SSL_PROC_CHK_NEG( ssl_certificate_request_coordinate( ssl ) );
 
 #if defined(MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED)
     if( ret == SSL_CERTIFICATE_REQUEST_SEND )

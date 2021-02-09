@@ -26,39 +26,14 @@
 #if defined(MBEDTLS_MPS_SEPARATE_LAYERS) ||     \
     defined(MBEDTLS_MPS_TOP_TRANSLATION_UNIT)
 
+#include "layer3_internal.h"
+
 #if defined(MBEDTLS_MPS_TRACE)
 static int trace_id = TRACE_BIT_LAYER_3;
 #endif /* MBEDTLS_MPS_TRACE */
 
 #include <stdlib.h>
 
-/*
- * Forward declarations for some internal functions
- */
-
-/* Reading-related */
-MBEDTLS_MPS_STATIC int l3_parse_hs_header( uint8_t mode, mbedtls_reader *rd,
-                               mps_l3_hs_in_internal *in );
-
-MBEDTLS_MPS_STATIC int l3_parse_alert( mbedtls_reader *rd,
-                           mps_l3_alert_in_internal *alert );
-
-MBEDTLS_MPS_STATIC int l3_parse_ccs( mbedtls_reader *rd );
-MBEDTLS_MPS_STATIC int l3_prepare_write( mps_l3 *l3, mbedtls_mps_msg_type_t type,
-                             mbedtls_mps_epoch_id epoch );
-MBEDTLS_MPS_STATIC int l3_check_clear( mps_l3 *l3 );
-
-#if defined(MBEDTLS_MPS_PROTO_TLS)
-MBEDTLS_MPS_STATIC int l3_parse_hs_header_tls( mbedtls_reader *rd,
-                                               mps_l3_hs_in_internal *in );
-MBEDTLS_MPS_STATIC int l3_write_hs_header_tls( mps_l3_hs_out_internal *hs );
-#endif /* MBEDTLS_MPS_PROTO_TLS */
-
-#if defined(MBEDTLS_MPS_PROTO_DTLS)
-MBEDTLS_MPS_STATIC int l3_parse_hs_header_dtls( mbedtls_reader *rd,
-                                                mps_l3_hs_in_internal *in );
-MBEDTLS_MPS_STATIC int l3_write_hs_header_dtls( mps_l3_hs_out_internal *hs );
-#endif /* MBEDTLS_MPS_PROTO_DTLS */
 
 /*
  * Constants and sizes from the [D]TLS standard
@@ -124,6 +99,8 @@ int mps_l3_free( mps_l3 *l3 )
  * Reading API
  */
 
+/* TODO: Will we need this at some point? */
+__attribute__((unused))
 /* Check if a message is ready to be processed. */
 int mps_l3_read_check( mps_l3 *l3 )
 {
@@ -133,7 +110,7 @@ int mps_l3_read_check( mps_l3 *l3 )
 /* Attempt to receive an incoming message from Layer 2. */
 int mps_l3_read( mps_l3 *l3 )
 {
-    int res;
+    int ret;
     mps_l2_in in;
     mbedtls_mps_transport_type const mode =
         mbedtls_mps_l3_conf_get_mode( &l3->conf );
@@ -171,9 +148,21 @@ int mps_l3_read( mps_l3 *l3 )
     /* Request incoming data from Layer 2 context */
     TRACE( trace_comment, "Check for incoming data on Layer 2" );
 
-    res = mps_l2_read_start( l2, &in );
-    if( res != 0 )
-        RETURN( res );
+    /* TODO: Some compilers complain that `in` could still be
+     * uninitialized after the call has succeeded.
+     * I can't figure out what, if anything, is wrong here.
+     * Need to take a look again at a later point.
+     *
+     * For now, just force the initialization.
+     */
+    {
+        mps_l2_in l2_in_zero = { 0 };
+        in = l2_in_zero;
+    }
+
+    ret = mps_l2_read_start( l2, &in );
+    if( ret != 0 )
+        RETURN( ret );
 
     TRACE( trace_comment, "Opened incoming datastream" );
     TRACE( trace_comment, "* Epoch: %u", (unsigned) in.epoch );
@@ -200,8 +189,8 @@ int mps_l3_read( mps_l3 *l3 )
              * - For DTLS, an incomplete alert message
              *   is treated as a fatal error.
              */
-            res = l3_parse_alert( in.rd, &l3->io.in.alert );
-            if( res == MBEDTLS_ERR_READER_OUT_OF_DATA )
+            ret = l3_parse_alert( in.rd, &l3->io.in.alert );
+            if( ret == MBEDTLS_ERR_READER_OUT_OF_DATA )
             {
 #if defined(MBEDTLS_MPS_PROTO_DTLS)
                 if( MBEDTLS_MPS_IS_DTLS( mode ) )
@@ -215,9 +204,9 @@ int mps_l3_read( mps_l3 *l3 )
                 if( MBEDTLS_MPS_IS_TLS( mode ) )
                 {
                     TRACE( trace_comment, "Not enough data available in record to read alert message" );
-                    res = mps_l2_read_done( l2 );
-                    if( res != 0 )
-                        RETURN( res );
+                    ret = mps_l2_read_done( l2 );
+                    if( ret != 0 )
+                        RETURN( ret );
 
                     /* No records are buffered by Layer 2, so progress depends
                      * on the availability of the underlying transport. We could
@@ -228,8 +217,8 @@ int mps_l3_read( mps_l3 *l3 )
                 }
 #endif /* MBEDTLS_MPS_PROTO_TLS */
             }
-            else if( res != 0 )
-                RETURN( res );
+            else if( ret != 0 )
+                RETURN( ret );
 
             break;
 
@@ -241,9 +230,9 @@ int mps_l3_read( mps_l3 *l3 )
              * records, and hence malicious length-0 records of type CCS
              * will already have been silently skipped over (DTLS) or
              * lead to failure (TLS) by Layer 2. */
-            res = l3_parse_ccs( in.rd );
-            if( res != 0 )
-                RETURN( res );
+            ret = l3_parse_ccs( in.rd );
+            if( ret != 0 )
+                RETURN( ret );
             break;
 
         case MBEDTLS_MPS_MSG_ACK:
@@ -304,10 +293,10 @@ int mps_l3_read( mps_l3 *l3 )
                      * - For DTLS, an incomplete handshake header
                      *   is treated as a fatal error.
                      */
-                    res = l3_parse_hs_header(
+                    ret = l3_parse_hs_header(
                         mbedtls_mps_l3_conf_get_mode( &l3->conf ), in.rd,
                         &l3->io.in.hs );
-                    if( res == MBEDTLS_ERR_READER_OUT_OF_DATA )
+                    if( ret == MBEDTLS_ERR_READER_OUT_OF_DATA )
                     {
 #if defined(MBEDTLS_MPS_PROTO_DTLS)
                         if( MBEDTLS_MPS_IS_DTLS( mode ) )
@@ -322,9 +311,9 @@ int mps_l3_read( mps_l3 *l3 )
                         {
                             TRACE( trace_comment, "Incomplete handshake header in current record -- wait for more data." );
 
-                            res = mps_l2_read_done( l2 );
-                            if( res != 0 )
-                                RETURN( res );
+                            ret = mps_l2_read_done( l2 );
+                            if( ret != 0 )
+                                RETURN( ret );
 
                             /* We could return WANT_READ here, because
                              * _currently_ no records are buffered by Layer 2,
@@ -338,8 +327,8 @@ int mps_l3_read( mps_l3 *l3 )
                         }
 #endif /* MBEDTLS_MPS_PROTO_TLS */
                     }
-                    else if( res != 0 )
-                        RETURN( res );
+                    else if( ret != 0 )
+                        RETURN( ret );
 
                     /* Setup the extended reader keeping track of the
                      * global message bounds. */
@@ -379,22 +368,25 @@ int mps_l3_read( mps_l3 *l3 )
 #endif /* MBEDTLS_MPS_ENABLE_ASSERTIONS */
                     break;
 
-#if defined(MBEDTLS_MPS_ENABLE_ASSERTIONS)
+
                 case MPS_L3_HS_ACTIVE:
                 default:
+#if defined(MBEDTLS_MPS_ENABLE_ASSERTIONS)
                     /* Should never happen -- if a handshake message
                      * is active, then this must be reflected in the
                      * state variable l3->io.in.state. */
                     TRACE( trace_error, "ASSERTION FAILURE!" );
                     RETURN( MBEDTLS_ERR_MPS_INTERNAL_ERROR );
+#else
+                    break;
 #endif /* MBEDTLS_MPS_ENABLE_ASSERTIONS */
             }
 
             /* Bind the raw reader (supplying record contents) to the
              * extended reader (keeping track of global message bounds). */
-            res = mbedtls_reader_attach( &l3->io.in.hs.rd_ext, in.rd );
-            if( res != 0 )
-                RETURN( res );
+            ret = mbedtls_reader_attach( &l3->io.in.hs.rd_ext, in.rd );
+            if( ret != 0 )
+                RETURN( ret );
 
             /* Make changes to internal structures only now
              * that we know that everything went well. */
@@ -1254,6 +1246,8 @@ int mps_l3_pause_handshake( mps_l3 *l3 )
 }
 #endif /* MBEDTLS_MPS_PROTO_TLS */
 
+/* TODO: Will we need this at some point? */
+__attribute__((unused))
 /* Abort the writing of a handshake message. */
 int mps_l3_write_abort_handshake( mps_l3 *l3 )
 {
@@ -1606,6 +1600,38 @@ MBEDTLS_MPS_STATIC int l3_prepare_write( mps_l3 *l3, mbedtls_mps_msg_type_t port
     l3->io.out.state   = port;
     RETURN( 0 );
 }
+
+int mps_l3_epoch_add( mps_l3 *ctx,
+                      mbedtls_mps_transform_t *transform,
+                      mbedtls_mps_epoch_id *epoch )
+{
+    return( mps_l2_epoch_add( ctx->conf.l2, transform, epoch ) );
+}
+
+
+int mps_l3_epoch_usage( mps_l3 *ctx,
+                        mbedtls_mps_epoch_id epoch_id,
+                        mbedtls_mps_epoch_usage clear,
+                        mbedtls_mps_epoch_usage set )
+{
+    return( mps_l2_epoch_usage( ctx->conf.l2, epoch_id, clear, set ) );
+}
+
+#if defined(MBEDTLS_MPS_PROTO_DTLS)
+int mps_l3_force_next_sequence_number( mps_l3 *ctx,
+                                       mbedtls_mps_epoch_id epoch_id,
+                                       uint64_t ctr )
+{
+    return( mps_l2_force_next_sequence_number( ctx->conf.l2, epoch_id, ctr ) );
+}
+
+int mps_l3_get_last_sequence_number( mps_l3 *ctx,
+                                     mbedtls_mps_epoch_id epoch_id,
+                                     uint64_t *ctr )
+{
+    return( mps_l2_get_last_sequence_number( ctx->conf.l2, epoch_id, ctr ) );
+}
+#endif /* MBEDTLS_MPS_PROTO_DTLS */
 
 #endif /* MBEDTLS_MPS_SEPARATE_LAYERS) ||
           MBEDTLS_MPS_TOP_TRANSLATION_UNIT */

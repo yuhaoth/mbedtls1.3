@@ -19,11 +19,7 @@
  *  This file is part of Mbed TLS (https://tls.mbed.org)
  */
 
-#include "mbedtls/mps/mps.h"
-#include "mbedtls/mps/trace.h"
 #include "mbedtls/mps/common.h"
-
-#include "mbedtls/platform_util.h"
 
 /* Embed all other MPS translation units into here
  * for release builds on constrained systems to allow
@@ -36,6 +32,11 @@
 #include "layer2.c"
 #include "layer3.c"
 #endif /* MBEDTLS_MPS_SEPARATE_LAYERS */
+
+#include "mbedtls/mps/mps.h"
+#include "mbedtls/mps/trace.h"
+
+#include "mbedtls/platform_util.h"
 
 #include <string.h>
 
@@ -57,18 +58,32 @@ static int trace_id = TRACE_BIT_LAYER_4;
 
 /* Convenience macro to quit a function by jumping to its
  * exit section in case a function call returns an error. */
-#define MPS_CHK( exp )                            \
-    do                                            \
-    {                                             \
-        if( ( ret = ( exp ) ) < 0 )               \
-        {                                         \
-            goto exit;                            \
-        }                                         \
+#define MPS_CHK( exp )                                  \
+    do                                                  \
+    {                                                   \
+        ret = ( exp );                                  \
+        if( ret != 0 )                                  \
+        {                                               \
+            if( ret > 0 )                               \
+                ret = MBEDTLS_ERR_MPS_INTERNAL_ERROR;   \
+            goto exit;                                  \
+        }                                               \
+    } while( 0 )
+
+#define MPS_CHK_NEG( exp )                              \
+    do                                                  \
+    {                                                   \
+        ret = ( exp );                                  \
+        if( ret < 0 )                                   \
+        {                                               \
+            goto exit;                                  \
+        }                                               \
     } while( 0 )
 
 /* Convenience macro for the failure handling
  * within internal functions. */
 #define MPS_INTERNAL_FAILURE_HANDLER                    \
+    goto exit; /* Silence unused label warnings */      \
     exit:                                               \
     RETURN( ret );
 
@@ -76,6 +91,7 @@ static int trace_id = TRACE_BIT_LAYER_4;
  * within functions at MPS-API boundary, which
  * should block the MPS on most errors. */
 #define MPS_API_BOUNDARY_FAILURE_HANDLER                \
+    goto exit; /* Silence unused label warnings */      \
     exit:                                               \
     ret = mps_generic_failure_handler( mps, ret );      \
     RETURN( ret );                                      \
@@ -407,6 +423,11 @@ MBEDTLS_MPS_STATIC int mps_handle_pending_retransmit( mbedtls_mps *mps );
 MBEDTLS_MPS_STATIC int mps_reassembly_init( mbedtls_mps *mps );
 MBEDTLS_MPS_STATIC int mps_reassembly_free( mbedtls_mps *mps );
 
+MBEDTLS_MPS_STATIC void mps_bitmask_set( unsigned char *mask,
+                                         size_t first_bit,
+                                         size_t bitlen );
+MBEDTLS_MPS_STATIC int mps_bitmask_check( unsigned char *mask, size_t len );
+
 /* Feed a handshake fragment into the reassembly module, which might
  * drop the fragment, buffer it as (part of) a future message, or use
  * it for the reassembly of the next handshake message.
@@ -428,6 +449,9 @@ MBEDTLS_MPS_STATIC int mps_reassembly_pause( mbedtls_mps *mps );
 
 MBEDTLS_MPS_STATIC int mps_reassembly_forget( mbedtls_mps *mps );
 
+MBEDTLS_MPS_STATIC int mps_recognition_info_match(
+    mbedtls_mps_recognition_info *info, mps_l3_handshake_in *hs_in );
+
 #define MPS_RETRANSMIT_ONLY_EMPTY_FRAGMENTS 0
 #define MPS_RETRANSMIT_FULL_FLIGHT          1
 
@@ -441,7 +465,7 @@ MBEDTLS_MPS_STATIC int mps_reassembly_forget( mbedtls_mps *mps );
  */
 
 MBEDTLS_MPS_STATIC int mps_clear_pending( mbedtls_mps *mps,
-                              uint8_t allow_active_hs )
+                                          uint8_t allow_active_hs )
 {
     int ret = 0;
     mbedtls_mps_transport_type const mode =
@@ -458,6 +482,7 @@ MBEDTLS_MPS_STATIC int mps_clear_pending( mbedtls_mps *mps,
         MPS_CHK( mps_dtls_frag_out_unpause( mps, allow_active_hs ) );
     }
 #else
+    ((void) allow_active_hs);
     ((void) mode);
 #endif /* MBEDTLS_MPS_PROTO_DTLS */
 
@@ -663,7 +688,6 @@ MBEDTLS_MPS_STATIC int mps_generic_failure_handler( mbedtls_mps *mps, int ret )
     }
 #else
     ((void) error_string);
-    ((void) mode);
 #endif /* MBEDTLS_MPS_ENABLE_ASSERTIONS */
 
     if( MBEDTLS_MPS_ERROR_IS_FATAL( flags ) )
@@ -876,6 +900,7 @@ int mbedtls_mps_init( mbedtls_mps *mps,
                       uint8_t mode,
                       size_t max_write )
 {
+    int ret = 0;
     TRACE_INIT( "mbedtls_mps_init" );
 
     mps->conf.l3   = l3;
@@ -937,7 +962,7 @@ int mbedtls_mps_init( mbedtls_mps *mps,
     ((void) max_write);
 #endif /* MBEDTLS_MPS_PROTO_DTLS */
 
-    RETURN( 0 );
+    MPS_INTERNAL_FAILURE_HANDLER
 }
 
 int mbedtls_mps_free( mbedtls_mps *mps )
@@ -992,17 +1017,20 @@ int mbedtls_mps_read( mbedtls_mps *mps )
     }
 
 #if defined(MBEDTLS_MPS_PROTO_DTLS)
-    /* Check if a future message has been buffered. */
-    ret = mps_reassembly_check_and_load( mps );
-    if( ret != MBEDTLS_ERR_MPS_REASSEMBLY_FEED_NEED_MORE )
+    if( MBEDTLS_MPS_IS_DTLS( mode ) )
     {
-        MPS_CHK( ret );
-        RETURN( MBEDTLS_MPS_MSG_HS );
+        /* Check if a future message has been buffered. */
+        ret = mps_reassembly_check_and_load( mps );
+        if( ret != MBEDTLS_ERR_MPS_REASSEMBLY_FEED_NEED_MORE )
+        {
+            MPS_CHK( ret );
+            RETURN( MBEDTLS_MPS_MSG_HS );
+        }
     }
 #endif /* MBEDTLS_MPS_PROTO_DTLS */
 
     /* Fetch a new message (fragment) from Layer 3. */
-    MPS_CHK( mps_l3_read( l3 ) );
+    MPS_CHK_NEG( mps_l3_read( l3 ) );
 
     /* Go through the various message types:
      * - Fatal alerts and (non-fatal) closure notifications are handled here,
@@ -1037,22 +1065,30 @@ int mbedtls_mps_read( mbedtls_mps *mps )
             TRACE( trace_comment, "CCS message received from L3." );
 
             MPS_CHK( mps_l3_read_ccs( l3, &ccs_l3 ) );
-
-            /* For DTLS, Layer 3 might be configured to pass through
-             * records on multiple epochs for the purpose of detection
-             * of flight retransmissions.
-             *
-             * CCS messages, however, should always be discarded
-             * if they're not secured through the current incoming epoch.
-             */
-
             MPS_CHK( mps_l3_read_consume( l3 ) );
 
-            if( ccs_l3.epoch != mps->in_epoch )
+#if defined(MBEDTLS_MPS_PROTO_TLS)
+            MBEDTLS_MPS_IF_TLS( mode )
             {
+                /* TLS */
+            }
+#endif /* MBEDTLS_MPS_PROTO_TLS */
+#if defined(MBEDTLS_MPS_PROTO_DTLS)
+            if( MBEDTLS_MPS_IS_DTLS( mode ) &&
+                ccs_l3.epoch != mps->in_epoch )
+            {
+                /* For DTLS, Layer 3 might be configured to pass through
+                 * records on multiple epochs for the purpose of detection
+                 * of flight retransmissions.
+                 *
+                 * CCS messages, however, should always be discarded
+                 * if they're not secured through the current incoming epoch.
+                 */
+
                 /* The exit handler will retry the read. */
                 MPS_CHK( MBEDTLS_ERR_MPS_RETRY );
             }
+#endif /* MBEDTLS_MPS_PROTO_DTLS */
 
             mps->in.state = MBEDTLS_MPS_MSG_CCS;
             RETURN( MBEDTLS_MPS_MSG_CCS );
@@ -1218,7 +1254,6 @@ int mbedtls_mps_read_handshake( mbedtls_mps *mps,
     int ret;
     mbedtls_mps_transport_type const mode =
         mbedtls_mps_conf_get_mode( &mps->conf );
-    mps_l3* const l3 = mbedtls_mps_l4_get_l3( mps );
     TRACE_INIT( "mbedtls_mps_read_handshake" );
 
     ret = mps_check_read( mps );
@@ -1232,6 +1267,7 @@ int mbedtls_mps_read_handshake( mbedtls_mps *mps,
     MBEDTLS_MPS_IF_TLS( mode )
     {
         /* TLS */
+        mps_l3* const l3 = mbedtls_mps_l4_get_l3( mps );
         mps_l3_handshake_in hs_l3;
         MPS_CHK( mps_l3_read_handshake( l3, &hs_l3 ) );
 
@@ -1309,6 +1345,7 @@ int mbedtls_mps_read_set_flags( mbedtls_mps *mps, mbedtls_mps_msg_flags flags )
         mps->in.flags = flags;
 #else
     ((void) mode);
+    ((void) flags);
 #endif /* MBEDTLS_MPS_PROTO_DTLS */
 
     MPS_API_BOUNDARY_FAILURE_HANDLER
@@ -1319,7 +1356,6 @@ int mbedtls_mps_read_pause( mbedtls_mps *mps )
     int ret;
     mbedtls_mps_transport_type const mode =
         mbedtls_mps_conf_get_mode( &mps->conf );
-    mps_l3* const l3 = mbedtls_mps_l4_get_l3( mps );
 
     MBEDTLS_MPS_STATE_VALIDATE( mps->in.state == MBEDTLS_MPS_MSG_HS,
       "mbedtls_mps_read_pause() must only be called if HS msg is open." );
@@ -1332,6 +1368,7 @@ int mbedtls_mps_read_pause( mbedtls_mps *mps )
     if( MBEDTLS_MPS_IS_TLS( mode ) )
     {
         /* TLS */
+        mps_l3* const l3 = mbedtls_mps_l4_get_l3( mps );
         MPS_CHK( mps_l3_read_pause_handshake( l3 ) );
     }
 #endif /* MBEDTLS_MPS_PROTO_TLS */
@@ -1459,6 +1496,7 @@ int mbedtls_mps_write_set_flags( mbedtls_mps *mps, mbedtls_mps_msg_flags flags )
         mps->dtls.io.out.flags = flags;
 #else
     ((void) mode);
+    ((void) flags);
 #endif /* MBEDTLS_MPS_PROTO_DTLS */
 
     MPS_API_BOUNDARY_FAILURE_HANDLER
@@ -1485,7 +1523,6 @@ int mbedtls_mps_write_handshake( mbedtls_mps *mps,
     int ret;
     mbedtls_mps_transport_type const mode =
         mbedtls_mps_conf_get_mode( &mps->conf );
-    mps_l3* const l3 = mbedtls_mps_l4_get_l3( mps );
 
     TRACE_INIT( "mbedtls_mps_write_handshake, type %u, length %u",
                 (unsigned) hs_new->type, (unsigned) hs_new->length );
@@ -1497,7 +1534,23 @@ int mbedtls_mps_write_handshake( mbedtls_mps *mps,
     {
         /* TLS
          * Write a handshake message on Layer 3 and forward the writer. */
-        mps_l3_handshake_out hs_l3;
+        mps_l3* const l3 = mbedtls_mps_l4_get_l3( mps );
+
+        /* TODO: This zero-initialization should not be necessary, but
+         * some compilers complain if it's omitted, for the following reason:
+         * At the moment, each layer has its own configuration, and in particular
+         * its own `mode` identifier. This code-path is guarded by the L4-mode
+         * being stream, while mps_l3_write_handshake() operates based on the L3-mode.
+         * If the L4-mode is stream and the L3-mode is datagram, then
+         * mps_l3_write_handshake() would use some fields of hs_l3 uninitialized,
+         * which is what the compiler warns about. In a well-formed configuration,
+         * this should never happen, but the compiler can't reason about it.
+         * So either we need to silence the compiler by something overhead-generating
+         * like the zero-initialization below, or some attribute, or we remove
+         * the duplication of the modes altogether -- which would ultimately
+         * be the best solution. */
+
+        mps_l3_handshake_out hs_l3 = { 0 };
 
         /* Retransmission isn't needed in TLS. */
         ((void) cb);
@@ -1781,19 +1834,6 @@ int mbedtls_mps_write_alert( mbedtls_mps *mps,
     MPS_API_BOUNDARY_FAILURE_HANDLER
 }
 
-MBEDTLS_MPS_ALWAYS_INLINE int mps_out_flight_get_retransmission_handle(
-    mbedtls_mps *mps, mbedtls_mps_retransmission_handle **hdl, size_t offset )
-{
-    TRACE_INIT( "mps_get_transmission_handle, index %u",
-                (unsigned) offset );
-
-    MBEDTLS_MPS_ASSERT_RAW( offset < MBEDTLS_MPS_MAX_FLIGHT_LENGTH,
-                            "Invalid retransmission handle index" );
-
-    *hdl = &mps->dtls.outgoing.backup[ offset ];
-    RETURN( 0 );
-}
-
 int mbedtls_mps_write_ccs( mbedtls_mps *mps )
 {
     int ret;
@@ -1830,7 +1870,6 @@ int mbedtls_mps_write_pause( mbedtls_mps *mps )
     int ret;
     mbedtls_mps_transport_type const mode =
         mbedtls_mps_conf_get_mode( &mps->conf );
-    mps_l3* const l3 = mbedtls_mps_l4_get_l3( mps );
     TRACE_INIT( "mbedtls_mps_write_pause" );
 
     ret = mps_check_write( mps );
@@ -1840,6 +1879,7 @@ int mbedtls_mps_write_pause( mbedtls_mps *mps )
 #if defined(MBEDTLS_MPS_PROTO_TLS)
     if( MBEDTLS_MPS_IS_TLS( mode ) )
     {
+        mps_l3* const l3 = mbedtls_mps_l4_get_l3( mps );
         MPS_CHK( mps_l3_pause_handshake( l3 ) );
     }
 #endif /* MBEDTLS_MPS_PROTO_TLS */
@@ -2011,7 +2051,7 @@ int mbedtls_mps_add_key_material( mbedtls_mps *mps,
 int mbedtls_mps_set_incoming_keys( mbedtls_mps *mps,
                                    mbedtls_mps_epoch_id id )
 {
-    int ret;
+    int ret = 0;
     mps_l3* const l3 = mbedtls_mps_l4_get_l3( mps );
     TRACE_INIT( "mbedtls_mps_set_incoming_keys, epoch %d", (int) id );
 
@@ -2047,7 +2087,7 @@ int mbedtls_mps_set_incoming_keys( mbedtls_mps *mps,
 int mbedtls_mps_set_outgoing_keys( mbedtls_mps *mps,
                                    mbedtls_mps_epoch_id id )
 {
-    int ret;
+    int ret = 0;
     mps_l3* const l3 = mbedtls_mps_l4_get_l3( mps );
     TRACE_INIT( "mbedtls_mps_set_outgoing_keys, epoch %d", (int) id );
 
@@ -2932,6 +2972,19 @@ MBEDTLS_MPS_STATIC int mps_retransmit_out( mbedtls_mps *mps )
     return( mps_retransmit_out_core( mps, MPS_RETRANSMIT_FULL_FLIGHT ) );
 }
 
+MBEDTLS_MPS_ALWAYS_INLINE int mps_out_flight_get_retransmission_handle(
+    mbedtls_mps *mps, mbedtls_mps_retransmission_handle **hdl, size_t offset )
+{
+    TRACE_INIT( "mps_get_transmission_handle, index %u",
+                (unsigned) offset );
+
+    MBEDTLS_MPS_ASSERT_RAW( offset < MBEDTLS_MPS_MAX_FLIGHT_LENGTH,
+                            "Invalid retransmission handle index" );
+
+    *hdl = &mps->dtls.outgoing.backup[ offset ];
+    RETURN( 0 );
+}
+
 MBEDTLS_MPS_STATIC int mps_retransmit_out_core( mbedtls_mps *mps,
                                     uint8_t mode )
 {
@@ -3183,7 +3236,13 @@ MBEDTLS_MPS_STATIC
 int mbedtls_mps_retransmission_handle_incoming_fragment( mbedtls_mps *mps )
 {
     int ret = 0;
-    mps_l3_handshake_in hs_l3;
+
+    /* TODO: This zero-initialization should not be necessary, but
+     * some compilers complain if it's omitted, for the following reason:
+     * At the moment, each layer has its own configuration, and in particular
+     * its own `mode` identifier, and if L4 and L3 mode get out of sync,
+     * we'd use parts of `hs_l3` uninitialized below. */
+    mps_l3_handshake_in hs_l3 = { 0 };
     mps_l3* const l3 = mbedtls_mps_l4_get_l3( mps );
     TRACE_INIT( "mps_retransmission_handle_incoming_fragment" );
 
@@ -3695,7 +3754,7 @@ MBEDTLS_MPS_STATIC int mbedtls_mps_retransmission_handle_resend( mbedtls_mps *mp
 
 
 MBEDTLS_MPS_STATIC int mps_dtls_frag_out_unpause( mbedtls_mps *mps,
-                                      uint8_t allow_active_hs )
+                                                  uint8_t allow_active_hs )
 {
     int ret;
     TRACE_INIT( "mps_dtls_frag_out_unpause" );
@@ -3747,6 +3806,7 @@ MBEDTLS_MPS_STATIC int mps_dtls_frag_out_unpause( mbedtls_mps *mps,
         /* TODO: Think about the classification of this error
          * again. Is it always an internal error, or can this
          * be triggered by malformed input data as well? */
+        ((void) allow_active_hs);
         MBEDTLS_MPS_ASSERT( allow_active_hs,
                             "Caller doesn't allow active handshake" );
         TRACE( trace_comment, "HS msg not yet fully written -- keep open" );
