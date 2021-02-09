@@ -5814,7 +5814,7 @@ int mbedtls_ssl_read( mbedtls_ssl_context *ssl, unsigned char *buf, size_t len )
     size_t data_read;
     unsigned char *src;
     mbedtls_reader *rd;
-    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read( &ssl->mps.l4 ) );
+    MBEDTLS_SSL_PROC_CHK_NEG( mbedtls_mps_read( &ssl->mps.l4 ) );
     msg_type = ret;
 
     if( msg_type == MBEDTLS_MPS_MSG_HS )

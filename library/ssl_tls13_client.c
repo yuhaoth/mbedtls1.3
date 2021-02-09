@@ -131,7 +131,7 @@ int ssl_write_early_data_process( mbedtls_ssl_context* ssl )
 #endif /* MBEDTLS_SSL_USE_MPS */
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> write early data" ) );
 
-    MBEDTLS_SSL_PROC_CHK( ssl_write_early_data_coordinate( ssl ) );
+    MBEDTLS_SSL_PROC_CHK_NEG( ssl_write_early_data_coordinate( ssl ) );
     if( ret == SSL_EARLY_DATA_WRITE )
     {
 #if defined(MBEDTLS_ZERO_RTT)
@@ -344,8 +344,7 @@ int ssl_write_end_of_early_data_process( mbedtls_ssl_context* ssl )
     int ret;
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> write EndOfEarlyData" ) );
 
-    MBEDTLS_SSL_PROC_CHK( ssl_write_end_of_early_data_coordinate( ssl ) );
-
+    MBEDTLS_SSL_PROC_CHK_NEG( ssl_write_end_of_early_data_coordinate( ssl ) );
     if( ret == SSL_END_OF_EARLY_DATA_WRITE )
     {
 #if defined(MBEDTLS_SSL_USE_MPS)
@@ -1320,7 +1319,7 @@ static int ssl_client_hello_process( mbedtls_ssl_context* ssl )
     mbedtls_mps_handshake_out msg;
     unsigned char *buf;
     mbedtls_mps_size_t buf_len, msg_len;
-#else
+#else /* MBEDTLS_SSL_USE_MPS */
     size_t msg_len, len_without_binders;
     unsigned char *buf;
     size_t len;
@@ -1356,8 +1355,7 @@ static int ssl_client_hello_process( mbedtls_ssl_context* ssl )
                                         msg_len );
     ssl->handshake->update_checksum( ssl, buf, len_without_binders );
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && \
-    defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
+#if defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
     /* Patch the PSK binder after updating the HS checksum. */
     {
 
@@ -1372,8 +1370,7 @@ static int ssl_client_hello_process( mbedtls_ssl_context* ssl )
         ssl->handshake->update_checksum( ssl, buf + len_without_binders,
                                          msg_len - len_without_binders );
     }
-#endif /* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED &&
-          MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+#endif /* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED */
 
     /* Commit message */
     MBEDTLS_SSL_PROC_CHK( mbedtls_writer_commit_partial_ext( msg.handle,
@@ -2307,7 +2304,7 @@ static int ssl_certificate_request_process( mbedtls_ssl_context* ssl )
      * - Fetch record
      * - Make sure it's either a CertificateRequest or a ServerHelloDone
      */
-    MBEDTLS_SSL_PROC_CHK( ssl_certificate_request_coordinate( ssl ) );
+    MBEDTLS_SSL_PROC_CHK_NEG( ssl_certificate_request_coordinate( ssl ) );
 
 #if defined(MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED)
     if( ret == SSL_CERTIFICATE_REQUEST_EXPECT_REQUEST )
@@ -2379,7 +2376,7 @@ static int ssl_certificate_request_coordinate( mbedtls_ssl_context* ssl )
         return( SSL_CERTIFICATE_REQUEST_SKIP );
     }
 
-    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read( &ssl->mps.l4 ) );
+    MBEDTLS_SSL_PROC_CHK_NEG( mbedtls_mps_read( &ssl->mps.l4 ) );
     if( ret != MBEDTLS_MPS_MSG_HS )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad certificate request message" ) );
@@ -2402,7 +2399,7 @@ static int ssl_certificate_request_fetch( mbedtls_ssl_context* ssl,
                                           mbedtls_mps_handshake_in *msg )
 {
     int ret;
-    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read( &ssl->mps.l4 ) );
+    MBEDTLS_SSL_PROC_CHK_NEG( mbedtls_mps_read( &ssl->mps.l4 ) );
     if( ret != MBEDTLS_MPS_MSG_HS )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad certificate request message" ) );
@@ -2712,7 +2709,7 @@ static int ssl_encrypted_extensions_fetch( mbedtls_ssl_context* ssl,
                                            mbedtls_mps_handshake_in *msg )
 {
     int ret;
-    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read( &ssl->mps.l4 ) );
+    MBEDTLS_SSL_PROC_CHK_NEG( mbedtls_mps_read( &ssl->mps.l4 ) );
     if( ret != MBEDTLS_MPS_MSG_HS )
     {
         SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_UNEXPECTED_MESSAGE );
@@ -2979,10 +2976,10 @@ static int ssl_server_hello_process( mbedtls_ssl_context* ssl )
      */
 
 #if defined(MBEDTLS_SSL_USE_MPS)
-    MBEDTLS_SSL_PROC_CHK( ssl_server_hello_coordinate( ssl, &msg,
+    MBEDTLS_SSL_PROC_CHK_NEG( ssl_server_hello_coordinate( ssl, &msg,
                                                  &buf, &buflen ) );
 #else /* MBEDTLS_SSL_USE_MPS */
-    MBEDTLS_SSL_PROC_CHK( ssl_server_hello_coordinate( ssl,
+    MBEDTLS_SSL_PROC_CHK_NEG( ssl_server_hello_coordinate( ssl,
                                                  &buf, &buflen ) );
 #endif /* MBEDTLS_SSL_USE_MPS */
 
@@ -3067,7 +3064,7 @@ static int ssl_server_hello_coordinate( mbedtls_ssl_context* ssl,
     int ret;
     unsigned char *peak;
 
-    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read( &ssl->mps.l4 ) );
+    MBEDTLS_SSL_PROC_CHK_NEG( mbedtls_mps_read( &ssl->mps.l4 ) );
 
 #if defined(MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE)
     if( ret == MBEDTLS_MPS_MSG_CCS )

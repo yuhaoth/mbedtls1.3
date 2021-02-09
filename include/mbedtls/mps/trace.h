@@ -154,7 +154,7 @@ void trace_indent( int level, trace_type ty );
 #define TRACE( type, fmt, ... ) do { } while( 0 )
 #define TRACE_INIT( fmt, ... )  do { } while( 0 )
 #define TRACE_END               do { } while( 0 )
-#define RETURN( val ) return( val );
+#define RETURN( val ) return( val )
 
 #endif /* MBEDTLS_MPS_TRACE */
 

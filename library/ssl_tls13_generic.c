@@ -762,7 +762,7 @@ int mbedtls_ssl_write_change_cipher_spec_process( mbedtls_ssl_context* ssl )
 
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> write change cipher spec" ) );
 
-    MBEDTLS_SSL_PROC_CHK( ssl_write_change_cipher_spec_coordinate( ssl ) );
+    MBEDTLS_SSL_PROC_CHK_NEG( ssl_write_change_cipher_spec_coordinate( ssl ) );
 
     if( ret == SSL_WRITE_CCS_NEEDED )
     {
@@ -1801,7 +1801,7 @@ int mbedtls_ssl_certificate_verify_process( mbedtls_ssl_context* ssl )
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> write certificate verify" ) );
 
     /* Coordination step: Check if we need to send a CertificateVerify */
-    MBEDTLS_SSL_PROC_CHK( ssl_certificate_verify_coordinate( ssl ) );
+    MBEDTLS_SSL_PROC_CHK_NEG( ssl_certificate_verify_coordinate( ssl ) );
 
     if( ret == SSL_CERTIFICATE_VERIFY_SEND )
     {
@@ -2176,7 +2176,7 @@ int mbedtls_ssl_read_certificate_verify_process( mbedtls_ssl_context* ssl )
     /* Coordination step */
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> parse certificate verify" ) );
 
-    MBEDTLS_SSL_PROC_CHK( ssl_read_certificate_verify_coordinate( ssl ) );
+    MBEDTLS_SSL_PROC_CHK_NEG( ssl_read_certificate_verify_coordinate( ssl ) );
 
 #if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED) // TBD: double-check
     if( ret == SSL_CERTIFICATE_VERIFY_READ )
@@ -2271,7 +2271,7 @@ static int ssl_read_certificate_verify_fetch( mbedtls_ssl_context *ssl,
 {
     int ret;
 
-    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read( &ssl->mps.l4 ) );
+    MBEDTLS_SSL_PROC_CHK_NEG( mbedtls_mps_read( &ssl->mps.l4 ) );
 
     if( ret != MBEDTLS_MPS_MSG_HS )
         return( MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE );
@@ -2573,7 +2573,7 @@ int mbedtls_ssl_write_certificate_process( mbedtls_ssl_context* ssl )
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> write certificate" ) );
 
     /* Coordination: Check if we need to send a certificate. */
-    MBEDTLS_SSL_PROC_CHK( ssl_write_certificate_coordinate( ssl ) );
+    MBEDTLS_SSL_PROC_CHK_NEG( ssl_write_certificate_coordinate( ssl ) );
 
 #if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
     if( ret == SSL_WRITE_CERTIFICATE_AVAILABLE )
@@ -2912,7 +2912,7 @@ int mbedtls_ssl_read_certificate_process( mbedtls_ssl_context* ssl )
     /* Coordination:
      * Check if we expect a certificate, and if yes,
      * check if a non-empty certificate has been sent. */
-    MBEDTLS_SSL_PROC_CHK( ssl_read_certificate_coordinate( ssl ) );
+    MBEDTLS_SSL_PROC_CHK_NEG( ssl_read_certificate_coordinate( ssl ) );
 #if defined(MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED)
     if( ret == SSL_CERTIFICATE_EXPECTED )
     {
@@ -2979,7 +2979,7 @@ static int ssl_read_certificate_fetch( mbedtls_ssl_context *ssl,
 {
     int ret;
 
-    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read( &ssl->mps.l4 ) );
+    MBEDTLS_SSL_PROC_CHK_NEG( mbedtls_mps_read( &ssl->mps.l4 ) );
 
     if( ret != MBEDTLS_MPS_MSG_HS )
         return( MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE );
@@ -4548,7 +4548,7 @@ static int ssl_read_finished_fetch( mbedtls_ssl_context *ssl,
 {
     int ret;
 
-    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read( &ssl->mps.l4 ) );
+    MBEDTLS_SSL_PROC_CHK_NEG( mbedtls_mps_read( &ssl->mps.l4 ) );
 
     if( ret != MBEDTLS_MPS_MSG_HS )
         return( MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE );
@@ -4937,7 +4937,7 @@ static int ssl_new_session_ticket_fetch( mbedtls_ssl_context *ssl,
                                          mbedtls_mps_handshake_in *msg )
 {
     int ret;
-    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read( &ssl->mps.l4 ) );
+    MBEDTLS_SSL_PROC_CHK_NEG( mbedtls_mps_read( &ssl->mps.l4 ) );
 
     if( ret != MBEDTLS_MPS_MSG_HS )
         return( MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE );

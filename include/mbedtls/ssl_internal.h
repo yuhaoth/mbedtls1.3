@@ -138,7 +138,18 @@
 #define MBEDTLS_VARINT_HDR_2 64
 enum varint_length_enum { VARINT_LENGTH_FAILURE = 0, VARINT_LENGTH_1_BYTE = 1, VARINT_LENGTH_2_BYTE = 2, VARINT_LENGTH_3_BYTE = 3 };
 
-#define MBEDTLS_SSL_PROC_CHK(f) do { if( ( ret = f ) < 0 ) goto cleanup; } while( 0 )
+#define MBEDTLS_SSL_PROC_CHK(f)     \
+    do {                                                        \
+        ret = (f);                                              \
+        if( ret != 0 )                                          \
+        {                                                       \
+            if( ret > 0 )                                       \
+                ret = MBEDTLS_ERR_SSL_INTERNAL_ERROR;           \
+            goto cleanup;                                       \
+        }                                                       \
+    } while( 0 )
+
+#define MBEDTLS_SSL_PROC_CHK_NEG(f) do { if( ( ret = f ) < 0 )  goto cleanup; } while( 0 )
 
 /*
  * DTLS retransmission states, see RFC 6347 4.2.4

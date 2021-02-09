@@ -533,7 +533,7 @@ static inline mbedtls_mps_l2* mbedtls_mps_l3_get_l2( mps_l3 *l3 )
  * \return        A negative error code on failure.
  */
 
-MBEDTLS_MPS_PUBLIC int mps_l3_init( mps_l3 *l3, mbedtls_mps_l2 *l2, uint8_t mode );
+int mps_l3_init( mps_l3 *l3, mbedtls_mps_l2 *l2, uint8_t mode );
 
 /**
  * \brief         Free a Layer 3 context.
@@ -546,7 +546,11 @@ MBEDTLS_MPS_PUBLIC int mps_l3_init( mps_l3 *l3, mbedtls_mps_l2 *l2, uint8_t mode
  * \return        \c 0 on success.
  * \return        A negative error code on failure.
  */
-MBEDTLS_MPS_PUBLIC int mps_l3_free( mps_l3 *l3 );
+int mps_l3_free( mps_l3 *l3 );
+
+#if defined(MBEDTLS_MPS_SEPARATE_LAYERS)      ||       \
+    defined(MBEDTLS_MPS_TOP_TRANSLATION_UNIT) ||       \
+    defined(MBEDTLS_MPS_NO_STATIC_FUNCTIONS)
 
 /**
  * \brief         Request an incoming message from Layer 3.
@@ -570,7 +574,7 @@ MBEDTLS_MPS_PUBLIC int mps_l3_free( mps_l3 *l3 );
 /* OPTIMIZATION:
  * Subsume mps_l3_read() with mps_l3_read_XXX() by filling
  * an indexed union of mps_l3_in_xxx on success. */
-MBEDTLS_MPS_PUBLIC int mps_l3_read( mps_l3 *l3 );
+MBEDTLS_MPS_INTERNAL_API int mps_l3_read( mps_l3 *l3 );
 
 /**
  * \brief       Check if a message has been read.
@@ -588,7 +592,7 @@ MBEDTLS_MPS_PUBLIC int mps_l3_read( mps_l3 *l3 );
  *              and only reports if a message is available
  *              through a prior call to mps_l3_read().
  */
-MBEDTLS_MPS_PUBLIC int mps_l3_read_check( mps_l3 * l3 );
+MBEDTLS_MPS_INTERNAL_API int mps_l3_read_check( mps_l3 * l3 );
 
 /**
  * \brief         Get a handle to the contents of an incoming handshake message.
@@ -607,7 +611,7 @@ MBEDTLS_MPS_PUBLIC int mps_l3_read_check( mps_l3 * l3 );
  */
 /* TODO: Consider making this function static inline
  * to avoid a layer of indirection. */
-MBEDTLS_MPS_PUBLIC int mps_l3_read_handshake( mps_l3 *l3, mps_l3_handshake_in *hs );
+MBEDTLS_MPS_INTERNAL_API int mps_l3_read_handshake( mps_l3 *l3, mps_l3_handshake_in *hs );
 
 /**
  * \brief         Get a handle to the contents of an incoming
@@ -626,7 +630,7 @@ MBEDTLS_MPS_PUBLIC int mps_l3_read_handshake( mps_l3 *l3, mps_l3_handshake_in *h
  *                through a call to mps_l3_dispatch().
  */
 
-MBEDTLS_MPS_PUBLIC int mps_l3_read_app( mps_l3 *l3, mps_l3_app_in *app );
+MBEDTLS_MPS_INTERNAL_API int mps_l3_read_app( mps_l3 *l3, mps_l3_app_in *app );
 
 /**
  * \brief         Get a handle to the contents of an incoming alert message.
@@ -638,7 +642,7 @@ MBEDTLS_MPS_PUBLIC int mps_l3_read_app( mps_l3 *l3, mps_l3_app_in *app );
  * \return        A negative error code on failure.
  *
  */
-MBEDTLS_MPS_PUBLIC int mps_l3_read_alert( mps_l3 *l3, mps_l3_alert_in *alert );
+MBEDTLS_MPS_INTERNAL_API int mps_l3_read_alert( mps_l3 *l3, mps_l3_alert_in *alert );
 
 /**
  * \brief         Get a handle to the contents of an incoming CCS message.
@@ -650,7 +654,7 @@ MBEDTLS_MPS_PUBLIC int mps_l3_read_alert( mps_l3 *l3, mps_l3_alert_in *alert );
  * \return        A negative error code on failure.
  *
  */
-MBEDTLS_MPS_PUBLIC int mps_l3_read_ccs( mps_l3 *l3, mps_l3_ccs_in *ccs );
+MBEDTLS_MPS_INTERNAL_API int mps_l3_read_ccs( mps_l3 *l3, mps_l3_ccs_in *ccs );
 
 #if defined(MBEDTLS_MPS_PROTO_TLS)
 /**
@@ -676,7 +680,7 @@ MBEDTLS_MPS_PUBLIC int mps_l3_read_ccs( mps_l3 *l3, mps_l3_ccs_in *ccs );
  *                the user must call mps_l3_read_handshake() again to
  *                retrieve the handle to use.
  */
-MBEDTLS_MPS_PUBLIC int mps_l3_read_pause_handshake( mps_l3 *l3 );
+MBEDTLS_MPS_INTERNAL_API int mps_l3_read_pause_handshake( mps_l3 *l3 );
 #endif /* MBEDTLS_MPS_PROTO_TLS */
 
 /**
@@ -699,7 +703,7 @@ MBEDTLS_MPS_PUBLIC int mps_l3_read_pause_handshake( mps_l3 *l3 );
  * \return        Another negative error code for other kinds of failure.
  *
  */
-MBEDTLS_MPS_PUBLIC int mps_l3_read_consume( mps_l3 *l3 );
+MBEDTLS_MPS_INTERNAL_API int mps_l3_read_consume( mps_l3 *l3 );
 
 /**
  * \brief           Start writing an outgoing handshake message.
@@ -710,7 +714,7 @@ MBEDTLS_MPS_PUBLIC int mps_l3_read_consume( mps_l3 *l3 );
  * \return          \c 0 on success.
  * \return          A negative error code on failure.
  */
-MBEDTLS_MPS_PUBLIC int mps_l3_write_handshake( mps_l3 *l3, mps_l3_handshake_out *hs );
+MBEDTLS_MPS_INTERNAL_API int mps_l3_write_handshake( mps_l3 *l3, mps_l3_handshake_out *hs );
 
 /**
  * \brief           Start writing outgoing application data.
@@ -721,7 +725,7 @@ MBEDTLS_MPS_PUBLIC int mps_l3_write_handshake( mps_l3 *l3, mps_l3_handshake_out 
  * \return          \c 0 on success.
  * \return          A negative error code on failure.
  */
-MBEDTLS_MPS_PUBLIC int mps_l3_write_app( mps_l3 *l3, mps_l3_app_out *app );
+MBEDTLS_MPS_INTERNAL_API int mps_l3_write_app( mps_l3 *l3, mps_l3_app_out *app );
 
 /**
  * \brief           Start writing an outgoing alert message.
@@ -732,7 +736,7 @@ MBEDTLS_MPS_PUBLIC int mps_l3_write_app( mps_l3 *l3, mps_l3_app_out *app );
  * \return          \c 0 on success.
  * \return          A negative error code on failure.
  */
-MBEDTLS_MPS_PUBLIC int mps_l3_write_alert( mps_l3 *l3, mps_l3_alert_out *alert );
+MBEDTLS_MPS_INTERNAL_API int mps_l3_write_alert( mps_l3 *l3, mps_l3_alert_out *alert );
 
 /**
  * \brief           Start writing an outgoing CCS message.
@@ -749,7 +753,7 @@ MBEDTLS_MPS_PUBLIC int mps_l3_write_alert( mps_l3 *l3, mps_l3_alert_out *alert )
  *                  in the same way as the writing of messages of
  *                  other content types.
  */
-MBEDTLS_MPS_PUBLIC int mps_l3_write_ccs( mps_l3 *l3, mps_l3_ccs_out *ccs );
+MBEDTLS_MPS_INTERNAL_API int mps_l3_write_ccs( mps_l3 *l3, mps_l3_ccs_out *ccs );
 
 #if defined(MBEDTLS_MPS_PROTO_TLS)
 /**
@@ -775,7 +779,7 @@ MBEDTLS_MPS_PUBLIC int mps_l3_write_ccs( mps_l3 *l3, mps_l3_ccs_out *ccs );
  *                  the user must call mps_l3_write_handshake() again to
  *                  retrieve the handle to use.
  */
-MBEDTLS_MPS_PUBLIC int mps_l3_pause_handshake( mps_l3 *l3 );
+MBEDTLS_MPS_INTERNAL_API int mps_l3_pause_handshake( mps_l3 *l3 );
 #endif /* MBEDTLS_MPS_PROTO_TLS */
 
 /**
@@ -791,7 +795,7 @@ MBEDTLS_MPS_PUBLIC int mps_l3_pause_handshake( mps_l3 *l3 );
  * \return          0 on success, a negative error code on failure.
  *
  */
-MBEDTLS_MPS_PUBLIC int mps_l3_write_abort_handshake( mps_l3 *l3 );
+MBEDTLS_MPS_INTERNAL_API int mps_l3_write_abort_handshake( mps_l3 *l3 );
 
 /**
  * \brief         Conclude the writing of the current outgoing message.
@@ -811,7 +815,7 @@ MBEDTLS_MPS_PUBLIC int mps_l3_write_abort_handshake( mps_l3 *l3 );
  * \return        A negative error code on failure.
  *
  */
-MBEDTLS_MPS_PUBLIC int mps_l3_dispatch( mps_l3 *l3 );
+MBEDTLS_MPS_INTERNAL_API int mps_l3_dispatch( mps_l3 *l3 );
 
 /**
  * \brief         Flush all outgoing messages dispatched so far
@@ -831,37 +835,30 @@ MBEDTLS_MPS_PUBLIC int mps_l3_dispatch( mps_l3 *l3 );
  * \note          In case #MPS_ERR_WANT_WRITE is returned, the function can
  *                be called again to retry the flush.
  */
-MBEDTLS_MPS_PUBLIC int mps_l3_flush( mps_l3 *l3 );
+MBEDTLS_MPS_INTERNAL_API int mps_l3_flush( mps_l3 *l3 );
 
+MBEDTLS_MPS_INTERNAL_API int mps_l3_epoch_add( mps_l3 *ctx,
+                                      mbedtls_mps_transform_t *transform,
+                                      mbedtls_mps_epoch_id *epoch );
 
-static inline int mps_l3_epoch_add( mps_l3 *ctx,
-                                    mbedtls_mps_transform_t *transform,
-                                    mbedtls_mps_epoch_id *epoch )
-{
-    return( mps_l2_epoch_add( ctx->conf.l2, transform, epoch ) );
-}
-
-
-static inline int mps_l3_epoch_usage( mps_l3 *ctx,
+MBEDTLS_MPS_INTERNAL_API int mps_l3_epoch_usage( mps_l3 *ctx,
                                       mbedtls_mps_epoch_id epoch_id,
                                       mbedtls_mps_epoch_usage clear,
-                                      mbedtls_mps_epoch_usage set )
-{
-    return( mps_l2_epoch_usage( ctx->conf.l2, epoch_id, clear, set ) );
-}
+                                      mbedtls_mps_epoch_usage set );
 
-static inline int mps_l3_force_next_sequence_number( mps_l3 *ctx,
-                                                mbedtls_mps_epoch_id epoch_id,
-                                                uint64_t ctr )
-{
-    return( mps_l2_force_next_sequence_number( ctx->conf.l2, epoch_id, ctr ) );
-}
+#if defined(MBEDTLS_MPS_PROTO_DTLS)
+MBEDTLS_MPS_INTERNAL_API int mps_l3_force_next_sequence_number(
+                                      mps_l3 *ctx,
+                                      mbedtls_mps_epoch_id epoch_id,
+                                      uint64_t ctr );
 
-static inline int mps_l3_get_last_sequence_number( mps_l3 *ctx,
-                                                mbedtls_mps_epoch_id epoch_id,
-                                                uint64_t *ctr )
-{
-    return( mps_l2_get_last_sequence_number( ctx->conf.l2, epoch_id, ctr ) );
-}
+MBEDTLS_MPS_INTERNAL_API int mps_l3_get_last_sequence_number(
+                                      mps_l3 *ctx,
+                                      mbedtls_mps_epoch_id epoch_id,
+                                      uint64_t *ctr );
+#endif /* MBEDTLS_MPS_PROTO_DTLS */
+
+#endif /* MBEDTLS_MPS_SEPARATE_LAYERS) ||
+          MBEDTLS_MPS_TOP_TRANSLATION_UNIT */
 
 #endif /* MBEDTLS_MPS_MESSAGE_EXTRACTION_LAYER_H */

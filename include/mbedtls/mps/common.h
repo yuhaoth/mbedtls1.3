@@ -255,13 +255,13 @@ typedef uint8_t mbedtls_mps_epoch_offset_t;
 #define MBEDTLS_MPS_STATE_VALIDATE( cond, string )               \
     do                                                           \
     {                                                            \
-        ( cond );                                                \
+        (void) ( cond );                                         \
     } while( 0 )
 
 #define MBEDTLS_MPS_STATE_VALIDATE_RAW( cond, string )           \
     do                                                           \
     {                                                            \
-        ( cond );                                                \
+        (void)( cond );                                          \
     } while( 0 )
 
 #endif /* MBEDTLS_MPS_STATE_VALIDATION */
@@ -290,7 +290,8 @@ typedef uint8_t mbedtls_mps_epoch_offset_t;
 
 #else /* MBEDTLS_MPS_ENABLE_ASSERTIONS */
 
-#define MBEDTLS_MPS_ASSERT( cond, string ) do {} while( 0 )
+#define MBEDTLS_MPS_ASSERT( cond, string )     do {} while( 0 )
+#define MBEDTLS_MPS_ASSERT_RAW( cond, string ) do {} while( 0 )
 
 #endif /* MBEDTLS_MPS_ENABLE_ASSERTIONS */
 
@@ -309,9 +310,9 @@ typedef uint8_t mbedtls_mps_epoch_offset_t;
 #endif /* MBEDTLS_MPS_NO_STATIC_FUNCTIONS */
 
 #if !defined(MBEDTLS_MPS_SEPARATE_LAYERS)
-#define MBEDTLS_MPS_PUBLIC MBEDTLS_MPS_STATIC
+#define MBEDTLS_MPS_INTERNAL_API MBEDTLS_MPS_STATIC
 #else
-#define MBEDTLS_MPS_PUBLIC
+#define MBEDTLS_MPS_INTERNAL_API
 #endif /* MBEDTLS_MPS_SEPARATE_LAYERS */
 
 /** Internal macro sanity check. */
@@ -398,8 +399,10 @@ typedef uint8_t mbedtls_mps_transport_type;
 #if defined(MBEDTLS_MPS_PROTO_BOTH)
 #define MBEDTLS_MPS_IS_DTLS( mode )               \
     ( (mode) == MBEDTLS_MPS_MODE_DATAGRAM )
+/* Define `1` in a roundabout way using `mode` to avoid unused
+ * variable warnings. */
 #define MBEDTLS_MPS_ELSE_IF_DTLS( mode )         \
-    else
+    else if( ( mode ) == ( mode ) )
 #else
 /* Define `1` in a roundabout way using `mode` to avoid unused
  * variable warnings. */
