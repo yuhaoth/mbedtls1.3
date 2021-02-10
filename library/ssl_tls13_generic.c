@@ -151,6 +151,66 @@ static uint32_t get_varint_value( const uint32_t input )
 }
 #endif /* MBEDTLS_SSL_TLS13_CTLS */
 
+#if defined(MBEDTLS_SSL_USE_MPS)
+int mbedtls_ssl_mps_fetch_full_hs_msg( mbedtls_ssl_context *ssl,
+                                       unsigned hs_type,
+                                       unsigned char **buf,
+                                       size_t *buflen )
+{
+    int ret;
+    mbedtls_mps_handshake_in msg;
+
+    MBEDTLS_SSL_PROC_CHK_NEG( mbedtls_mps_read( &ssl->mps.l4 ) );
+
+    if( ret != MBEDTLS_MPS_MSG_HS )
+        return( MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE );
+
+    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read_handshake( &ssl->mps.l4,
+                                                      &msg ) );
+
+    if( msg.type != hs_type )
+        return( MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE );
+
+    ret = mbedtls_reader_get_ext( msg.handle,
+                                  msg.length,
+                                  buf,
+                                  NULL );
+
+    if( ret == MBEDTLS_ERR_READER_OUT_OF_DATA )
+    {
+        MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read_pause( &ssl->mps.l4 ) );
+        ret = MBEDTLS_ERR_SSL_WANT_READ;
+    }
+    else
+    {
+        MBEDTLS_SSL_PROC_CHK( ret );
+
+        /* *buf already set in mbedtls_reader_get_ext() */
+        *buflen = msg.length;
+    }
+
+cleanup:
+
+    return( ret );
+}
+
+int mbedtls_ssl_mps_hs_consume_full_hs_msg( mbedtls_ssl_context *ssl )
+{
+    int ret;
+    mbedtls_mps_handshake_in msg;
+
+    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read_handshake( &ssl->mps.l4,
+                                                      &msg ) );
+
+    MBEDTLS_SSL_PROC_CHK( mbedtls_reader_commit_ext( msg.handle ) );
+    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read_consume( &ssl->mps.l4 ) );
+
+cleanup:
+
+    return( ret );
+}
+#endif /* MBEDTLS_SSL_USE_MPS */
+
 void mbedtls_ssl_add_hs_msg_to_checksum( mbedtls_ssl_context *ssl,
                                          unsigned hs_type,
                                          unsigned char const *msg,
