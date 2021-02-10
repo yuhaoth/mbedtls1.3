@@ -2798,7 +2798,7 @@ static int ssl_write_certificate_write( mbedtls_ssl_context* ssl,
     while ( crt != NULL )
     {
         n = crt->raw.len;
-        if( n > MBEDTLS_SSL_MAX_CONTENT_LEN - 3 - i )
+        if( n > buflen - 3 - i )
         {
             MBEDTLS_SSL_DEBUG_MSG( 1, ( "certificate too large, %d > %d",
                                         i + 3 + n, MBEDTLS_SSL_MAX_CONTENT_LEN ) );
