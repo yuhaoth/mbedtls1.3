@@ -2270,6 +2270,27 @@ int mbedtls_ssl_fetch_input( mbedtls_ssl_context *ssl, size_t nb_want )
     return( 0 );
 }
 
+#if defined(MBEDTLS_SSL_USE_MPS)
+int mbedtls_ssl_flush_output( mbedtls_ssl_context *ssl )
+{
+    int ret;
+
+    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_flush( &ssl->mps.l4 ) );
+
+cleanup:
+
+#if defined(MBEDTLS_SSL_USE_MPS)
+    /*
+     * Remap MPS error codes
+     *
+     * TODO: Consolidate MPS and SSL error codes, so that this isn't necessary.
+     */
+    ret = mbedtls_ssl_mps_remap_error( ret );
+#endif /* MBEDTLS_SSL_USE_MPS */
+
+    return( ret);
+}
+#else /* MBEDTLS_SSL_USE_MPS */
 /*
  * Flush any data not yet written
  */
@@ -2334,6 +2355,7 @@ int mbedtls_ssl_flush_output( mbedtls_ssl_context *ssl )
 
     return( 0 );
 }
+#endif /* MBEDTLS_SSL_USE_MPS */
 
 /*
  * Functions to handle the DTLS retransmission state machine
