@@ -1342,10 +1342,6 @@ run_test    "TLS 1.3, TLS_AES_128_CCM_SHA256, ECDHE-ECDSA, empty client certific
             1 \
 	    -s "empty certificate message received"                 \
 	    -s "client has no certificate"                          \
-	    -c "subject name      : C=NL, O=PolarSSL, CN=localhost" \
-            -c "Protocol is TLSv1.3"                                \
-            -c "Ciphersuite is TLS_AES_128_CCM_SHA256"              \
-	    -c "Verifying peer X.509 certificate... ok"             \
 	    -c "write empty client certificate"
 
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
