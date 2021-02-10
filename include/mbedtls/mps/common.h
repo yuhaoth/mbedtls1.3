@@ -24,15 +24,15 @@
 #define MBEDTLS_MPS_COMMON_H
 
 #ifndef MBEDTLS_MPS_ERR_BASE
-#define MBEDTLS_MPS_ERR_BASE    ( 1 << 0 )
+#define MBEDTLS_MPS_ERR_BASE    ( 1 << 10 )
 #endif
 
 #ifndef MBEDTLS_READER_ERR_BASE
-#define MBEDTLS_READER_ERR_BASE ( 1 << 7 )
+#define MBEDTLS_READER_ERR_BASE ( 1 << 11 )
 #endif
 
 #ifndef MBEDTLS_WRITER_ERR_BASE
-#define MBEDTLS_WRITER_ERR_BASE ( 1 << 11 )
+#define MBEDTLS_WRITER_ERR_BASE ( 1 << 12 )
 #endif
 
 #define MBEDTLS_MPS_MAKE_ERROR(code) \
