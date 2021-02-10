@@ -2059,10 +2059,7 @@ static int ssl_read_early_data_postprocess( mbedtls_ssl_context* ssl )
 /* Main entry point from the state machine; orchestrates the otherfunctions. */
 static int ssl_client_hello_process( mbedtls_ssl_context* ssl );
 
-#if defined(MBEDTLS_SSL_USE_MPS)
-static int ssl_client_hello_fetch( mbedtls_ssl_context* ssl,
-                                   mbedtls_mps_handshake_in *msg );
-#else
+#if !defined(MBEDTLS_SSL_USE_MPS)
 static int ssl_client_hello_fetch( mbedtls_ssl_context* ssl,
                                    unsigned char** buf,
                                    size_t* buflen );
@@ -2091,33 +2088,21 @@ static int ssl_client_hello_process( mbedtls_ssl_context* ssl )
     int hrr_required;
     unsigned char* buf = NULL;
     size_t buflen = 0;
-#if defined(MBEDTLS_SSL_USE_MPS)
-    mbedtls_mps_handshake_in msg;
-#endif /* MBEDTLS_SSL_USE_MPS */
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> parse client hello" ) );
 
 #if defined(MBEDTLS_SSL_USE_MPS)
 
-    MBEDTLS_SSL_PROC_CHK( ssl_client_hello_fetch( ssl, &msg ) );
-    ret = mbedtls_reader_get_ext( msg.handle, msg.length,
-                                  &buf, NULL );
-    if( ret == MBEDTLS_ERR_READER_OUT_OF_DATA )
-    {
-        MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read_pause( &ssl->mps.l4 ) );
-        return( MBEDTLS_ERR_SSL_WANT_READ );
-    }
-    MBEDTLS_SSL_PROC_CHK( ret );
-
-    buflen = msg.length;
+    MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_mps_fetch_full_hs_msg( ssl,
+                                            MBEDTLS_SSL_HS_CLIENT_HELLO,
+                                            &buf, &buflen ) );
 
     mbedtls_ssl_add_hs_hdr_to_checksum( ssl,
-                  MBEDTLS_SSL_HS_CLIENT_HELLO, msg.length );
+                  MBEDTLS_SSL_HS_CLIENT_HELLO, buflen );
 
     MBEDTLS_SSL_PROC_CHK_NEG( ssl_client_hello_parse( ssl, buf, buflen ) );
     hrr_required = ret;
 
-    MBEDTLS_SSL_PROC_CHK( mbedtls_reader_commit_ext( msg.handle ) );
-    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read_consume( &ssl->mps.l4 ) );
+    MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_mps_hs_consume_full_hs_msg( ssl ) );
 
 #else /* MBEDTLS_SSL_USE_MPS */
 
@@ -2141,39 +2126,7 @@ cleanup:
     return( ret );
 }
 
-#if defined(MBEDTLS_SSL_USE_MPS)
-
-static int ssl_client_hello_fetch( mbedtls_ssl_context* ssl,
-                                   mbedtls_mps_handshake_in *msg )
-{
-    int ret;
-
-    MBEDTLS_SSL_PROC_CHK_NEG( mbedtls_mps_read( &ssl->mps.l4 ) );
-
-#if defined(MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE)
-    if( ret == MBEDTLS_MPS_MSG_CCS )
-    {
-        MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read_consume( &ssl->mps.l4 ) );
-        return( MBEDTLS_ERR_SSL_WANT_READ );
-    }
-#endif /* MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE */
-
-    if( ret != MBEDTLS_MPS_MSG_HS )
-        return( MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE );
-
-    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read_handshake( &ssl->mps.l4,
-                                                      msg ) );
-
-    if( msg->type != MBEDTLS_SSL_HS_CLIENT_HELLO )
-        return( MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE );
-
-cleanup:
-
-    return( ret );
-}
-
-#else /* MBEDTLS_SSL_USE_MPS */
-
+#if !defined(MBEDTLS_SSL_USE_MPS)
 static int ssl_client_hello_fetch( mbedtls_ssl_context* ssl,
                                    unsigned char** dst,
                                    size_t* dstlen )
