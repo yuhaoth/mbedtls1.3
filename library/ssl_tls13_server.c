@@ -3353,7 +3353,11 @@ static int ssl_encrypted_extensions_process( mbedtls_ssl_context* ssl )
 
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> write encrypted extension" ) );
 
-    MBEDTLS_SSL_PROC_CHK( ssl_encrypted_extensions_prepare( ssl ) );
+    if( ssl->handshake->state_local.encrypted_extensions_out.preparation_done == 0 )
+    {
+        MBEDTLS_SSL_PROC_CHK( ssl_encrypted_extensions_prepare( ssl ) );
+        ssl->handshake->state_local.encrypted_extensions_out.preparation_done = 1;
+    }
 
 #if defined(MBEDTLS_SSL_USE_MPS)
     /* Make sure we can write a new message. */

@@ -762,6 +762,12 @@ struct mbedtls_ssl_handshake_params
             uint8_t preparation_done;
         } cli_key_exch_in;
 
+        /* Server, outgoing ClientKeyExchange */
+        struct
+        {
+            uint8_t preparation_done;
+        } encrypted_extensions_out;
+
 #endif /* MBEDTLS_SSL_SRV_C */
 
         /* Incoming CertificateVerify */
