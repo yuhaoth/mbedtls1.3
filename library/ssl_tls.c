@@ -6404,6 +6404,22 @@ int mbedtls_ssl_session_load( mbedtls_ssl_session *session,
     return( ret );
 }
 
+#if defined(MBEDTLS_SSL_USE_MPS)
+int mbedtls_ssl_mps_remap_error( int ret )
+{
+    /* TODO: This should remap _all_ public MPS error codes. */
+
+    if( ret == MBEDTLS_ERR_MPS_WANT_READ )
+        ret = MBEDTLS_ERR_SSL_WANT_READ;
+    if( ret == MBEDTLS_ERR_MPS_WANT_WRITE )
+        ret = MBEDTLS_ERR_SSL_WANT_WRITE;
+    if( ret == MBEDTLS_ERR_MPS_RETRY )
+        ret = MBEDTLS_ERR_SSL_WANT_READ;
+
+    return( ret );
+}
+#endif /* MBEDTLS_SSL_USE_MPS */
+
 /*
  * Perform a single step of the SSL handshake
  */
@@ -6422,6 +6438,15 @@ int mbedtls_ssl_handshake_step( mbedtls_ssl_context *ssl )
     if( ssl->conf->endpoint == MBEDTLS_SSL_IS_SERVER )
         ret = mbedtls_ssl_handshake_server_step( ssl );
 #endif
+
+#if defined(MBEDTLS_SSL_USE_MPS)
+    /*
+     * Remap MPS error codes
+     *
+     * TODO: Consolidate MPS and SSL error codes, so that this isn't necessary.
+     */
+    ret = mbedtls_ssl_mps_remap_error( ret );
+#endif /* MBEDTLS_SSL_USE_MPS */
 
     return( ret );
 }

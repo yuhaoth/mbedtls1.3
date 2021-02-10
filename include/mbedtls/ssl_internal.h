@@ -1436,6 +1436,9 @@ int mbedtls_ssl_mps_fetch_full_hs_msg( mbedtls_ssl_context *ssl,
                                        unsigned char **buf,
                                        size_t *buflen );
 int mbedtls_ssl_mps_hs_consume_full_hs_msg( mbedtls_ssl_context *ssl );
+
+int mbedtls_ssl_mps_remap_error( int ret );
+
 int mbedtls_ssl_get_handshake_transcript( mbedtls_ssl_context *ssl,
                                           const mbedtls_md_type_t md,
                                           unsigned char *dst,
