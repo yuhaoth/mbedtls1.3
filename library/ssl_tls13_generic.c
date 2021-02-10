@@ -4222,6 +4222,7 @@ int mbedtls_ssl_finished_out_process( mbedtls_ssl_context* ssl )
                                                              buf_len - msg_len ) );
 
     MBEDTLS_SSL_PROC_CHK( mbedtls_mps_dispatch( &ssl->mps.l4 ) );
+    MBEDTLS_SSL_PROC_CHK( ssl_finished_out_postprocess( ssl ) );
     MBEDTLS_SSL_PROC_CHK( mbedtls_mps_flush( &ssl->mps.l4 ) );
 
 #else /* MBEDTLS_SSL_USE_MPS */
@@ -4235,11 +4236,11 @@ int mbedtls_ssl_finished_out_process( mbedtls_ssl_context* ssl )
     ssl->out_msgtype = MBEDTLS_SSL_MSG_HANDSHAKE;
     ssl->out_msg[0] = MBEDTLS_SSL_HS_FINISHED;
 
+    MBEDTLS_SSL_PROC_CHK( ssl_finished_out_postprocess( ssl ) );
+
     MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_write_handshake_msg( ssl ) );
 
 #endif /* MBEDTLS_SSL_USE_MPS */
-
-    MBEDTLS_SSL_PROC_CHK( ssl_finished_out_postprocess( ssl ) );
 
 cleanup:
 

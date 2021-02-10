@@ -157,7 +157,6 @@ int ssl_write_early_data_process( mbedtls_ssl_context* ssl )
                                                              buf_len - msg_len ) );
 
         MBEDTLS_SSL_PROC_CHK( mbedtls_mps_dispatch( &ssl->mps.l4 ) );
-        MBEDTLS_SSL_PROC_CHK( mbedtls_mps_flush( &ssl->mps.l4 ) );
 
 #else  /* MBEDTLS_SSL_USE_MPS */
 
@@ -360,10 +359,14 @@ int ssl_write_end_of_early_data_process( mbedtls_ssl_context* ssl )
         /* EndOfEarlyData message is empty */
 
         MBEDTLS_SSL_PROC_CHK( mbedtls_mps_dispatch( &ssl->mps.l4 ) );
-        MBEDTLS_SSL_PROC_CHK( mbedtls_mps_flush( &ssl->mps.l4 ) );
 
         mbedtls_ssl_add_hs_hdr_to_checksum(
             ssl, MBEDTLS_SSL_HS_END_OF_EARLY_DATA, 0 );
+
+        /* Update state */
+        MBEDTLS_SSL_PROC_CHK( ssl_write_end_of_early_data_postprocess( ssl ) );
+
+        MBEDTLS_SSL_PROC_CHK( mbedtls_mps_flush( &ssl->mps.l4 ) );
 
 #else  /* MBEDTLS_SSL_USE_MPS */
 
@@ -376,15 +379,20 @@ int ssl_write_end_of_early_data_process( mbedtls_ssl_context* ssl )
         ssl->out_msg[0]  = MBEDTLS_SSL_HS_END_OF_EARLY_DATA;
         ssl->out_msglen  = 4;
 
+        /* Update state */
+        MBEDTLS_SSL_PROC_CHK( ssl_write_end_of_early_data_postprocess( ssl ) );
+
         /* Dispatch message */
         MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_write_handshake_msg( ssl ) );
 
 #endif /* MBEDTLS_SSL_USE_MPS */
 
     }
-
-    /* Update state */
-    MBEDTLS_SSL_PROC_CHK( ssl_write_end_of_early_data_postprocess( ssl ) );
+    else
+    {
+        /* Update state */
+        MBEDTLS_SSL_PROC_CHK( ssl_write_end_of_early_data_postprocess( ssl ) );
+    }
 
 cleanup:
 
@@ -1377,7 +1385,6 @@ static int ssl_client_hello_process( mbedtls_ssl_context* ssl )
                                                              buf_len - msg_len ) );
 
     MBEDTLS_SSL_PROC_CHK( mbedtls_mps_dispatch( &ssl->mps.l4 ) );
-    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_flush( &ssl->mps.l4 ) );
 
 #else /* MBEDTLS_SSL_USE_MPS */
 
