@@ -777,14 +777,6 @@ int mbedtls_ssl_encrypt_buf( mbedtls_ssl_context *ssl,
 
     mode = mbedtls_cipher_get_cipher_mode( &transform->cipher_ctx_enc );
 
-    if( rec->data_len > MBEDTLS_SSL_OUT_CONTENT_LEN )
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "Record content %u too large, maximum %d",
-                                    (unsigned) rec->data_len,
-                                    MBEDTLS_SSL_OUT_CONTENT_LEN ) );
-        return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
-    }
-
     /* The following two code paths implement the (D)TLSInnerPlaintext
      * structure present in TLS 1.3 and DTLS 1.2 + CID.
      *
