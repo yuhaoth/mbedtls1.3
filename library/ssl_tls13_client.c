@@ -3011,23 +3011,31 @@ static int ssl_server_hello_coordinate( mbedtls_ssl_context* ssl,
     if( msg->type != MBEDTLS_SSL_HS_SERVER_HELLO )
         return( MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE );
 
-    /* TODO: Handle the case of incoming record fragmentation. */
-    MBEDTLS_SSL_PROC_CHK( mbedtls_reader_get_ext( msg->handle,
-                                                  msg->length,
-                                                  &peak,
-                                                  NULL ) );
-    if( ssl_server_hello_is_hrr( peak ) )
+    ret = mbedtls_reader_get_ext( msg->handle,
+                                  msg->length,
+                                  &peak,
+                                  NULL );
+
+    if( ret == MBEDTLS_ERR_READER_OUT_OF_DATA )
     {
-        MBEDTLS_SSL_DEBUG_MSG( 2, ( "received HelloRetryRequest message" ) );
-        ret = SSL_SERVER_HELLO_COORDINATE_HRR;
+        MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read_pause( &ssl->mps.l4 ) );
+        ret = MBEDTLS_ERR_SSL_WANT_READ;
     }
     else
     {
-        ret = SSL_SERVER_HELLO_COORDINATE_HELLO;
-    }
+        if( ssl_server_hello_is_hrr( peak ) )
+        {
+            MBEDTLS_SSL_DEBUG_MSG( 2, ( "received HelloRetryRequest message" ) );
+            ret = SSL_SERVER_HELLO_COORDINATE_HRR;
+        }
+        else
+        {
+            ret = SSL_SERVER_HELLO_COORDINATE_HELLO;
+        }
 
-    *buf = peak;
-    *buflen = msg->length;
+        *buf = peak;
+        *buflen = msg->length;
+    }
 
 cleanup:
 
