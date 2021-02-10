@@ -4571,6 +4571,17 @@ data_exchange:
                 }
             }
         }
+
+        while( ( ret = mbedtls_ssl_flush_output( &ssl ) ) != 0 )
+        {
+            if( ret != MBEDTLS_ERR_SSL_WANT_READ &&
+                ret != MBEDTLS_ERR_SSL_WANT_WRITE )
+            {
+                mbedtls_printf( " failed\n  ! mbedtls_ssl_flush_output returned -0x%x\n\n",
+                                (unsigned int) -ret );
+                goto exit;
+            }
+        }
     }
     else /* Not stream, so datagram */
     {

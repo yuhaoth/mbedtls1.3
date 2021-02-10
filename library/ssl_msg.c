@@ -5894,8 +5894,6 @@ int mbedtls_ssl_write( mbedtls_ssl_context *ssl,
                                                wr_buf_len - len ) );
 
     MBEDTLS_SSL_PROC_CHK( mbedtls_mps_dispatch( &ssl->mps.l4 ) );
-    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_flush( &ssl->mps.l4 ) );
-
     ret = len;
 
 cleanup:
