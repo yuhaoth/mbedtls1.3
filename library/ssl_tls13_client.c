@@ -3061,7 +3061,7 @@ static int ssl_server_hello_coordinate( mbedtls_ssl_context* ssl,
                                         unsigned char **buf,
                                         size_t *buflen )
 {
-    int ret;
+    int ret = 0;
     unsigned char *peak;
 
     MBEDTLS_SSL_PROC_CHK_NEG( mbedtls_mps_read( &ssl->mps.l4 ) );
@@ -3112,12 +3112,7 @@ static int ssl_server_hello_coordinate( mbedtls_ssl_context* ssl,
 {
     int ret;
 
-    if( ( ret = mbedtls_ssl_read_record( ssl, 0 ) ) != 0 )
-    {
-        /* No alert on a read error. */
-        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_read_record", ret );
-        return( ret );
-    }
+    MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_read_record( ssl, 0 ) );
 
     /* TBD: If we do an HRR, keep track of the number
      * of ClientHello's we sent, and fail if it
@@ -3144,6 +3139,8 @@ static int ssl_server_hello_coordinate( mbedtls_ssl_context* ssl,
     {
         ret = SSL_SERVER_HELLO_COORDINATE_HELLO;
     }
+
+cleanup:
 
     return( ret );
 }
