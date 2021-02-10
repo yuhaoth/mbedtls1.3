@@ -2122,7 +2122,7 @@ static int ssl_client_hello_process( mbedtls_ssl_context* ssl )
 #else /* MBEDTLS_SSL_USE_MPS */
 
     MBEDTLS_SSL_PROC_CHK( ssl_client_hello_fetch( ssl, &buf, &buflen ) );
-    MBEDTLS_SSL_PROC_CHK( ssl_client_hello_parse( ssl, buf, buflen ) );
+    MBEDTLS_SSL_PROC_CHK_NEG( ssl_client_hello_parse( ssl, buf, buflen ) );
     hrr_required = ret;
 
 #endif /* MBEDTLS_SSL_USE_MPS */
