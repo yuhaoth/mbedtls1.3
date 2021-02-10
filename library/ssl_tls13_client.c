@@ -1253,7 +1253,7 @@ static int ssl_write_key_shares_ext( mbedtls_ssl_context *ssl,
         }
 
         if( ( ret = mbedtls_ecdh_make_params( &ssl->handshake->ecdh_ctx[nr], &len,
-                                              p+2, MBEDTLS_SSL_MAX_CONTENT_LEN - *olen,
+                                              p+2, end - (p+2),
                                               ssl->conf->f_rng, ssl->conf->p_rng ) ) != 0 )
         {
             MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ecdh_make_params", ret );
