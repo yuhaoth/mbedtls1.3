@@ -4221,6 +4221,13 @@ int mbedtls_ssl_handshake_client_step( mbedtls_ssl_context *ssl )
             if( ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_DATAGRAM )
                 mbedtls_ssl_send_flight_completed( ssl );
 #endif
+
+#if defined(MBEDTLS_SSL_USE_MPS)
+            ret = mbedtls_mps_flush( &ssl->mps.l4 );
+            if( ret != 0 )
+                break;
+#endif /* MBEDTLS_SSL_USE_MPS */
+
             break;
 
             /* ----- WRITE CHANGE CIPHER SPEC ----*/
@@ -4341,6 +4348,13 @@ int mbedtls_ssl_handshake_client_step( mbedtls_ssl_context *ssl )
             if( ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_DATAGRAM )
                 mbedtls_ssl_send_flight_completed( ssl );
 #endif
+
+#if defined(MBEDTLS_SSL_USE_MPS)
+            ret = mbedtls_mps_flush( &ssl->mps.l4 );
+            if( ret != 0 )
+                break;
+#endif /* MBEDTLS_SSL_USE_MPS */
+
             break;
 
             /* ----- READ 2nd SERVER HELLO ----*/
