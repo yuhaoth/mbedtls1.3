@@ -4520,6 +4520,19 @@ int mbedtls_ssl_handshake_client_step( mbedtls_ssl_context *ssl )
             mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_HANDSHAKE_OVER );
             break;
 
+    case MBEDTLS_SSL_CLIENT_NEW_SESSION_TICKET:
+
+            ret = mbedtls_ssl_new_session_ticket_process( ssl );
+            if( ret != 0 )
+            {
+                MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_new_session_ticket_process", ret );
+                break;
+            }
+
+            mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_HANDSHAKE_OVER );
+            ret = MBEDTLS_ERR_SSL_RECEIVED_NEW_SESSION_TICKET;
+            break;
+
         default:
             MBEDTLS_SSL_DEBUG_MSG( 1, ( "invalid state %d", ssl->state ) );
             return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );

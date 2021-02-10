@@ -4822,10 +4822,7 @@ void mbedtls_ssl_conf_early_data( mbedtls_ssl_config *conf, int early_data, char
  */
 int mbedtls_ssl_new_session_ticket_process( mbedtls_ssl_context* ssl );
 
-#if defined(MBEDTLS_SSL_USE_MPS)
-static int ssl_new_session_ticket_fetch( mbedtls_ssl_context* ssl,
-                                         mbedtls_mps_handshake_in *msg );
-#else /* MBEDTLS_SSL_USE_MPS */
+#if !defined(MBEDTLS_SSL_USE_MPS)
 static int ssl_new_session_ticket_fetch( mbedtls_ssl_context* ssl,
                                          unsigned char** buf,
                                          size_t* buflen );
@@ -4847,26 +4844,19 @@ int mbedtls_ssl_new_session_ticket_process( mbedtls_ssl_context* ssl )
     int ret;
     unsigned char* buf;
     size_t buflen;
-#if defined(MBEDTLS_SSL_USE_MPS)
-    mbedtls_mps_handshake_in msg;
-#endif /* MBEDTLS_SSL_USE_MPS */
 
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> parse new session ticket" ) );
 
 #if defined(MBEDTLS_SSL_USE_MPS)
-    MBEDTLS_SSL_PROC_CHK( ssl_new_session_ticket_fetch( ssl, &msg ) );
 
-    MBEDTLS_SSL_PROC_CHK( mbedtls_reader_get_ext( msg.handle,
-                                                  msg.length,
-                                                  &buf,
-                                                  NULL ) );
-    buflen = msg.length;
+    MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_mps_fetch_full_hs_msg( ssl,
+                                          MBEDTLS_SSL_HS_NEW_SESSION_TICKET,
+                                          &buf, &buflen ) );
 
-    /* Parsing step */
+    /* Process the message contents */
     MBEDTLS_SSL_PROC_CHK( ssl_new_session_ticket_parse( ssl, buf, buflen ) );
 
-    MBEDTLS_SSL_PROC_CHK( mbedtls_reader_commit_ext( msg.handle ) );
-    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read_consume( &ssl->mps.l4 ) );
+    MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_mps_hs_consume_full_hs_msg( ssl ) );
 
 #else /* MBEDTLS_SSL_USE_MPS */
 
@@ -4889,27 +4879,7 @@ cleanup:
     return( ret );
 }
 
-#if defined(MBEDTLS_SSL_USE_MPS)
-static int ssl_new_session_ticket_fetch( mbedtls_ssl_context *ssl,
-                                         mbedtls_mps_handshake_in *msg )
-{
-    int ret;
-    MBEDTLS_SSL_PROC_CHK_NEG( mbedtls_mps_read( &ssl->mps.l4 ) );
-
-    if( ret != MBEDTLS_MPS_MSG_HS )
-        return( MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE );
-
-    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read_handshake( &ssl->mps.l4,
-                                                      msg ) );
-
-    if( msg->type != MBEDTLS_SSL_HS_NEW_SESSION_TICKET )
-        return( MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE );
-
-cleanup:
-
-    return( ret );
-}
-#else /* MBEDTLS_SSL_USE_MPS */
+#if !defined(MBEDTLS_SSL_USE_MPS)
 static int ssl_new_session_ticket_fetch( mbedtls_ssl_context* ssl,
                                          unsigned char** dst,
                                          size_t* dstlen )

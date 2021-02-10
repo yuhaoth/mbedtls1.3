@@ -5643,9 +5643,8 @@ static int ssl_handle_hs_message_post_handshake( mbedtls_ssl_context *ssl )
 
 static int ssl_check_new_session_ticket( mbedtls_ssl_context *ssl )
 {
-    int ret;
-
 #if defined(MBEDTLS_SSL_USE_MPS)
+    int ret;
     mbedtls_mps_handshake_in msg;
     ret = mbedtls_mps_read_handshake( &ssl->mps.l4, &msg );
     if( ret != 0 )
@@ -5662,14 +5661,9 @@ static int ssl_check_new_session_ticket( mbedtls_ssl_context *ssl )
 #endif /* MBEDTLS_SSL_USE_MPS */
 
     MBEDTLS_SSL_DEBUG_MSG( 3, ( "NewSessionTicket received" ) );
+    mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_CLIENT_NEW_SESSION_TICKET );
 
-    if( ( ret = mbedtls_ssl_new_session_ticket_process( ssl ) ) != 0 )
-    {
-        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_parse_new_session_ticket", ret );
-        return( ret );
-    }
-
-    return( MBEDTLS_ERR_SSL_RECEIVED_NEW_SESSION_TICKET );
+    return( MBEDTLS_ERR_SSL_WANT_READ );
 }
 
 static int ssl_handle_hs_message_post_handshake_tls13( mbedtls_ssl_context *ssl )
