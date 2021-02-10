@@ -5822,6 +5822,21 @@ int mbedtls_ssl_read( mbedtls_ssl_context *ssl, unsigned char *buf, size_t len )
     size_t data_read;
     unsigned char *src;
     mbedtls_reader *rd;
+
+    ret = mbedtls_ssl_handle_pending_alert( ssl );
+    if( ret != 0 )
+        goto cleanup;
+
+    if( ssl->state != MBEDTLS_SSL_HANDSHAKE_OVER )
+    {
+        ret = mbedtls_ssl_handshake( ssl );
+        if( ret != 0 )
+        {
+            MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_handshake", ret );
+            goto cleanup;
+        }
+    }
+
     MBEDTLS_SSL_PROC_CHK_NEG( mbedtls_mps_read( &ssl->mps.l4 ) );
     msg_type = ret;
 
@@ -5829,7 +5844,7 @@ int mbedtls_ssl_read( mbedtls_ssl_context *ssl, unsigned char *buf, size_t len )
     {
         ret = ssl_handle_hs_message_post_handshake( ssl );
         if( ret != 0 )
-            return( ret );
+            goto cleanup;
 
         return( MBEDTLS_ERR_SSL_WANT_READ );
     }
@@ -5873,6 +5888,10 @@ int mbedtls_ssl_write( mbedtls_ssl_context *ssl,
     mbedtls_writer *msg;
     unsigned char *wr_buf;
     mbedtls_mps_size_t wr_buf_len;
+
+    ret = mbedtls_ssl_handle_pending_alert( ssl );
+    if( ret != 0 )
+        goto cleanup;
 
     /* Make sure we can write a new message. */
     MBEDTLS_SSL_PROC_CHK( mbedtls_mps_flush( &ssl->mps.l4 ) );
@@ -6435,6 +6454,46 @@ void mbedtls_ssl_read_version( int *major, int *minor, int transport,
 }
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+
+#if defined(MBEDTLS_SSL_USE_MPS)
+
+/*
+ * Send pending fatal alerts or warnings.
+ */
+int mbedtls_ssl_handle_pending_alert( mbedtls_ssl_context *ssl )
+{
+    int ret;
+
+    if( ssl->send_alert == 0 )
+        return( 0 );
+
+    /* Send alert if requested */
+    if( ssl->send_alert == 1 )
+    {
+        MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> send alert message" ) );
+        MBEDTLS_SSL_DEBUG_MSG( 3, ( "send alert level=%u message=%u",
+                                    MBEDTLS_SSL_ALERT_LEVEL_FATAL,
+                                    ssl->alert_type ) );
+
+        ret = mbedtls_mps_send_fatal( &ssl->mps.l4,
+                                      ssl->alert_type );
+
+        MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= send alert message" ) );
+        if( ret != 0 )
+            return( ret );
+
+        ssl->send_alert = 2;
+    }
+
+    ret = mbedtls_mps_flush( &ssl->mps.l4 );
+    if( ret != 0 )
+        return( ret );
+
+    return( ssl->alert_reason );
+}
+
+#else /* MBEDTLS_SSL_USE_MPS */
+
 /*
  * Send pending fatal alerts or warnings.
  */
@@ -6446,8 +6505,8 @@ int mbedtls_ssl_handle_pending_alert( mbedtls_ssl_context *ssl )
     if( ssl->send_alert != 0 )
     {
         ret = mbedtls_ssl_send_alert_message( ssl,
-                                              ssl->send_alert,
-                                              ssl->alert_type );
+                                 MBEDTLS_SSL_ALERT_LEVEL_FATAL,
+                                 ssl->alert_type );
         if( ret != 0 )
             return( ret );
     }
@@ -6456,6 +6515,8 @@ int mbedtls_ssl_handle_pending_alert( mbedtls_ssl_context *ssl )
     ssl->alert_type = 0;
     return( 0 );
 }
+#endif /* MBEDTLS_SSL_USE_MPS */
+
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 
 #endif /* MBEDTLS_SSL_TLS_C */

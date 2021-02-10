@@ -1288,7 +1288,8 @@ static int ssl_parse_supported_versions_ext( mbedtls_ssl_context *ssl,
     MBEDTLS_SSL_DEBUG_MSG( 1, ( "Unsupported version of TLS. Supported is [%d:%d]",
                               ssl->conf->min_major_ver, ssl->conf->min_minor_ver ) );
 
-    SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_PROTOCOL_VERSION );
+    SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_PROTOCOL_VERSION,
+                          MBEDTLS_ERR_SSL_BAD_HS_CLIENT_HELLO );
     return( MBEDTLS_ERR_SSL_BAD_HS_CLIENT_HELLO );
 
 found_version:
@@ -1777,7 +1778,8 @@ static int ssl_end_of_early_data_fetch( mbedtls_ssl_context *ssl )
         ssl->in_msg[0]  != MBEDTLS_SSL_HS_END_OF_EARLY_DATA ||
         ssl->in_hslen   != 4 )
     {
-        SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_UNEXPECTED_MESSAGE );
+        SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_UNEXPECTED_MESSAGE,
+                              MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE );
         ret = MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE;
         goto cleanup;
     }
@@ -1938,7 +1940,8 @@ static int ssl_early_data_fetch( mbedtls_ssl_context *ssl,
 
     if( ssl->in_msgtype != MBEDTLS_SSL_MSG_APPLICATION_DATA )
     {
-        SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_UNEXPECTED_MESSAGE );
+        SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_UNEXPECTED_MESSAGE,
+                              MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE );
         ret = MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE;
         goto cleanup;
     }
@@ -3119,7 +3122,8 @@ static int ssl_client_hello_parse( mbedtls_ssl_context* ssl,
         !ssl_check_certificate_key_exchange( ssl ) )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "ClientHello message misses mandatory extensions." ) );
-        SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_MISSING_EXTENSION );
+        SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_MISSING_EXTENSION ,
+                              MBEDTLS_ERR_SSL_BAD_HS_CLIENT_HELLO );
         return( MBEDTLS_ERR_SSL_BAD_HS_CLIENT_HELLO );
     }
 
@@ -4697,17 +4701,20 @@ int mbedtls_ssl_handshake_server_step( mbedtls_ssl_context *ssl )
                     mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_SERVER_HELLO );
                     break;
                 case MBEDTLS_ERR_SSL_BAD_HS_PROTOCOL_VERSION:
-                    mbedtls_ssl_send_alert_message( ssl, MBEDTLS_SSL_ALERT_LEVEL_FATAL, MBEDTLS_SSL_ALERT_MSG_PROTOCOL_VERSION );
+                    SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_PROTOCOL_VERSION,
+                                          MBEDTLS_ERR_SSL_BAD_HS_PROTOCOL_VERSION );
                     break;
                 case MBEDTLS_ERR_SSL_NO_CIPHER_CHOSEN:
-                    mbedtls_ssl_send_fatal_handshake_failure( ssl );
+                    SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_HANDSHAKE_FAILURE,
+                                          MBEDTLS_ERR_SSL_NO_CIPHER_CHOSEN );
                     break;
                 case MBEDTLS_ERR_SSL_NO_USABLE_CIPHERSUITE:
-                    mbedtls_ssl_send_fatal_handshake_failure( ssl );
+                    SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_HANDSHAKE_FAILURE,
+                                          MBEDTLS_ERR_SSL_NO_USABLE_CIPHERSUITE );
                     break;
                 case MBEDTLS_ERR_SSL_BAD_HS_MISSING_EXTENSION_EXT:
-                    mbedtls_ssl_send_alert_message( ssl, MBEDTLS_SSL_ALERT_LEVEL_FATAL, MBEDTLS_SSL_ALERT_MSG_MISSING_EXTENSION );
-                    return ( MBEDTLS_ERR_SSL_BAD_HS_MISSING_EXTENSION_EXT );
+                    SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_MISSING_EXTENSION,
+                                          MBEDTLS_ERR_SSL_BAD_HS_MISSING_EXTENSION_EXT );
                     break;
                 case MBEDTLS_ERR_SSL_BAD_HS_CHANGE_CIPHER_SPEC:
                     /* Stay in this state */
@@ -4894,7 +4901,6 @@ int mbedtls_ssl_handshake_server_step( mbedtls_ssl_context *ssl )
             return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
     }
 
-    mbedtls_ssl_handle_pending_alert( ssl );
     return( ret );
 }
 
