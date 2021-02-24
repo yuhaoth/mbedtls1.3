@@ -802,9 +802,6 @@ typedef int mbedtls_ssl_get_timer_t( void * ctx );
 typedef struct mbedtls_ssl_session mbedtls_ssl_session;
 typedef struct mbedtls_ssl_context mbedtls_ssl_context;
 typedef struct mbedtls_ssl_config  mbedtls_ssl_config;
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
-typedef struct mbedtls_ssl_ticket  mbedtls_ssl_ticket;
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 
 /* Defined in ssl_internal.h */
 typedef struct mbedtls_ssl_transform mbedtls_ssl_transform;
@@ -867,30 +864,6 @@ typedef enum
     MBEDTLS_SSL_TLS1_3_EXPORTER_MASTER_SECRET
 } mbedtls_ssl_tls1_3_secret_type;
 #endif /* MBEDTLS_SSL_EXPORT_KEYS && MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
-
-/**
-* \brief  Ticket Structure
-*/
-struct mbedtls_ssl_ticket {
-    unsigned char* ticket; // The ticket itself is the psk_identity
-    size_t ticket_len; // PSK identity length
-    int ciphersuite;
-    uint32_t ticket_lifetime;
-    uint32_t ticket_age_add;
-    size_t key_len;
-#if defined(MBEDTLS_SHA256_C) && !defined(MBEDTLS_SHA512_C)
-    unsigned char key[32];
-#else
-    unsigned char key[48];
-#endif
-#if defined(MBEDTLS_HAVE_TIME)
-    time_t start;
-#endif
-#if defined(MBEDTLS_X509_CRT_PARSE_C)
-    mbedtls_x509_crt* peer_cert;    /*!< entry peer_cert */
-#endif
-    mbedtls_ssl_ticket_flags flags; /*!< ticket flags    */
-};
 
 #if defined(MBEDTLS_SSL_ASYNC_PRIVATE)
 #if defined(MBEDTLS_X509_CRT_PARSE_C)
@@ -1172,32 +1145,34 @@ struct mbedtls_ssl_session
     unsigned int key_exchange; /* Indication of the key exchange algorithm being negotiated*/
     unsigned char key_exchange_modes; /*!< psk key exchange modes */
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
-#if defined(MBEDTLS_SSL_SESSION_TICKETS) && defined(MBEDTLS_SSL_CLI_C)
+#if ( defined(MBEDTLS_SSL_SESSION_TICKETS) || defined(MBEDTLS_SSL_NEW_SESSION_TICKET) ) && defined(MBEDTLS_SSL_CLI_C)
     unsigned char *ticket;      /*!< RFC 5077 session ticket */
     size_t ticket_len;          /*!< session ticket length   */
     uint32_t ticket_lifetime;   /*!< ticket lifetime hint    */
-#endif /* MBEDTLS_SSL_SESSION_TICKETS && MBEDTLS_SSL_CLI_C */
+#endif /* ( MBEDTLS_SSL_SESSION_TICKETS || MBEDTLS_SSL_NEW_SESSION_TICKET ) && MBEDTLS_SSL_CLI_C */
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && defined(MBEDTLS_SSL_NEW_SESSION_TICKET)
-// TBD: Replace fields by ticket structure
-// We currently only store a single ticket on the client size
-    unsigned char* ticket;          /*!< TLS 1.3 session ticket acting as psk identity */
-    size_t ticket_len;              /*!< ticket length   */
-    uint32_t ticket_lifetime;       /*!< ticket lifetime hint    */
-    mbedtls_ssl_ticket_flags flags; /*!< ticket flags */
-    uint32_t ticket_age_add;        /* A randomly generated 32-bit value that is used to obscure the age of the ticket */
-    unsigned char* ticket_nonce;    /*!< ticket nonce value */
-    uint8_t ticket_nonce_len;       /*!< ticket nonce length */
-    size_t key_len;                 /*!< psk key length */
+    int minor_ver;                         /*!< Version information for selecting ticket format */
+    unsigned int endpoint : 1;             /*!< 0: client, 1: server */
+    mbedtls_ssl_ticket_flags ticket_flags; /*!< Ticket flags */
+    uint32_t ticket_age_add;               /*!< Randomly generated value used to obscure the age of the ticket */
+    unsigned char* ticket_nonce;           /*!< Ticket nonce value */
+    uint8_t ticket_nonce_len;              /*!< Ticket nonce length */
+    uint8_t resumption_key_len;            /*!< PSK key length */
+
 #if defined(MBEDTLS_SHA256_C) && !defined(MBEDTLS_SHA512_C)
-    unsigned char key[32];
+    unsigned char key[32];                 /*!< key (32 byte) */
 #else /* MBEDTLS_SHA512_C */
-    unsigned char key[48];
+    unsigned char key[48];                 /*!< key (48 byte) */
 #endif /* MBEDTLS_SHA256_C && !MBEDTLS_SHA512_C */
-#if defined(MBEDTLS_HAVE_TIME)
-    time_t ticket_received;
-#endif /* MBEDTLS_HAVE_TIME */
-#endif /* MBEDTLS_SSL_NEW_SESSION_TICKET && MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+
+#if defined(MBEDTLS_HAVE_TIME) && defined(MBEDTLS_SSL_CLI_C)
+    time_t ticket_received;         /*!< time ticket was received */
+#endif /* MBEDTLS_HAVE_TIME && MBEDTLS_SSL_CLI_C */
+
+#endif /*  MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL || MBEDTLS_SSL_NEW_SESSION_TICKET */
+
+
 
 #if defined(MBEDTLS_SSL_MAX_FRAGMENT_LENGTH)
     unsigned char mfl_code;     /*!< MaxFragmentLength negotiated by peer */
@@ -1304,20 +1279,12 @@ struct mbedtls_ssl_config
 
 #if ((defined(MBEDTLS_SSL_SESSION_TICKETS) || (defined(MBEDTLS_SSL_NEW_SESSION_TICKET) && defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)) ) && defined(MBEDTLS_SSL_SRV_C))
     /* Callback to create and write a session ticket */
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
-    int(*f_ticket_write)(void*, const mbedtls_ssl_ticket*,
-        unsigned char*, const unsigned char*, size_t*, uint32_t*,
-        mbedtls_ssl_ticket_flags*);
-    /** Callback to parse a session ticket into a session structure         */
-    int(*f_ticket_parse)(void*, mbedtls_ssl_ticket*, unsigned char*, size_t);
-    void* p_ticket;                 /*!< context for the ticket callbacks   */
-#else
     int (*f_ticket_write)( void *, const mbedtls_ssl_session *,
             unsigned char *, const unsigned char *, size_t *, uint32_t * );
     /** Callback to parse a session ticket into a session structure         */
     int (*f_ticket_parse)( void *, mbedtls_ssl_session *, unsigned char *, size_t);
     void *p_ticket;                 /*!< context for the ticket callbacks   */
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+
 #endif /* (MBEDTLS_SSL_SESSION_TICKETS || (MBEDTLS_SSL_NEW_SESSION_TICKET && MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) ) && MBEDTLS_SSL_SRV_C */
 
 #if defined(MBEDTLS_SSL_EXPORT_KEYS)
@@ -1392,13 +1359,6 @@ struct mbedtls_ssl_config
     int key_exchange_modes; /*!< key exchange mode */
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && defined(MBEDTLS_SSL_NEW_SESSION_TICKET)
-    uint32_t ticket_age_add; /*!< used to obscure the age of the ticket */
-#if defined(MBEDTLS_HAVE_TIME)
-    time_t ticket_received;               /*!< time when ticket was received */
-#endif /* MBEDTLS_HAVE_TIME */
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL && MBEDTLS_SSL_NEW_SESSION_TICKET */
-
 #if defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
 
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
@@ -1448,13 +1408,6 @@ struct mbedtls_ssl_config
 #endif /* MBEDTLS_ZERO_RTT */
 
 #endif /* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED */
-
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && defined(MBEDTLS_SSL_NEW_SESSION_TICKET)
-    /*!< Variable to toggle the use of resumption vs. a full exchange.
-    Default value is 0 (for full exchange) and 1 is resumption with ticket.  */
-    int resumption_mode;
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL && MBEDTLS_SSL_NEW_SESSION_TICKET */
-
 
 #if defined(MBEDTLS_SSL_ALPN)
     const char **alpn_list;         /*!< ordered list of protocols          */
@@ -2432,36 +2385,6 @@ void mbedtls_ssl_set_timer_cb( mbedtls_ssl_context *ssl,
                                mbedtls_ssl_set_timer_t *f_set_timer,
                                mbedtls_ssl_get_timer_t *f_get_timer );
 
-
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
-/**
- * \brief           Callback type: generate and write session ticket
- *
- * \note            This describes what a callback implementation should do.
- *                  This callback should generate and encrypted and
- *                  authenticated ticket for the session and write it to the
- *                  output buffer. Here, ticket means the opaque ticket part
- *                  of the NewSessionTicket structure of RFC 5077.
- *
- * \param p_ticket  Context for the callback
- * \param session   SSL session to bo written in the ticket
- * \param start     Start of the outpur buffer
- * \param end       End of the output buffer
- * \param tlen      On exit, holds the length written
- * \param lifetime  On exit, holds the lifetime of the ticket in seconds
- *
- * \return          0 if successful, or
- *                  a specific MBEDTLS_ERR_XXX code.
- */
-typedef int mbedtls_ssl_ticket_write_t(void* p_ticket,
-    const mbedtls_ssl_ticket* session,
-    unsigned char* start,
-    const unsigned char* end,
-    size_t* tlen,
-    uint32_t* lifetime, mbedtls_ssl_ticket_flags* flags);
-
-#else
-
 /**
  * \brief           Callback type: generate and write session ticket
  *
@@ -2469,7 +2392,8 @@ typedef int mbedtls_ssl_ticket_write_t(void* p_ticket,
  *                  This callback should generate an encrypted and
  *                  authenticated ticket for the session and write it to the
  *                  output buffer. Here, ticket means the opaque ticket part
- *                  of the NewSessionTicket structure of RFC 5077.
+ *                  of the NewSessionTicket structure of RFC 5077 or of a
+ *                  TLS 1.3 ticket.
  *
  * \param p_ticket  Context for the callback
  * \param session   SSL session to be written in the ticket
@@ -2487,7 +2411,6 @@ typedef int mbedtls_ssl_ticket_write_t( void *p_ticket,
                                         const unsigned char *end,
                                         size_t *tlen,
                                         uint32_t *lifetime );
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 
 #if defined(MBEDTLS_SSL_EXPORT_KEYS)
 #if defined(MBEDTLS_SSL_PROTO_TLS1) || defined(MBEDTLS_SSL_PROTO_TLS1_1) || \
@@ -2582,35 +2505,6 @@ typedef int mbedtls_ssl_export_secret_t( void *p_expsecret,
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 #endif /* MBEDTLS_SSL_EXPORT_KEYS */
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
-/**
- * \brief           Callback type: parse and load session ticket
- *
- * \note            This describes what a callback implementation should do.
- *                  This callback should parse a session ticket as generated
- *                  by the corresponding mbedtls_ssl_ticket_write_t function,
- *                  and, if the ticket is authentic and valid, load the
- *                  session.
- *
- * \note            The implementation is allowed to modify the first len
- *                  bytes of the input buffer, eg to use it as a temporary
- *                  area for the decrypted ticket contents.
- *
- * \param p_ticket  Context for the callback
- * \param session   SSL session to be loaded
- * \param buf       Start of the buffer containing the ticket
- * \param len       Length of the ticket.
- *
- * \return          0 if successful, or
- *                  MBEDTLS_ERR_SSL_INVALID_MAC if not authentic, or
- *                  MBEDTLS_ERR_SSL_SESSION_TICKET_EXPIRED if expired, or
- *                  any other non-zero code for other failures.
- */
-typedef int mbedtls_ssl_ticket_parse_t(void* p_ticket,
-    mbedtls_ssl_ticket* session,
-    unsigned char* buf,
-    size_t len);
-#else
 /**
  * \brief           Callback type: parse and load session ticket
  *
@@ -2638,34 +2532,8 @@ typedef int mbedtls_ssl_ticket_parse_t( void *p_ticket,
                                         mbedtls_ssl_session *session,
                                         unsigned char *buf,
                                         size_t len );
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 
-
-#if (defined(MBEDTLS_SSL_SESSION_TICKETS) || defined(MBEDTLS_SSL_NEW_SESSION_TICKET)) && defined(MBEDTLS_SSL_SRV_C) && defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
-/**
- * \brief           Configure SSL session ticket callbacks (server only).
- *                  (Default: none.)
- *
- * \note            On server, session tickets are enabled by providing
- *                  non-NULL callbacks.
- *
- * \note            On client, use \c mbedtls_ssl_conf_session_tickets().
- *
- * \param conf      SSL configuration context
- * \param f_ticket_write    Callback for writing a ticket
- * \param f_ticket_parse    Callback for parsing a ticket
- * \param p_ticket          Context shared by the two callbacks
- * \param use_tickets       Enable or disable (MBEDTLS_SSL_SESSION_TICKETS_ENABLED or
- *                                         MBEDTLS_SSL_SESSION_TICKETS_DISABLED)
- */
-void mbedtls_ssl_conf_session_tickets_cb(mbedtls_ssl_config* conf,
-    mbedtls_ssl_ticket_write_t* f_ticket_write,
-    mbedtls_ssl_ticket_parse_t* f_ticket_parse,
-    void* p_ticket, int use_tickets);
-#endif /* ( MBEDTLS_SSL_SESSION_TICKETS || MBEDTLS_SSL_NEW_SESSION_TICKET ) && MBEDTLS_SSL_SRV_C && MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
-
-
-#if (defined(MBEDTLS_SSL_SESSION_TICKETS) && defined(MBEDTLS_SSL_SRV_C) && !defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL))
+#if (defined(MBEDTLS_SSL_SESSION_TICKETS) || defined(MBEDTLS_SSL_NEW_SESSION_TICKET)) && defined(MBEDTLS_SSL_SRV_C)
 /**
  * \brief           Configure SSL session ticket callbacks (server only).
  *                  (Default: none.)
@@ -2684,7 +2552,7 @@ void mbedtls_ssl_conf_session_tickets_cb( mbedtls_ssl_config *conf,
         mbedtls_ssl_ticket_write_t *f_ticket_write,
         mbedtls_ssl_ticket_parse_t *f_ticket_parse,
         void *p_ticket );
-#endif /* MBEDTLS_SSL_SESSION_TICKETS && MBEDTLS_SSL_SRV_C */
+#endif /* ( MBEDTLS_SSL_SESSION_TICKETS || MBEDTLS_SSL_NEW_SESSION_TICKET ) && MBEDTLS_SSL_SRV_C */
 
 #if defined(MBEDTLS_SSL_EXPORT_KEYS)
 #if defined(MBEDTLS_SSL_PROTO_TLS1) || defined(MBEDTLS_SSL_PROTO_TLS1_1) || \
@@ -3083,6 +2951,9 @@ void mbedtls_ssl_conf_session_cache( mbedtls_ssl_config *conf,
         int (*f_set_cache)(void *, const mbedtls_ssl_session *) );
 #endif /* MBEDTLS_SSL_SRV_C */
 
+#if defined(MBEDTLS_SSL_PROTO_TLS1_2) || defined(MBEDTLS_SSL_PROTO_TLS1_1) || \
+    defined(MBEDTLS_SSL_PROTO_TLS1) || defined(MBEDTLS_SSL_NEW_SESSION_TICKET)
+
 #if defined(MBEDTLS_SSL_CLI_C)
 /**
  * \brief          Request resumption of session (client-side only)
@@ -3162,6 +3033,7 @@ int mbedtls_ssl_session_load( mbedtls_ssl_session *session,
  *
  * \return         \c 0 if successful.
  * \return         #MBEDTLS_ERR_SSL_BUFFER_TOO_SMALL if \p buf is too small.
+ * \return.........#MBEDTLS_ERR_SSL_INTERNAL_ERROR if session is NULL.
  */
 int mbedtls_ssl_session_save( const mbedtls_ssl_session *session,
                               unsigned char *buf,
@@ -3184,6 +3056,8 @@ int mbedtls_ssl_session_save( const mbedtls_ssl_session *session,
  * \return         \c NULL if no session is active.
  */
 const mbedtls_ssl_session *mbedtls_ssl_get_session_pointer( const mbedtls_ssl_context *ssl );
+#endif /* MBEDTLS_SSL_PROTO_TLS1_2 || MBEDTLS_SSL_PROTO_TLS1_1 || MBEDTLS_SSL_PROTO_TLS1 ||
+          MBEDTLS_SSL_NEW_SESSION_TICKET */
 
 /**
  * \brief               Set the list of allowed ciphersuites and the preference
@@ -3452,7 +3326,7 @@ int mbedtls_ssl_conf_own_cert( mbedtls_ssl_config *conf,
  * \returns A negative error code on failure.
  */
 
-int mbedtls_ssl_conf_tls13_key_exchange( mbedtls_ssl_config* conf,
+int mbedtls_ssl_conf_ke( mbedtls_ssl_config* conf,
                          const int key_exchange_mode );
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 

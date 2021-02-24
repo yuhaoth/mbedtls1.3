@@ -1357,10 +1357,6 @@ int main( int argc, char *argv[] )
     char early_data[] = "early data test";
 #endif /* MBEDTLS_ZERO_RTT */
 
-#if defined(MBEDTLS_SSL_NEW_SESSION_TICKET)
-    mbedtls_ssl_ticket ticket;
-#endif /* MBEDTLS_SSL_NEW_SESSION_TICKET */
-
     mbedtls_ssl_session saved_session;
 
     unsigned char *session_data = NULL;
@@ -1406,10 +1402,6 @@ int main( int argc, char *argv[] )
     mbedtls_ssl_config_init( &conf );
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
-
-#if defined(MBEDTLS_SSL_NEW_SESSION_TICKET)
-    mbedtls_ssl_init_client_ticket( &ticket );
-#endif /* MBEDTLS_SSL_NEW_SESSION_TICKET */
 
 #if defined(MBEDTLS_ECP_C)
     memset( (void *) named_groups_list, MBEDTLS_ECP_DP_NONE, sizeof( named_groups_list ) );
@@ -2753,7 +2745,7 @@ int main( int argc, char *argv[] )
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
     // Configure key exchange mode
-    mbedtls_ssl_conf_tls13_key_exchange( &conf, opt.key_exchange_modes );
+    mbedtls_ssl_conf_ke( &conf, opt.key_exchange_modes );
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 
 #if defined(MBEDTLS_DHM_C)
@@ -3382,7 +3374,7 @@ send_request:
 
                     case MBEDTLS_ERR_SSL_RECEIVED_NEW_SESSION_TICKET:
                         /* We were waiting for application data but got a NewSessionTicket instead. */
-                        mbedtls_printf( " received a ticket.\n" );
+                        mbedtls_printf( " got ticket.\n" );
                         continue;
 
 #endif /* MBEDTLS_SSL_NEW_SESSION_TICKET */
@@ -3465,94 +3457,63 @@ send_request:
         ret = 0;
     }
 
+#if defined(MBEDTLS_SSL_NEW_SESSION_TICKET)
     if( opt.reconnect != 0 )
     {
         mbedtls_printf("  . Saving session for reuse..." );
         fflush( stdout );
 
-        /* For TLS <= 1.2, serialize the session and restore later,
-         * triggering either session ID or session ticket based
-         * resumption in the next handshake. */
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
-        if( ssl.minor_ver == MBEDTLS_SSL_MINOR_VERSION_4 )
+        if( opt.reco_mode == 1 )
         {
-            /*
-             * Store ticket sent by the server after the handshake is completed.
-             */
-
-#if defined(MBEDTLS_SSL_NEW_SESSION_TICKET)
-            ret = mbedtls_ssl_get_client_ticket( &ssl, &ticket );
-            if( ret < 0 )
+            /* free any previously saved data */
+            if( session_data != NULL )
             {
-                mbedtls_printf( " failed\n  ! mbedtls_ssl_get_ticket returned -0x%x\n\n",
-                                (unsigned) -ret );
+                mbedtls_platform_zeroize( session_data, session_data_len );
+                mbedtls_free( session_data );
+                session_data = NULL;
+            }
+
+            /* get size of the buffer needed */
+            mbedtls_ssl_session_save( mbedtls_ssl_get_session_pointer( &ssl ),
+                                        NULL, 0, &session_data_len );
+            session_data = mbedtls_calloc( 1, session_data_len );
+            if( session_data == NULL )
+            {
+                mbedtls_printf( " failed\n  ! alloc %u bytes for session data\n",
+                                (unsigned) session_data_len );
+                ret = MBEDTLS_ERR_SSL_ALLOC_FAILED;
                 goto exit;
             }
-            else if( ret == 0 )
+
+            /* actually save session data */
+            if( ( ret = mbedtls_ssl_session_save( mbedtls_ssl_get_session_pointer( &ssl ),
+                                                    session_data, session_data_len,
+                                                    &session_data_len ) ) != 0 )
             {
-                mbedtls_printf( "got ticket\n" );
-            }
-            else
-#endif /* MBEDTLS_SSL_NEW_SESSION_TICKET */
-            {
-                opt.reconnect = 0;
-                mbedtls_printf( " failed\n  ! no ticket available\n" );
+                mbedtls_printf( " failed\n  ! mbedtls_ssl_session_saved returned -0x%04x\n\n",
+                                (unsigned int) -ret );
+                goto exit;
             }
         }
         else
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
         {
-            if( opt.reco_mode == 1 )
+            if( ( ret = mbedtls_ssl_get_session( &ssl, &saved_session ) ) != 0 )
             {
-                /* free any previously saved data */
-                if( session_data != NULL )
-                {
-                    mbedtls_platform_zeroize( session_data, session_data_len );
-                    mbedtls_free( session_data );
-                    session_data = NULL;
-                }
-
-                /* get size of the buffer needed */
-                mbedtls_ssl_session_save( mbedtls_ssl_get_session_pointer( &ssl ),
-                                          NULL, 0, &session_data_len );
-                session_data = mbedtls_calloc( 1, session_data_len );
-                if( session_data == NULL )
-                {
-                    mbedtls_printf( " failed\n  ! alloc %u bytes for session data\n",
-                                    (unsigned) session_data_len );
-                    ret = MBEDTLS_ERR_SSL_ALLOC_FAILED;
-                    goto exit;
-                }
-
-                /* actually save session data */
-                if( ( ret = mbedtls_ssl_session_save( mbedtls_ssl_get_session_pointer( &ssl ),
-                                                      session_data, session_data_len,
-                                                      &session_data_len ) ) != 0 )
-                {
-                    mbedtls_printf( " failed\n  ! mbedtls_ssl_session_saved returned -0x%04x\n\n",
-                                    (unsigned int) -ret );
-                    goto exit;
-                }
-            }
-            else
-            {
-                if( ( ret = mbedtls_ssl_get_session( &ssl, &saved_session ) ) != 0 )
-                {
-                    mbedtls_printf( " failed\n  ! mbedtls_ssl_get_session returned -0x%x\n\n",
-                                    (unsigned int) -ret );
-                    goto exit;
-                }
-            }
-
-            mbedtls_printf( " ok\n" );
-
-            if( opt.reco_mode == 1 )
-            {
-                mbedtls_printf( "    [ Saved %u bytes of session data]\n",
-                                (unsigned) session_data_len );
+                mbedtls_printf( " failed\n  ! mbedtls_ssl_get_session returned -0x%x\n\n",
+                                (unsigned int) -ret );
+                goto exit;
             }
         }
+
+        mbedtls_printf( " ok\n" );
+
+        if( opt.reco_mode == 1 )
+        {
+            mbedtls_printf( "    [ Saved %u bytes of session data]\n",
+                            (unsigned) session_data_len );
+        }
     }
+#endif /* MBEDTLS_SSL_NEW_SESSION_TICKET */
 
     /*
      * 7b. Simulate hard reset and reconnect from same port?
@@ -3787,6 +3748,7 @@ close_notify:
      * 9. Reconnect?
      */
 reconnect:
+#if defined(MBEDTLS_SSL_NEW_SESSION_TICKET)
     if( opt.reconnect != 0 )
     {
         --opt.reconnect;
@@ -3811,21 +3773,6 @@ reconnect:
             goto exit;
         }
 
-#if defined(MBEDTLS_SSL_NEW_SESSION_TICKET)
-        /* We need to decide when to send a ticket.
-         *
-         * At a minimum we need to configure the psk (with the resumption_secret)
-         * and the psk_identity (with the ticket).
-         */
-        if(( ret = mbedtls_ssl_conf_client_ticket( &ssl, &ticket )) != 0 )
-        {
-            mbedtls_printf(" failed\n  ! mbedtls_ssl_conf_client_ticket returned %d\n\n", ret);
-            goto exit;
-        }
-        // enable resumption
-        mbedtls_ssl_conf_client_ticket_enable( &ssl );
-#else
-
         if( opt.reco_mode == 1 )
         {
             if( ( ret = mbedtls_ssl_session_load( &saved_session,
@@ -3844,7 +3791,16 @@ reconnect:
                             (unsigned int) -ret );
             goto exit;
         }
-#endif /* MBEDTLS_SSL_NEW_SESSION_TICKET */
+
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+        // Configure key exchange mode to use PSK-ECDHE
+        if( ( ret = mbedtls_ssl_conf_ke( &conf, MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_DHE_KE ) )  != 0 )
+        {
+            mbedtls_printf( " failed\n  ! mbedtls_ssl_conf_ke returned -0x%x\n\n",
+                            (unsigned int) -ret );
+            goto exit;
+        }
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 
         if( ( ret = mbedtls_net_connect( &server_fd,
                         opt.server_addr, opt.server_port,
@@ -3883,6 +3839,7 @@ reconnect:
 
         goto send_request;
     }
+#endif /* MBEDTLS_SSL_NEW_SESSION_TICKET */
 
     /*
      * Cleanup and exit
@@ -3908,11 +3865,7 @@ exit:
 #endif
 #endif
 
-#if defined(MBEDTLS_SSL_NEW_SESSION_TICKET)
-    mbedtls_ssl_del_client_ticket( &ticket );
-#else
     mbedtls_ssl_session_free( &saved_session );
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 
     mbedtls_ssl_free( &ssl );
     mbedtls_ssl_config_free( &conf );

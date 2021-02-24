@@ -87,15 +87,6 @@ mbedtls_ssl_ticket_context;
  */
 void mbedtls_ssl_ticket_init( mbedtls_ssl_ticket_context *ctx );
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && defined(MBEDTLS_SSL_NEW_SESSION_TICKET)
-void mbedtls_ssl_del_client_ticket(mbedtls_ssl_ticket* ticket);
-void mbedtls_ssl_init_client_ticket(mbedtls_ssl_ticket* ticket);
-void mbedtls_ssl_conf_client_ticket_disable(mbedtls_ssl_context* ssl);
-void mbedtls_ssl_conf_client_ticket_enable(mbedtls_ssl_context* ssl);
-int mbedtls_ssl_get_client_ticket(const mbedtls_ssl_context* ssl, mbedtls_ssl_ticket* ticket);
-int mbedtls_ssl_conf_client_ticket(const mbedtls_ssl_context* ssl, mbedtls_ssl_ticket* ticket);
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL && MBEDTLS_SSL_NEW_SESSION_TICKET */
-
 /**
  * \brief           Prepare context to be actually used
  *
@@ -118,17 +109,10 @@ int mbedtls_ssl_conf_client_ticket(const mbedtls_ssl_context* ssl, mbedtls_ssl_t
  * \return          0 if successful,
  *                  or a specific MBEDTLS_ERR_XXX error code
  */
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
-int mbedtls_ssl_ticket_setup( mbedtls_ssl_ticket_context *ctx,
-    int (*f_rng)(void *, unsigned char *, size_t), void *p_rng,
-    mbedtls_cipher_type_t cipher,
-    uint32_t lifetime, mbedtls_ssl_ticket_flags flags);
-#else 
 int mbedtls_ssl_ticket_setup(mbedtls_ssl_ticket_context* ctx,
     int (*f_rng)(void*, unsigned char*, size_t), void* p_rng,
     mbedtls_cipher_type_t cipher,
     uint32_t lifetime);
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 
 /**
  * \brief           Implementation of the ticket write callback
