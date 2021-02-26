@@ -813,20 +813,6 @@ static int ssl_write_change_cipher_spec_coordinate( mbedtls_ssl_context* ssl )
         }
     }
 #endif /* MBEDTLS_SSL_SRV_C */
-
-#if defined(MBEDTLS_SSL_CLI_C)
-    if( ssl->conf->endpoint == MBEDTLS_SSL_IS_CLIENT )
-    {
-        if( ssl->state == MBEDTLS_SSL_CLIENT_CCS_BEFORE_FINISHED )
-        {
-            if( ssl->transform_out == NULL )
-                ret = SSL_WRITE_CCS_NEEDED;
-            else
-                ret = SSL_WRITE_CCS_SKIP;
-        }
-    }
-#endif /* MBEDTLS_SSL_CLI_C */
-
     return( ret );
 }
 
