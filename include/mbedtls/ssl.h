@@ -3033,7 +3033,7 @@ int mbedtls_ssl_session_load( mbedtls_ssl_session *session,
  *
  * \return         \c 0 if successful.
  * \return         #MBEDTLS_ERR_SSL_BUFFER_TOO_SMALL if \p buf is too small.
- * \return.........#MBEDTLS_ERR_SSL_INTERNAL_ERROR if session is NULL.
+ * \return         #MBEDTLS_ERR_SSL_INTERNAL_ERROR if session is NULL.
  */
 int mbedtls_ssl_session_save( const mbedtls_ssl_session *session,
                               unsigned char *buf,
