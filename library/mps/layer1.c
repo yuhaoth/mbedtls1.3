@@ -1226,8 +1226,7 @@ int mps_l1_flush( mps_l1 *ctx )
 }
 
 /* TODO: Will we need this at some point? */
-__attribute__((unused))
-int mps_l1_read_dependency( mps_l1 *ctx )
+int UNUSED mps_l1_read_dependency( mps_l1 *ctx )
 {
     mbedtls_mps_transport_type const mode =
         mbedtls_mps_l1_get_mode( ctx );
@@ -1243,8 +1242,7 @@ int mps_l1_read_dependency( mps_l1 *ctx )
 }
 
 /* TODO: Will we need this at some point? */
-__attribute__((unused))
-int mps_l1_write_dependency( mps_l1 *ctx )
+int UNUSED mps_l1_write_dependency( mps_l1 *ctx )
 {
     mbedtls_mps_transport_type const mode =
         mbedtls_mps_l1_get_mode( ctx );

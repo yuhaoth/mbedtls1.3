@@ -715,4 +715,11 @@ typedef size_t mbedtls_mps_size_t;
 
 /* \} name SECTION: Parsing and writing macros */
 
+#if ( defined(__ARMCC_VERSION) || defined(_MSC_VER) ) && \
+    !defined(inline) && !defined(__cplusplus)
+#define UNUSED
+#else
+#define UNUSED __attribute__((unused))
+#endif
+
 #endif /* MBEDTLS_MPS_COMMON_H */
