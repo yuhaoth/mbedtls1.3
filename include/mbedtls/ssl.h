@@ -637,6 +637,7 @@ extern "C" {
         MBEDTLS_SSL_HANDSHAKE_FINISH_ACK,
         MBEDTLS_SSL_HANDSHAKE_OVER,
         MBEDTLS_SSL_SERVER_NEW_SESSION_TICKET,
+        MBEDTLS_SSL_CLIENT_NEW_SESSION_TICKET,
 #if defined(MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE)
         MBEDTLS_SSL_CLIENT_CCS_BEFORE_2ND_CLIENT_HELLO,
         MBEDTLS_SSL_CLIENT_CCS_AFTER_SERVER_FINISHED,
@@ -1700,19 +1701,22 @@ struct mbedtls_ssl_context
     int nb_zero;                /*!< # of 0-length encrypted messages */
 
 
-	/* The following two variables indicate if and, if yes,
-	 * what kind of alert or warning is pending to be sent.
-	 * They should not be set manually but through the macros
-	 * SSL_PEND_FATAL_ALERT( TYPE ) and SSL_PEND_WARNING( TYPE )
-	 * defined below. */
-	unsigned char send_alert;   /*!< Determines if either a fatal error
-									 or a warning should be sent. Values:
-									 - \c 0 if no alert is to be sent.
-									 - #MBEDTLS_SSL_ALERT_LEVEL_FATAL
-									   if a fatal alert is to be sent
-									 - #MBEDTLS_SSL_ALERT_LEVEL_WARNING
-									   if a non-fatal alert is to be sent. */
-	unsigned char alert_type;   /*!< Type of alert if send_alert != 0 */
+    /* The following two variables indicate if and, if yes,
+     * what kind of alert or warning is pending to be sent.
+     * They should not be set manually but through the macros
+     * SSL_PEND_FATAL_ALERT( TYPE ) and SSL_PEND_WARNING( TYPE )
+     * defined below. */
+    unsigned char send_alert;   /*!< Determines if either a fatal error
+                                  or a warning should be sent. Values:
+                                  - \c 0 if no alert is to be sent.
+                                  - #MBEDTLS_SSL_ALERT_LEVEL_FATAL
+                                  if a fatal alert is to be sent
+                                  - #MBEDTLS_SSL_ALERT_LEVEL_WARNING
+                                  if a non-fatal alert is to be sent. */
+    unsigned char alert_type;   /*!< Type of alert if send_alert != 0 */
+    int alert_reason;           /*!< The error code to be returned to the
+                                 *   user once the fatal alert has been sent. */
+
     int keep_current_message;   /*!< drop or reuse current message
                                      on next call to record layer? */
 
@@ -1829,21 +1833,14 @@ struct mbedtls_ssl_context
 };
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
-#define SSL_PEND_FATAL_ALERT( type )                                    \
+#define SSL_PEND_FATAL_ALERT( type, user_return_value )                 \
     do                                                                  \
     {                                                                   \
-        ssl->send_alert = MBEDTLS_SSL_ALERT_LEVEL_FATAL;                \
-        ssl->alert_type = type;                                         \
-    } while( 0 )
-
-#define SSL_PEND_WARNING( type )                                        \
-    do                                                                  \
-    {                                                                   \
-        ssl->send_alert = MBEDTLS_SSL_ALERT_LEVEL_WARNING;              \
-        ssl->alert_type = type;                                         \
+        ssl->send_alert = 1;                                            \
+        ssl->alert_reason = (user_return_value);                        \
+        ssl->alert_type = (type);                                       \
     } while( 0 )
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
-
 
 #if defined(MBEDTLS_SSL_HW_RECORD_ACCEL)
 
@@ -5037,6 +5034,8 @@ int  mbedtls_ssl_tls_prf( const mbedtls_tls_prf_types prf,
                           const char *label,
                           const unsigned char *random, size_t rlen,
                           unsigned char *dstbuf, size_t dlen );
+
+int mbedtls_ssl_flush_output(mbedtls_ssl_context* ssl);
 
 #ifdef __cplusplus
 }

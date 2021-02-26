@@ -762,6 +762,12 @@ struct mbedtls_ssl_handshake_params
             uint8_t preparation_done;
         } cli_key_exch_in;
 
+        /* Server, outgoing ClientKeyExchange */
+        struct
+        {
+            uint8_t preparation_done;
+        } encrypted_extensions_out;
+
 #endif /* MBEDTLS_SSL_SRV_C */
 
         /* Incoming CertificateVerify */
@@ -1430,6 +1436,14 @@ int mbedtls_ssl_create_binder( mbedtls_ssl_context *ssl,
                                const mbedtls_ssl_ciphersuite_t *suite_info,
                                unsigned char *result );
 #endif /* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED */
+
+int mbedtls_ssl_mps_fetch_full_hs_msg( mbedtls_ssl_context *ssl,
+                                       unsigned hs_type,
+                                       unsigned char **buf,
+                                       size_t *buflen );
+int mbedtls_ssl_mps_hs_consume_full_hs_msg( mbedtls_ssl_context *ssl );
+
+int mbedtls_ssl_mps_remap_error( int ret );
 
 int mbedtls_ssl_get_handshake_transcript( mbedtls_ssl_context *ssl,
                                           const mbedtls_md_type_t md,

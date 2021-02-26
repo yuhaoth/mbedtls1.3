@@ -151,6 +151,66 @@ static uint32_t get_varint_value( const uint32_t input )
 }
 #endif /* MBEDTLS_SSL_TLS13_CTLS */
 
+#if defined(MBEDTLS_SSL_USE_MPS)
+int mbedtls_ssl_mps_fetch_full_hs_msg( mbedtls_ssl_context *ssl,
+                                       unsigned hs_type,
+                                       unsigned char **buf,
+                                       size_t *buflen )
+{
+    int ret;
+    mbedtls_mps_handshake_in msg;
+
+    MBEDTLS_SSL_PROC_CHK_NEG( mbedtls_mps_read( &ssl->mps.l4 ) );
+
+    if( ret != MBEDTLS_MPS_MSG_HS )
+        return( MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE );
+
+    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read_handshake( &ssl->mps.l4,
+                                                      &msg ) );
+
+    if( msg.type != hs_type )
+        return( MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE );
+
+    ret = mbedtls_reader_get_ext( msg.handle,
+                                  msg.length,
+                                  buf,
+                                  NULL );
+
+    if( ret == MBEDTLS_ERR_READER_OUT_OF_DATA )
+    {
+        MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read_pause( &ssl->mps.l4 ) );
+        ret = MBEDTLS_ERR_SSL_WANT_READ;
+    }
+    else
+    {
+        MBEDTLS_SSL_PROC_CHK( ret );
+
+        /* *buf already set in mbedtls_reader_get_ext() */
+        *buflen = msg.length;
+    }
+
+cleanup:
+
+    return( ret );
+}
+
+int mbedtls_ssl_mps_hs_consume_full_hs_msg( mbedtls_ssl_context *ssl )
+{
+    int ret;
+    mbedtls_mps_handshake_in msg;
+
+    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read_handshake( &ssl->mps.l4,
+                                                      &msg ) );
+
+    MBEDTLS_SSL_PROC_CHK( mbedtls_reader_commit_ext( msg.handle ) );
+    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read_consume( &ssl->mps.l4 ) );
+
+cleanup:
+
+    return( ret );
+}
+#endif /* MBEDTLS_SSL_USE_MPS */
+
 void mbedtls_ssl_add_hs_msg_to_checksum( mbedtls_ssl_context *ssl,
                                          unsigned hs_type,
                                          unsigned char const *msg,
@@ -2121,10 +2181,7 @@ int mbedtls_ssl_read_certificate_verify_process( mbedtls_ssl_context* ssl );
 #define SSL_CERTIFICATE_VERIFY_READ 1
 static int ssl_read_certificate_verify_coordinate( mbedtls_ssl_context* ssl );
 
-#if defined(MBEDTLS_SSL_USE_MPS)
-static int ssl_read_certificate_verify_fetch( mbedtls_ssl_context* ssl,
-                                              mbedtls_mps_handshake_in *msg );
-#else
+#if !defined(MBEDTLS_SSL_USE_MPS)
 static int ssl_read_certificate_verify_fetch( mbedtls_ssl_context* ssl,
                                               unsigned char** buf,
                                               size_t* buflen );
@@ -2169,9 +2226,6 @@ int mbedtls_ssl_read_certificate_verify_process( mbedtls_ssl_context* ssl )
     {
         unsigned char *buf;
         size_t buflen;
-#if defined(MBEDTLS_SSL_USE_MPS)
-        mbedtls_mps_handshake_in msg;
-#endif /* MBEDTLS_SSL_USE_MPS */
 
         /* Need to calculate the hash of the transcript first
          * before reading the message since otherwise it gets
@@ -2195,12 +2249,10 @@ int mbedtls_ssl_read_certificate_verify_process( mbedtls_ssl_context* ssl )
                                      !ssl->conf->endpoint );
 
 #if defined(MBEDTLS_SSL_USE_MPS)
-        MBEDTLS_SSL_PROC_CHK( ssl_read_certificate_verify_fetch( ssl, &msg ) );
-        MBEDTLS_SSL_PROC_CHK( mbedtls_reader_get_ext( msg.handle,
-                                                      msg.length,
-                                                      &buf,
-                                                      NULL ) );
-        buflen = msg.length;
+
+        MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_mps_fetch_full_hs_msg( ssl,
+                                              MBEDTLS_SSL_HS_CERTIFICATE_VERIFY,
+                                              &buf, &buflen ) );
 
         mbedtls_ssl_add_hs_msg_to_checksum(
             ssl, MBEDTLS_SSL_HS_CERTIFICATE_VERIFY, buf, buflen );
@@ -2209,8 +2261,8 @@ int mbedtls_ssl_read_certificate_verify_process( mbedtls_ssl_context* ssl )
         MBEDTLS_SSL_PROC_CHK( ssl_read_certificate_verify_parse( ssl, buf, buflen,
                                                                  verify_buffer,
                                                                  verify_buffer_len ) );
-        MBEDTLS_SSL_PROC_CHK( mbedtls_reader_commit_ext( msg.handle ) );
-        MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read_consume( &ssl->mps.l4 ) );
+
+        MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_mps_hs_consume_full_hs_msg( ssl ) );
 
 #else /* MBEDTLS_SSL_USE_MPS */
 
@@ -2251,28 +2303,7 @@ cleanup:
     return( ret );
 }
 
-#if defined(MBEDTLS_SSL_USE_MPS)
-static int ssl_read_certificate_verify_fetch( mbedtls_ssl_context *ssl,
-                                              mbedtls_mps_handshake_in *msg )
-{
-    int ret;
-
-    MBEDTLS_SSL_PROC_CHK_NEG( mbedtls_mps_read( &ssl->mps.l4 ) );
-
-    if( ret != MBEDTLS_MPS_MSG_HS )
-        return( MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE );
-
-    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read_handshake( &ssl->mps.l4,
-                                                      msg ) );
-
-    if( msg->type != MBEDTLS_SSL_HS_CERTIFICATE_VERIFY )
-        return( MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE );
-
-cleanup:
-
-    return( ret );
-}
-#else /* MBEDTLS_SSL_USE_MPS */
+#if !defined(MBEDTLS_SSL_USE_MPS)
 static int ssl_read_certificate_verify_fetch( mbedtls_ssl_context *ssl,
                                               unsigned char **buf,
                                               size_t *buflen )
@@ -2289,7 +2320,8 @@ static int ssl_read_certificate_verify_fetch( mbedtls_ssl_context *ssl,
         ssl->in_msg[0]  != MBEDTLS_SSL_HS_CERTIFICATE_VERIFY )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad certificate verify message" ) );
-        SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_UNEXPECTED_MESSAGE );
+        SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_UNEXPECTED_MESSAGE,
+                              MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE );
         ret = MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE;
         goto cleanup;
     }
@@ -2766,7 +2798,7 @@ static int ssl_write_certificate_write( mbedtls_ssl_context* ssl,
     while ( crt != NULL )
     {
         n = crt->raw.len;
-        if( n > MBEDTLS_SSL_MAX_CONTENT_LEN - 3 - i )
+        if( n > buflen - 3 - i )
         {
             MBEDTLS_SSL_DEBUG_MSG( 1, ( "certificate too large, %d > %d",
                                         i + 3 + n, MBEDTLS_SSL_MAX_CONTENT_LEN ) );
@@ -2864,10 +2896,7 @@ int mbedtls_ssl_read_certificate_process( mbedtls_ssl_context* ssl );
 #define SSL_CERTIFICATE_SKIP       1
 static int ssl_read_certificate_coordinate( mbedtls_ssl_context* ssl );
 
-#if defined(MBEDTLS_SSL_USE_MPS)
-static int ssl_read_certificate_fetch( mbedtls_ssl_context* ssl,
-                                       mbedtls_mps_handshake_in *msg );
-#else
+#if !defined(MBEDTLS_SSL_USE_MPS)
 static int ssl_read_certificate_fetch( mbedtls_ssl_context* ssl,
                                        unsigned char** buf,
                                        size_t* buflen );
@@ -2906,14 +2935,10 @@ int mbedtls_ssl_read_certificate_process( mbedtls_ssl_context* ssl )
         size_t buflen;
 
 #if defined(MBEDTLS_SSL_USE_MPS)
-        mbedtls_mps_handshake_in msg;
 
-        MBEDTLS_SSL_PROC_CHK( ssl_read_certificate_fetch( ssl, &msg ) );
-        MBEDTLS_SSL_PROC_CHK( mbedtls_reader_get_ext( msg.handle,
-                                                      msg.length,
-                                                      &buf,
-                                                      NULL ) );
-        buflen = msg.length;
+        MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_mps_fetch_full_hs_msg( ssl,
+                                          MBEDTLS_SSL_HS_CERTIFICATE,
+                                          &buf, &buflen ) );
 
         mbedtls_ssl_add_hs_msg_to_checksum(
             ssl, MBEDTLS_SSL_HS_CERTIFICATE, buf, buflen );
@@ -2923,8 +2948,7 @@ int mbedtls_ssl_read_certificate_process( mbedtls_ssl_context* ssl )
         /* Validate the certificate chain and set the verification results. */
         MBEDTLS_SSL_PROC_CHK( ssl_read_certificate_validate( ssl ) );
 
-        MBEDTLS_SSL_PROC_CHK( mbedtls_reader_commit_ext( msg.handle ) );
-        MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read_consume( &ssl->mps.l4 ) );
+        MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_mps_hs_consume_full_hs_msg( ssl ) );
 
 #else /* MBEDTLS_SSL_USE_MPS */
 
@@ -2959,28 +2983,7 @@ cleanup:
     return( ret );
 }
 
-#if defined(MBEDTLS_SSL_USE_MPS)
-static int ssl_read_certificate_fetch( mbedtls_ssl_context *ssl,
-                                       mbedtls_mps_handshake_in *msg )
-{
-    int ret;
-
-    MBEDTLS_SSL_PROC_CHK_NEG( mbedtls_mps_read( &ssl->mps.l4 ) );
-
-    if( ret != MBEDTLS_MPS_MSG_HS )
-        return( MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE );
-
-    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read_handshake( &ssl->mps.l4,
-                                                      msg ) );
-
-    if( msg->type != MBEDTLS_SSL_HS_CERTIFICATE )
-        return( MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE );
-
-cleanup:
-
-    return( ret );
-}
-#else /* MBEDTLS_SSL_USE_MPS */
+#if !defined(MBEDTLS_SSL_USE_MPS)
 static int ssl_read_certificate_fetch( mbedtls_ssl_context *ssl,
                                        unsigned char **buf,
                                        size_t *buflen )
@@ -3000,7 +3003,8 @@ static int ssl_read_certificate_fetch( mbedtls_ssl_context *ssl,
         ssl->in_msg[0] != MBEDTLS_SSL_HS_CERTIFICATE )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad certificate message" ) );
-        SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_UNEXPECTED_MESSAGE );
+        SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_UNEXPECTED_MESSAGE,
+                              MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE );
         ret = MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE;
         goto cleanup;
     }
@@ -3095,7 +3099,8 @@ static int ssl_read_certificate_parse( mbedtls_ssl_context* ssl,
         if( buflen < 3 + certificate_request_context_len + 1 )
         {
             MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad certificate message" ) );
-            SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_DECODE_ERROR );
+            SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_DECODE_ERROR,
+                                  MBEDTLS_ERR_SSL_BAD_HS_CERTIFICATE_VERIFY );
             return( MBEDTLS_ERR_SSL_BAD_HS_CERTIFICATE );
         }
 
@@ -3110,7 +3115,8 @@ static int ssl_read_certificate_parse( mbedtls_ssl_context* ssl,
             else
             {
                 MBEDTLS_SSL_DEBUG_MSG( 1, ( "client certificate required" ) );
-                SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_CERT_REQUIRED );
+                SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_CERT_REQUIRED,
+                                      MBEDTLS_ERR_SSL_NO_CLIENT_CERTIFICATE );
                 return( MBEDTLS_ERR_SSL_NO_CLIENT_CERTIFICATE );
             }
         }
@@ -3120,7 +3126,8 @@ static int ssl_read_certificate_parse( mbedtls_ssl_context* ssl,
     if( buflen < 3 + 3 )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad certificate message" ) );
-        SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_DECODE_ERROR );
+        SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_DECODE_ERROR,
+                              MBEDTLS_ERR_SSL_BAD_HS_CERTIFICATE );
         return( MBEDTLS_ERR_SSL_BAD_HS_CERTIFICATE );
     }
 
@@ -3138,7 +3145,8 @@ static int ssl_read_certificate_parse( mbedtls_ssl_context* ssl,
         buflen != ( n + 3 + certificate_request_context_len + 1 ) )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad certificate message" ) );
-        SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_DECODE_ERROR );
+        SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_DECODE_ERROR,
+                              MBEDTLS_ERR_SSL_BAD_HS_CERTIFICATE );
         return( MBEDTLS_ERR_SSL_BAD_HS_CERTIFICATE );
     }
 
@@ -3154,7 +3162,8 @@ static int ssl_read_certificate_parse( mbedtls_ssl_context* ssl,
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "alloc( %d bytes ) failed",
                                     sizeof( mbedtls_x509_crt ) ) );
-        SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_INTERNAL_ERROR );
+        SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_INTERNAL_ERROR,
+                              MBEDTLS_ERR_SSL_ALLOC_FAILED );
         return( MBEDTLS_ERR_SSL_ALLOC_FAILED );
     }
 
@@ -3167,7 +3176,8 @@ static int ssl_read_certificate_parse( mbedtls_ssl_context* ssl,
         if( buf[i] != 0 )
         {
             MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad certificate message" ) );
-            SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_DECODE_ERROR );
+            SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_DECODE_ERROR,
+                                  MBEDTLS_ERR_SSL_BAD_HS_CERTIFICATE );
             return( MBEDTLS_ERR_SSL_BAD_HS_CERTIFICATE );
         }
 
@@ -3178,7 +3188,8 @@ static int ssl_read_certificate_parse( mbedtls_ssl_context* ssl,
         if( n < 128 || i + n > buflen )
         {
             MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad certificate message" ) );
-            SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_DECODE_ERROR );
+            SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_DECODE_ERROR,
+                                  MBEDTLS_ERR_SSL_BAD_HS_CERTIFICATE );
             return( MBEDTLS_ERR_SSL_BAD_HS_CERTIFICATE );
         }
 
@@ -3194,17 +3205,20 @@ static int ssl_read_certificate_parse( mbedtls_ssl_context* ssl,
                 break;
 
             case MBEDTLS_ERR_X509_ALLOC_FAILED:
-                SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_INTERNAL_ERROR );
+                SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_INTERNAL_ERROR,
+                                      MBEDTLS_ERR_X509_ALLOC_FAILED );
                 MBEDTLS_SSL_DEBUG_RET( 1, " mbedtls_x509_crt_parse_der", ret );
                 return( ret );
 
             case MBEDTLS_ERR_X509_UNKNOWN_VERSION:
-                SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_UNSUPPORTED_CERT );
+                SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_UNSUPPORTED_CERT,
+                                      MBEDTLS_ERR_X509_UNKNOWN_VERSION );
                 MBEDTLS_SSL_DEBUG_RET( 1, " mbedtls_x509_crt_parse_der", ret );
                 return( ret );
 
             default:
-                SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_BAD_CERT );
+                SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_BAD_CERT,
+                                      ret );
                 MBEDTLS_SSL_DEBUG_RET( 1, " mbedtls_x509_crt_parse_der", ret );
                 return( ret );
         }
@@ -3363,27 +3377,27 @@ static int ssl_read_certificate_validate( mbedtls_ssl_context* ssl )
            Pick one and send the corresponding alert. Which alert to send
            may be a subject of debate in some cases. */
         if( ssl->session_negotiate->verify_result & MBEDTLS_X509_BADCERT_OTHER )
-            SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_ACCESS_DENIED );
+            SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_ACCESS_DENIED, ret );
         else if( ssl->session_negotiate->verify_result & MBEDTLS_X509_BADCERT_CN_MISMATCH )
-            SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_BAD_CERT );
+            SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_BAD_CERT, ret );
         else if( ssl->session_negotiate->verify_result & MBEDTLS_X509_BADCERT_KEY_USAGE )
-            SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_UNSUPPORTED_CERT );
+            SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_UNSUPPORTED_CERT, ret );
         else if( ssl->session_negotiate->verify_result & MBEDTLS_X509_BADCERT_EXT_KEY_USAGE )
-            SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_UNSUPPORTED_CERT );
+            SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_UNSUPPORTED_CERT, ret );
         else if( ssl->session_negotiate->verify_result & MBEDTLS_X509_BADCERT_NS_CERT_TYPE )
-            SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_UNSUPPORTED_CERT );
+            SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_UNSUPPORTED_CERT, ret );
         else if( ssl->session_negotiate->verify_result & MBEDTLS_X509_BADCERT_BAD_PK )
-            SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_UNSUPPORTED_CERT );
+            SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_UNSUPPORTED_CERT, ret );
         else if( ssl->session_negotiate->verify_result & MBEDTLS_X509_BADCERT_BAD_KEY )
-            SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_UNSUPPORTED_CERT );
+            SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_UNSUPPORTED_CERT, ret );
         else if( ssl->session_negotiate->verify_result & MBEDTLS_X509_BADCERT_EXPIRED )
-            SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_CERT_EXPIRED );
+            SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_CERT_EXPIRED, ret );
         else if( ssl->session_negotiate->verify_result & MBEDTLS_X509_BADCERT_REVOKED )
-            SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_CERT_REVOKED );
+            SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_CERT_REVOKED, ret );
         else if( ssl->session_negotiate->verify_result & MBEDTLS_X509_BADCERT_NOT_TRUSTED )
-            SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_UNKNOWN_CA );
+            SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_UNKNOWN_CA, ret );
         else
-            SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_CERT_UNKNOWN );
+            SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_CERT_UNKNOWN, ret );
     }
 
 #if defined(MBEDTLS_DEBUG_C)
@@ -4220,6 +4234,7 @@ int mbedtls_ssl_finished_out_process( mbedtls_ssl_context* ssl )
                                                              buf_len - msg_len ) );
 
     MBEDTLS_SSL_PROC_CHK( mbedtls_mps_dispatch( &ssl->mps.l4 ) );
+    MBEDTLS_SSL_PROC_CHK( ssl_finished_out_postprocess( ssl ) );
     MBEDTLS_SSL_PROC_CHK( mbedtls_mps_flush( &ssl->mps.l4 ) );
 
 #else /* MBEDTLS_SSL_USE_MPS */
@@ -4233,11 +4248,13 @@ int mbedtls_ssl_finished_out_process( mbedtls_ssl_context* ssl )
     ssl->out_msgtype = MBEDTLS_SSL_MSG_HANDSHAKE;
     ssl->out_msg[0] = MBEDTLS_SSL_HS_FINISHED;
 
+    /* TODO: This doesn't work if mbedtls_ssl_write_handshake_msg() fails
+     * because the underlying transport isn't ready. */
     MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_write_handshake_msg( ssl ) );
+    MBEDTLS_SSL_PROC_CHK( ssl_finished_out_postprocess( ssl ) );
+
 
 #endif /* MBEDTLS_SSL_USE_MPS */
-
-    MBEDTLS_SSL_PROC_CHK( ssl_finished_out_postprocess( ssl ) );
 
 cleanup:
 
@@ -4453,10 +4470,7 @@ static int ssl_finished_out_write( mbedtls_ssl_context* ssl,
 /* Main entry point: orchestrates the other functions */
 int mbedtls_ssl_finished_in_process( mbedtls_ssl_context* ssl );
 
-#if defined(MBEDTLS_SSL_USE_MPS)
-static int ssl_read_finished_fetch( mbedtls_ssl_context* ssl,
-                                    mbedtls_mps_handshake_in *msg );
-#else
+#if !defined(MBEDTLS_SSL_USE_MPS)
 static int ssl_read_finished_fetch( mbedtls_ssl_context* ssl,
                                     unsigned char** buf,
                                     size_t* buflen );
@@ -4477,9 +4491,6 @@ int mbedtls_ssl_finished_in_process( mbedtls_ssl_context* ssl )
     int ret = 0;
     unsigned char *buf;
     size_t buflen;
-#if defined(MBEDTLS_SSL_USE_MPS)
-    mbedtls_mps_handshake_in msg;
-#endif /* MBEDTLS_SSL_USE_MPS */
 
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> parse finished" ) );
 
@@ -4487,22 +4498,18 @@ int mbedtls_ssl_finished_in_process( mbedtls_ssl_context* ssl )
     MBEDTLS_SSL_PROC_CHK( ssl_finished_in_preprocess( ssl ) );
 
 #if defined(MBEDTLS_SSL_USE_MPS)
-    MBEDTLS_SSL_PROC_CHK( ssl_read_finished_fetch( ssl, &msg ) );
 
-    MBEDTLS_SSL_PROC_CHK( mbedtls_reader_get_ext( msg.handle,
-                                                  msg.length,
-                                                  &buf,
-                                                  NULL ) );
-    buflen = msg.length;
+    MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_mps_fetch_full_hs_msg( ssl,
+                                              MBEDTLS_SSL_HS_FINISHED,
+                                              &buf, &buflen ) );
 
     mbedtls_ssl_add_hs_msg_to_checksum(
         ssl, MBEDTLS_SSL_HS_FINISHED, buf, buflen );
 
-    /* Parsing step */
+    /* Process the message contents */
     MBEDTLS_SSL_PROC_CHK( ssl_finished_in_parse( ssl, buf, buflen ) );
 
-    MBEDTLS_SSL_PROC_CHK( mbedtls_reader_commit_ext( msg.handle ) );
-    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read_consume( &ssl->mps.l4 ) );
+    MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_mps_hs_consume_full_hs_msg( ssl ) );
 
 #else /* MBEDTLS_SSL_USE_MPS */
 
@@ -4528,28 +4535,7 @@ cleanup:
     return( ret );
 }
 
-#if defined(MBEDTLS_SSL_USE_MPS)
-static int ssl_read_finished_fetch( mbedtls_ssl_context *ssl,
-                                              mbedtls_mps_handshake_in *msg )
-{
-    int ret;
-
-    MBEDTLS_SSL_PROC_CHK_NEG( mbedtls_mps_read( &ssl->mps.l4 ) );
-
-    if( ret != MBEDTLS_MPS_MSG_HS )
-        return( MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE );
-
-    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read_handshake( &ssl->mps.l4,
-                                                      msg ) );
-
-    if( msg->type != MBEDTLS_SSL_HS_FINISHED )
-        return( MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE );
-
-cleanup:
-
-    return( ret );
-}
-#else /* MBEDTLS_SSL_USE_MPS */
+#if !defined(MBEDTLS_SSL_USE_MPS)
 static int ssl_read_finished_fetch( mbedtls_ssl_context *ssl,
                                     unsigned char **buf,
                                     size_t *buflen )
@@ -4565,7 +4551,8 @@ static int ssl_read_finished_fetch( mbedtls_ssl_context *ssl,
     if( ssl->in_msgtype != MBEDTLS_SSL_MSG_HANDSHAKE  ||
         ssl->in_msg[0]  != MBEDTLS_SSL_HS_FINISHED    )
     {
-        SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_UNEXPECTED_MESSAGE );
+        SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_UNEXPECTED_MESSAGE,
+                              MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE );
         ret = MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE;
         goto cleanup;
     }
@@ -4614,7 +4601,8 @@ static int ssl_finished_in_parse( mbedtls_ssl_context* ssl,
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad finished message" ) );
 
-        SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_DECODE_ERROR );
+        SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_DECODE_ERROR,
+                              MBEDTLS_ERR_SSL_BAD_HS_FINISHED );
         return( MBEDTLS_ERR_SSL_BAD_HS_FINISHED );
     }
 
@@ -4633,7 +4621,8 @@ static int ssl_finished_in_parse( mbedtls_ssl_context* ssl,
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad finished message" ) );
 
-        SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_DECODE_ERROR );
+        SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_DECODE_ERROR,
+                              MBEDTLS_ERR_SSL_BAD_HS_FINISHED );
         return( MBEDTLS_ERR_SSL_BAD_HS_FINISHED );
     }
     return( 0 );
@@ -4851,10 +4840,7 @@ void mbedtls_ssl_conf_early_data( mbedtls_ssl_config *conf, int early_data, char
  */
 int mbedtls_ssl_new_session_ticket_process( mbedtls_ssl_context* ssl );
 
-#if defined(MBEDTLS_SSL_USE_MPS)
-static int ssl_new_session_ticket_fetch( mbedtls_ssl_context* ssl,
-                                         mbedtls_mps_handshake_in *msg );
-#else /* MBEDTLS_SSL_USE_MPS */
+#if !defined(MBEDTLS_SSL_USE_MPS)
 static int ssl_new_session_ticket_fetch( mbedtls_ssl_context* ssl,
                                          unsigned char** buf,
                                          size_t* buflen );
@@ -4876,26 +4862,19 @@ int mbedtls_ssl_new_session_ticket_process( mbedtls_ssl_context* ssl )
     int ret;
     unsigned char* buf;
     size_t buflen;
-#if defined(MBEDTLS_SSL_USE_MPS)
-    mbedtls_mps_handshake_in msg;
-#endif /* MBEDTLS_SSL_USE_MPS */
 
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> parse new session ticket" ) );
 
 #if defined(MBEDTLS_SSL_USE_MPS)
-    MBEDTLS_SSL_PROC_CHK( ssl_new_session_ticket_fetch( ssl, &msg ) );
 
-    MBEDTLS_SSL_PROC_CHK( mbedtls_reader_get_ext( msg.handle,
-                                                  msg.length,
-                                                  &buf,
-                                                  NULL ) );
-    buflen = msg.length;
+    MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_mps_fetch_full_hs_msg( ssl,
+                                          MBEDTLS_SSL_HS_NEW_SESSION_TICKET,
+                                          &buf, &buflen ) );
 
-    /* Parsing step */
+    /* Process the message contents */
     MBEDTLS_SSL_PROC_CHK( ssl_new_session_ticket_parse( ssl, buf, buflen ) );
 
-    MBEDTLS_SSL_PROC_CHK( mbedtls_reader_commit_ext( msg.handle ) );
-    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read_consume( &ssl->mps.l4 ) );
+    MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_mps_hs_consume_full_hs_msg( ssl ) );
 
 #else /* MBEDTLS_SSL_USE_MPS */
 
@@ -4918,27 +4897,7 @@ cleanup:
     return( ret );
 }
 
-#if defined(MBEDTLS_SSL_USE_MPS)
-static int ssl_new_session_ticket_fetch( mbedtls_ssl_context *ssl,
-                                         mbedtls_mps_handshake_in *msg )
-{
-    int ret;
-    MBEDTLS_SSL_PROC_CHK_NEG( mbedtls_mps_read( &ssl->mps.l4 ) );
-
-    if( ret != MBEDTLS_MPS_MSG_HS )
-        return( MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE );
-
-    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read_handshake( &ssl->mps.l4,
-                                                      msg ) );
-
-    if( msg->type != MBEDTLS_SSL_HS_NEW_SESSION_TICKET )
-        return( MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE );
-
-cleanup:
-
-    return( ret );
-}
-#else /* MBEDTLS_SSL_USE_MPS */
+#if !defined(MBEDTLS_SSL_USE_MPS)
 static int ssl_new_session_ticket_fetch( mbedtls_ssl_context* ssl,
                                          unsigned char** dst,
                                          size_t* dstlen )

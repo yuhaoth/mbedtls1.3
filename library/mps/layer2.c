@@ -1653,14 +1653,7 @@ int mps_l2_read_start( mbedtls_mps_l2 *ctx, mps_l2_in *in )
         ret = l2_handle_record_content( ctx, &rec );
         if( ret != 0 )
         {
-            /* TODO: Despite the caller mps_l3_read() immediately
-             * returning upon a non-zero error, and not operating
-             * on *in, GCC with -O3 complains that this path leads
-             * to *in being used uninitialized... */
-//            mps_l2_in l2_in_zero = { 0 };
-//            *in = l2_in_zero;
-
-            return( ret );
+            RETURN( ret );
         }
     }
 
