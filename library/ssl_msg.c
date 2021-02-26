@@ -2278,15 +2278,12 @@ int mbedtls_ssl_flush_output( mbedtls_ssl_context *ssl )
     MBEDTLS_SSL_PROC_CHK( mbedtls_mps_flush( &ssl->mps.l4 ) );
 
 cleanup:
-
-#if defined(MBEDTLS_SSL_USE_MPS)
     /*
      * Remap MPS error codes
      *
      * TODO: Consolidate MPS and SSL error codes, so that this isn't necessary.
      */
     ret = mbedtls_ssl_mps_remap_error( ret );
-#endif /* MBEDTLS_SSL_USE_MPS */
 
     return( ret);
 }
