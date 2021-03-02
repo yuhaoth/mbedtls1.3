@@ -5105,8 +5105,8 @@ int mbedtls_ssl_conf_psk( mbedtls_ssl_config *conf,
 
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
-/* mbedtls_ssl_conf_ke( ) allows to set the key exchange mode. */
-int mbedtls_ssl_conf_ke( mbedtls_ssl_config* conf,
+/* mbedtls_ssl_conf_tls13_key_exchange( ) allows to set the key exchange mode. */
+int mbedtls_ssl_conf_tls13_key_exchange( mbedtls_ssl_config* conf,
     const int key_exchange_mode )
 {
     conf->key_exchange_modes = key_exchange_mode;

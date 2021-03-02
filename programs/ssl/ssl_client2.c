@@ -2745,7 +2745,7 @@ int main( int argc, char *argv[] )
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
     // Configure key exchange mode
-    mbedtls_ssl_conf_ke( &conf, opt.key_exchange_modes );
+    mbedtls_ssl_conf_tls13_key_exchange( &conf, opt.key_exchange_modes );
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 
 #if defined(MBEDTLS_DHM_C)
@@ -3794,9 +3794,10 @@ reconnect:
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
         // Configure key exchange mode to use PSK-ECDHE
-        if( ( ret = mbedtls_ssl_conf_ke( &conf, MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_DHE_KE ) )  != 0 )
+        if( ( ret = mbedtls_ssl_conf_tls13_key_exchange( &conf,
+                            MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_DHE_KE ) )  != 0 )
         {
-            mbedtls_printf( " failed\n  ! mbedtls_ssl_conf_ke returned -0x%x\n\n",
+            mbedtls_printf( " failed\n  ! mbedtls_ssl_conf_tls13_key_exchange returned -0x%x\n\n",
                             (unsigned int) -ret );
             goto exit;
         }
