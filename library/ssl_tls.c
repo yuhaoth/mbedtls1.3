@@ -5948,9 +5948,9 @@ static unsigned char ssl_serialized_session_header[] = {
  *        these version+format bytes.
  *
  *  Note: The format below is used by TLS/DTLS versions prior to 1.3.
-          The ticket format used in TLS/DTLS 1.3 is shown further below.
+ *        The ticket format used in TLS/DTLS 1.3 is shown further below.
  * 
-  *                               // In this version, `session_format` determines
+ *                               // In this version, `session_format` determines
  *                               // the setting of those compile-time
  *                               // configuration options which influence
  *                               // the structure of mbedtls_ssl_session.
