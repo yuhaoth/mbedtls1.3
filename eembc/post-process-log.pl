@@ -228,19 +228,19 @@ if (scalar(keys %g_ctx) > 0) {
 # Now do a fancy print (about 200 columns wide) of each event for each
 # alias at each state in the handshake.
 #
-printf "% 5s % 8s % 15s: ", "alias", "type", "context";
+printf "% 5s,% 8s,% 15s:,", "alias", "type", "context";
 foreach my $j (-1, 0 .. 20) {
-	printf "% 6d ", $j;
+	printf "% 6d,", $j;
 }
 print "\n";
 foreach my $alias (sort { $a <=> $b } keys %g_cross) {
 	my $entry = $g_cross{$alias};
-	printf "%05d % 8s % 15s: ", $alias, $entry->{'type'}, $g_alias_to_context{$alias};
+	printf "%05d,% 8s,% 15s:,", $alias, $entry->{'type'}, $g_alias_to_context{$alias};
 	foreach my $j (-1, 0 .. 20) {
 		if (exists($entry->{'state'}{$j})) {
-			printf "% 6s ", $entry->{'state'}{$j}{'event'};
+			printf "% 6s,", $entry->{'state'}{$j}{'event'};
 		} else {
-			printf "% 6s ", " ";
+			printf "% 6s,", " ";
 		}
 	}
 	print "\n";
