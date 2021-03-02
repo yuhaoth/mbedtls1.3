@@ -5974,17 +5974,18 @@ static unsigned char ssl_serialized_session_header[] = {
  *
  * For TLS/DTLS 1.3 the ticket contains the following content:
  *
- *  - ticket creation time ( start )
- *  - ciphersuite ( ciphersuite )
- *  - ticket lifetime ( ticket_lifetime )
- *  - ticket-age-add parameter ( ticket_age_add )
- *  - key length ( key_len )
- *  - flags ( flags )
- *  - key ( key )
- * 
- * Note: This is not the NewSessionTicket message but rather
- *       the encrypted content of the opaque ticket structure
- *        within that message.
+ *  uint64 start_time;
+ *  uint8 ciphersuite[2];
+ *  uint32 ticket_lifetime;
+ *  uint32 ticket_age_add;
+ *  uint8 ticket_flags; 
+ *  opaque resumption_key<0..255>;
+ *  opaque ticket<0..2^16>;
+ *  uint64 ticket_received;
+ *
+ * Note: The field ticket, and ticket_received
+ *       are only stored on the client-side.
+ *
  */
 static int ssl_session_save( const mbedtls_ssl_session *session,
                              unsigned char omit_header,
@@ -6082,9 +6083,9 @@ static int ssl_session_save( const mbedtls_ssl_session *session,
             *p++ = (unsigned char)( ( session->ticket_age_add >>  8 ) & 0xFF );
             *p++ = (unsigned char)( ( session->ticket_age_add       ) & 0xFF );
 
-            *p++ = (unsigned char)( ( session->resumption_key_len      ) & 0xFF );
-
             *p++ = (unsigned char)( ( session->ticket_flags      ) & 0xFF );
+
+            *p++ = (unsigned char)( ( session->resumption_key_len      ) & 0xFF );
         }
 
         used += session->resumption_key_len;
@@ -6409,9 +6410,9 @@ static int ssl_session_load( mbedtls_ssl_session *session,
                             ( (uint32_t) p[3]       );
         p += 4;
 
-        session->resumption_key_len = *p++;
-
         session->ticket_flags = *p++;
+
+        session->resumption_key_len = *p++;
 
         if( session->resumption_key_len > (size_t)( end - p ) )
             return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
