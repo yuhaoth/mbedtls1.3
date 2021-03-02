@@ -6011,7 +6011,8 @@ static int ssl_session_save( const mbedtls_ssl_session *session,
     minor_ver = session->minor_ver;
 
 #if defined(MBEDTLS_SSL_CLI_C)
-    if( ( session->endpoint == MBEDTLS_SSL_IS_CLIENT ) && ( minor_ver == MBEDTLS_SSL_MINOR_VERSION_4 ) )
+    if( ( session->endpoint == MBEDTLS_SSL_IS_CLIENT ) && 
+        ( minor_ver == MBEDTLS_SSL_MINOR_VERSION_4 ) )
     {
         /* Check whether we got a ticket already */
         if( session->ticket == NULL )
