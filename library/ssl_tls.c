@@ -225,7 +225,7 @@ int mbedtls_ssl_session_copy( mbedtls_ssl_session *dst,
 
 #endif /* MBEDTLS_X509_CRT_PARSE_C */
 
-#if ( defined(MBEDTLS_SSL_SESSION_TICKETS) || defined(MBEDTLS_SSL_NEW_SESSION_TICKET) ) && \ 
+#if ( defined(MBEDTLS_SSL_SESSION_TICKETS) || defined(MBEDTLS_SSL_NEW_SESSION_TICKET) ) && \
     defined(MBEDTLS_SSL_CLI_C)
     if( src->ticket != NULL )
     {
@@ -5981,7 +5981,6 @@ static unsigned char ssl_serialized_session_header[] = {
  *  - key length ( key_len )
  *  - flags ( flags )
  *  - key ( key )
- *  - certificate of the peer ( peer_cert )
  */
 static int ssl_session_save( const mbedtls_ssl_session *session,
                              unsigned char omit_header,
@@ -5996,12 +5995,15 @@ static int ssl_session_save( const mbedtls_ssl_session *session,
 #endif /* MBEDTLS_SSL_NEW_SESSION_TICKET */
 #if defined(MBEDTLS_HAVE_TIME)
     uint64_t start;
-#endif
+#endif /* MBEDTLS_HAVE_TIME */
+
+#if defined(MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER)
 #if defined(MBEDTLS_X509_CRT_PARSE_C)
 #if defined(MBEDTLS_SSL_KEEP_PEER_CERTIFICATE)
     size_t cert_len;
 #endif /* MBEDTLS_SSL_KEEP_PEER_CERTIFICATE */
 #endif /* MBEDTLS_X509_CRT_PARSE_C */
+#endif /* MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER */
 
     if( session == NULL ) 
         return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
@@ -6009,19 +6011,6 @@ static int ssl_session_save( const mbedtls_ssl_session *session,
 #if defined(MBEDTLS_SSL_NEW_SESSION_TICKET)
     /* Ticket format depends on the TLS version negotiated. */
     minor_ver = session->minor_ver;
-
-#if defined(MBEDTLS_SSL_CLI_C)
-    if( ( session->endpoint == MBEDTLS_SSL_IS_CLIENT ) && 
-        ( minor_ver == MBEDTLS_SSL_MINOR_VERSION_4 ) )
-    {
-        /* Check whether we got a ticket already */
-        if( session->ticket == NULL )
-        {
-            *olen = used;
-            return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
-        }
-    }
-#endif /* MBEDTLS_SSL_CLI_C */
 #endif /* MBEDTLS_SSL_NEW_SESSION_TICKET */
 
     if( !omit_header )
@@ -6200,6 +6189,7 @@ static int ssl_session_save( const mbedtls_ssl_session *session,
     }
 #endif /* MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER */
 
+#if defined(MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER)
     /*
      * Peer's end-entity certificate
      */
@@ -6248,6 +6238,7 @@ static int ssl_session_save( const mbedtls_ssl_session *session,
     }
 #endif /* !MBEDTLS_SSL_KEEP_PEER_CERTIFICATE */
 #endif /* MBEDTLS_X509_CRT_PARSE_C */
+#endif /* MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER */
 
     /*
      * Session ticket if any, plus associated data
@@ -6337,12 +6328,15 @@ static int ssl_session_load( mbedtls_ssl_session *session,
     int minor_ver = 0;
 #if defined(MBEDTLS_HAVE_TIME) && defined(MBEDTLS_SSL_SESSION_TICKETS)
     uint64_t start;
-#endif
+#endif /* MBEDTLS_HAVE_TIME && MBEDTLS_SSL_SESSION_TICKETS */
+
+#if defined(MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER)
 #if defined(MBEDTLS_X509_CRT_PARSE_C)
 #if defined(MBEDTLS_SSL_KEEP_PEER_CERTIFICATE)
     size_t cert_len;
 #endif /* MBEDTLS_SSL_KEEP_PEER_CERTIFICATE */
 #endif /* MBEDTLS_X509_CRT_PARSE_C */
+#endif /* MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER */
 
     if( !omit_header )
     {
@@ -6529,6 +6523,7 @@ static int ssl_session_load( mbedtls_ssl_session *session,
     session->ticket = NULL;
 #endif /* MBEDTLS_SSL_SESSION_TICKETS && MBEDTLS_SSL_CLI_C */
 
+#if defined(MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER)
     /*
      * Peer certificate
      */
@@ -6597,6 +6592,8 @@ static int ssl_session_load( mbedtls_ssl_session *session,
     }
 #endif /* MBEDTLS_SSL_KEEP_PEER_CERTIFICATE */
 #endif /* MBEDTLS_X509_CRT_PARSE_C */
+
+#endif /* MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER */
 
     /*
      * Session ticket and associated data
