@@ -3957,7 +3957,7 @@ int mbedtls_ssl_handshake_client_step( mbedtls_ssl_context *ssl )
         return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
     }
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "client state: %d", ssl->state ) );
-
+    printf("client state: %d\n", ssl->state);
     if( ( ret = mbedtls_ssl_flush_output( ssl ) ) != 0 )
         return( ret );
 
