@@ -6003,7 +6003,8 @@ static int ssl_session_save( const mbedtls_ssl_session *session,
 #endif /* MBEDTLS_SSL_KEEP_PEER_CERTIFICATE */
 #endif /* MBEDTLS_X509_CRT_PARSE_C */
 
-    if( session == NULL ) return ( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
+    if( session == NULL ) 
+        return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
 
 #if defined(MBEDTLS_SSL_NEW_SESSION_TICKET)
     /* Ticket format depends on the TLS version negotiated. */
