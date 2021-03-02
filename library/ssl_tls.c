@@ -5972,7 +5972,7 @@ static unsigned char ssl_serialized_session_header[] = {
  * verify_result is put before peer_cert so that all mandatory fields come
  * together in one block.
  *
- * In TLS/DTLS 1.3 the ticket contains the following content:
+ * For TLS/DTLS 1.3 the ticket contains the following content:
  *
  *  - ticket creation time ( start )
  *  - ciphersuite ( ciphersuite )
@@ -5981,6 +5981,10 @@ static unsigned char ssl_serialized_session_header[] = {
  *  - key length ( key_len )
  *  - flags ( flags )
  *  - key ( key )
+ * 
+ * Note: This is not the NewSessionTicket message but rather
+ *       the encrypted content of the opaque ticket structure
+ *        within that message.
  */
 static int ssl_session_save( const mbedtls_ssl_session *session,
                              unsigned char omit_header,
