@@ -384,7 +384,7 @@ typedef uint8_t mbedtls_mps_transport_type;
 #else
 /* Define `1` in a roundabout way using `mode` to avoid unused
  * variable warnings. */
-#define MBEDTLS_MPS_IS_TLS( mode ) ( ( mode ) == ( mode ) )
+#define MBEDTLS_MPS_IS_TLS( mode ) ( ((void) mode), 1 )
 #endif /* MBEDTLS_MPS_PROTO_BOTH */
 
 #define MBEDTLS_MPS_IF_TLS( mode ) if( MBEDTLS_MPS_IS_TLS( mode ) )
@@ -399,14 +399,12 @@ typedef uint8_t mbedtls_mps_transport_type;
 #if defined(MBEDTLS_MPS_PROTO_BOTH)
 #define MBEDTLS_MPS_IS_DTLS( mode )               \
     ( (mode) == MBEDTLS_MPS_MODE_DATAGRAM )
-/* Define `1` in a roundabout way using `mode` to avoid unused
- * variable warnings. */
 #define MBEDTLS_MPS_ELSE_IF_DTLS( mode )         \
-    else if( ( mode ) == ( mode ) )
+    else if( ((void)mode), 1 )
 #else
 /* Define `1` in a roundabout way using `mode` to avoid unused
  * variable warnings. */
-#define MBEDTLS_MPS_IS_DTLS( mode ) ( ( mode ) == ( mode ) )
+#define MBEDTLS_MPS_IS_DTLS( mode ) ( ((void) mode), 1 )
 #define MBEDTLS_MPS_ELSE_IF_DTLS( mode )        \
     if( MBEDTLS_MPS_IS_DTLS( mode ) )
 #endif /* MBEDTLS_MPS_PROTO_BOTH */
