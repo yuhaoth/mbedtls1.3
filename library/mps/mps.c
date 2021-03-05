@@ -1549,8 +1549,11 @@ int mbedtls_mps_write_handshake( mbedtls_mps *mps,
          * like the zero-initialization below, or some attribute, or we remove
          * the duplication of the modes altogether -- which would ultimately
          * be the best solution. */
-
-        mps_l3_handshake_out hs_l3 = { 0 };
+        /* Use per-field initialization to silence annoying compiler warning
+         * when using the _compliant_ `struct foo bar = { 0 }` zero-initialization... */
+        mps_l3_handshake_out hs_l3 = { .epoch = 0, .type = 0, .seq_nr = 0,
+                                       .len = 0, .frag_len = 0, .frag_offset = 0,
+                                       .wr_ext = NULL };
 
         /* Retransmission isn't needed in TLS. */
         ((void) cb);
@@ -3242,7 +3245,11 @@ int mbedtls_mps_retransmission_handle_incoming_fragment( mbedtls_mps *mps )
      * At the moment, each layer has its own configuration, and in particular
      * its own `mode` identifier, and if L4 and L3 mode get out of sync,
      * we'd use parts of `hs_l3` uninitialized below. */
-    mps_l3_handshake_in hs_l3 = { 0 };
+    /* Use per-field initialization to silence annoying compiler warning
+     * when using the _compliant_ `struct foo bar = { 0 }` zero-initialization... */
+    mps_l3_handshake_in hs_l3 = { .epoch = 0, .type = 0, .len = 0,
+                                  .frag_len = 0, .frag_offset = 0, .seq_nr = 0,
+                                  .rd_ext = NULL };
     mps_l3* const l3 = mbedtls_mps_l4_get_l3( mps );
     TRACE_INIT( "mps_retransmission_handle_incoming_fragment" );
 
