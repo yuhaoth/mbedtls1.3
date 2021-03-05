@@ -5153,9 +5153,10 @@ static int ssl_new_session_ticket_parse( mbedtls_ssl_context* ssl,
         return ( ret );
     }
 
-    ssl->session->resumption_key_len =  mbedtls_hash_size_for_ciphersuite( suite_info );
+    ssl->session->resumption_key_len = mbedtls_hash_size_for_ciphersuite( suite_info );
 
-    MBEDTLS_SSL_DEBUG_BUF( 3, "Ticket-resumed PSK", ssl->session->key, ssl->session->resumption_key_len );
+    MBEDTLS_SSL_DEBUG_BUF( 3, "Ticket-resumed PSK", ssl->session->key, 
+                           ssl->session->resumption_key_len );
 
 #if defined(MBEDTLS_HAVE_TIME)
     /* Store ticket creation time */
