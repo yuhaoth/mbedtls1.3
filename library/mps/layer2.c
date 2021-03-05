@@ -1907,8 +1907,6 @@ mbedtls_mps_size_t l2_get_header_len( mbedtls_mps_l2 *ctx,
          * which have a uniform and simple record header. */
         RETURN( dtls12_rec_hdr_len );
     }
-#else
-    ((void) ctx);
 #endif /* MBEDTLS_MPS_PROTO_DTLS */
 }
 
