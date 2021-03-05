@@ -124,17 +124,10 @@ static int ssl_ticket_update_keys( mbedtls_ssl_ticket_context *ctx )
 /*
  * Setup context for actual use
  */
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
-int mbedtls_ssl_ticket_setup( mbedtls_ssl_ticket_context* ctx,
-    int (*f_rng)(void *, unsigned char *, size_t), void* p_rng,
-    mbedtls_cipher_type_t cipher,
-    uint32_t lifetime, mbedtls_ssl_ticket_flags flags )
-#else
 int mbedtls_ssl_ticket_setup( mbedtls_ssl_ticket_context *ctx,
     int (*f_rng)(void *, unsigned char *, size_t), void *p_rng,
     mbedtls_cipher_type_t cipher,
     uint32_t lifetime )
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
     const mbedtls_cipher_info_t *cipher_info;
@@ -143,10 +136,6 @@ int mbedtls_ssl_ticket_setup( mbedtls_ssl_ticket_context *ctx,
     ctx->p_rng = p_rng;
 
     ctx->ticket_lifetime = lifetime;
-
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
-    ctx->flags = flags;
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 
     cipher_info = mbedtls_cipher_info_from_type( cipher);
     if( cipher_info == NULL )
@@ -192,117 +181,6 @@ int mbedtls_ssl_ticket_setup( mbedtls_ssl_ticket_context *ctx,
     return( 0 );
 }
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
-
-/*
- * Serialize a session in the following format:
- *  0   .   n-1     session structure, n = sizeof(mbedtls_ssl_session)
- *  n   .   n+2     peer_cert length = m (0 if no certificate)
- *  n+3 .   n+2+m   peer cert ASN.1
- */
-static int ssl_save_session(const mbedtls_ssl_ticket* session,
-    unsigned char* buf, size_t buf_len,
-    size_t* olen)
-{
-    unsigned char* p = buf;
-    size_t left = buf_len;
-#if defined(MBEDTLS_X509_CRT_PARSE_C)
-    size_t cert_len;
-#endif /* MBEDTLS_X509_CRT_PARSE_C */
-
-    if (left < sizeof(mbedtls_ssl_ticket))
-        return(MBEDTLS_ERR_SSL_BUFFER_TOO_SMALL);
-    memcpy(p, session, sizeof(mbedtls_ssl_ticket));
-    p += sizeof(mbedtls_ssl_ticket);
-    left -= sizeof(mbedtls_ssl_ticket);
-
-#if defined(MBEDTLS_X509_CRT_PARSE_C)
-    if (session->peer_cert == NULL)
-        cert_len = 0;
-    else
-        cert_len = session->peer_cert->raw.len;
-
-    if (left < 3 + cert_len)
-        return(MBEDTLS_ERR_SSL_BUFFER_TOO_SMALL);
-
-    *p++ = (unsigned char)(cert_len >> 16 & 0xFF);
-    *p++ = (unsigned char)(cert_len >> 8 & 0xFF);
-    *p++ = (unsigned char)(cert_len & 0xFF);
-
-    if (session->peer_cert != NULL)
-        memcpy(p, session->peer_cert->raw.p, cert_len);
-
-    p += cert_len;
-#endif /* MBEDTLS_X509_CRT_PARSE_C */
-
-    * olen = p - buf;
-
-    return(0);
-}
-
-/*
- * Unserialise session, see ssl_save_session()
- */
-static int ssl_load_session(mbedtls_ssl_ticket* session,
-    const unsigned char* buf, size_t len)
-{
-    const unsigned char* p = buf;
-    const unsigned char* const end = buf + len;
-#if defined(MBEDTLS_X509_CRT_PARSE_C)
-    size_t cert_len;
-#endif /* MBEDTLS_X509_CRT_PARSE_C */
-
-    if (p + sizeof(mbedtls_ssl_ticket) > end)
-        return(MBEDTLS_ERR_SSL_BAD_INPUT_DATA);
-
-    memcpy(session, p, sizeof(mbedtls_ssl_ticket));
-    p += sizeof(mbedtls_ssl_ticket);
-
-#if defined(MBEDTLS_X509_CRT_PARSE_C)
-    if (p + 3 > end)
-        return(MBEDTLS_ERR_SSL_BAD_INPUT_DATA);
-
-    cert_len = (p[0] << 16) | (p[1] << 8) | p[2];
-    p += 3;
-
-    if (cert_len == 0)
-    {
-        session->peer_cert = NULL;
-    }
-    else
-    {
-        int ret;
-
-        if (p + cert_len > end)
-            return(MBEDTLS_ERR_SSL_BAD_INPUT_DATA);
-
-        session->peer_cert = mbedtls_calloc(1, sizeof(mbedtls_x509_crt));
-
-        if (session->peer_cert == NULL)
-            return(MBEDTLS_ERR_SSL_ALLOC_FAILED);
-
-        mbedtls_x509_crt_init(session->peer_cert);
-
-        if ((ret = mbedtls_x509_crt_parse_der(session->peer_cert,
-            p, cert_len)) != 0)
-        {
-            mbedtls_x509_crt_free(session->peer_cert);
-            mbedtls_free(session->peer_cert);
-            session->peer_cert = NULL;
-            return(ret);
-        }
-
-        p += cert_len;
-    }
-#endif /* MBEDTLS_X509_CRT_PARSE_C */
-
-    if (p != end)
-        return(MBEDTLS_ERR_SSL_BAD_INPUT_DATA);
-
-    return(0);
-}
-
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 /*
  * Create session ticket, with the following structure:
  *
@@ -316,22 +194,12 @@ static int ssl_load_session(mbedtls_ssl_ticket* session,
  * The key_name, iv, and length of encrypted_state are the additional
  * authenticated data.
  */
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
-int mbedtls_ssl_ticket_write(void* p_ticket,
-    const mbedtls_ssl_ticket* session,
-    unsigned char* start,
-    const unsigned char* end,
-    size_t* tlen,
-    uint32_t* ticket_lifetime,
-    mbedtls_ssl_ticket_flags* flags)
-#else
 int mbedtls_ssl_ticket_write( void *p_ticket,
                               const mbedtls_ssl_session *session,
                               unsigned char *start,
                               const unsigned char *end,
                               size_t *tlen,
                               uint32_t *ticket_lifetime )
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
     mbedtls_ssl_ticket_context *ctx = p_ticket;
@@ -363,24 +231,12 @@ int mbedtls_ssl_ticket_write( void *p_ticket,
     key = &ctx->keys[ctx->active];
 
     *ticket_lifetime = ctx->ticket_lifetime;
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
-    *flags = ctx->flags;
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
-
 
     memcpy( key_name, key->name, TICKET_KEY_NAME_BYTES );
 
     if( ( ret = ctx->f_rng( ctx->p_rng, iv, TICKET_IV_BYTES ) ) != 0 )
         goto cleanup;
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
-    if ((ret = ssl_save_session(session,
-        state, end - state, &clear_len)) != 0 ||
-        (unsigned long)clear_len > 65535)
-    {
-        goto cleanup;
-    }
-#else
     /* Dump session state */
     if( ( ret = mbedtls_ssl_session_save( session,
                                           state, end - state,
@@ -389,9 +245,6 @@ int mbedtls_ssl_ticket_write( void *p_ticket,
     {
          goto cleanup;
     }
-
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
-
 
     state_len_bytes[0] = ( clear_len >> 8 ) & 0xff;
     state_len_bytes[1] = ( clear_len      ) & 0xff;
@@ -443,18 +296,10 @@ static mbedtls_ssl_ticket_key *ssl_ticket_select_key(
 /*
  * Load session ticket (see mbedtls_ssl_ticket_write for structure)
  */
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
-int mbedtls_ssl_ticket_parse(void* p_ticket,
-    mbedtls_ssl_ticket* session,
-    unsigned char* buf,
-    size_t len)
-#else
 int mbedtls_ssl_ticket_parse( void *p_ticket,
                               mbedtls_ssl_session *session,
                               unsigned char *buf,
                               size_t len )
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
-
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
     mbedtls_ssl_ticket_context *ctx = p_ticket;
@@ -517,14 +362,9 @@ int mbedtls_ssl_ticket_parse( void *p_ticket,
         ret = MBEDTLS_ERR_SSL_INTERNAL_ERROR;
         goto cleanup;
     }
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
-    if ((ret = ssl_load_session(session, ticket, clear_len)) != 0)
-        goto cleanup;
-#else
     /* Actually load session */
     if( ( ret = mbedtls_ssl_session_load( session, ticket, clear_len ) ) != 0 )
         goto cleanup;
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 
 #if defined(MBEDTLS_HAVE_TIME)
     {

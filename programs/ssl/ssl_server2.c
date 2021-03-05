@@ -2144,7 +2144,9 @@ int main( int argc, char *argv[] )
     opt.async_private_error = DFL_ASYNC_PRIVATE_ERROR;
     opt.psk                 = DFL_PSK;
     opt.key_exchange_modes = DFL_KEY_EXCHANGE_MODES;
+#if defined(MBEDTLS_SSL_NEW_SESSION_TICKET)
     opt.ticket_flags        = DFL_TICKET_FLAGS;
+#endif /* MBEDTLS_SSL_NEW_SESSION_TICKET */
     opt.early_data          = DFL_EARLY_DATA;
     opt.sig_algs            = DFL_SIG_ALGS;
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
@@ -3570,28 +3572,7 @@ int main( int argc, char *argv[] )
                                    mbedtls_ssl_cache_get,
                                    mbedtls_ssl_cache_set );
 #endif
-
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
-#if defined(MBEDTLS_SSL_NEW_SESSION_TICKET)
-    if( opt.tickets == MBEDTLS_SSL_SESSION_TICKETS_ENABLED )
-    {
-        if( ( ret = mbedtls_ssl_ticket_setup( &ticket_ctx,
-                        mbedtls_ctr_drbg_random, &ctr_drbg,
-                        MBEDTLS_CIPHER_AES_256_GCM,
-                        opt.ticket_timeout, opt.ticket_flags ) ) != 0 )
-        {
-            mbedtls_printf( " failed\n  ! mbedtls_ssl_ticket_setup returned %d\n\n", ret );
-            goto exit;
-        }
-
-        mbedtls_ssl_conf_session_tickets_cb( &conf,
-                mbedtls_ssl_ticket_write,
-                mbedtls_ssl_ticket_parse,
-                &ticket_ctx, opt.tickets );
-    }
-#endif /* MBEDTLS_SSL_NEW_SESSION_TICKET */
-#else
-#if defined(MBEDTLS_SSL_SESSION_TICKETS)
+#if defined(MBEDTLS_SSL_SESSION_TICKETS) || defined(MBEDTLS_SSL_NEW_SESSION_TICKET)
     if( opt.tickets == MBEDTLS_SSL_SESSION_TICKETS_ENABLED )
     {
         if( ( ret = mbedtls_ssl_ticket_setup( &ticket_ctx,
@@ -3607,9 +3588,15 @@ int main( int argc, char *argv[] )
                 mbedtls_ssl_ticket_write,
                 mbedtls_ssl_ticket_parse,
                 &ticket_ctx );
+
+#if defined(MBEDTLS_SSL_NEW_SESSION_TICKET)
+        /* Enable use of tickets */
+        mbedtls_ssl_conf_session_tickets( &conf, opt.tickets );
+#endif /* MBEDTLS_SSL_NEW_SESSION_TICKET */
+
     }
-#endif /* MBEDTLS_SSL_SESSION_TICKETS */
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+
+#endif /* MBEDTLS_SSL_SESSION_TICKETS || MBEDTLS_SSL_NEW_SESSION_TICKET */
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
 #if defined(MBEDTLS_SSL_COOKIE_C)
@@ -3929,7 +3916,7 @@ int main( int argc, char *argv[] )
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
     /* Configure supported TLS 1.3 key exchange modes. */
-    mbedtls_ssl_conf_tls13_key_exchange(&conf, opt.key_exchange_modes);
+    mbedtls_ssl_conf_tls13_key_exchange( &conf, opt.key_exchange_modes );
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 
 #if defined(MBEDTLS_DHM_C)

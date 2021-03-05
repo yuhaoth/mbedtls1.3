@@ -100,9 +100,8 @@ int mps_l3_free( mps_l3 *l3 )
  */
 
 /* TODO: Will we need this at some point? */
-__attribute__((unused))
 /* Check if a message is ready to be processed. */
-int mps_l3_read_check( mps_l3 *l3 )
+int UNUSED mps_l3_read_check( mps_l3 *l3 )
 {
     return( l3->io.in.state );
 }
@@ -1247,9 +1246,8 @@ int mps_l3_pause_handshake( mps_l3 *l3 )
 #endif /* MBEDTLS_MPS_PROTO_TLS */
 
 /* TODO: Will we need this at some point? */
-__attribute__((unused))
 /* Abort the writing of a handshake message. */
-int mps_l3_write_abort_handshake( mps_l3 *l3 )
+int UNUSED mps_l3_write_abort_handshake( mps_l3 *l3 )
 {
     int res;
     mbedtls_mps_size_t committed;

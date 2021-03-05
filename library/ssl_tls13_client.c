@@ -784,6 +784,10 @@ int mbedtls_ssl_write_pre_shared_key_ext( mbedtls_ssl_context *ssl,
     const mbedtls_ssl_ciphersuite_t *suite_info;
     const int *ciphersuites;
     int hash_len;
+    unsigned char *psk_identity;
+    size_t psk_identity_len;
+    unsigned char *psk;
+    size_t psk_len;
 
     *total_ext_len = 0;
     *bytes_written = 0;
@@ -792,7 +796,7 @@ int mbedtls_ssl_write_pre_shared_key_ext( mbedtls_ssl_context *ssl,
         return( 0 );
 
     /* Check whether we have any PSK credentials configured. */
-    if( mbedtls_ssl_get_psk( ssl, NULL, NULL ) != 0 )
+    if( mbedtls_ssl_get_psk( ssl, (const unsigned char**) &psk, &psk_len ) != 0 )
     {
         MBEDTLS_SSL_DEBUG_MSG( 3, ( "client hello, skip pre_shared_key extensions" ) );
         return( 0 );
@@ -820,12 +824,24 @@ int mbedtls_ssl_write_pre_shared_key_ext( mbedtls_ssl_context *ssl,
     if( hash_len == -1 )
         return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
 
+#if defined(MBEDTLS_SSL_NEW_SESSION_TICKET)
+    if( ssl->handshake->resume == 1 )
+    {
+        psk_identity = ssl->session_negotiate->ticket;
+        psk_identity_len = ssl->session_negotiate->ticket_len;
+    }
+    else
+ #endif /* MBEDTLS_SSL_NEW_SESSION_TICKET */
+    {
+        psk_identity = ssl->conf->psk_identity;
+        psk_identity_len = ssl->conf->psk_identity_len;
+    }
 
     size_t const ext_type_bytes           = 2;
     size_t const ext_len_bytes            = 2;
     size_t const psk_identities_len_bytes = 2;
     size_t const psk_identity_len_bytes   = 2;
-    size_t const psk_identity_bytes       = ssl->conf->psk_identity_len;
+    size_t const psk_identity_bytes       = psk_identity_len;
     size_t const obfuscated_ticket_bytes  = 4;
     size_t const psk_binders_len_bytes    = 2;
     size_t const psk_binder_len_bytes     = 1;
@@ -887,27 +903,29 @@ int mbedtls_ssl_write_pre_shared_key_ext( mbedtls_ssl_context *ssl,
         *p++ = (unsigned char)( ( ext_len >> 0 ) & 0xFF );
 
         /* 2 bytes length field for array of PskIdentity */
-        *p++ = (unsigned char)( ( ( ssl->conf->psk_identity_len + 4 + 2 ) >> 8 ) & 0xFF );
-        *p++ = (unsigned char)( ( ( ssl->conf->psk_identity_len + 4 + 2 ) >> 0 ) & 0xFF );
+        *p++ = (unsigned char)( ( ( psk_identity_len + 4 + 2 ) >> 8 ) & 0xFF );
+        *p++ = (unsigned char)( ( ( psk_identity_len + 4 + 2 ) >> 0 ) & 0xFF );
 
         /* 2 bytes length field for psk_identity */
-        *p++ = (unsigned char)( ( ( ssl->conf->psk_identity_len ) >> 8 ) & 0xFF );
-        *p++ = (unsigned char)( ( ( ssl->conf->psk_identity_len ) >> 0 ) & 0xFF );
+        *p++ = (unsigned char)( ( ( psk_identity_len ) >> 8 ) & 0xFF );
+        *p++ = (unsigned char)( ( ( psk_identity_len ) >> 0 ) & 0xFF );
 
         /* actual psk_identity */
-        memcpy( p, ssl->conf->psk_identity, ssl->conf->psk_identity_len );
-        p += ssl->conf->psk_identity_len;
+        memcpy( p, psk_identity, psk_identity_len );
+        p += psk_identity_len;
+
+#if defined(MBEDTLS_SSL_NEW_SESSION_TICKET)
 
         /* Calculate obfuscated_ticket_age (omitted for external PSKs). */
-        if( ssl->conf->ticket_age_add > 0 )
+        if( ssl->session_negotiate->ticket_age_add > 0 )
         {
             /* TODO: Should we somehow fail if TIME is disabled here?
              * TODO: Use Mbed TLS' time abstraction? */
 #if defined(MBEDTLS_HAVE_TIME)
             time_t now = time( NULL );
 
-            if( !( ssl->conf->ticket_received <= now &&
-                   now - ssl->conf->ticket_received < 7 * 86400 * 1000 ) )
+            if( !( ssl->session_negotiate->ticket_received <= now &&
+                   now - ssl->session_negotiate->ticket_received < 7 * 86400 * 1000 ) )
             {
                 MBEDTLS_SSL_DEBUG_MSG( 3, ( "ticket expired" ) );
                 /* TBD: We would have to fall back to another PSK */
@@ -915,13 +933,14 @@ int mbedtls_ssl_write_pre_shared_key_ext( mbedtls_ssl_context *ssl,
             }
 
             obfuscated_ticket_age =
-                (uint32_t)( now - ssl->conf->ticket_received ) +
-                ssl->conf->ticket_age_add;
+                (uint32_t)( now - ssl->session_negotiate->ticket_received ) +
+                ssl->session_negotiate->ticket_age_add;
 
             MBEDTLS_SSL_DEBUG_MSG( 5, ( "obfuscated_ticket_age: %u",
                                         obfuscated_ticket_age ) );
 #endif /* MBEDTLS_HAVE_TIME */
         }
+#endif /* MBEDTLS_SSL_NEW_SESSION_TICKET */
 
         /* add obfuscated ticket age */
         *p++ = ( obfuscated_ticket_age >> 24 ) & 0xFF;
@@ -946,14 +965,14 @@ int mbedtls_ssl_write_pre_shared_key_ext( mbedtls_ssl_context *ssl,
         /* 1 bytes length field for next psk binder */
         *p++ = (unsigned char)( ( hash_len ) & 0xFF );
 
-        if( ssl->conf->resumption_mode )
+        if( ssl->handshake->resume )
             external_psk = 0;
         else
             external_psk = 1;
 
         ret = mbedtls_ssl_create_binder( ssl,
                   external_psk,
-                  ssl->conf->psk, ssl->conf->psk_len,
+                  psk, psk_len,
                   mbedtls_md_info_from_type( suite_info->mac ),
                   suite_info, p );
 
@@ -1970,6 +1989,15 @@ static int ssl_parse_supported_version_ext( mbedtls_ssl_context* ssl,
             return( MBEDTLS_ERR_SSL_BAD_HS_SERVER_HELLO );
         }
     }
+
+#if defined(MBEDTLS_SSL_NEW_SESSION_TICKET)
+    /* For ticket handling, we need to populate the version 
+    * and the endpoint information into the session structure
+    * since only session information is available in that API.
+    */
+    ssl->session_negotiate->minor_ver = ssl->minor_ver;
+    ssl->session_negotiate->endpoint = ssl->conf->endpoint;
+#endif /* MBEDTLS_SSL_NEW_SESSION_TICKET */
 
     return( 0 );
 }
@@ -4171,6 +4199,10 @@ int mbedtls_ssl_handshake_client_step( mbedtls_ssl_context *ssl )
                 mbedtls_ack_clear_all( ssl, MBEDTLS_SSL_ACK_RECORDS_RECEIVED );
             }
 #endif /* MBEDTLS_SSL_PROTO_DTLS */
+
+#if defined(MBEDTLS_SSL_NEW_SESSION_TICKET)
+            ssl->session_negotiate->endpoint = ssl->conf->endpoint;
+#endif /* MBEDTLS_SSL_NEW_SESSION_TICKET */
             break;
 
             /* ----- WRITE CLIENT HELLO ----*/

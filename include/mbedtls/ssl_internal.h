@@ -1502,7 +1502,7 @@ int mbedtls_ssl_write_early_data_ext(mbedtls_ssl_context* ssl, unsigned char* bu
 int mbedtls_ssl_parse_supported_groups_ext(mbedtls_ssl_context* ssl, const unsigned char* buf, size_t len);
 #endif /* MBEDTLS_ECDH_C ||  MBEDTLS_ECDSA_C */
 #if defined(MBEDTLS_SSL_NEW_SESSION_TICKET)
-int mbedtls_ssl_parse_new_session_ticket_server(mbedtls_ssl_context* ssl, unsigned char* buf, size_t len, mbedtls_ssl_ticket* ticket);
+int mbedtls_ssl_parse_new_session_ticket_server(mbedtls_ssl_context* ssl, unsigned char* buf, size_t len);
 #endif /* MBEDTLS_SSL_NEW_SESSION_TICKET */
 #if defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
 int mbedtls_ssl_parse_client_psk_identity_ext(mbedtls_ssl_context* ssl, const unsigned char* buf, size_t len);

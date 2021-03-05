@@ -116,8 +116,8 @@ MBEDTLS_MPS_STATIC int l2_in_fetch_protected_record_tls( mbedtls_mps_l2 *ctx,
 MBEDTLS_MPS_STATIC int l2_in_fetch_protected_record_dtls12( mbedtls_mps_l2 *ctx,
                                                             mps_rec *rec );
 
-/* TODO */__attribute__((unused))
-MBEDTLS_MPS_STATIC int l2_in_fetch_protected_record_dtls13( mbedtls_mps_l2 *ctx,
+/* TODO */
+MBEDTLS_MPS_STATIC int UNUSED l2_in_fetch_protected_record_dtls13( mbedtls_mps_l2 *ctx,
                                                             mps_rec *rec );
 MBEDTLS_MPS_STATIC int l2_handle_invalid_record( mbedtls_mps_l2 *ctx, int ret );
 #endif /* MBEDTLS_MPS_PROTO_DTLS */
