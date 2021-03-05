@@ -2053,6 +2053,25 @@ int l2_in_fetch_protected_record_tls( mbedtls_mps_l2 *ctx, mps_rec *rec )
         RETURN( ret );
 
     /*
+     * Check if the record should be silently ignored.
+     */
+
+    /*
+     * Check if we should ignore the record.
+     */
+    if( l2_type_ignore( ctx, type ) == 1 )
+    {
+        TRACE( trace_comment, "Silently ignore record of type %u",
+               (unsigned) type );
+
+        ret = l2_in_release_record( ctx );
+        if( ret != 0 )
+            RETURN( ret );
+
+        RETURN( MBEDTLS_ERR_MPS_RETRY );
+    }
+
+    /*
      * Write target record structure
      */
 
@@ -2537,6 +2556,19 @@ int l2_type_empty_allowed( mbedtls_mps_l2 *ctx, mbedtls_mps_msg_type_t type )
     uint32_t const mask = ((uint32_t) 1u) << type;
     uint32_t const flag =
         mbedtls_mps_l2_conf_get_empty_flag( &ctx->conf );
+    return( ( flag & mask ) != 0 );
+}
+
+/* Check if records of a valid record content type should be
+ * silently ignored.
+ * This assumes that the provided type is at least valid,
+ * and in particular smaller than 64. */
+MBEDTLS_MPS_STATIC
+int l2_type_ignore( mbedtls_mps_l2 *ctx, mbedtls_mps_msg_type_t type )
+{
+    uint32_t const mask = ((uint32_t) 1u) << type;
+    uint32_t const flag =
+        mbedtls_mps_l2_conf_get_ignore_flag( &ctx->conf );
     return( ( flag & mask ) != 0 );
 }
 
