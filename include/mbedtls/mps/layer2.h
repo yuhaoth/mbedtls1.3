@@ -433,6 +433,16 @@ struct mbedtls_mps_l2_config
                            *   incoming empty records are treated as errors. */
 #endif /* !MBEDTLS_MPS_CONF_EMPTY_FLAG */
 
+#if !defined(MBEDTLS_MPS_CONF_IGNORE_FLAG)
+    uint32_t ignore_flag; /*!< This member defines the record content types
+                           *   which the Layer 2 instance will silently ignore.
+                           *   It is realized as a 32-bit bitflag, with the
+                           *   n-th bit (n=0..31) indicating being set if
+                           *   empty records of content type ID n is allowed.
+                           *   This must be a sub-field of \p type_flag. */
+#endif /* !MBEDTLS_MPS_CONF_IGNORE_FLAG */
+
+
     /* Notes:
      * - Both record size limit values are usually negotiated with
      *   either the maximum_fragment_length extension or the new
@@ -629,6 +639,22 @@ static inline uint32_t mbedtls_mps_l2_conf_get_empty_flag(
     return( MBEDTLS_MPS_CONF_EMPTY_FLAG );
 }
 #endif /* MBEDTLS_MPS_CONF_EMPTY_FLAG */
+
+#if !defined(MBEDTLS_MPS_CONF_IGNORE_FLAG)
+static inline uint32_t mbedtls_mps_l2_conf_get_ignore_flag(
+    mbedtls_mps_l2_config *conf )
+{
+    return( conf->ignore_flag );
+}
+#else /* !MBEDTLS_MPS_CONF_IGNORE_FLAG */
+static inline uint32_t mbedtls_mps_l2_conf_get_ignore_flag(
+    mbedtls_mps_l2_config *conf )
+{
+    ((void) conf);
+    return( MBEDTLS_MPS_CONF_IGNORE_FLAG );
+}
+#endif /* MBEDTLS_MPS_CONF_IGNORE_FLAG */
+
 
 #if defined(MBEDTLS_MPS_PROTO_DTLS)
 #if !defined(MBEDTLS_MPS_CONF_BADMAC_LIMIT)
@@ -985,6 +1011,10 @@ typedef uint8_t mbedtls_mps_record_empty_config_t;
 #define MBEDTLS_MPS_EMPTY_FORBIDDEN ( (mbedtls_mps_record_empty_config_t) 0 )
 #define MBEDTLS_MPS_EMPTY_ALLOWED   ( (mbedtls_mps_record_empty_config_t) 1 )
 
+typedef uint8_t mbedtls_mps_record_ignore_config_t;
+#define MBEDTLS_MPS_IGNORE_KEEP ( (mbedtls_mps_record_ignore_config_t) 0 )
+#define MBEDTLS_MPS_IGNORE_DROP ( (mbedtls_mps_record_ignore_config_t) 1 )
+
 /**
  * \brief          Configure Layer 2 context to accept records
  *                 of a given record content type.
@@ -996,8 +1026,8 @@ typedef uint8_t mbedtls_mps_record_empty_config_t;
  * \param type     The record content type to configure.
  * \param pausing  This parameter indicates whether content of type
  *                 \p type is allowed to be split across multiple records
- *                 (value #MPS_L2_SPLIT_ENABLED) or not
- *                 (value #MPS_L2_SPLIT_DISABLED).
+ *                 (value #MBEDTLS_MPS_SPLIT_ENABLED) or not
+ *                 (value #MBEDTLS_MPS_SPLIT_DISABLED).
  *                 E.g., handshake messages are allowed to be
  *                 split across multiple records in all versions of TLS,
  *                 while in TLS 1.3 alert messages must not be split.
@@ -1005,8 +1035,8 @@ typedef uint8_t mbedtls_mps_record_empty_config_t;
  *                 member of ::mps_l2_config for more information.
  * \param merging  This parameter indicates whether successive read/write
  *                 requests for content type \p type is allowed to be served
- *                 from the same record (value #MPS_L2_PACK_ENABLED) or not
- *                 (value #MPS_L2_PACK_DISABLED).
+ *                 from the same record (value #MBEDTLS_MPS_PACK_ENABLED) or not
+ *                 (value #MBEDTLS_MPS_PACK_DISABLED).
  *                 E.g., multiple handshake messages are allowed to be packed
  *                 in the same record in all versions of TLS, while in TLS 1.3
  *                 a single record must not contain multiple alert messages.
@@ -1014,10 +1044,14 @@ typedef uint8_t mbedtls_mps_record_empty_config_t;
  *                 member of ::mps_l2_config for more information.
  * \param empty    This parameter indicates whether empty records of content
  *                 type \p type are allowed to be sent
- *                 (value #MPS_L2_EMPTY_ALLOWED) or not
- *                 (value #MPS_L2_EMPTY_DISCARD).
+ *                 (value #MBEDTLS_MPS_EMPTY_ALLOWED) or not
+ *                 (value #MBEDTLS_MPS_EMPTY_DISCARD).
  *                 See the documentation of \c empty_flag
  *                 member of ::mps_l2_config for more information.
+ * \param ignore   This parameter indicates whether incoming records of
+ *                 content type \p type should be silently ignored.
+ *                 (value #MBEDTLS_MPS_IGNORE_DROP) or not
+ *                 (value #MBEDTLS_MPS_IGNORE_KEEP).
  *
  * \return         \c 0 on success.
  * \return         A negative error code on failure.
@@ -1027,19 +1061,22 @@ static inline int mps_l2_config_add_type( mbedtls_mps_l2 *ctx,
                                     mbedtls_mps_msg_type_t type,
                                     mbedtls_mps_record_split_config_t pausing,
                                     mbedtls_mps_record_pack_config_t merging,
-                                    mbedtls_mps_record_empty_config_t empty )
+                                    mbedtls_mps_record_empty_config_t empty,
+                                    mbedtls_mps_record_empty_config_t ignore )
 {
     uint32_t mask;
 
     if( type >= MBEDTLS_MPS_MSG_MAX )
         return( MBEDTLS_ERR_MPS_INVALID_RECORD );
 
+#if !defined(MBEDTLS_MPS_CONF_PAUSE_FLAG)
     mask = ( (uint32_t) 1u << type );
     if( mbedtls_mps_l2_conf_get_type_flag( &ctx->conf ) & mask )
         return( MBEDTLS_ERR_MPS_INVALID_ARGS );
 
-#if !defined(MBEDTLS_MPS_CONF_PAUSE_FLAG)
     ctx->conf.type_flag |= mask;
+#else
+    ((void) mask);
 #endif /* MBEDTLS_MPS_CONF_TYPE_FLAG */
 
 #if defined(MBEDTLS_MPS_PROTO_TLS)
@@ -1057,6 +1094,10 @@ static inline int mps_l2_config_add_type( mbedtls_mps_l2 *ctx,
 #if !defined(MBEDTLS_MPS_CONF_EMPTY_FLAG)
     ctx->conf.empty_flag |= ( empty   == MBEDTLS_MPS_EMPTY_ALLOWED ) * mask;
 #endif /* !MBEDTLS_MPS_CONF_EMPTY_FLAG */
+
+#if !defined(MBEDTLS_MPS_CONF_IGNORE_FLAG)
+    ctx->conf.ignore_flag |= ( ignore == MBEDTLS_MPS_IGNORE_DROP ) * mask;
+#endif /* !MBEDTLS_MPS_CONF_IGNORE_FLAG */
 
     return( 0 );
 }

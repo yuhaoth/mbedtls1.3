@@ -2705,6 +2705,7 @@ void mbedtls_ssl_send_flight_completed( mbedtls_ssl_context *ssl )
  * Handshake layer functions
  */
 
+#if !defined(MBEDTLS_SSL_USE_MPS)
 /*
  * Write (DTLS: or queue) current handshake (including CCS) message.
  *
@@ -2903,10 +2904,6 @@ int mbedtls_ssl_write_record( mbedtls_ssl_context *ssl, uint8_t force_flush )
 
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> write record" ) );
 
-#if defined(MBEDTLS_SSL_USE_MPS)
-    return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
-#endif
-
 #if defined(MBEDTLS_ZLIB_SUPPORT)
     if( ssl->transform_out != NULL &&
         ssl->session_out->compression == MBEDTLS_SSL_COMPRESS_DEFLATE )
@@ -3080,6 +3077,7 @@ int mbedtls_ssl_write_record( mbedtls_ssl_context *ssl, uint8_t force_flush )
 
     return( 0 );
 }
+#endif /* MBEDTLS_SSL_USE_MPS */
 
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
 

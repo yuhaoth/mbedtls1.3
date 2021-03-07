@@ -1282,7 +1282,10 @@ int mbedtls_ssl_read_record( mbedtls_ssl_context *ssl,
 
 int mbedtls_ssl_fetch_input(mbedtls_ssl_context* ssl, size_t nb_want);
 int mbedtls_ssl_flush_output(mbedtls_ssl_context* ssl);
+
+#if !defined(MBEDTLS_SSL_US_EMPS)
 int mbedtls_ssl_write_record( mbedtls_ssl_context *ssl, uint8_t force_flush );
+#endif /* MBEDTLS_SSL_USE_MPS */
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
 int mbedtls_ssl_read_certificate_process(mbedtls_ssl_context* ssl);

@@ -182,6 +182,8 @@ MBEDTLS_MPS_STATIC int l2_type_is_valid( mbedtls_mps_l2 *ctx,
                              mbedtls_mps_msg_type_t type );
 MBEDTLS_MPS_STATIC int l2_type_empty_allowed( mbedtls_mps_l2 *ctx,
                                   mbedtls_mps_msg_type_t type );
+MBEDTLS_MPS_STATIC int l2_type_ignore( mbedtls_mps_l2 *ctx,
+                                       mbedtls_mps_msg_type_t type );
 
 /*
  * Epoch handling

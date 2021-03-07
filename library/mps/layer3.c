@@ -155,7 +155,7 @@ int mps_l3_read( mps_l3 *l3 )
      * For now, just force the initialization.
      */
     {
-        mps_l2_in l2_in_zero = { 0 };
+        mps_l2_in l2_in_zero = { .type = 0, .epoch = 0, .rd = NULL };
         in = l2_in_zero;
     }
 

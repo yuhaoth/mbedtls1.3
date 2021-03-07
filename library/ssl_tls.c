@@ -4333,28 +4333,34 @@ static int ssl_mps_init( mbedtls_ssl_context *ssl )
     ret = mps_l2_config_add_type( &ssl->mps.l2, MBEDTLS_MPS_MSG_HS,
                                   MBEDTLS_MPS_SPLIT_ENABLED,
                                   MBEDTLS_MPS_PACK_ENABLED,
-                                  MBEDTLS_MPS_EMPTY_FORBIDDEN );
+                                  MBEDTLS_MPS_EMPTY_FORBIDDEN,
+                                  MBEDTLS_MPS_IGNORE_KEEP );
     if( ret != 0 )
         goto exit;
 
     ret = mps_l2_config_add_type( &ssl->mps.l2, MBEDTLS_MPS_MSG_ALERT,
                                   MBEDTLS_MPS_SPLIT_DISABLED,
                                   MBEDTLS_MPS_PACK_DISABLED,
-                                  MBEDTLS_MPS_EMPTY_FORBIDDEN );
+                                  MBEDTLS_MPS_EMPTY_FORBIDDEN,
+                                  MBEDTLS_MPS_IGNORE_KEEP );
     if( ret != 0 )
         goto exit;
 
+#if defined(MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE)
     ret = mps_l2_config_add_type( &ssl->mps.l2, MBEDTLS_MPS_MSG_CCS,
                                   MBEDTLS_MPS_SPLIT_DISABLED,
                                   MBEDTLS_MPS_PACK_DISABLED,
-                                  MBEDTLS_MPS_EMPTY_FORBIDDEN );
+                                  MBEDTLS_MPS_EMPTY_FORBIDDEN,
+                                  MBEDTLS_MPS_IGNORE_DROP );
     if( ret != 0 )
         goto exit;
+#endif /* MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE */
 
     ret = mps_l2_config_add_type( &ssl->mps.l2, MBEDTLS_MPS_MSG_APP,
                                   MBEDTLS_MPS_SPLIT_ENABLED,
                                   MBEDTLS_MPS_PACK_ENABLED,
-                                  MBEDTLS_MPS_EMPTY_ALLOWED );
+                                  MBEDTLS_MPS_EMPTY_ALLOWED,
+                                  MBEDTLS_MPS_IGNORE_KEEP );
     if( ret != 0 )
         goto exit;
 
