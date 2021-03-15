@@ -4981,16 +4981,6 @@ static int ssl_new_session_ticket_parse( mbedtls_ssl_context* ssl,
     MBEDTLS_SSL_DEBUG_MSG( 3, ( "ticket->ticket_age_add: %u", ssl->session->ticket_age_add ) );
 
     /* Ticket Nonce */
-    ssl->session->ticket_nonce_len = buf[8];
-
-    used += ssl->session->ticket_nonce_len;
-
-    if( used > buflen )
-    {
-         MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad new session ticket message" ) );
-         return( MBEDTLS_ERR_SSL_BAD_HS_NEW_SESSION_TICKET );
-    }
-
     /* Check if we previously received a ticket already. If we did, then we should
      * re-use already allocated nonce-space.
      */
@@ -4999,6 +4989,16 @@ static int ssl_new_session_ticket_parse( mbedtls_ssl_context* ssl,
         mbedtls_free( ssl->session->ticket_nonce );
         ssl->session->ticket_nonce = NULL;
         ssl->session->ticket_nonce_len = 0;
+    }
+
+    ssl->session->ticket_nonce_len = buf[8];
+
+    used += ssl->session->ticket_nonce_len;
+
+    if( used > buflen )
+    {
+         MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad new session ticket message" ) );
+         return( MBEDTLS_ERR_SSL_BAD_HS_NEW_SESSION_TICKET );
     }
 
     if( ssl->session->ticket_nonce_len > 0 )
