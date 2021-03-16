@@ -947,6 +947,7 @@ exit:
 }
 /* END_CASE */
 
+
 /* BEGIN_CASE */
 void mbedtls_ecp_tls_read_group( data_t * buf, int result, int bits,
                                  int record_len )
@@ -957,12 +958,6 @@ void mbedtls_ecp_tls_read_group( data_t * buf, int result, int bits,
 
     mbedtls_ecp_group_init( &grp );
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
-    vbuf++;
-    buf->x++;
-    buf->len--;
-    record_len--;
-#endif
     ret = mbedtls_ecp_tls_read_group( &grp, &vbuf, buf->len );
 
     TEST_ASSERT( ret == result );
