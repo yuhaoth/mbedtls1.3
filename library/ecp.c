@@ -1011,17 +1011,6 @@ int mbedtls_ecp_tls_read_point( const mbedtls_ecp_group *grp,
     ECP_VALIDATE_RET( buf != NULL );
     ECP_VALIDATE_RET( *buf != NULL );
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
-    if( buf_len < 3 )
-        return( MBEDTLS_ERR_ECP_BAD_INPUT_DATA );
-
-    data_len = ( *( *buf ) << 8 ) | *( *buf+1 );
-    *buf += 2; 
-
-    if (data_len < 1 || data_len > buf_len - 2 )
-        return(MBEDTLS_ERR_ECP_BAD_INPUT_DATA);
-
-#else 
     /*
      * We must have at least two bytes (1 for length, at least one for data)
      */
@@ -1031,7 +1020,6 @@ int mbedtls_ecp_tls_read_point( const mbedtls_ecp_group *grp,
     data_len = *(*buf)++;
     if( data_len < 1 || data_len > buf_len - 1 )
         return( MBEDTLS_ERR_ECP_BAD_INPUT_DATA );
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 
     /*
      * Save buffer start for read_binary and update buf
@@ -1041,6 +1029,38 @@ int mbedtls_ecp_tls_read_point( const mbedtls_ecp_group *grp,
 
     return( mbedtls_ecp_point_read_binary( grp, pt, buf_start, data_len ) );
 }
+
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && defined(MBEDTLS_ECDH_C)
+int mbedtls_ecp_tls_13_read_point( const mbedtls_ecp_group *grp,
+                                mbedtls_ecp_point *pt,
+                                const unsigned char **buf, size_t buf_len )
+{
+    unsigned char data_len;
+    const unsigned char *buf_start;
+    ECP_VALIDATE_RET( grp != NULL );
+    ECP_VALIDATE_RET( pt  != NULL );
+    ECP_VALIDATE_RET( buf != NULL );
+    ECP_VALIDATE_RET( *buf != NULL );
+
+    if( buf_len < 3 )
+        return( MBEDTLS_ERR_ECP_BAD_INPUT_DATA );
+
+    data_len = ( *( *buf ) << 8 ) | *( *buf+1 );
+    *buf += 2;
+
+    if( data_len < 1 || data_len > buf_len - 2 )
+        return( MBEDTLS_ERR_ECP_BAD_INPUT_DATA );
+
+    /*
+     * Save buffer start for read_binary and update buf
+     */
+    buf_start = *buf;
+    *buf += data_len;
+
+    return( mbedtls_ecp_point_read_binary( grp, pt, buf_start, data_len ) );
+}
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL && MBEDTLS_ECDH_C */
+
 
 /*
  * Export a point as a TLS ECPoint record (RFC 4492)
@@ -1060,21 +1080,6 @@ int mbedtls_ecp_tls_write_point( const mbedtls_ecp_group *grp, const mbedtls_ecp
     ECP_VALIDATE_RET( format == MBEDTLS_ECP_PF_UNCOMPRESSED ||
                       format == MBEDTLS_ECP_PF_COMPRESSED );
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
-    if( blen < 2 )
-        return( MBEDTLS_ERR_ECP_BAD_INPUT_DATA );
-
-    if( ( ret = mbedtls_ecp_point_write_binary( grp, pt, format,
-                    olen, buf + 2, blen - 2) ) != 0 )
-        return( ret );
-
-    // Length
-    *buf++ = (unsigned char)( ( *olen >> 8 ) & 0xFF );
-    *buf++ = (unsigned char)( ( *olen ) & 0xFF );
-    *olen += 2;
-
-#else 
-
     /*
      * buffer length must be at least one, for our length byte
      */
@@ -1091,10 +1096,37 @@ int mbedtls_ecp_tls_write_point( const mbedtls_ecp_group *grp, const mbedtls_ecp
     buf[0] = (unsigned char) *olen;
     ++*olen;
 
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+    return( 0 );
+}
+
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && defined(MBEDTLS_ECDH_C)
+int mbedtls_ecp_tls_13_write_point( const mbedtls_ecp_group *grp, const mbedtls_ecp_point *pt,
+                         int format, size_t *olen,
+                         unsigned char *buf, size_t blen )
+{
+    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
+    ECP_VALIDATE_RET( grp  != NULL );
+    ECP_VALIDATE_RET( pt   != NULL );
+    ECP_VALIDATE_RET( olen != NULL );
+    ECP_VALIDATE_RET( buf  != NULL );
+    ECP_VALIDATE_RET( format == MBEDTLS_ECP_PF_UNCOMPRESSED ||
+                      format == MBEDTLS_ECP_PF_COMPRESSED );
+
+    if( blen < 2 )
+        return( MBEDTLS_ERR_ECP_BAD_INPUT_DATA );
+
+    if( ( ret = mbedtls_ecp_point_write_binary( grp, pt, format,
+                    olen, buf + 2, blen - 2) ) != 0 )
+        return( ret );
+
+    // Length
+    *buf++ = (unsigned char)( ( *olen >> 8 ) & 0xFF );
+    *buf++ = (unsigned char)( ( *olen ) & 0xFF );
+    *olen += 2;
 
     return( 0 );
 }
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL && MBEDTLS_ECDH_C */
 
 /*
  * Set a group from an ECParameters record (RFC 4492)
@@ -1127,10 +1159,6 @@ int mbedtls_ecp_tls_read_group_id( mbedtls_ecp_group_id *grp,
     ECP_VALIDATE_RET( buf  != NULL );
     ECP_VALIDATE_RET( *buf != NULL );
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
-    if (len < 2)
-        return(MBEDTLS_ERR_ECP_BAD_INPUT_DATA);
-#else 
     /*
      * We expect at least three bytes (see below)
      */
@@ -1142,7 +1170,6 @@ int mbedtls_ecp_tls_read_group_id( mbedtls_ecp_group_id *grp,
      */
     if( *(*buf)++ != MBEDTLS_ECP_TLS_NAMED_CURVE )
         return( MBEDTLS_ERR_ECP_BAD_INPUT_DATA );
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 
     /*
      * Next two bytes are the namedcurve value
@@ -1173,15 +1200,6 @@ int mbedtls_ecp_tls_write_group( const mbedtls_ecp_group *grp, size_t *olen,
     if( ( curve_info = mbedtls_ecp_curve_info_from_grp_id( grp->id ) ) == NULL )
         return( MBEDTLS_ERR_ECP_BAD_INPUT_DATA );
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
-    *olen = 2;
-    if (blen < *olen)
-        return(MBEDTLS_ERR_ECP_BUFFER_TOO_SMALL);
-
-    // Two bytes for named curve
-    buf[0] = curve_info->tls_id >> 8;
-    buf[1] = curve_info->tls_id & 0xFF;
-#else 
     /*
      * We are going to write 3 bytes (see below)
      */
@@ -1199,10 +1217,68 @@ int mbedtls_ecp_tls_write_group( const mbedtls_ecp_group *grp, size_t *olen,
      */
     buf[0] = curve_info->tls_id >> 8;
     buf[1] = curve_info->tls_id & 0xFF;
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 
     return( 0 );
 }
+
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+/*
+ * Read a group id from an ECParameters record (TLS 1.3) and convert it to
+ * mbedtls_ecp_group_id.
+ */
+int mbedtls_ecp_tls_13_read_group_id( mbedtls_ecp_group_id *grp,
+                                   const unsigned char **buf, size_t len )
+{
+    uint16_t tls_id;
+    const mbedtls_ecp_curve_info *curve_info;
+    ECP_VALIDATE_RET( grp  != NULL );
+    ECP_VALIDATE_RET( buf  != NULL );
+    ECP_VALIDATE_RET( *buf != NULL );
+
+    if( len < 2 )
+        return( MBEDTLS_ERR_ECP_BAD_INPUT_DATA );
+
+    /*
+     * Next two bytes are the namedcurve value
+     */
+    tls_id = *(*buf)++;
+    tls_id <<= 8;
+    tls_id |= *(*buf)++;
+
+    if( ( curve_info = mbedtls_ecp_curve_info_from_tls_id( tls_id ) ) == NULL )
+        return( MBEDTLS_ERR_ECP_FEATURE_UNAVAILABLE );
+
+    *grp = curve_info->grp_id;
+
+    return( 0 );
+}
+
+/*
+ * Write the ECParameters record corresponding to a group (TLS 1.3)
+ */
+int mbedtls_ecp_tls_13_write_group( const mbedtls_ecp_group *grp, size_t *olen,
+                         unsigned char *buf, size_t blen )
+{
+    const mbedtls_ecp_curve_info *curve_info;
+    ECP_VALIDATE_RET( grp  != NULL );
+    ECP_VALIDATE_RET( buf  != NULL );
+    ECP_VALIDATE_RET( olen != NULL );
+
+    if( ( curve_info = mbedtls_ecp_curve_info_from_grp_id( grp->id ) ) == NULL )
+        return( MBEDTLS_ERR_ECP_BAD_INPUT_DATA );
+
+    *olen = 2;
+    if( blen < *olen )
+        return( MBEDTLS_ERR_ECP_BUFFER_TOO_SMALL );
+
+    // Two bytes for named curve
+    buf[0] = curve_info->tls_id >> 8;
+    buf[1] = curve_info->tls_id & 0xFF;
+
+    return( 0 );
+}
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+
 
 /*
  * Wrapper around fast quasi-modp functions, with fall-back to mbedtls_mpi_mod_mpi.

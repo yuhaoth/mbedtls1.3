@@ -187,11 +187,11 @@ static int ssl_write_key_shares_ext(
         return( ret );
     }
 
-    if( ( ret = mbedtls_ecdh_make_params( &ssl->handshake->ecdh_ctx[ssl->handshake->ecdh_ctx_selected], &len,
+    if( ( ret = mbedtls_ecdh_make_tls_13_params( &ssl->handshake->ecdh_ctx[ssl->handshake->ecdh_ctx_selected], &len,
                                         p, end-buf,
                                         ssl->conf->f_rng, ssl->conf->p_rng ) ) != 0 )
     {
-        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ecdh_make_params", ret );
+        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ecdh_make_tls_13_params", ret );
         return( ret );
     }
 
@@ -393,7 +393,7 @@ static int ssl_parse_key_shares_ext(
     old = start;
     while( extensions_available )
     {
-        ret = mbedtls_ecdh_read_params(
+        ret = mbedtls_ecdh_read_tls_13_params(
             &ssl->handshake->ecdh_ctx[ssl->handshake->ecdh_ctx_selected],
             (const unsigned char **) &start, end );
 
@@ -403,7 +403,7 @@ static int ssl_parse_key_shares_ext(
              * to the next one
              */
 
-            MBEDTLS_SSL_DEBUG_RET( 1, ( "mbedtls_ecdh_read_params failed " ), ret );
+            MBEDTLS_SSL_DEBUG_RET( 1, ( "mbedtls_ecdh_read_tls_13_params failed " ), ret );
             final_ret = MBEDTLS_ERR_SSL_BAD_HS_CLIENT_KEY_SHARE;
             goto skip_parsing_key_share_entry;
         }
