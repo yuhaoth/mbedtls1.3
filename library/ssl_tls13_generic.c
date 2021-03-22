@@ -3768,25 +3768,28 @@ static void ssl_setup_seq_protection_keys( mbedtls_ssl_context *ssl,
 }
 #endif /* MBEDTLS_SSL_PROTO_DTLS */
 
-
-/* mbedtls_ssl_tls13_build_transform() activates keys and IVs for
- * the negotiated ciphersuite for use with encryption/decryption.
- * The sequence numbers are also set to zero.
- */
-int mbedtls_ssl_tls13_build_transform( mbedtls_ssl_context *ssl,
-                             mbedtls_ssl_key_set *traffic_keys,
-                             mbedtls_ssl_transform *transform )
+int mbedtls_ssl_tls13_populate_transform( mbedtls_ssl_transform *transform,
+                                          int endpoint,
+                                          int ciphersuite,
+                                          mbedtls_ssl_key_set const *traffic_keys,
+                                          mbedtls_ssl_context *ssl /* DEBUG ONLY */ )
 {
     int ret;
     mbedtls_cipher_info_t const *cipher_info;
-    const mbedtls_ssl_ciphersuite_t *suite_info;
-    unsigned char *key_enc, *iv_enc, *key_dec, *iv_dec;
+    const mbedtls_ssl_ciphersuite_t *ciphersuite_info;
+    unsigned char const *key_enc;
+    unsigned char const *iv_enc;
+    unsigned char const *key_dec;
+    unsigned char const *iv_dec;
 
-    /* Make sure transform is cleaned up before we write it. */
-    mbedtls_ssl_transform_free( transform );
+#if !defined(MBEDTLS_DEBUG_C)
+    ssl = NULL; /* make sure we don't use it except for those cases */
+    (void) ssl;
+#endif
 
-    suite_info = ssl->handshake->ciphersuite_info;
-    cipher_info = mbedtls_cipher_info_from_type( suite_info->cipher );
+    ciphersuite_info = mbedtls_ssl_ciphersuite_from_id( ciphersuite );
+
+    cipher_info = mbedtls_cipher_info_from_type( ciphersuite_info->cipher );
     if( cipher_info == NULL )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "should never happen" ) );
@@ -3812,7 +3815,7 @@ int mbedtls_ssl_tls13_build_transform( mbedtls_ssl_context *ssl,
     }
 
 #if defined(MBEDTLS_SSL_SRV_C)
-    if( ssl->conf->endpoint == MBEDTLS_SSL_IS_SERVER )
+    if( endpoint == MBEDTLS_SSL_IS_SERVER )
     {
         key_enc = traffic_keys->server_write_key;
         key_dec = traffic_keys->client_write_key;
@@ -3822,7 +3825,7 @@ int mbedtls_ssl_tls13_build_transform( mbedtls_ssl_context *ssl,
     else
 #endif /* MBEDTLS_SSL_SRV_C */
 #if defined(MBEDTLS_SSL_CLI_C)
-    if( ssl->conf->endpoint == MBEDTLS_SSL_IS_CLIENT )
+    if( endpoint == MBEDTLS_SSL_IS_CLIENT )
     {
         key_enc = traffic_keys->client_write_key;
         key_dec = traffic_keys->server_write_key;
@@ -3859,7 +3862,7 @@ int mbedtls_ssl_tls13_build_transform( mbedtls_ssl_context *ssl,
      * Setup other fields in SSL transform
      */
 
-    if( ( suite_info->flags & MBEDTLS_CIPHERSUITE_SHORT_TAG ) != 0 )
+    if( ( ciphersuite_info->flags & MBEDTLS_CIPHERSUITE_SHORT_TAG ) != 0 )
         transform->taglen  = 8;
     else
         transform->taglen  = 16;
@@ -3870,7 +3873,7 @@ int mbedtls_ssl_tls13_build_transform( mbedtls_ssl_context *ssl,
     transform->minlen      = transform->taglen + 1;
     transform->minor_ver   = MBEDTLS_SSL_MINOR_VERSION_4;
 
-    return ( 0 );
+    return( 0 );
 }
 
 #if defined(MBEDTLS_ZERO_RTT)
@@ -4362,11 +4365,14 @@ static int ssl_finished_out_postprocess( mbedtls_ssl_context* ssl )
             return( ret );
         }
 
-        ret = mbedtls_ssl_tls13_build_transform( ssl, &traffic_keys,
-                                                 ssl->transform_application );
+        ret = mbedtls_ssl_tls13_populate_transform( ssl->transform_application,
+                                               ssl->conf->endpoint,
+                                               ssl->session_negotiate->ciphersuite,
+                                               &traffic_keys,
+                                               ssl );
         if( ret != 0 )
         {
-            MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_tls13_build_transform", ret );
+            MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_tls13_populate_transform", ret );
             return( ret );
         }
 
@@ -4377,8 +4383,12 @@ static int ssl_finished_out_postprocess( mbedtls_ssl_context* ssl )
             if( transform_application == NULL )
                 return( MBEDTLS_ERR_SSL_ALLOC_FAILED );
 
-            ret = mbedtls_ssl_tls13_build_transform( ssl, &traffic_keys,
-                                                     transform_application );
+            ret = mbedtls_ssl_tls13_populate_transform(
+                         transform_application,
+                         ssl->conf->endpoint,
+                         ssl->session_negotiate->ciphersuite,
+                         &traffic_keys,
+                         ssl );
 
             /* Register transform with MPS. */
             ret = mbedtls_mps_add_key_material( &ssl->mps.l4,
@@ -4713,11 +4723,15 @@ static int ssl_finished_in_postprocess_cli( mbedtls_ssl_context *ssl )
         return( ret );
     }
 
-    ret = mbedtls_ssl_tls13_build_transform( ssl, &traffic_keys,
-                                             ssl->transform_application );
+    ret = mbedtls_ssl_tls13_populate_transform(
+                                    ssl->transform_application,
+                                    ssl->conf->endpoint,
+                                    ssl->session_negotiate->ciphersuite,
+                                    &traffic_keys,
+                                    ssl );
     if( ret != 0 )
     {
-        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_tls13_build_transform", ret );
+        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_tls13_populate_transform", ret );
         return( ret );
     }
 
@@ -4728,8 +4742,12 @@ static int ssl_finished_in_postprocess_cli( mbedtls_ssl_context *ssl )
         if( transform_application == NULL )
             return( MBEDTLS_ERR_SSL_ALLOC_FAILED );
 
-        ret = mbedtls_ssl_tls13_build_transform( ssl, &traffic_keys,
-                                                 transform_application );
+        ret = mbedtls_ssl_tls13_populate_transform(
+                              transform_application,
+                              ssl->conf->endpoint,
+                              ssl->session_negotiate->ciphersuite,
+                              &traffic_keys,
+                              ssl );
 
         /* Register transform with MPS. */
         ret = mbedtls_mps_add_key_material( &ssl->mps.l4,
