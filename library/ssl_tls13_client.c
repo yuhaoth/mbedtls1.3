@@ -3716,10 +3716,9 @@ static int ssl_hrr_parse( mbedtls_ssl_context* ssl,
                  */
                 nr = 0;
                 found = 0;
-                for ( grp_id = ssl->handshake->key_shares_curve_list; 
+                for ( grp_id = ssl->handshake->key_shares_curve_list;
                       *grp_id != MBEDTLS_ECP_DP_NONE; grp_id++ )
                 {
-
                     info = mbedtls_ecp_curve_info_from_grp_id( *grp_id );
 
                     if( info == NULL ) return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
@@ -3728,14 +3727,6 @@ static int ssl_hrr_parse( mbedtls_ssl_context* ssl,
                     {
                         /* We found a match */
                         found = 1;
-                        break;
-                    }
-
-                    nr++;
-                    if( nr == MBEDTLS_SSL_MAX_KEY_SHARES )
-                    {
-                        MBEDTLS_SSL_DEBUG_MSG( 4, ( "Reached maximum number of KeyShareEntries: %d", 
-                                                     nr ) );
                         break;
                     }
                 }
