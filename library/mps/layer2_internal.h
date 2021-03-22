@@ -84,10 +84,40 @@ int mps_l2_find_suitable_slot( mbedtls_mps_l2 *ctx,
                                mbedtls_mps_l2_in_internal **dst );
 
 /*
- * Reading related
+ *
+ * Incoming data
+ *
  */
 
-/* Various record header parsing functions
+/*
+ * TLS record input queue API
+ */
+
+/* Request a plaintext buffer from the (D)TLS input queue.
+ *
+ * The metadata attached to the buffer is:
+ * - The epoch used to protect the buffer.
+ * - The TLS record content type of the buffer
+ * - The record sequence number
+ *
+ * The record structure is borrowed to the caller and valid
+ * until l2_in_release_record() is called.
+ */
+MBEDTLS_MPS_STATIC int l2_in_fetch_record( mbedtls_mps_l2 *ctx, mps_rec *rec );
+
+/* Consume the last buffer received from the TLS input queue.
+ *
+ * This function marks the plaintext buffer last received from the
+ * TLS input queue via l2_in_fetch_record() as processed. The corresponding
+ * record structure must not be used anymore afterwards.
+ */
+MBEDTLS_MPS_STATIC int l2_in_release_record( mbedtls_mps_l2 *ctx );
+
+/*
+ * Internal functions of the (D)TLS input queue.
+ */
+
+/* Various record parsing functions
  *
  * These functions fetch and validate record headers for various TLS/DTLS
  * versions from Layer 1 and feed them into the provided record structure.
@@ -105,7 +135,7 @@ int mps_l2_find_suitable_slot( mbedtls_mps_l2 *ctx,
  * - The record sequence number has been seen before,
  *   so the record is likely duplicated / replayed.
  */
-MBEDTLS_MPS_STATIC int l2_in_fetch_record( mbedtls_mps_l2 *ctx, mps_rec *rec );
+
 MBEDTLS_MPS_STATIC int l2_in_fetch_protected_record( mbedtls_mps_l2 *ctx,
                                                      mps_rec *rec );
 #if defined(MBEDTLS_MPS_PROTO_TLS)
@@ -124,20 +154,39 @@ MBEDTLS_MPS_STATIC int l2_handle_invalid_record( mbedtls_mps_l2 *ctx, int ret );
 
 MBEDTLS_MPS_STATIC int l2_handle_record_content( mbedtls_mps_l2 *ctx, mps_rec *rec );
 
-/* Signal to the underlying Layer 1 that the last
- * incoming record has been fully processed. */
-MBEDTLS_MPS_STATIC int l2_in_release_record( mbedtls_mps_l2 *ctx );
-
 /*
- * Writing related
+ *
+ * Outgoing data
+ *
  */
 
+/*
+ * TLS record output queue API
+ */
+
+/* Prepare a new plaintext buffer for outgoing data.
+ *
+ * The buffer established by this function is mps_l2::io::out::payload,
+ * which includes the total length of the buffer as well as a field through
+ * which the caller can signal how much data has actually been written.
+ *
+ * The plaintext buffer is borrowed to the caller and valid until
+ * l2_out_dispatch_record() is called.
+ */
 MBEDTLS_MPS_STATIC int l2_out_prepare_record( mbedtls_mps_l2 *ctx,
                                               mbedtls_mps_epoch_id epoch );
-MBEDTLS_MPS_STATIC int l2_out_track_record( mbedtls_mps_l2 *ctx );
-MBEDTLS_MPS_STATIC int l2_out_release_record( mbedtls_mps_l2 *ctx,
-                                              uint8_t force );
+
+/* Dispatch plaintext buffer of outgoing data
+ *
+ * After a plaintext buffer has been received from l2_out_prepare_record()
+ * and filled with outgoing data by the caller, this function transfers it
+ * to the underlying transport for encryption and dispatch.
+ */
 MBEDTLS_MPS_STATIC int l2_out_dispatch_record( mbedtls_mps_l2 *ctx );
+
+/*
+ * TLS record output queue internal API
+ */
 
 /* Various record header writing functions */
 MBEDTLS_MPS_STATIC int l2_out_write_protected_record( mbedtls_mps_l2 *ctx,
@@ -157,6 +206,14 @@ MBEDTLS_MPS_STATIC int l2_out_clear_pending( mbedtls_mps_l2 *ctx );
 
 MBEDTLS_MPS_STATIC mbedtls_mps_size_t l2_get_header_len( mbedtls_mps_l2 *ctx,
                                                    mbedtls_mps_epoch_id epoch );
+
+/*
+ * Binding output plaintext buffers to writers
+ */
+
+MBEDTLS_MPS_STATIC int l2_out_track_record( mbedtls_mps_l2 *ctx );
+MBEDTLS_MPS_STATIC int l2_out_release_record( mbedtls_mps_l2 *ctx,
+                                              uint8_t force );
 
 #if defined(MBEDTLS_MPS_PROTO_TLS)
 MBEDTLS_MPS_ALWAYS_INLINE
