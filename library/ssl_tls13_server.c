@@ -3563,13 +3563,6 @@ static int ssl_encrypted_extensions_prepare( mbedtls_ssl_context* ssl )
         }
     }
 #endif
-#if defined(MBEDTLS_SSL_PROTO_DTLS)
-    /* epoch value ( 2 ) is used for messages protected
-     * using keys derived from the handshake_traffic_secret.
-     */
-    ssl->in_epoch = 2;
-    ssl->out_epoch = 2;
-#endif /* MBEDTLS_SSL_PROTO_DTLS */
 
     return( 0 );
 }
