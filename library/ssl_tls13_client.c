@@ -3716,7 +3716,8 @@ static int ssl_hrr_parse( mbedtls_ssl_context* ssl,
                  */
                 nr = 0;
                 found = 0;
-                for ( grp_id = ssl->handshake->key_shares_curve_list; *grp_id != MBEDTLS_ECP_DP_NONE; grp_id++ )
+                for ( grp_id = ssl->handshake->key_shares_curve_list; 
+                      *grp_id != MBEDTLS_ECP_DP_NONE; grp_id++ )
                 {
 
                     info = mbedtls_ecp_curve_info_from_grp_id( *grp_id );
