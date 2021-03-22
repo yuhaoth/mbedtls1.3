@@ -3553,9 +3553,6 @@ static int ssl_encrypted_extensions_prepare( mbedtls_ssl_context* ssl )
         memset( ssl->out_ctr, 0, 8 );
     }
 
-    /* Set sequence number used at the handshake header to zero */
-    memset( ssl->transform_out->sequence_number_enc, 0x0, 12 );
-
 #if defined(MBEDTLS_SSL_HW_RECORD_ACCEL)
     if( mbedtls_ssl_hw_record_activate != NULL )
     {

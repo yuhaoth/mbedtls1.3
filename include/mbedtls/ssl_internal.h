@@ -988,11 +988,6 @@ struct mbedtls_ssl_transform
     size_t maclen;                      /*!<  MAC(CBC) len            */
     size_t taglen;                      /*!<  TAG(AEAD) len           */
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
-    unsigned char sequence_number_dec[12]; /* sequence number for incoming (decrypting) traffic */
-    unsigned char sequence_number_enc[12]; /* sequence number for outgoing (encrypting) traffic */
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
-
     unsigned char iv_enc[ MBEDTLS_MAX_IV_LENGTH ];           /*!<  IV (encryption)         */
     unsigned char iv_dec[ MBEDTLS_MAX_IV_LENGTH ];           /*!<  IV (decryption)         */
 #if defined(MBEDTLS_SSL_SOME_MODES_USE_MAC)

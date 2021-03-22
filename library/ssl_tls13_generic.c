@@ -3859,10 +3859,6 @@ int mbedtls_ssl_tls13_build_transform( mbedtls_ssl_context *ssl,
      * Setup other fields in SSL transform
      */
 
-    /* Reset sequence numbers */
-    memset( transform->sequence_number_dec, 0x0, 12 );
-    memset( transform->sequence_number_enc, 0x0, 12 );
-
     if( ( suite_info->flags & MBEDTLS_CIPHERSUITE_SHORT_TAG ) != 0 )
         transform->taglen  = 8;
     else
