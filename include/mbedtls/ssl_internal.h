@@ -989,11 +989,6 @@ struct mbedtls_ssl_transform
     size_t taglen;                      /*!<  TAG(AEAD) len           */
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
-    mbedtls_ssl_key_set traffic_keys;
-#if defined(MBEDTLS_SSL_PROTO_DTLS)
-    mbedtls_ssl_key_set traffic_keys_previous;
-#endif /* MBEDTL_SSL_PROTO_DTLS */
-
     unsigned char sequence_number_dec[12]; /* sequence number for incoming (decrypting) traffic */
     unsigned char sequence_number_enc[12]; /* sequence number for outgoing (encrypting) traffic */
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */

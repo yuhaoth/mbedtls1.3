@@ -3794,14 +3794,6 @@ int mbedtls_ssl_tls13_build_transform( mbedtls_ssl_context *ssl,
     }
 
     /*
-     * Store new traffic_keys in transform
-     *
-     * TODO: Why do we do that in TLS? We're not using the
-     * raw key material anymore after this routine.
-     */
-    transform->traffic_keys = *traffic_keys;
-
-    /*
      * Setup cipher contexts in target transform
      */
 
