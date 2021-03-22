@@ -3772,15 +3772,10 @@ static void ssl_setup_seq_protection_keys( mbedtls_ssl_context *ssl,
 /* mbedtls_ssl_tls13_build_transform() activates keys and IVs for
  * the negotiated ciphersuite for use with encryption/decryption.
  * The sequence numbers are also set to zero.
- *
- * backup_old_keys (only relevant in DTLS)
- *   - Do not backup old keys       -- use 1
- *   - Backup old keys in transform -- use 0
  */
 int mbedtls_ssl_tls13_build_transform( mbedtls_ssl_context *ssl,
                              mbedtls_ssl_key_set *traffic_keys,
-                             mbedtls_ssl_transform *transform,
-                             int remove_old_keys )
+                             mbedtls_ssl_transform *transform )
 {
     int ret;
     mbedtls_cipher_info_t const *cipher_info;
@@ -3797,21 +3792,6 @@ int mbedtls_ssl_tls13_build_transform( mbedtls_ssl_context *ssl,
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "should never happen" ) );
         return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
     }
-
-    /*
-     * Before we change anything, backup keys for DTLS
-     */
-
-#if defined(MBEDTLS_SSL_PROTO_DTLS)
-    if( ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_DATAGRAM &&
-        remove_old_keys == 1 )
-    {
-        /* Copy current traffic_key structure to previous */
-        transform->traffic_keys_previous = transform->traffic_keys;
-    }
-#else
-    ((void) remove_old_keys);
-#endif /* MBEDTLS_SSL_PROTO_DTLS */
 
     /*
      * Store new traffic_keys in transform
@@ -4401,8 +4381,7 @@ static int ssl_finished_out_postprocess( mbedtls_ssl_context* ssl )
         }
 
         ret = mbedtls_ssl_tls13_build_transform( ssl, &traffic_keys,
-                                                 ssl->transform_application,
-                                                 0 );
+                                                 ssl->transform_application );
         if( ret != 0 )
         {
             MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_tls13_build_transform", ret );
@@ -4417,7 +4396,7 @@ static int ssl_finished_out_postprocess( mbedtls_ssl_context* ssl )
                 return( MBEDTLS_ERR_SSL_ALLOC_FAILED );
 
             ret = mbedtls_ssl_tls13_build_transform( ssl, &traffic_keys,
-                                                     transform_application, 0 );
+                                                     transform_application );
 
             /* Register transform with MPS. */
             ret = mbedtls_mps_add_key_material( &ssl->mps.l4,
@@ -4753,7 +4732,7 @@ static int ssl_finished_in_postprocess_cli( mbedtls_ssl_context *ssl )
     }
 
     ret = mbedtls_ssl_tls13_build_transform( ssl, &traffic_keys,
-                                             ssl->transform_application, 0 );
+                                             ssl->transform_application );
     if( ret != 0 )
     {
         MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_tls13_build_transform", ret );
@@ -4768,7 +4747,7 @@ static int ssl_finished_in_postprocess_cli( mbedtls_ssl_context *ssl )
             return( MBEDTLS_ERR_SSL_ALLOC_FAILED );
 
         ret = mbedtls_ssl_tls13_build_transform( ssl, &traffic_keys,
-                                                 transform_application, 0 );
+                                                 transform_application );
 
         /* Register transform with MPS. */
         ret = mbedtls_mps_add_key_material( &ssl->mps.l4,

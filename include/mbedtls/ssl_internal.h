@@ -1428,8 +1428,7 @@ int mbedtls_ssl_certificate_verify_process(mbedtls_ssl_context* ssl);
 
 int mbedtls_ssl_tls13_build_transform( mbedtls_ssl_context* ssl,
                              mbedtls_ssl_key_set* traffic_keys,
-                             mbedtls_ssl_transform* transform,
-                             int mode );
+                             mbedtls_ssl_transform* transform );
 
 #if defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
 int mbedtls_ssl_create_binder( mbedtls_ssl_context *ssl,
