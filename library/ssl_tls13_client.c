@@ -3734,7 +3734,8 @@ static int ssl_hrr_parse( mbedtls_ssl_context* ssl,
                     nr++;
                     if( nr == MBEDTLS_SSL_MAX_KEY_SHARES )
                     {
-                        MBEDTLS_SSL_DEBUG_MSG( 4, ( "Reached maximum number of KeyShareEntries: %d", nr ) );
+                        MBEDTLS_SSL_DEBUG_MSG( 4, ( "Reached maximum number of KeyShareEntries: %d", 
+                                                     nr ) );
                         break;
                     }
                 }
