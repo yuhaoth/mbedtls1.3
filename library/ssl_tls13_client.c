@@ -3605,6 +3605,7 @@ static int ssl_hrr_parse( mbedtls_ssl_context* ssl,
     const mbedtls_ecp_group_id* grp_id;
     const mbedtls_ecp_curve_info* info, * curve = NULL;
     int tls_id;
+    int nr;
 #endif /* MBEDTLS_ECDH_C */
 
 #if defined(MBEDTLS_SSL_COOKIE_C)
@@ -3986,9 +3987,11 @@ static int ssl_hrr_parse( mbedtls_ssl_context* ssl,
                  * field does not correspond to a group which was provided in the
                  * "key_share" extension in the original ClientHello.
                  */
+                nr = 0;
                 found = 0;
-                for ( grp_id = ssl->conf->key_shares_curve_list; *grp_id != MBEDTLS_ECP_DP_NONE; grp_id++ ) {
-
+                for ( grp_id = ssl->handshake->key_shares_curve_list;
+                      *grp_id != MBEDTLS_ECP_DP_NONE; grp_id++ )
+                {
                     info = mbedtls_ecp_curve_info_from_grp_id( *grp_id );
 
                     if( info == NULL ) return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );

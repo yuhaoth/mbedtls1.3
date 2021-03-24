@@ -310,31 +310,7 @@ add_common_ciphersuites()
                     ECDHE-ECDSA-AES128-GCM-SHA256   \
                     ECDHE-ECDSA-AES256-GCM-SHA384   \
                     "
-            fi
-            if [ `minor_ver "$MODE"` -ge 4 ]
-            then
-                M_CIPHERS="$M_CIPHERS               \
-                    TLS_AES_128_GCM_SHA256          \
-                    TLS_AES_256_GCM_SHA384          \
-                    TLS_CHACHA20_POLY1305_SHA256    \
-                    TLS_AES_128_CCM_SHA256          \
-                    TLS_AES_128_CCM_8_SHA256        \
-                    "
-                G_CIPHERS="$G_CIPHERS                       \
-                    +ECDHE-ECDSA:+NULL:+SHA1                \
-                    +ECDHE-ECDSA:+ARCFOUR-128:+SHA1         \
-                    +ECDHE-ECDSA:+3DES-CBC:+SHA1            \
-                    +ECDHE-ECDSA:+AES-128-CBC:+SHA1         \
-                    +ECDHE-ECDSA:+AES-256-CBC:+SHA1         \
-                    "
-                O_CIPHERS="$O_CIPHERS               \
-                    TLS_AES_256_GCM_SHA384          \
-                    TLS_AES_128_GCM_SHA256          \
-                    TLS_CHACHA20_POLY1305_SHA256    \
-                    TLS_AES_128_CCM_SHA256          \
-                    TLS_AES_128_CCM_8_SHA256        \
-                    "
-            fi            
+            fi         
             ;;
 
         "RSA")
@@ -533,24 +509,7 @@ add_openssl_ciphersuites()
                     ECDHE-ECDSA-ARIA128-GCM-SHA256  \
                     ECDHE-ECDSA-CHACHA20-POLY1305   \
                     "
-            fi
-            if [ `minor_ver "$MODE"` -ge 4 ]
-            then
-                M_CIPHERS="$M_CIPHERS                               \
-                    TLS_AES_128_GCM_SHA256          \
-                    TLS_AES_256_GCM_SHA384          \
-                    TLS_CHACHA20_POLY1305_SHA256          \
-                    TLS_AES_128_CCM_SHA256          \
-                    TLS_AES_128_CCM_8_SHA256        \
-                    "
-                O_CIPHERS="$O_CIPHERS               \
-                    TLS_AES_128_GCM_SHA256        \
-                    TLS_AES_256_GCM_SHA384        \
-                    TLS_CHACHA20_POLY1305_SHA256    \
-                    TLS_AES_128_CCM_SHA256    \
-                    TLS_AES_128_CCM_8_SHA256  \
-                    "
-            fi            
+            fi      
             ;;
 
         "RSA")
@@ -959,14 +918,15 @@ setup_arguments()
     if [ `minor_ver "$MODE"` -ge 4 ]
     then
         O_SERVER_ARGS="-accept $PORT -ciphersuites TLS_AES_128_GCM_SHA256:TLS_AES_256_GCM_SHA384:TLS_CHACHA20_POLY1305_SHA256:TLS_AES_128_CCM_SHA256:TLS_AES_128_CCM_8_SHA256 --$MODE -dhparam data_files/dhparams.pem"
-        M_SERVER_ARGS="server_port=$PORT server_addr=0.0.0.0 force_version=$MODE"    
+        M_SERVER_ARGS="server_port=$PORT server_addr=0.0.0.0 force_version=$MODE"
+        G_SERVER_PRIO="NONE:${G_PRIO_CCM}+SHA256:+SHA384:+COMP-NULL:+GROUP-SECP256R1:+GROUP-SECP384R1:+CTYPE-ALL:+ECDHE-ECDSA:+CIPHER-ALL:+MAC-ALL:-SHA1:-AES-128-CBC:+SIGN-ECDSA-SECP384R1-SHA384:+SIGN-ECDSA-SECP256R1-SHA256:+ECDHE-ECDSA:${G_PRIO_MODE}"
     else 
         O_SERVER_ARGS="-accept $PORT -cipher NULL,ALL -$MODE -dhparam data_files/dhparams.pem"   
         M_SERVER_ARGS="server_port=$PORT server_addr=0.0.0.0 force_version=$MODE arc4=1"
-    fi
-    
+        G_SERVER_PRIO="NORMAL:${G_PRIO_CCM}+ARCFOUR-128:+NULL:+MD5:+PSK:+DHE-PSK:+ECDHE-PSK:+SHA256:+SHA384:+RSA-PSK:-VERS-TLS-ALL:$G_PRIO_MODE"
+    fi    
+
     G_SERVER_ARGS="-p $PORT --http $G_MODE"
-    G_SERVER_PRIO="NORMAL:${G_PRIO_CCM}+ARCFOUR-128:+NULL:+MD5:+PSK:+DHE-PSK:+ECDHE-PSK:+SHA256:+SHA384:+RSA-PSK:-VERS-TLS-ALL:$G_PRIO_MODE"
 
     # with OpenSSL 1.0.1h, -www, -WWW and -HTTP break DTLS handshakes
     if is_dtls "$MODE"; then
@@ -1211,7 +1171,15 @@ run_client() {
             else
                 G_HOST="localhost"
             fi
-            CLIENT_CMD="$GNUTLS_CLI $G_CLIENT_ARGS --priority $G_PRIO_MODE:$2 $G_HOST"
+
+            if [ `minor_ver "$MODE"` -ge 4 ]
+            then
+                G_CLIENT_PRIO="NONE:${2}:+GROUP-SECP256R1:+GROUP-SECP384R1:+CTYPE-ALL:+ECDHE-ECDSA:+CIPHER-ALL:+MAC-ALL:-SHA1:-AES-128-CBC:+SIGN-ECDSA-SECP256R1-SHA256:+SIGN-ECDSA-SECP384R1-SHA384:+ECDHE-ECDSA:${G_PRIO_MODE}" 
+                CLIENT_CMD="$GNUTLS_CLI $G_CLIENT_ARGS --priority $G_CLIENT_PRIO $G_HOST"            
+            else 
+                CLIENT_CMD="$GNUTLS_CLI $G_CLIENT_ARGS --priority $G_PRIO_MODE:$2 $G_HOST"        
+            fi     
+            
             log "$CLIENT_CMD"
             echo "$CLIENT_CMD" > $CLI_OUT
             printf 'GET HTTP/1.0\r\n\r\n' | $CLIENT_CMD >> $CLI_OUT 2>&1 &
@@ -1432,18 +1400,21 @@ for VERIFY in $VERIFIES; do
                             TLS_AES_256_GCM_SHA384          \
                             TLS_AES_128_CCM_SHA256          \
                             TLS_AES_128_CCM_8_SHA256        \
+                            TLS_CHACHA20_POLY1305_SHA256    \
                             "
-                        O_CIPHERS="$O_CIPHERS               \
-                            TLS_AES_128_GCM_SHA256          \
-                            TLS_AES_256_GCM_SHA384          \
-                            TLS_AES_128_CCM_SHA256          \
-                            TLS_AES_128_CCM_8_SHA256        \
+                        G_CIPHERS="$G_CIPHERS                \
+                            +AES-128-GCM:+SHA256             \
+                            +AES-256-GCM:+SHA384             \
+                            +AES-128-CCM:+SHA256             \
+                            +AES-128-CCM-8:+SHA256           \
+                            +CHACHA20-POLY1305:+SHA256       \
                             "
                     else 
                             add_common_ciphersuites
                             add_gnutls_ciphersuites
-                    fi                                                    
+                    fi
                     filter_ciphersuites
+
 
                     if [ "X" != "X$M_CIPHERS" ]; then
                         start_server "GnuTLS"
@@ -1460,7 +1431,6 @@ for VERIFY in $VERIFIES; do
                         done
                         stop_server
                     fi
-
                     ;;
 
                 mbed*)
