@@ -1604,6 +1604,19 @@ run_test    "TLS 1.3, TLS_AES_128_GCM_SHA256, RSA-certificate, OpenSSL server" \
             0 \
             -c "Certificate Verify: using RSA"
 
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_ALPN
+run_test    "TLS 1.3, ALPN" \
+            "$P_SRV debug_level=5 force_version=tls1_3 psk=010203 psk_identity=0a0b0c key_exchange_modes=psk alpn=abc,1234" \
+            "$P_CLI debug_level=5 force_version=tls1_3 psk=010203 psk_identity=0a0b0c key_exchange_modes=psk alpn=1234" \
+            0 \
+            -s "Protocol is TLSv1.3" \
+            -s "found alpn extension" \
+            -c "found alpn extension" \
+            -c "Application Layer Protocol is 1234" \
+            -s "Application Layer Protocol is 1234"
+
 #
 # TLS 1.2 specific tests
 #

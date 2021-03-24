@@ -3302,8 +3302,8 @@ static void ssl_write_max_fragment_length_ext( mbedtls_ssl_context *ssl,
 
 
 #if defined(MBEDTLS_SSL_ALPN)
-static void ssl_write_alpn_ext( mbedtls_ssl_context *ssl,
-                                unsigned char *buf, size_t *olen )
+static int ssl_write_alpn_ext( mbedtls_ssl_context *ssl,
+                                unsigned char *buf, size_t buflen, size_t *olen )
 {
     *olen = 0;
 
@@ -3313,8 +3313,13 @@ static void ssl_write_alpn_ext( mbedtls_ssl_context *ssl,
         return( 0 );
     }
 
-    MBEDTLS_SSL_DEBUG_MSG( 3, ( "server hello, adding alpn extension" ) );
+    if( buflen < 7 + strlen( ssl->alpn_chosen ) )
+    {
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "buffer too small" ) );
+        return ( MBEDTLS_ERR_SSL_BUFFER_TOO_SMALL );
+    }
 
+    MBEDTLS_SSL_DEBUG_MSG( 3, ( "server hello, adding alpn extension" ) );
     /*
      * 0 . 1    ext identifier
      * 2 . 3    ext length
@@ -3336,6 +3341,7 @@ static void ssl_write_alpn_ext( mbedtls_ssl_context *ssl,
     buf[6] = (unsigned char)( ( *olen - 7 ) & 0xFF );
 
     memcpy( buf + 7, ssl->alpn_chosen, *olen - 7 );
+    return ( 0 );
 }
 #endif /* MBEDTLS_SSL_ALPN */
 
