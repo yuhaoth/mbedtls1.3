@@ -3229,7 +3229,8 @@ static int ssl_client_hello_postprocess( mbedtls_ssl_context* ssl,
             return( ret );
         }
 
-        ret = mbedtls_ssl_tls13_build_transform( ssl, &traffic_keys, ssl->transform_earlydata, 0 );
+        ret = mbedtls_ssl_tls13_build_transform( ssl, &traffic_keys,
+                                                 ssl->transform_earlydata );
         if( ret != 0 )
         {
             MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_tls13_build_transform", ret );
@@ -3244,7 +3245,7 @@ static int ssl_client_hello_postprocess( mbedtls_ssl_context* ssl,
                 return( MBEDTLS_ERR_SSL_ALLOC_FAILED );
 
             ret = mbedtls_ssl_tls13_build_transform( ssl, &traffic_keys,
-                                                     transform_earlydata, 0 );
+                                                     transform_earlydata );
 
             /* Register transform with MPS. */
             ret = mbedtls_mps_add_key_material( &ssl->mps.l4,
@@ -3469,7 +3470,8 @@ static int ssl_encrypted_extensions_prepare( mbedtls_ssl_context* ssl )
     }
 
     /* Setup transform from handshake key material */
-    ret = mbedtls_ssl_tls13_build_transform( ssl, &traffic_keys, ssl->transform_handshake, 0 );
+    ret = mbedtls_ssl_tls13_build_transform( ssl, &traffic_keys,
+                                             ssl->transform_handshake );
     if( ret != 0 )
     {
         MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_tls13_build_transform", ret );
@@ -3488,7 +3490,7 @@ static int ssl_encrypted_extensions_prepare( mbedtls_ssl_context* ssl )
             return( MBEDTLS_ERR_SSL_ALLOC_FAILED );
 
         ret = mbedtls_ssl_tls13_build_transform( ssl, &traffic_keys,
-                                                 transform_handshake, 0 );
+                                                 transform_handshake );
 
         /* Register transform with MPS. */
         ret = mbedtls_mps_add_key_material( &ssl->mps.l4,
@@ -3551,9 +3553,6 @@ static int ssl_encrypted_extensions_prepare( mbedtls_ssl_context* ssl )
         memset( ssl->out_ctr, 0, 8 );
     }
 
-    /* Set sequence number used at the handshake header to zero */
-    memset( ssl->transform_out->sequence_number_enc, 0x0, 12 );
-
 #if defined(MBEDTLS_SSL_HW_RECORD_ACCEL)
     if( mbedtls_ssl_hw_record_activate != NULL )
     {
@@ -3564,13 +3563,6 @@ static int ssl_encrypted_extensions_prepare( mbedtls_ssl_context* ssl )
         }
     }
 #endif
-#if defined(MBEDTLS_SSL_PROTO_DTLS)
-    /* epoch value ( 2 ) is used for messages protected
-     * using keys derived from the handshake_traffic_secret.
-     */
-    ssl->in_epoch = 2;
-    ssl->out_epoch = 2;
-#endif /* MBEDTLS_SSL_PROTO_DTLS */
 
     return( 0 );
 }

@@ -988,16 +988,6 @@ struct mbedtls_ssl_transform
     size_t maclen;                      /*!<  MAC(CBC) len            */
     size_t taglen;                      /*!<  TAG(AEAD) len           */
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
-    mbedtls_ssl_key_set traffic_keys;
-#if defined(MBEDTLS_SSL_PROTO_DTLS)
-    mbedtls_ssl_key_set traffic_keys_previous;
-#endif /* MBEDTL_SSL_PROTO_DTLS */
-
-    unsigned char sequence_number_dec[12]; /* sequence number for incoming (decrypting) traffic */
-    unsigned char sequence_number_enc[12]; /* sequence number for outgoing (encrypting) traffic */
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
-
     unsigned char iv_enc[ MBEDTLS_MAX_IV_LENGTH ];           /*!<  IV (encryption)         */
     unsigned char iv_dec[ MBEDTLS_MAX_IV_LENGTH ];           /*!<  IV (decryption)         */
 #if defined(MBEDTLS_SSL_SOME_MODES_USE_MAC)
@@ -1428,8 +1418,7 @@ int mbedtls_ssl_certificate_verify_process(mbedtls_ssl_context* ssl);
 
 int mbedtls_ssl_tls13_build_transform( mbedtls_ssl_context* ssl,
                              mbedtls_ssl_key_set* traffic_keys,
-                             mbedtls_ssl_transform* transform,
-                             int mode );
+                             mbedtls_ssl_transform* transform );
 
 #if defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
 int mbedtls_ssl_create_binder( mbedtls_ssl_context *ssl,
