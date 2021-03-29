@@ -1416,9 +1416,11 @@ int mbedtls_ssl_handshake_key_derivation( mbedtls_ssl_context* ssl,
 int mbedtls_ssl_read_certificate_verify_process(mbedtls_ssl_context* ssl);
 int mbedtls_ssl_certificate_verify_process(mbedtls_ssl_context* ssl);
 
-int mbedtls_ssl_tls13_build_transform( mbedtls_ssl_context* ssl,
-                             mbedtls_ssl_key_set* traffic_keys,
-                             mbedtls_ssl_transform* transform );
+int mbedtls_ssl_tls13_populate_transform( mbedtls_ssl_transform *transform,
+                                          int endpoint,
+                                          int ciphersuite,
+                                          mbedtls_ssl_key_set const *traffic_keys,
+                                          mbedtls_ssl_context *ssl /* DEBUG ONLY */ );
 
 #if defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
 int mbedtls_ssl_create_binder( mbedtls_ssl_context *ssl,

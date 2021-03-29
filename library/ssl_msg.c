@@ -433,6 +433,19 @@ static void ssl_extract_add_data_from_record( unsigned char* add_data,
      *
      * For TLS 1.3, the record sequence number is dropped from the AAD
      * and encoded within the nonce of the AEAD operation instead.
+     * Moreover, the additional data involves the length of the TLS
+     * ciphertext, not the TLS plaintext as in earlier versions.
+     * Quoting RFC 8446 (TLS 1.3):
+     *
+     *      additional_data = TLSCiphertext.opaque_type ||
+     *                        TLSCiphertext.legacy_record_version ||
+     *                        TLSCiphertext.length
+     *
+     * We pass the tag length to this function in order to compute the
+     * ciphertext length from the inner plaintext length rec->data_len via
+     *
+     *     TLSCiphertext.length = TLSInnerPlaintext.length + taglen.
+     *
      */
 
     unsigned char *cur = add_data;
@@ -441,6 +454,9 @@ static void ssl_extract_add_data_from_record( unsigned char* add_data,
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
     if( minor_ver == MBEDTLS_SSL_MINOR_VERSION_4 )
     {
+        /* In TLS 1.3, the AAD contains the length of the TLSCiphertext,
+         * which differs from the length of the TLSInnerPlaintext
+         * by the length of the authentication tag. */
         ad_len_field += taglen;
     }
     else
@@ -467,8 +483,8 @@ static void ssl_extract_add_data_from_record( unsigned char* add_data,
         *cur = rec->cid_len;
         cur++;
 
-        cur[0] = ( rec->data_len >> 8 ) & 0xFF;
-        cur[1] = ( rec->data_len >> 0 ) & 0xFF;
+        cur[0] = ( ad_len_field >> 8 ) & 0xFF;
+        cur[1] = ( ad_len_field >> 0 ) & 0xFF;
         cur += 2;
     }
     else

@@ -226,8 +226,12 @@ static int ssl_write_early_data_prepare( mbedtls_ssl_context* ssl )
         if( transform_earlydata == NULL )
             return( MBEDTLS_ERR_SSL_ALLOC_FAILED );
 
-        ret = mbedtls_ssl_tls13_build_transform( ssl, &traffic_keys,
-                                                 transform_earlydata );
+        ret = mbedtls_ssl_tls13_populate_transform(
+                              transform_earlydata,
+                              ssl->conf->endpoint,
+                              ssl->session_negotiate->ciphersuite,
+                              &traffic_keys,
+                              ssl );
 
         /* Register transform with MPS. */
         ret = mbedtls_mps_add_key_material( &ssl->mps.l4,
@@ -245,11 +249,15 @@ static int ssl_write_early_data_prepare( mbedtls_ssl_context* ssl )
 
 #else /* MBEDTLS_SSL_USE_MPS */
 
-    ret = mbedtls_ssl_tls13_build_transform( ssl, &traffic_keys,
-                                             ssl->transform_earlydata );
+    ret = mbedtls_ssl_tls13_populate_transform(
+                              ssl->transform_earlydata,
+                              ssl->conf->endpoint,
+                              ssl->session_negotiate->ciphersuite,
+                              &traffic_keys,
+                              ssl );
     if( ret != 0 )
     {
-        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_tls13_build_transform", ret );
+        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_tls13_populate_transform", ret );
         return( ret );
     }
 
@@ -3527,11 +3535,15 @@ static int ssl_server_hello_postprocess( mbedtls_ssl_context* ssl )
         return( ret );
     }
 
-    ret = mbedtls_ssl_tls13_build_transform( ssl, &traffic_keys,
-                                             ssl->transform_handshake );
+    ret = mbedtls_ssl_tls13_populate_transform(
+                              ssl->transform_handshake,
+                              ssl->conf->endpoint,
+                              ssl->session_negotiate->ciphersuite,
+                              &traffic_keys,
+                              ssl );
     if( ret != 0 )
     {
-        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_tls13_build_transform", ret );
+        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_tls13_populate_transform", ret );
         return( ret );
     }
 
@@ -3545,8 +3557,12 @@ static int ssl_server_hello_postprocess( mbedtls_ssl_context* ssl )
         if( transform_handshake == NULL )
             return( MBEDTLS_ERR_SSL_ALLOC_FAILED );
 
-        ret = mbedtls_ssl_tls13_build_transform( ssl, &traffic_keys,
-                                                 transform_handshake );
+        ret = mbedtls_ssl_tls13_populate_transform(
+                              transform_handshake,
+                              ssl->conf->endpoint,
+                              ssl->session_negotiate->ciphersuite,
+                              &traffic_keys,
+                              ssl );
 
         /* Register transform with MPS. */
         ret = mbedtls_mps_add_key_material( &ssl->mps.l4,
