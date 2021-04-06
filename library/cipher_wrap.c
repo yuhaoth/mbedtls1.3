@@ -647,7 +647,6 @@ static const mbedtls_cipher_info_t aes_256_ccm_info = {
     16,
     &ccm_aes_info
 };
-
 #endif /* MBEDTLS_CCM_C */
 
 #endif /* MBEDTLS_AES_C */
