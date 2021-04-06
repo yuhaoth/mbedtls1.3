@@ -1900,4 +1900,200 @@ int mbedtls_ssl_double_retransmit_timeout( mbedtls_ssl_context *ssl );
 void mbedtls_ssl_reset_retransmit_timeout( mbedtls_ssl_context *ssl );
 #endif /* MBEDTLS_SSL_PROTO_DTLS */
 
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+#if defined(MBEDTLS_ECDH_C)
+/**
+ * \brief           This function generates an EC key pair and exports its
+ *                  in the format used in a TLS 1.3 KeyShare extension.
+ *
+ * \see             ecp.h
+ *
+ * \param ctx       The ECDH context to use. This must be initialized
+ *                  and bound to a group, for example via mbedtls_ecdh_setup().
+ * \param olen      The address at which to store the number of Bytes written.
+ * \param buf       The destination buffer. This must be a writable buffer of
+ *                  length \p blen Bytes.
+ * \param blen      The length of the destination buffer \p buf in Bytes.
+ * \param f_rng     The RNG function to use. This must not be \c NULL.
+ * \param p_rng     The RNG context to be passed to \p f_rng. This may be
+ *                  \c NULL in case \p f_rng doesn't need a context argument.
+ *
+ * \return          \c 0 on success.
+ * \return          #MBEDTLS_ERR_ECP_IN_PROGRESS if maximum number of
+ *                  operations was reached: see \c mbedtls_ecp_set_max_ops().
+ * \return          Another \c MBEDTLS_ERR_ECP_XXX error code on failure.
+ */
+int mbedtls_ecdh_make_tls_13_params( mbedtls_ecdh_context *ctx, size_t *olen,
+                      unsigned char *buf, size_t blen,
+                      int (*f_rng)(void *, unsigned char *, size_t),
+                      void *p_rng );
+
+/**
+ * \brief           This function parses the ECDHE parameters in a
+ *                  TLS 1.3 KeyShare extension.
+ *
+ * \see             ecp.h
+ *
+ * \param ctx       The ECDHE context to use. This must be initialized.
+ * \param buf       On input, \c *buf must be the start of the input buffer.
+ *                  On output, \c *buf is updated to point to the end of the
+ *                  data that has been read. On success, this is the first byte
+ *                  past the end of the ServerKeyExchange parameters.
+ *                  On error, this is the point at which an error has been
+ *                  detected, which is usually not useful except to debug
+ *                  failures.
+ * \param end       The end of the input buffer.
+ *
+ * \return          \c 0 on success.
+ * \return          An \c MBEDTLS_ERR_ECP_XXX error code on failure.
+ *
+ */
+int mbedtls_ecdh_read_tls_13_params( mbedtls_ecdh_context *ctx,
+                              const unsigned char **buf,
+                              const unsigned char *end );
+
+/**
+ * \brief           This function generates a public key and exports it
+ *                  as a TLS 1.3 KeyShare payload.
+ *
+ * \see             ecp.h
+ *
+ * \param ctx       The ECDH context to use. This must be initialized
+ *                  and bound to a group, the latter usually by
+ *                  mbedtls_ecdh_read_params().
+ * \param olen      The address at which to store the number of Bytes written.
+ *                  This must not be \c NULL.
+ * \param buf       The destination buffer. This must be a writable buffer
+ *                  of length \p blen Bytes.
+ * \param blen      The size of the destination buffer \p buf in Bytes.
+ * \param f_rng     The RNG function to use. This must not be \c NULL.
+ * \param p_rng     The RNG context to be passed to \p f_rng. This may be
+ *                  \c NULL in case \p f_rng doesn't need a context argument.
+ *
+ * \return          \c 0 on success.
+ * \return          #MBEDTLS_ERR_ECP_IN_PROGRESS if maximum number of
+ *                  operations was reached: see \c mbedtls_ecp_set_max_ops().
+ * \return          Another \c MBEDTLS_ERR_ECP_XXX error code on failure.
+ */
+int mbedtls_ecdh_make_tls_13_public( mbedtls_ecdh_context *ctx, size_t *olen,
+                      unsigned char *buf, size_t blen,
+                      int (*f_rng)(void *, unsigned char *, size_t),
+                      void *p_rng );
+
+/**
+ * \brief       This function parses and processes the ECDHE payload of a
+ *              TLS 1.3 KeyShare extension.
+ *
+ * \see         ecp.h
+ *
+ * \param ctx   The ECDH context to use. This must be initialized
+ *              and bound to a group, for example via mbedtls_ecdh_setup().
+ * \param buf   The pointer to the ClientKeyExchange payload. This must
+ *              be a readable buffer of length \p blen Bytes.
+ * \param blen  The length of the input buffer \p buf in Bytes.
+ *
+ * \return      \c 0 on success.
+ * \return      An \c MBEDTLS_ERR_ECP_XXX error code on failure.
+ */
+int mbedtls_ecdh_read_tls_13_public( mbedtls_ecdh_context *ctx,
+                              const unsigned char *buf, size_t blen );
+#endif /* MBEDTLS_ECDH_C */
+
+#if defined(MBEDTLS_ECP_C)
+/**
+ * \brief           This function imports a point from a TLS ECPoint record.
+ *
+ * \note            On function return, \p *buf is updated to point immediately
+ *                  after the ECPoint record.
+ *
+ * \param grp       The ECP group to use.
+ *                  This must be initialized and have group parameters
+ *                  set, for example through mbedtls_ecp_group_load().
+ * \param pt        The destination point.
+ * \param buf       The address of the pointer to the start of the input buffer.
+ * \param len       The length of the buffer.
+ *
+ * \return          \c 0 on success.
+ * \return          An \c MBEDTLS_ERR_MPI_XXX error code on initialization
+ *                  failure.
+ * \return          #MBEDTLS_ERR_ECP_BAD_INPUT_DATA if input is invalid.
+ */
+int mbedtls_ecp_tls_13_read_point( const mbedtls_ecp_group *grp,
+                                mbedtls_ecp_point *pt,
+                                const unsigned char **buf, size_t len );
+
+/**
+ * \brief           This function exports a point as defined in TLS 1.3.
+ *
+ * \param grp       The ECP group to use.
+ *                  This must be initialized and have group parameters
+ *                  set, for example through mbedtls_ecp_group_load().
+ * \param pt        The point to be exported. This must be initialized.
+ * \param format    The point format to use. This must be either
+ *                  #MBEDTLS_ECP_PF_COMPRESSED or #MBEDTLS_ECP_PF_UNCOMPRESSED.
+ * \param olen      The address at which to store the length in Bytes
+ *                  of the data written.
+ * \param buf       The target buffer. This must be a writable buffer of
+ *                  length \p blen Bytes.
+ * \param blen      The length of the target buffer \p buf in Bytes.
+ *
+ * \return          \c 0 on success.
+ * \return          #MBEDTLS_ERR_ECP_BAD_INPUT_DATA if the input is invalid.
+ * \return          #MBEDTLS_ERR_ECP_BUFFER_TOO_SMALL if the target buffer
+ *                  is too small to hold the exported point.
+ * \return          Another negative error code on other kinds of failure.
+ */
+int mbedtls_ecp_tls_13_write_point( const mbedtls_ecp_group *grp,
+                                 const mbedtls_ecp_point *pt,
+                                 int format, size_t *olen,
+                                 unsigned char *buf, size_t blen );
+
+
+/**
+ * \brief           This function extracts an elliptic curve group ID from a
+ *                  TLS ECParameters record as defined in TLS 1.3.
+ *
+ * \note            The read pointer \p buf is updated to point right after
+ *                  the ECParameters record on exit.
+ *
+ * \param grp       The address at which to store the group id.
+ *                  This must not be \c NULL.
+ * \param buf       The address of the pointer to the start of the input buffer.
+ * \param len       The length of the input buffer \c *buf in Bytes.
+ *
+ * \return          \c 0 on success.
+ * \return          #MBEDTLS_ERR_ECP_BAD_INPUT_DATA if input is invalid.
+ * \return          #MBEDTLS_ERR_ECP_FEATURE_UNAVAILABLE if the group is not
+ *                  recognized.
+ * \return          Another negative error code on other kinds of failure.
+ */
+int mbedtls_ecp_tls_13_read_group_id( mbedtls_ecp_group_id *grp,
+                                   const unsigned char **buf,
+                                   size_t len );
+
+
+/**
+ * \brief           This function exports an elliptic curve as a TLS
+ *                  ECParameters record as defined in TLS 1.3.
+ *
+ * \param grp       The ECP group to be exported.
+ *                  This must be initialized and have group parameters
+ *                  set, for example through mbedtls_ecp_group_load().
+ * \param olen      The address at which to store the number of Bytes written.
+ *                  This must not be \c NULL.
+ * \param buf       The buffer to write to. This must be a writable buffer
+ *                  of length \p blen Bytes.
+ * \param blen      The length of the output buffer \p buf in Bytes.
+ *
+ * \return          \c 0 on success.
+ * \return          #MBEDTLS_ERR_ECP_BUFFER_TOO_SMALL if the output
+ *                  buffer is too small to hold the exported group.
+ * \return          Another negative error code on other kinds of failure.
+ */
+int mbedtls_ecp_tls_13_write_group( const mbedtls_ecp_group *grp,
+                                 size_t *olen,
+                                 unsigned char *buf, size_t blen );
+#endif /* MBEDTLS_ECP_C */
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+
 #endif /* ssl_internal.h */
