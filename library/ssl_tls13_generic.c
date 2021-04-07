@@ -40,6 +40,7 @@
 
 #include "mbedtls/ssl_ticket.h"
 #include "mbedtls/debug.h"
+#include "mbedtls/error.h"
 #include "mbedtls/ssl.h"
 #include "mbedtls/ssl_internal.h"
 #include "ssl_tls13_keys.h"
@@ -5215,6 +5216,389 @@ int mbedtls_ssl_write_early_data_ext( mbedtls_ssl_context *ssl,
 #endif /* MBEDTLS_ZERO_RTT */
 
 
+#if defined(MBEDTLS_ECDH_C)
+#if defined(MBEDTLS_ECDH_LEGACY_CONTEXT)
+typedef mbedtls_ecdh_context mbedtls_ecdh_context_mbed;
+#endif
+
+#define ECDH_VALIDATE_RET( cond )    \
+    MBEDTLS_INTERNAL_VALIDATE_RET( cond, MBEDTLS_ERR_ECP_BAD_INPUT_DATA )
+
+static int ecdh_make_tls_13_params_internal( mbedtls_ecdh_context_mbed *ctx,
+                                      size_t *olen, int point_format,
+                                      unsigned char *buf, size_t blen,
+                                      int (*f_rng)(void *,
+                                                   unsigned char *,
+                                                   size_t),
+                                      void *p_rng,
+                                      int restart_enabled )
+{
+    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
+    size_t grp_len, pt_len;
+#if defined(MBEDTLS_ECP_RESTARTABLE)
+    mbedtls_ecp_restart_ctx *rs_ctx = NULL;
+#endif
+
+    if( ctx->grp.pbits == 0 )
+        return( MBEDTLS_ERR_ECP_BAD_INPUT_DATA );
+
+#if defined(MBEDTLS_ECP_RESTARTABLE)
+    if( restart_enabled )
+        rs_ctx = &ctx->rs;
+#else
+    (void) restart_enabled;
+#endif
+
+
+#if defined(MBEDTLS_ECP_RESTARTABLE)
+    if( ( ret = ecdh_gen_public_restartable( &ctx->grp, &ctx->d, &ctx->Q,
+                                             f_rng, p_rng, rs_ctx ) ) != 0 )
+        return( ret );
+#else
+    if( ( ret = mbedtls_ecdh_gen_public( &ctx->grp, &ctx->d, &ctx->Q,
+                                         f_rng, p_rng ) ) != 0 )
+        return( ret );
+#endif /* MBEDTLS_ECP_RESTARTABLE */
+
+    if( ( ret = mbedtls_ecp_tls_13_write_group( &ctx->grp, &grp_len, buf,
+                                             blen ) ) != 0 )
+        return( ret );
+
+    buf += grp_len;
+    blen -= grp_len;
+
+    if( ( ret = mbedtls_ecp_tls_13_write_point( &ctx->grp, &ctx->Q, point_format,
+                                             &pt_len, buf, blen ) ) != 0 )
+        return( ret );
+
+    *olen = grp_len + pt_len;
+    return( 0 );
+}
+
+int mbedtls_ecdh_make_tls_13_params( mbedtls_ecdh_context *ctx, size_t *olen,
+                              unsigned char *buf, size_t blen,
+                              int (*f_rng)(void *, unsigned char *, size_t),
+                              void *p_rng )
+{
+    int restart_enabled = 0;
+    ECDH_VALIDATE_RET( ctx != NULL );
+    ECDH_VALIDATE_RET( olen != NULL );
+    ECDH_VALIDATE_RET( buf != NULL );
+    ECDH_VALIDATE_RET( f_rng != NULL );
+
+#if defined(MBEDTLS_ECP_RESTARTABLE)
+    restart_enabled = ctx->restart_enabled;
+#else
+    (void) restart_enabled;
+#endif
+
+#if defined(MBEDTLS_ECDH_LEGACY_CONTEXT)
+    return( ecdh_make_tls_13_params_internal( ctx, olen, ctx->point_format, buf, blen,
+                                       f_rng, p_rng, restart_enabled ) );
+#else
+    switch( ctx->var )
+    {
+#if defined(MBEDTLS_ECDH_VARIANT_EVEREST_ENABLED)
+        case MBEDTLS_ECDH_VARIANT_EVEREST:
+            return( mbedtls_everest_make_params( &ctx->ctx.everest_ecdh, olen,
+                                                 buf, blen, f_rng, p_rng ) );
+#endif
+        case MBEDTLS_ECDH_VARIANT_MBEDTLS_2_0:
+            return( ecdh_make_params_internal( &ctx->ctx.mbed_ecdh, olen,
+                                               ctx->point_format, buf, blen,
+                                               f_rng, p_rng,
+                                               restart_enabled ) );
+        default:
+            return MBEDTLS_ERR_ECP_BAD_INPUT_DATA;
+    }
+#endif
+}
+
+static int ecdh_read_tls_13_params_internal( mbedtls_ecdh_context_mbed *ctx,
+                                      const unsigned char **buf,
+                                      const unsigned char *end )
+{
+    return( mbedtls_ecp_tls_13_read_point( &ctx->grp, &ctx->Qp, buf,
+                                        end - *buf ) );
+}
+
+int mbedtls_ecdh_read_tls_13_params( mbedtls_ecdh_context *ctx,
+                              const unsigned char **buf,
+                              const unsigned char *end )
+{
+    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
+    mbedtls_ecp_group_id grp_id;
+    ECDH_VALIDATE_RET( ctx != NULL );
+    ECDH_VALIDATE_RET( buf != NULL );
+    ECDH_VALIDATE_RET( *buf != NULL );
+    ECDH_VALIDATE_RET( end != NULL );
+
+    if( ( ret = mbedtls_ecp_tls_13_read_group_id( &grp_id, buf, end - *buf ) )
+            != 0 )
+        return( ret );
+
+    if( ( ret = mbedtls_ecdh_setup( ctx, grp_id ) ) != 0 )
+        return( ret );
+
+#if defined(MBEDTLS_ECDH_LEGACY_CONTEXT)
+    return( ecdh_read_tls_13_params_internal( ctx, buf, end ) );
+#else
+    switch( ctx->var )
+    {
+#if defined(MBEDTLS_ECDH_VARIANT_EVEREST_ENABLED)
+        case MBEDTLS_ECDH_VARIANT_EVEREST:
+            return( mbedtls_everest_read_params( &ctx->ctx.everest_ecdh,
+                                                 buf, end) );
+#endif
+        case MBEDTLS_ECDH_VARIANT_MBEDTLS_2_0:
+            return( ecdh_read_params_internal( &ctx->ctx.mbed_ecdh,
+                                               buf, end ) );
+        default:
+            return MBEDTLS_ERR_ECP_BAD_INPUT_DATA;
+    }
+#endif
+}
+
+static int ecdh_make_tls_13_public_internal( mbedtls_ecdh_context_mbed *ctx,
+                                      size_t *olen, int point_format,
+                                      unsigned char *buf, size_t blen,
+                                      int (*f_rng)(void *,
+                                                   unsigned char *,
+                                                   size_t),
+                                      void *p_rng,
+                                      int restart_enabled )
+{
+    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
+#if defined(MBEDTLS_ECP_RESTARTABLE)
+    mbedtls_ecp_restart_ctx *rs_ctx = NULL;
+#endif
+
+    if( ctx->grp.pbits == 0 )
+        return( MBEDTLS_ERR_ECP_BAD_INPUT_DATA );
+
+#if defined(MBEDTLS_ECP_RESTARTABLE)
+    if( restart_enabled )
+        rs_ctx = &ctx->rs;
+#else
+    (void) restart_enabled;
+#endif
+
+#if defined(MBEDTLS_ECP_RESTARTABLE)
+    if( ( ret = ecdh_gen_public_restartable( &ctx->grp, &ctx->d, &ctx->Q,
+                                             f_rng, p_rng, rs_ctx ) ) != 0 )
+        return( ret );
+#else
+    if( ( ret = mbedtls_ecdh_gen_public( &ctx->grp, &ctx->d, &ctx->Q,
+                                         f_rng, p_rng ) ) != 0 )
+        return( ret );
+#endif /* MBEDTLS_ECP_RESTARTABLE */
+
+    return mbedtls_ecp_tls_13_write_point( &ctx->grp, &ctx->Q, point_format, olen,
+                                        buf, blen );
+}
+
+/*
+ * Setup and export the client public value
+ */
+int mbedtls_ecdh_make_tls_13_public( mbedtls_ecdh_context *ctx, size_t *olen,
+                              unsigned char *buf, size_t blen,
+                              int (*f_rng)(void *, unsigned char *, size_t),
+                              void *p_rng )
+{
+    int restart_enabled = 0;
+    ECDH_VALIDATE_RET( ctx != NULL );
+    ECDH_VALIDATE_RET( olen != NULL );
+    ECDH_VALIDATE_RET( buf != NULL );
+    ECDH_VALIDATE_RET( f_rng != NULL );
+
+#if defined(MBEDTLS_ECP_RESTARTABLE)
+    restart_enabled = ctx->restart_enabled;
+#endif
+
+#if defined(MBEDTLS_ECDH_LEGACY_CONTEXT)
+    return( ecdh_make_tls_13_public_internal( ctx, olen, ctx->point_format, buf, blen,
+                                       f_rng, p_rng, restart_enabled ) );
+#else
+    switch( ctx->var )
+    {
+#if defined(MBEDTLS_ECDH_VARIANT_EVEREST_ENABLED)
+        case MBEDTLS_ECDH_VARIANT_EVEREST:
+            return( mbedtls_everest_make_public( &ctx->ctx.everest_ecdh, olen,
+                                                 buf, blen, f_rng, p_rng ) );
+#endif
+        case MBEDTLS_ECDH_VARIANT_MBEDTLS_2_0:
+            return( ecdh_make_public_internal( &ctx->ctx.mbed_ecdh, olen,
+                                               ctx->point_format, buf, blen,
+                                               f_rng, p_rng,
+                                               restart_enabled ) );
+        default:
+            return MBEDTLS_ERR_ECP_BAD_INPUT_DATA;
+    }
+#endif
+}
+
+static int ecdh_read_tls_13_public_internal( mbedtls_ecdh_context_mbed *ctx,
+                                      const unsigned char *buf, size_t blen )
+{
+    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
+    const unsigned char *p = buf;
+
+    if( ( ret = mbedtls_ecp_tls_13_read_point( &ctx->grp, &ctx->Qp, &p,
+                                            blen ) ) != 0 )
+        return( ret );
+
+    if( (size_t)( p - buf ) != blen )
+        return( MBEDTLS_ERR_ECP_BAD_INPUT_DATA );
+
+    return( 0 );
+}
+
+/*
+ * Parse and import the client's TLS 1.3 public value
+ */
+int mbedtls_ecdh_read_tls_13_public( mbedtls_ecdh_context *ctx,
+                              const unsigned char *buf, size_t blen )
+{
+    ECDH_VALIDATE_RET( ctx != NULL );
+    ECDH_VALIDATE_RET( buf != NULL );
+
+#if defined(MBEDTLS_ECDH_LEGACY_CONTEXT)
+    return( ecdh_read_tls_13_public_internal( ctx, buf, blen ) );
+#else
+    switch( ctx->var )
+    {
+#if defined(MBEDTLS_ECDH_VARIANT_EVEREST_ENABLED)
+        case MBEDTLS_ECDH_VARIANT_EVEREST:
+            return( mbedtls_everest_read_public( &ctx->ctx.everest_ecdh,
+                                                 buf, blen ) );
+#endif
+        case MBEDTLS_ECDH_VARIANT_MBEDTLS_2_0:
+            return( ecdh_read_public_internal( &ctx->ctx.mbed_ecdh,
+                                                       buf, blen ) );
+        default:
+            return MBEDTLS_ERR_ECP_BAD_INPUT_DATA;
+    }
+#endif
+}
+#endif /* MBEDTLS_ECDH_C */
+
+#if defined(MBEDTLS_ECP_C)
+#define ECP_VALIDATE_RET( cond )    \
+    MBEDTLS_INTERNAL_VALIDATE_RET( cond, MBEDTLS_ERR_ECP_BAD_INPUT_DATA )
+
+int mbedtls_ecp_tls_13_read_point( const mbedtls_ecp_group *grp,
+                                mbedtls_ecp_point *pt,
+                                const unsigned char **buf, size_t buf_len )
+{
+    unsigned char data_len;
+    const unsigned char *buf_start;
+    ECP_VALIDATE_RET( grp != NULL );
+    ECP_VALIDATE_RET( pt  != NULL );
+    ECP_VALIDATE_RET( buf != NULL );
+    ECP_VALIDATE_RET( *buf != NULL );
+
+    if( buf_len < 3 )
+        return( MBEDTLS_ERR_ECP_BAD_INPUT_DATA );
+
+    data_len = ( *( *buf ) << 8 ) | *( *buf+1 );
+    *buf += 2;
+
+    if( data_len < 1 || data_len > buf_len - 2 )
+        return( MBEDTLS_ERR_ECP_BAD_INPUT_DATA );
+
+    /*
+     * Save buffer start for read_binary and update buf
+     */
+    buf_start = *buf;
+    *buf += data_len;
+
+    return( mbedtls_ecp_point_read_binary( grp, pt, buf_start, data_len ) );
+}
+
+int mbedtls_ecp_tls_13_write_point( const mbedtls_ecp_group *grp, const mbedtls_ecp_point *pt,
+                         int format, size_t *olen,
+                         unsigned char *buf, size_t blen )
+{
+    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
+    ECP_VALIDATE_RET( grp  != NULL );
+    ECP_VALIDATE_RET( pt   != NULL );
+    ECP_VALIDATE_RET( olen != NULL );
+    ECP_VALIDATE_RET( buf  != NULL );
+    ECP_VALIDATE_RET( format == MBEDTLS_ECP_PF_UNCOMPRESSED ||
+                      format == MBEDTLS_ECP_PF_COMPRESSED );
+
+    if( blen < 2 )
+        return( MBEDTLS_ERR_ECP_BAD_INPUT_DATA );
+
+    if( ( ret = mbedtls_ecp_point_write_binary( grp, pt, format,
+                    olen, buf + 2, blen - 2) ) != 0 )
+        return( ret );
+
+    // Length
+    *buf++ = (unsigned char)( ( *olen >> 8 ) & 0xFF );
+    *buf++ = (unsigned char)( ( *olen ) & 0xFF );
+    *olen += 2;
+
+    return( 0 );
+}
+
+/*
+ * Read a group id from an ECParameters record (TLS 1.3) and convert it to
+ * mbedtls_ecp_group_id.
+ */
+int mbedtls_ecp_tls_13_read_group_id( mbedtls_ecp_group_id *grp,
+                                   const unsigned char **buf, size_t len )
+{
+    uint16_t tls_id;
+    const mbedtls_ecp_curve_info *curve_info;
+    ECP_VALIDATE_RET( grp  != NULL );
+    ECP_VALIDATE_RET( buf  != NULL );
+    ECP_VALIDATE_RET( *buf != NULL );
+
+    if( len < 2 )
+        return( MBEDTLS_ERR_ECP_BAD_INPUT_DATA );
+
+    /*
+     * Next two bytes are the namedcurve value
+     */
+    tls_id = *(*buf)++;
+    tls_id <<= 8;
+    tls_id |= *(*buf)++;
+
+    if( ( curve_info = mbedtls_ecp_curve_info_from_tls_id( tls_id ) ) == NULL )
+        return( MBEDTLS_ERR_ECP_FEATURE_UNAVAILABLE );
+
+    *grp = curve_info->grp_id;
+
+    return( 0 );
+}
+
+/*
+ * Write the ECParameters record corresponding to a group (TLS 1.3)
+ */
+int mbedtls_ecp_tls_13_write_group( const mbedtls_ecp_group *grp, size_t *olen,
+                         unsigned char *buf, size_t blen )
+{
+    const mbedtls_ecp_curve_info *curve_info;
+    ECP_VALIDATE_RET( grp  != NULL );
+    ECP_VALIDATE_RET( buf  != NULL );
+    ECP_VALIDATE_RET( olen != NULL );
+
+    if( ( curve_info = mbedtls_ecp_curve_info_from_grp_id( grp->id ) ) == NULL )
+        return( MBEDTLS_ERR_ECP_BAD_INPUT_DATA );
+
+    *olen = 2;
+    if( blen < *olen )
+        return( MBEDTLS_ERR_ECP_BUFFER_TOO_SMALL );
+
+    // Two bytes for named curve
+    buf[0] = curve_info->tls_id >> 8;
+    buf[1] = curve_info->tls_id & 0xFF;
+
+    return( 0 );
+}
+
+#endif /* MBEDTLS_ECP_C */
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 
 #endif /* MBEDTLS_SSL_TLS_C */
