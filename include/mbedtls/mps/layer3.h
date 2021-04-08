@@ -207,7 +207,7 @@ struct mps_l3_handshake_in
 
     /*!< The extended reader giving access to the message contents, and
      *   keeping track of message bounds. */
-    mbedtls_reader_ext *rd_ext;
+    mbedtls_mps_reader_ext *rd_ext;
 };
 
 /**
@@ -265,7 +265,7 @@ struct mps_l3_app_in
 {
     /*! The epoch used to protect the application data. */
     mbedtls_mps_stored_epoch_id epoch;
-    mbedtls_reader *rd;
+    mbedtls_mps_reader *rd;
 };
 
 struct mps_l3_app_out
@@ -339,7 +339,7 @@ struct mps_l3_hs_in_internal
     /*!< The handshake sequence number. */
     mbedtls_mps_stored_hs_seq_nr_t seq_nr;
 
-    mbedtls_reader_ext rd_ext;  /*!< The extended reader giving access to
+    mbedtls_mps_reader_ext rd_ext;  /*!< The extended reader giving access to
                                  *   the message contents, but also keeping
                                  *   track of message bounds.                */
 };
@@ -448,7 +448,7 @@ struct mps_l3
 
             /*! Epoch of current incoming message.  */
             mbedtls_mps_stored_epoch_id epoch;
-            mbedtls_reader *raw_in; /*!< Reader providing raw access to incoming
+            mbedtls_mps_reader *raw_in; /*!< Reader providing raw access to incoming
                                      *   data of the type indicated by \c state
                                      *   (including headers in case of handshake
                                      *    messages).                             */

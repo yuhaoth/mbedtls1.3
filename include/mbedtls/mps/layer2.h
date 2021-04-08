@@ -111,7 +111,7 @@ typedef struct
     mbedtls_mps_stored_msg_type_t type;
     /*!< The epoch through which the incoming data is protected. */
     mbedtls_mps_stored_epoch_id epoch;
-    mbedtls_reader *rd;           /*!< The reader providing access to the
+    mbedtls_mps_reader *rd;           /*!< The reader providing access to the
                                    *   incoming data.                        */
 } mps_l2_in;
 
@@ -192,7 +192,7 @@ struct mbedtls_mps_l2_in_internal
     /*! The epoch through which the data is secured. */
     mbedtls_mps_stored_epoch_id epoch;
     /*! The reader managing the incoming data after decryption. */
-    mbedtls_reader rd;
+    mbedtls_mps_reader rd;
 };
 typedef struct mbedtls_mps_l2_in_internal mbedtls_mps_l2_in_internal;
 

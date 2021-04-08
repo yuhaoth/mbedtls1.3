@@ -59,31 +59,31 @@ MPS Reader: Pausing, feed 50 bytes in 49x1b + 51b
 mbedtls_mps_reader_pausing_multiple_feeds:2
 
 MPS Reader: Pausing, inconsistent continuation, #0
-mbedtls_reader_inconsistent_usage:0
+mbedtls_mps_reader_inconsistent_usage:0
 
 MPS Reader: Pausing, inconsistent continuation, #1
-mbedtls_reader_inconsistent_usage:1
+mbedtls_mps_reader_inconsistent_usage:1
 
 MPS Reader: Pausing, inconsistent continuation, #2
-mbedtls_reader_inconsistent_usage:2
+mbedtls_mps_reader_inconsistent_usage:2
 
 MPS Reader: Pausing, inconsistent continuation, #3
-mbedtls_reader_inconsistent_usage:3
+mbedtls_mps_reader_inconsistent_usage:3
 
 MPS Reader: Pausing, inconsistent continuation, #4
-mbedtls_reader_inconsistent_usage:4
+mbedtls_mps_reader_inconsistent_usage:4
 
 MPS Reader: Pausing, inconsistent continuation, #5
-mbedtls_reader_inconsistent_usage:5
+mbedtls_mps_reader_inconsistent_usage:5
 
 MPS Reader: Pausing, inconsistent continuation, #6
-mbedtls_reader_inconsistent_usage:6
+mbedtls_mps_reader_inconsistent_usage:6
 
 MPS Reader: Pausing, inconsistent continuation, #7
-mbedtls_reader_inconsistent_usage:7
+mbedtls_mps_reader_inconsistent_usage:7
 
 MPS Reader: Pausing, inconsistent continuation, #8
-mbedtls_reader_inconsistent_usage:8
+mbedtls_mps_reader_inconsistent_usage:8
 
 MPS Reader: Reclaim with data remaining #0
 mbedtls_mps_reader_reclaim_data_left:0

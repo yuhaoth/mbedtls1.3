@@ -1,6 +1,6 @@
 
 /*
- * TODO: Test second argument in mbedtls_reader_reclaim!
+ * TODO: Test second argument in mbedtls_mps_reader_reclaim!
  */
 
 /* BEGIN_HEADER */
@@ -1371,17 +1371,17 @@ void mbedtls_mps_reader_feed_empty( int option )
 {
     unsigned char buf[100];
     unsigned char *tmp;
-    mbedtls_reader rd;
+    mbedtls_mps_reader rd;
     for( int i=0; (unsigned) i < sizeof( buf ); i++ )
         buf[i] = (unsigned char) i;
 
     /* Preparation (lower layer) */
-    mbedtls_reader_init( &rd, NULL, 0 );
+    mbedtls_mps_reader_init( &rd, NULL, 0 );
     switch( option )
     {
         case 0: /* NULL buffer */
-            TEST_ASSERT( mbedtls_reader_feed( &rd, NULL, sizeof( buf ) ) ==
-                         MBEDTLS_ERR_READER_INVALID_ARG );
+            TEST_ASSERT( mbedtls_mps_reader_feed( &rd, NULL, sizeof( buf ) ) ==
+                         MBEDTLS_ERR_MPS_READER_INVALID_ARG );
             break;
 
         default:
@@ -1389,16 +1389,16 @@ void mbedtls_mps_reader_feed_empty( int option )
             break;
     }
     /* Subsequent feed-calls should still succeed. */
-    TEST_ASSERT( mbedtls_reader_feed( &rd, buf, sizeof( buf ) ) == 0 );
+    TEST_ASSERT( mbedtls_mps_reader_feed( &rd, buf, sizeof( buf ) ) == 0 );
 
     /* Consumption (upper layer) */
-    TEST_ASSERT( mbedtls_reader_get( &rd, 100, &tmp, NULL ) == 0 );
+    TEST_ASSERT( mbedtls_mps_reader_get( &rd, 100, &tmp, NULL ) == 0 );
     TEST_ASSERT( memcmp( tmp, buf, 100 ) == 0 );
-    TEST_ASSERT( mbedtls_reader_commit( &rd ) == 0 );
+    TEST_ASSERT( mbedtls_mps_reader_commit( &rd ) == 0 );
 
     /* Wrapup */
-    TEST_ASSERT( mbedtls_reader_reclaim( &rd, NULL ) == 0 );
-    mbedtls_reader_free( &rd );
+    TEST_ASSERT( mbedtls_mps_reader_reclaim( &rd, NULL ) == 0 );
+    mbedtls_mps_reader_free( &rd );
 }
 /* END_CASE */
 
@@ -1410,24 +1410,24 @@ void mbedtls_mps_reader_no_pausing_single_step_single_round( int with_acc )
     unsigned char bufA[100];
     unsigned char acc[10];
     unsigned char *tmp;
-    mbedtls_reader rd;
+    mbedtls_mps_reader rd;
     for( int i=0; (unsigned) i < sizeof( bufA ); i++ )
         bufA[i] = (unsigned char) i;
 
     /* Preparation (lower layer) */
     if( with_acc == 0 )
-        mbedtls_reader_init( &rd, NULL, 0 );
+        mbedtls_mps_reader_init( &rd, NULL, 0 );
     else
-        mbedtls_reader_init( &rd, acc, sizeof( acc ) );
-    TEST_ASSERT( mbedtls_reader_feed( &rd, bufA, sizeof( bufA ) ) == 0 );
+        mbedtls_mps_reader_init( &rd, acc, sizeof( acc ) );
+    TEST_ASSERT( mbedtls_mps_reader_feed( &rd, bufA, sizeof( bufA ) ) == 0 );
     /* Consumption (upper layer) */
     /* Consume exactly what's available */
-    TEST_ASSERT( mbedtls_reader_get( &rd, 100, &tmp, NULL ) == 0 );
+    TEST_ASSERT( mbedtls_mps_reader_get( &rd, 100, &tmp, NULL ) == 0 );
     TEST_ASSERT( memcmp( tmp, bufA, 100 ) == 0 );
-    TEST_ASSERT( mbedtls_reader_commit( &rd ) == 0 );
+    TEST_ASSERT( mbedtls_mps_reader_commit( &rd ) == 0 );
     /* Wrapup (lower layer) */
-    TEST_ASSERT( mbedtls_reader_reclaim( &rd, NULL ) == 0 );
-    mbedtls_reader_free( &rd );
+    TEST_ASSERT( mbedtls_mps_reader_reclaim( &rd, NULL ) == 0 );
+    mbedtls_mps_reader_free( &rd );
 }
 /* END_CASE */
 
@@ -1439,7 +1439,7 @@ void mbedtls_mps_reader_no_pausing_single_step_multiple_rounds( int with_acc )
     unsigned char bufA[100], bufB[100];
     unsigned char acc[10];
     unsigned char *tmp;
-    mbedtls_reader rd;
+    mbedtls_mps_reader rd;
     for( int i=0; (unsigned) i < sizeof( bufA ); i++ )
         bufA[i] = (unsigned char) i;
     for( int i=0; (unsigned) i < sizeof( bufB ); i++ )
@@ -1447,25 +1447,25 @@ void mbedtls_mps_reader_no_pausing_single_step_multiple_rounds( int with_acc )
 
     /* Preparation (lower layer) */
     if( with_acc == 0 )
-        mbedtls_reader_init( &rd, NULL, 0 );
+        mbedtls_mps_reader_init( &rd, NULL, 0 );
     else
-        mbedtls_reader_init( &rd, acc, sizeof( acc ) );
-    TEST_ASSERT( mbedtls_reader_feed( &rd, bufA, sizeof( bufA ) ) == 0 );
+        mbedtls_mps_reader_init( &rd, acc, sizeof( acc ) );
+    TEST_ASSERT( mbedtls_mps_reader_feed( &rd, bufA, sizeof( bufA ) ) == 0 );
     /* Consumption (upper layer) */
     /* Consume exactly what's available */
-    TEST_ASSERT( mbedtls_reader_get( &rd, 100, &tmp, NULL ) == 0 );
+    TEST_ASSERT( mbedtls_mps_reader_get( &rd, 100, &tmp, NULL ) == 0 );
     TEST_ASSERT( memcmp( tmp, bufA, 100 ) == 0 );
-    TEST_ASSERT( mbedtls_reader_commit( &rd ) == 0 );
+    TEST_ASSERT( mbedtls_mps_reader_commit( &rd ) == 0 );
     /* Preparation */
-    TEST_ASSERT( mbedtls_reader_reclaim( &rd, NULL ) == 0 );
-    TEST_ASSERT( mbedtls_reader_feed( &rd, bufB, sizeof( bufB ) ) == 0 );
+    TEST_ASSERT( mbedtls_mps_reader_reclaim( &rd, NULL ) == 0 );
+    TEST_ASSERT( mbedtls_mps_reader_feed( &rd, bufB, sizeof( bufB ) ) == 0 );
     /* Consumption */
-    TEST_ASSERT( mbedtls_reader_get( &rd, 100, &tmp, NULL ) == 0 );
+    TEST_ASSERT( mbedtls_mps_reader_get( &rd, 100, &tmp, NULL ) == 0 );
     TEST_ASSERT( memcmp( tmp, bufB, 100 ) == 0 );
-    TEST_ASSERT( mbedtls_reader_commit( &rd ) == 0 );
+    TEST_ASSERT( mbedtls_mps_reader_commit( &rd ) == 0 );
     /* Wrapup (lower layer) */
-    TEST_ASSERT( mbedtls_reader_reclaim( &rd, NULL ) == 0 );
-    mbedtls_reader_free( &rd );
+    TEST_ASSERT( mbedtls_mps_reader_reclaim( &rd, NULL ) == 0 );
+    mbedtls_mps_reader_free( &rd );
 }
 /* END_CASE */
 
@@ -1478,28 +1478,28 @@ void mbedtls_mps_reader_no_pausing_multiple_steps_single_round( int with_acc )
     unsigned char acc[10];
     unsigned char *tmp;
     mbedtls_mps_size_t tmp_len;
-    mbedtls_reader rd;
+    mbedtls_mps_reader rd;
     for( int i=0; (unsigned) i < sizeof( buf ); i++ )
         buf[i] = (unsigned char) i;
 
     /* Preparation (lower layer) */
     if( with_acc == 0 )
-        mbedtls_reader_init( &rd, NULL, 0 );
+        mbedtls_mps_reader_init( &rd, NULL, 0 );
     else
-        mbedtls_reader_init( &rd, acc, sizeof( acc ) );
-    TEST_ASSERT( mbedtls_reader_feed( &rd, buf, sizeof( buf ) ) == 0 );
+        mbedtls_mps_reader_init( &rd, acc, sizeof( acc ) );
+    TEST_ASSERT( mbedtls_mps_reader_feed( &rd, buf, sizeof( buf ) ) == 0 );
     /* Consumption (upper layer) */
-    TEST_ASSERT( mbedtls_reader_get( &rd, 10, &tmp, NULL ) == 0 );
+    TEST_ASSERT( mbedtls_mps_reader_get( &rd, 10, &tmp, NULL ) == 0 );
     TEST_ASSERT( memcmp( tmp, buf, 10 ) == 0 );
-    TEST_ASSERT( mbedtls_reader_get( &rd, 70, &tmp, NULL ) == 0 );
+    TEST_ASSERT( mbedtls_mps_reader_get( &rd, 70, &tmp, NULL ) == 0 );
     TEST_ASSERT( memcmp( tmp, buf + 10, 70 ) == 0 );
-    TEST_ASSERT( mbedtls_reader_get( &rd, 30, &tmp, &tmp_len ) == 0 );
+    TEST_ASSERT( mbedtls_mps_reader_get( &rd, 30, &tmp, &tmp_len ) == 0 );
     TEST_ASSERT( tmp_len == 20 );
     TEST_ASSERT( memcmp( tmp, buf + 80, 20 ) == 0 );
-    TEST_ASSERT( mbedtls_reader_commit( &rd ) == 0 );
+    TEST_ASSERT( mbedtls_mps_reader_commit( &rd ) == 0 );
     /* Wrapup (lower layer) */
-    TEST_ASSERT( mbedtls_reader_reclaim( &rd, NULL ) == 0 );
-    mbedtls_reader_free( &rd );
+    TEST_ASSERT( mbedtls_mps_reader_reclaim( &rd, NULL ) == 0 );
+    mbedtls_mps_reader_free( &rd );
 }
 /* END_CASE */
 
@@ -1512,7 +1512,7 @@ void mbedtls_mps_reader_no_pausing_multiple_steps_multiple_rounds( int with_acc 
     unsigned char acc[10];
     unsigned char *tmp;
     mbedtls_mps_size_t tmp_len;
-    mbedtls_reader rd;
+    mbedtls_mps_reader rd;
     for( int i=0; (unsigned) i < sizeof( bufA ); i++ )
         bufA[i] = (unsigned char) i;
     for( int i=0; (unsigned) i < sizeof( bufB ); i++ )
@@ -1520,29 +1520,29 @@ void mbedtls_mps_reader_no_pausing_multiple_steps_multiple_rounds( int with_acc 
 
     /* Preparation (lower layer) */
     if( with_acc == 0 )
-        mbedtls_reader_init( &rd, NULL, 0 );
+        mbedtls_mps_reader_init( &rd, NULL, 0 );
     else
-        mbedtls_reader_init( &rd, acc, sizeof( acc ) );
-    TEST_ASSERT( mbedtls_reader_feed( &rd, bufA, sizeof( bufA ) ) == 0 );
+        mbedtls_mps_reader_init( &rd, acc, sizeof( acc ) );
+    TEST_ASSERT( mbedtls_mps_reader_feed( &rd, bufA, sizeof( bufA ) ) == 0 );
     /* Consumption (upper layer) */
-    TEST_ASSERT( mbedtls_reader_get( &rd, 10, &tmp, NULL ) == 0 );
+    TEST_ASSERT( mbedtls_mps_reader_get( &rd, 10, &tmp, NULL ) == 0 );
     TEST_ASSERT( memcmp( tmp, bufA, 10 ) == 0 );
-    TEST_ASSERT( mbedtls_reader_get( &rd, 70, &tmp, NULL ) == 0 );
+    TEST_ASSERT( mbedtls_mps_reader_get( &rd, 70, &tmp, NULL ) == 0 );
     TEST_ASSERT( memcmp( tmp, bufA + 10, 70 ) == 0 );
-    TEST_ASSERT( mbedtls_reader_get( &rd, 30, &tmp, &tmp_len ) == 0 );
+    TEST_ASSERT( mbedtls_mps_reader_get( &rd, 30, &tmp, &tmp_len ) == 0 );
     TEST_ASSERT( tmp_len == 20 );
     TEST_ASSERT( memcmp( tmp, bufA + 80, 20 ) == 0 );
-    TEST_ASSERT( mbedtls_reader_commit( &rd ) == 0 );
+    TEST_ASSERT( mbedtls_mps_reader_commit( &rd ) == 0 );
     /* Preparation */
-    TEST_ASSERT( mbedtls_reader_reclaim( &rd, NULL ) == 0 );
-    TEST_ASSERT( mbedtls_reader_feed( &rd, bufB, sizeof( bufB ) ) == 0 );
+    TEST_ASSERT( mbedtls_mps_reader_reclaim( &rd, NULL ) == 0 );
+    TEST_ASSERT( mbedtls_mps_reader_feed( &rd, bufB, sizeof( bufB ) ) == 0 );
     /* Consumption */
-    TEST_ASSERT( mbedtls_reader_get( &rd, 100, &tmp, NULL ) == 0 );
+    TEST_ASSERT( mbedtls_mps_reader_get( &rd, 100, &tmp, NULL ) == 0 );
     TEST_ASSERT( memcmp( tmp, bufB, 100 ) == 0 );
-    TEST_ASSERT( mbedtls_reader_commit( &rd ) == 0 );
+    TEST_ASSERT( mbedtls_mps_reader_commit( &rd ) == 0 );
     /* Wrapup */
-    TEST_ASSERT( mbedtls_reader_reclaim( &rd, NULL ) == 0 );
-    mbedtls_reader_free( &rd );
+    TEST_ASSERT( mbedtls_mps_reader_reclaim( &rd, NULL ) == 0 );
+    mbedtls_mps_reader_free( &rd );
 }
 /* END_CASE */
 
@@ -1553,23 +1553,23 @@ void mbedtls_mps_reader_pausing_needed_disabled()
      * and pausing is not used, expected OUT_OF_DATA. */
     unsigned char buf[100];
     unsigned char *tmp;
-    mbedtls_reader rd;
+    mbedtls_mps_reader rd;
     for( int i=0; (unsigned) i < sizeof( buf ); i++ )
         buf[i] = (unsigned char) i;
 
     /* Preparation (lower layer) */
-    mbedtls_reader_init( &rd, NULL, 0 );
-    TEST_ASSERT( mbedtls_reader_feed( &rd, buf, sizeof( buf ) ) == 0 );
+    mbedtls_mps_reader_init( &rd, NULL, 0 );
+    TEST_ASSERT( mbedtls_mps_reader_feed( &rd, buf, sizeof( buf ) ) == 0 );
     /* Consumption (upper layer) */
-    TEST_ASSERT( mbedtls_reader_get( &rd, 50, &tmp, NULL ) == 0 );
+    TEST_ASSERT( mbedtls_mps_reader_get( &rd, 50, &tmp, NULL ) == 0 );
     TEST_ASSERT( memcmp( tmp, buf, 50 ) == 0 );
-    TEST_ASSERT( mbedtls_reader_commit( &rd ) == 0 );
-    TEST_ASSERT( mbedtls_reader_get( &rd, 100, &tmp, NULL ) ==
-                 MBEDTLS_ERR_READER_OUT_OF_DATA );
+    TEST_ASSERT( mbedtls_mps_reader_commit( &rd ) == 0 );
+    TEST_ASSERT( mbedtls_mps_reader_get( &rd, 100, &tmp, NULL ) ==
+                 MBEDTLS_ERR_MPS_READER_OUT_OF_DATA );
     /* Wrapup (lower layer) */
-    TEST_ASSERT( mbedtls_reader_reclaim( &rd, NULL ) ==
-                 MBEDTLS_ERR_READER_NEED_ACCUMULATOR );
-    mbedtls_reader_free( &rd );
+    TEST_ASSERT( mbedtls_mps_reader_reclaim( &rd, NULL ) ==
+                 MBEDTLS_ERR_MPS_READER_NEED_ACCUMULATOR );
+    mbedtls_mps_reader_free( &rd );
 }
 /* END_CASE */
 
@@ -1582,23 +1582,23 @@ void mbedtls_mps_reader_pausing_needed_buffer_too_small()
     unsigned char buf[100];
     unsigned char acc[10];
     unsigned char *tmp;
-    mbedtls_reader rd;
+    mbedtls_mps_reader rd;
     for( int i=0; (unsigned) i < sizeof( buf ); i++ )
         buf[i] = (unsigned char) i;
 
     /* Preparation (lower layer) */
-    mbedtls_reader_init( &rd, acc, sizeof( acc ) );
-    TEST_ASSERT( mbedtls_reader_feed( &rd, buf, sizeof( buf ) ) == 0 );
+    mbedtls_mps_reader_init( &rd, acc, sizeof( acc ) );
+    TEST_ASSERT( mbedtls_mps_reader_feed( &rd, buf, sizeof( buf ) ) == 0 );
     /* Consumption (upper layer) */
-    TEST_ASSERT( mbedtls_reader_get( &rd, 50, &tmp, NULL ) == 0 );
+    TEST_ASSERT( mbedtls_mps_reader_get( &rd, 50, &tmp, NULL ) == 0 );
     TEST_ASSERT( memcmp( tmp, buf, 50 ) == 0 );
-    TEST_ASSERT( mbedtls_reader_commit( &rd ) == 0 );
-    TEST_ASSERT( mbedtls_reader_get( &rd, 100, &tmp, NULL ) ==
-                 MBEDTLS_ERR_READER_OUT_OF_DATA );
+    TEST_ASSERT( mbedtls_mps_reader_commit( &rd ) == 0 );
+    TEST_ASSERT( mbedtls_mps_reader_get( &rd, 100, &tmp, NULL ) ==
+                 MBEDTLS_ERR_MPS_READER_OUT_OF_DATA );
     /* Wrapup (lower layer) */
-    TEST_ASSERT( mbedtls_reader_reclaim( &rd, NULL ) ==
-                 MBEDTLS_ERR_READER_ACCUMULATOR_TOO_SMALL );
-    mbedtls_reader_free( &rd );
+    TEST_ASSERT( mbedtls_mps_reader_reclaim( &rd, NULL ) ==
+                 MBEDTLS_ERR_MPS_READER_ACCUMULATOR_TOO_SMALL );
+    mbedtls_mps_reader_free( &rd );
 }
 /* END_CASE */
 
@@ -1609,7 +1609,7 @@ void mbedtls_mps_reader_multiple_pausing( int option )
     unsigned char *tmp;
     unsigned char acc[50];
     mbedtls_mps_size_t tmp_len;
-    mbedtls_reader rd;
+    mbedtls_mps_reader rd;
     for( int i=0; (unsigned) i < sizeof( bufA ); i++ )
         bufA[i] = (unsigned char) i;
     for( int i=0; (unsigned) i < sizeof( bufB ); i++ )
@@ -1618,22 +1618,22 @@ void mbedtls_mps_reader_multiple_pausing( int option )
         bufC[i] = ~ ((unsigned char) i);
 
     /* Preparation (lower layer) */
-    mbedtls_reader_init( &rd, acc, sizeof( acc ) );
-    TEST_ASSERT( mbedtls_reader_feed( &rd, bufA, sizeof( bufA ) ) == 0 );
+    mbedtls_mps_reader_init( &rd, acc, sizeof( acc ) );
+    TEST_ASSERT( mbedtls_mps_reader_feed( &rd, bufA, sizeof( bufA ) ) == 0 );
 
     /* Consumption (upper layer) */
     /* Ask for more than what's available. */
-    TEST_ASSERT( mbedtls_reader_get( &rd, 80, &tmp, NULL ) == 0 );
+    TEST_ASSERT( mbedtls_mps_reader_get( &rd, 80, &tmp, NULL ) == 0 );
     TEST_ASSERT( memcmp( tmp, bufA, 80 ) == 0 );
-    TEST_ASSERT( mbedtls_reader_commit( &rd ) == 0 );
-    TEST_ASSERT( mbedtls_reader_get( &rd, 10, &tmp, NULL ) == 0 );
+    TEST_ASSERT( mbedtls_mps_reader_commit( &rd ) == 0 );
+    TEST_ASSERT( mbedtls_mps_reader_get( &rd, 10, &tmp, NULL ) == 0 );
     TEST_ASSERT( memcmp( tmp, bufA + 80, 10 ) == 0 );
-    TEST_ASSERT( mbedtls_reader_get( &rd, 20, &tmp, NULL ) ==
-                 MBEDTLS_ERR_READER_OUT_OF_DATA );
+    TEST_ASSERT( mbedtls_mps_reader_get( &rd, 20, &tmp, NULL ) ==
+                 MBEDTLS_ERR_MPS_READER_OUT_OF_DATA );
 
     /* Preparation */
-    TEST_ASSERT( mbedtls_reader_reclaim( &rd, NULL ) == 0 );
-    TEST_ASSERT( mbedtls_reader_feed( &rd, bufB, sizeof( bufB ) ) == 0 );
+    TEST_ASSERT( mbedtls_mps_reader_reclaim( &rd, NULL ) == 0 );
+    TEST_ASSERT( mbedtls_mps_reader_feed( &rd, bufB, sizeof( bufB ) ) == 0 );
 
     switch( option )
     {
@@ -1642,22 +1642,22 @@ void mbedtls_mps_reader_multiple_pausing( int option )
                  * large enough. */
 
             /* Consume */
-            TEST_ASSERT( mbedtls_reader_get( &rd, 10, &tmp, &tmp_len ) == 0 );
+            TEST_ASSERT( mbedtls_mps_reader_get( &rd, 10, &tmp, &tmp_len ) == 0 );
             TEST_ASSERT( tmp_len == 10 );
             TEST_ASSERT( memcmp( tmp, bufA + 80, 10 ) == 0 );
-            TEST_ASSERT( mbedtls_reader_get( &rd, 20, &tmp, NULL ) == 0 );
+            TEST_ASSERT( mbedtls_mps_reader_get( &rd, 20, &tmp, NULL ) == 0 );
             TEST_ASSERT( memcmp( tmp, bufA + 90, 10 ) == 0 );
             TEST_ASSERT( memcmp( tmp + 10, bufB, 10 ) == 0 );
-            TEST_ASSERT( mbedtls_reader_commit( &rd ) == 0 );
-            TEST_ASSERT( mbedtls_reader_get( &rd, 20, &tmp, NULL ) ==
-                         MBEDTLS_ERR_READER_OUT_OF_DATA );
+            TEST_ASSERT( mbedtls_mps_reader_commit( &rd ) == 0 );
+            TEST_ASSERT( mbedtls_mps_reader_get( &rd, 20, &tmp, NULL ) ==
+                         MBEDTLS_ERR_MPS_READER_OUT_OF_DATA );
 
             /* Prepare */
-            TEST_ASSERT( mbedtls_reader_reclaim( &rd, NULL ) == 0 );
-            TEST_ASSERT( mbedtls_reader_feed( &rd, bufC, sizeof( bufC ) ) == 0 );;
+            TEST_ASSERT( mbedtls_mps_reader_reclaim( &rd, NULL ) == 0 );
+            TEST_ASSERT( mbedtls_mps_reader_feed( &rd, bufC, sizeof( bufC ) ) == 0 );;
 
             /* Consume */
-            TEST_ASSERT( mbedtls_reader_get( &rd, 20, &tmp, NULL ) == 0 );
+            TEST_ASSERT( mbedtls_mps_reader_get( &rd, 20, &tmp, NULL ) == 0 );
             TEST_ASSERT( memcmp( tmp, bufB + 10, 10 ) == 0 );
             TEST_ASSERT( memcmp( tmp + 10, bufC, 10 ) == 0 );
             break;
@@ -1665,37 +1665,37 @@ void mbedtls_mps_reader_multiple_pausing( int option )
         case 1: /* Fetch same chunks, commit afterwards, and
                  * then exceed bounds of new buffer; accumulator
                  * not large enough. */
-            TEST_ASSERT( mbedtls_reader_get( &rd, 10, &tmp, NULL ) == 0 );
+            TEST_ASSERT( mbedtls_mps_reader_get( &rd, 10, &tmp, NULL ) == 0 );
             TEST_ASSERT( memcmp( tmp, bufA + 80, 10 ) == 0 );
-            TEST_ASSERT( mbedtls_reader_get( &rd, 20, &tmp, NULL ) == 0 );
+            TEST_ASSERT( mbedtls_mps_reader_get( &rd, 20, &tmp, NULL ) == 0 );
             TEST_ASSERT( memcmp( tmp, bufA + 90, 10 ) == 0 );
             TEST_ASSERT( memcmp( tmp + 10, bufB, 10 ) == 0 );
-            TEST_ASSERT( mbedtls_reader_commit( &rd ) == 0 );
-            TEST_ASSERT( mbedtls_reader_get( &rd, 51, &tmp, NULL ) ==
-                         MBEDTLS_ERR_READER_OUT_OF_DATA );
+            TEST_ASSERT( mbedtls_mps_reader_commit( &rd ) == 0 );
+            TEST_ASSERT( mbedtls_mps_reader_get( &rd, 51, &tmp, NULL ) ==
+                         MBEDTLS_ERR_MPS_READER_OUT_OF_DATA );
 
             /* Prepare */
-            TEST_ASSERT( mbedtls_reader_reclaim( &rd, NULL ) ==
-                         MBEDTLS_ERR_READER_ACCUMULATOR_TOO_SMALL );
+            TEST_ASSERT( mbedtls_mps_reader_reclaim( &rd, NULL ) ==
+                         MBEDTLS_ERR_MPS_READER_ACCUMULATOR_TOO_SMALL );
             break;
 
         case 2: /* Fetch same chunks, don't commit afterwards, and
                  * then exceed bounds of new buffer; accumulator
                  * large enough. */
-            TEST_ASSERT( mbedtls_reader_get( &rd, 10, &tmp, NULL ) == 0 );
+            TEST_ASSERT( mbedtls_mps_reader_get( &rd, 10, &tmp, NULL ) == 0 );
             TEST_ASSERT( memcmp( tmp, bufA + 80, 10 ) == 0 );
-            TEST_ASSERT( mbedtls_reader_get( &rd, 20, &tmp, NULL ) == 0 );
+            TEST_ASSERT( mbedtls_mps_reader_get( &rd, 20, &tmp, NULL ) == 0 );
             TEST_ASSERT( memcmp( tmp, bufA + 90, 10 ) == 0 );
             TEST_ASSERT( memcmp( tmp + 10, bufB, 10 ) == 0 );
-            TEST_ASSERT( mbedtls_reader_get( &rd, 20, &tmp, NULL ) ==
-                         MBEDTLS_ERR_READER_OUT_OF_DATA );
+            TEST_ASSERT( mbedtls_mps_reader_get( &rd, 20, &tmp, NULL ) ==
+                         MBEDTLS_ERR_MPS_READER_OUT_OF_DATA );
 
             /* Prepare */
-            TEST_ASSERT( mbedtls_reader_reclaim( &rd, NULL ) == 0 );
-            TEST_ASSERT( mbedtls_reader_feed( &rd, bufC, sizeof( bufC ) ) == 0 );;
+            TEST_ASSERT( mbedtls_mps_reader_reclaim( &rd, NULL ) == 0 );
+            TEST_ASSERT( mbedtls_mps_reader_feed( &rd, bufC, sizeof( bufC ) ) == 0 );;
 
             /* Consume */
-            TEST_ASSERT( mbedtls_reader_get( &rd, 50, &tmp, NULL ) == 0 );
+            TEST_ASSERT( mbedtls_mps_reader_get( &rd, 50, &tmp, NULL ) == 0 );
             TEST_ASSERT( memcmp( tmp, bufA + 80, 20 ) == 0 );
             TEST_ASSERT( memcmp( tmp + 20, bufB, 20 ) == 0 );
             TEST_ASSERT( memcmp( tmp + 40, bufC, 10 ) == 0 );
@@ -1704,17 +1704,17 @@ void mbedtls_mps_reader_multiple_pausing( int option )
         case 3: /* Fetch same chunks, don't commit afterwards, and
                  * then exceed bounds of new buffer; accumulator
                  * not large enough. */
-            TEST_ASSERT( mbedtls_reader_get( &rd, 10, &tmp, NULL ) == 0 );
+            TEST_ASSERT( mbedtls_mps_reader_get( &rd, 10, &tmp, NULL ) == 0 );
             TEST_ASSERT( memcmp( tmp, bufA + 80, 10 ) == 0 );
-            TEST_ASSERT( mbedtls_reader_get( &rd, 20, &tmp, NULL ) == 0 );
+            TEST_ASSERT( mbedtls_mps_reader_get( &rd, 20, &tmp, NULL ) == 0 );
             TEST_ASSERT( memcmp( tmp, bufA + 90, 10 ) == 0 );
             TEST_ASSERT( memcmp( tmp + 10, bufB, 10 ) == 0 );
-            TEST_ASSERT( mbedtls_reader_get( &rd, 21, &tmp, NULL ) ==
-                         MBEDTLS_ERR_READER_OUT_OF_DATA );
+            TEST_ASSERT( mbedtls_mps_reader_get( &rd, 21, &tmp, NULL ) ==
+                         MBEDTLS_ERR_MPS_READER_OUT_OF_DATA );
 
             /* Prepare */
-            TEST_ASSERT( mbedtls_reader_reclaim( &rd, NULL ) ==
-                         MBEDTLS_ERR_READER_ACCUMULATOR_TOO_SMALL );
+            TEST_ASSERT( mbedtls_mps_reader_reclaim( &rd, NULL ) ==
+                         MBEDTLS_ERR_MPS_READER_ACCUMULATOR_TOO_SMALL );
             break;
 
         default:
@@ -1722,7 +1722,7 @@ void mbedtls_mps_reader_multiple_pausing( int option )
             break;
     }
 
-    mbedtls_reader_free( &rd );
+    mbedtls_mps_reader_free( &rd );
 }
 /* END_CASE */
 
@@ -1733,27 +1733,27 @@ void mbedtls_mps_reader_reclaim_data_left( int option )
      * hasn't fully consumed the buffer. */
     unsigned char buf[100];
     unsigned char *tmp;
-    mbedtls_reader rd;
+    mbedtls_mps_reader rd;
     for( int i=0; (unsigned) i < sizeof( buf ); i++ )
         buf[i] = (unsigned char) i;
 
     /* Preparation (lower layer) */
-    mbedtls_reader_init( &rd, NULL, 0 );
-    TEST_ASSERT( mbedtls_reader_feed( &rd, buf, sizeof( buf ) ) == 0 );
+    mbedtls_mps_reader_init( &rd, NULL, 0 );
+    TEST_ASSERT( mbedtls_mps_reader_feed( &rd, buf, sizeof( buf ) ) == 0 );
 
     /* Consumption (upper layer) */
     switch( option )
     {
         case 0:
             /* Fetch (but not commit) the entire buffer. */
-            TEST_ASSERT( mbedtls_reader_get( &rd, sizeof( buf ), &tmp, NULL )
+            TEST_ASSERT( mbedtls_mps_reader_get( &rd, sizeof( buf ), &tmp, NULL )
                          == 0 );
             TEST_ASSERT( memcmp( tmp, buf, 100 ) == 0 );
             break;
 
         case 1:
             /* Fetch (but not commit) parts of the buffer. */
-            TEST_ASSERT( mbedtls_reader_get( &rd, sizeof( buf ) / 2,
+            TEST_ASSERT( mbedtls_mps_reader_get( &rd, sizeof( buf ) / 2,
                                              &tmp, NULL ) == 0 );
             TEST_ASSERT( memcmp( tmp, buf, sizeof( buf ) / 2 ) == 0 );
             break;
@@ -1761,11 +1761,11 @@ void mbedtls_mps_reader_reclaim_data_left( int option )
         case 2:
             /* Fetch and commit parts of the buffer, then
              * fetch but not commit the rest of the buffer. */
-            TEST_ASSERT( mbedtls_reader_get( &rd, sizeof( buf ) / 2,
+            TEST_ASSERT( mbedtls_mps_reader_get( &rd, sizeof( buf ) / 2,
                                              &tmp, NULL ) == 0 );
             TEST_ASSERT( memcmp( tmp, buf, sizeof( buf ) / 2 ) == 0 );
-            TEST_ASSERT( mbedtls_reader_commit( &rd ) == 0 );
-            TEST_ASSERT( mbedtls_reader_get( &rd, sizeof( buf ) / 2,
+            TEST_ASSERT( mbedtls_mps_reader_commit( &rd ) == 0 );
+            TEST_ASSERT( mbedtls_mps_reader_get( &rd, sizeof( buf ) / 2,
                                              &tmp, NULL ) == 0 );
             TEST_ASSERT( memcmp( tmp, buf + sizeof( buf ) / 2,
                                  sizeof( buf ) / 2 ) == 0 );
@@ -1777,9 +1777,9 @@ void mbedtls_mps_reader_reclaim_data_left( int option )
     }
 
     /* Wrapup */
-    TEST_ASSERT( mbedtls_reader_reclaim( &rd, NULL ) ==
-                 MBEDTLS_ERR_READER_DATA_LEFT );
-    mbedtls_reader_free( &rd );
+    TEST_ASSERT( mbedtls_mps_reader_reclaim( &rd, NULL ) ==
+                 MBEDTLS_ERR_MPS_READER_DATA_LEFT );
+    mbedtls_mps_reader_free( &rd );
 }
 /* END_CASE */
 
@@ -1791,30 +1791,30 @@ void mbedtls_mps_reader_reclaim_data_left_retry()
      * back to upper layer who continues processing. */
     unsigned char buf[100];
     unsigned char *tmp;
-    mbedtls_reader rd;
+    mbedtls_mps_reader rd;
 
     for( int i=0; (unsigned) i < sizeof( buf ); i++ )
         buf[i] = (unsigned char) i;
 
     /* Preparation (lower layer) */
-    mbedtls_reader_init( &rd, NULL, 0 );
-    TEST_ASSERT( mbedtls_reader_feed( &rd, buf, sizeof( buf ) ) == 0 );
+    mbedtls_mps_reader_init( &rd, NULL, 0 );
+    TEST_ASSERT( mbedtls_mps_reader_feed( &rd, buf, sizeof( buf ) ) == 0 );
     /* Consumption (upper layer) */
-    TEST_ASSERT( mbedtls_reader_get( &rd, 50, &tmp, NULL ) == 0 );
+    TEST_ASSERT( mbedtls_mps_reader_get( &rd, 50, &tmp, NULL ) == 0 );
     TEST_ASSERT( memcmp( tmp, buf, 50 ) == 0 );
-    TEST_ASSERT( mbedtls_reader_commit( &rd ) == 0 );
-    TEST_ASSERT( mbedtls_reader_get( &rd, 50, &tmp, NULL ) == 0 );
+    TEST_ASSERT( mbedtls_mps_reader_commit( &rd ) == 0 );
+    TEST_ASSERT( mbedtls_mps_reader_get( &rd, 50, &tmp, NULL ) == 0 );
     TEST_ASSERT( memcmp( tmp, buf + 50, 50 ) == 0 );
     /* Preparation */
-    TEST_ASSERT( mbedtls_reader_reclaim( &rd, NULL ) ==
-                 MBEDTLS_ERR_READER_DATA_LEFT );
+    TEST_ASSERT( mbedtls_mps_reader_reclaim( &rd, NULL ) ==
+                 MBEDTLS_ERR_MPS_READER_DATA_LEFT );
     /* Consumption */
-    TEST_ASSERT( mbedtls_reader_get( &rd, 50, &tmp, NULL ) == 0 );
+    TEST_ASSERT( mbedtls_mps_reader_get( &rd, 50, &tmp, NULL ) == 0 );
     TEST_ASSERT( memcmp( tmp, buf + 50, 50 ) == 0 );
-    TEST_ASSERT( mbedtls_reader_commit( &rd ) == 0 );
+    TEST_ASSERT( mbedtls_mps_reader_commit( &rd ) == 0 );
     /* Wrapup */
-    TEST_ASSERT( mbedtls_reader_reclaim( &rd, NULL ) == 0 );
-    mbedtls_reader_free( &rd );
+    TEST_ASSERT( mbedtls_mps_reader_reclaim( &rd, NULL ) == 0 );
+    mbedtls_mps_reader_free( &rd );
 }
 /* END_CASE */
 
@@ -1824,89 +1824,89 @@ void mbedtls_mps_reader_pausing( int option )
     unsigned char bufA[100], bufB[100];
     unsigned char *tmp;
     unsigned char acc[40];
-    mbedtls_reader rd;
+    mbedtls_mps_reader rd;
     for( int i=0; (unsigned) i < sizeof( bufA ); i++ )
         bufA[i] = (unsigned char) i;
     for( int i=0; (unsigned) i < sizeof( bufB ); i++ )
         bufB[i] = ~ ((unsigned char) i);
 
     /* Preparation (lower layer) */
-    mbedtls_reader_init( &rd, acc, sizeof( acc ) );
-    TEST_ASSERT( mbedtls_reader_feed( &rd, bufA, sizeof( bufA ) ) == 0 );
+    mbedtls_mps_reader_init( &rd, acc, sizeof( acc ) );
+    TEST_ASSERT( mbedtls_mps_reader_feed( &rd, bufA, sizeof( bufA ) ) == 0 );
 
     /* Consumption (upper layer) */
     /* Ask for more than what's available. */
-    TEST_ASSERT( mbedtls_reader_get( &rd, 80, &tmp, NULL ) == 0 );
+    TEST_ASSERT( mbedtls_mps_reader_get( &rd, 80, &tmp, NULL ) == 0 );
     TEST_ASSERT( memcmp( tmp, bufA, 80 ) == 0 );
-    TEST_ASSERT( mbedtls_reader_commit( &rd ) == 0 );
-    TEST_ASSERT( mbedtls_reader_get( &rd, 10, &tmp, NULL ) == 0 );
+    TEST_ASSERT( mbedtls_mps_reader_commit( &rd ) == 0 );
+    TEST_ASSERT( mbedtls_mps_reader_get( &rd, 10, &tmp, NULL ) == 0 );
     TEST_ASSERT( memcmp( tmp, bufA + 80, 10 ) == 0 );
     switch( option )
     {
         case 0:  /* Single uncommited fetch at pausing */
         case 1:
-            TEST_ASSERT( mbedtls_reader_commit( &rd ) == 0 );
+            TEST_ASSERT( mbedtls_mps_reader_commit( &rd ) == 0 );
             break;
         default: /* Multiple uncommitted fetches at pausing */
             break;
     }
-    TEST_ASSERT( mbedtls_reader_get( &rd, 20, &tmp, NULL ) ==
-                 MBEDTLS_ERR_READER_OUT_OF_DATA );
+    TEST_ASSERT( mbedtls_mps_reader_get( &rd, 20, &tmp, NULL ) ==
+                 MBEDTLS_ERR_MPS_READER_OUT_OF_DATA );
 
     /* Preparation */
-    TEST_ASSERT( mbedtls_reader_reclaim( &rd, NULL ) == 0 );
-    TEST_ASSERT( mbedtls_reader_feed( &rd, bufB, sizeof( bufB ) ) == 0 );
+    TEST_ASSERT( mbedtls_mps_reader_reclaim( &rd, NULL ) == 0 );
+    TEST_ASSERT( mbedtls_mps_reader_feed( &rd, bufB, sizeof( bufB ) ) == 0 );
 
     /* Consumption */
     switch( option )
     {
         case 0: /* Single fetch at pausing, re-fetch with commit. */
-            TEST_ASSERT( mbedtls_reader_get( &rd, 20, &tmp, NULL ) == 0 );
+            TEST_ASSERT( mbedtls_mps_reader_get( &rd, 20, &tmp, NULL ) == 0 );
             TEST_ASSERT( memcmp( tmp, bufA + 90, 10 ) == 0 );
             TEST_ASSERT( memcmp( tmp + 10, bufB, 10 ) == 0 );
-            TEST_ASSERT( mbedtls_reader_commit( &rd ) == 0 );
+            TEST_ASSERT( mbedtls_mps_reader_commit( &rd ) == 0 );
             break;
 
         case 1: /* Single fetch at pausing, re-fetch without commit. */
-            TEST_ASSERT( mbedtls_reader_get( &rd, 20, &tmp, NULL ) == 0 );
+            TEST_ASSERT( mbedtls_mps_reader_get( &rd, 20, &tmp, NULL ) == 0 );
             TEST_ASSERT( memcmp( tmp, bufA + 90, 10 ) == 0 );
             TEST_ASSERT( memcmp( tmp + 10, bufB, 10 ) == 0 );
             break;
 
         case 2: /* Multiple fetches at pausing, repeat without commit. */
-            TEST_ASSERT( mbedtls_reader_get( &rd, 10, &tmp, NULL ) == 0 );
+            TEST_ASSERT( mbedtls_mps_reader_get( &rd, 10, &tmp, NULL ) == 0 );
             TEST_ASSERT( memcmp( tmp, bufA + 80, 10 ) == 0 );
-            TEST_ASSERT( mbedtls_reader_get( &rd, 20, &tmp, NULL ) == 0 );
+            TEST_ASSERT( mbedtls_mps_reader_get( &rd, 20, &tmp, NULL ) == 0 );
             TEST_ASSERT( memcmp( tmp, bufA + 90, 10 ) == 0 );
             TEST_ASSERT( memcmp( tmp + 10, bufB, 10 ) == 0 );
             break;
 
         case 3: /* Multiple fetches at pausing, repeat with commit 1. */
-            TEST_ASSERT( mbedtls_reader_get( &rd, 10, &tmp, NULL ) == 0 );
+            TEST_ASSERT( mbedtls_mps_reader_get( &rd, 10, &tmp, NULL ) == 0 );
             TEST_ASSERT( memcmp( tmp, bufA + 80, 10 ) == 0 );
-            TEST_ASSERT( mbedtls_reader_commit( &rd ) == 0 );
-            TEST_ASSERT( mbedtls_reader_get( &rd, 20, &tmp, NULL ) == 0 );
+            TEST_ASSERT( mbedtls_mps_reader_commit( &rd ) == 0 );
+            TEST_ASSERT( mbedtls_mps_reader_get( &rd, 20, &tmp, NULL ) == 0 );
             TEST_ASSERT( memcmp( tmp, bufA + 90, 10 ) == 0 );
             TEST_ASSERT( memcmp( tmp + 10, bufB, 10 ) == 0 );
             break;
 
         case 4: /* Multiple fetches at pausing, repeat with commit 2. */
-            TEST_ASSERT( mbedtls_reader_get( &rd, 10, &tmp, NULL ) == 0 );
+            TEST_ASSERT( mbedtls_mps_reader_get( &rd, 10, &tmp, NULL ) == 0 );
             TEST_ASSERT( memcmp( tmp, bufA + 80, 10 ) == 0 );
-            TEST_ASSERT( mbedtls_reader_get( &rd, 20, &tmp, NULL ) == 0 );
+            TEST_ASSERT( mbedtls_mps_reader_get( &rd, 20, &tmp, NULL ) == 0 );
             TEST_ASSERT( memcmp( tmp, bufA + 90, 10 ) == 0 );
             TEST_ASSERT( memcmp( tmp + 10, bufB, 10 ) == 0 );
-            TEST_ASSERT( mbedtls_reader_commit( &rd ) == 0 );
+            TEST_ASSERT( mbedtls_mps_reader_commit( &rd ) == 0 );
             break;
 
         case 5: /* Multiple fetches at pausing, repeat with commit 3. */
-            TEST_ASSERT( mbedtls_reader_get( &rd, 10, &tmp, NULL ) == 0 );
+            TEST_ASSERT( mbedtls_mps_reader_get( &rd, 10, &tmp, NULL ) == 0 );
             TEST_ASSERT( memcmp( tmp, bufA + 80, 10 ) == 0 );
-            TEST_ASSERT( mbedtls_reader_commit( &rd ) == 0 );
-            TEST_ASSERT( mbedtls_reader_get( &rd, 20, &tmp, NULL ) == 0 );
+            TEST_ASSERT( mbedtls_mps_reader_commit( &rd ) == 0 );
+            TEST_ASSERT( mbedtls_mps_reader_get( &rd, 20, &tmp, NULL ) == 0 );
             TEST_ASSERT( memcmp( tmp, bufA + 90, 10 ) == 0 );
             TEST_ASSERT( memcmp( tmp + 10, bufB, 10 ) == 0 );
-            TEST_ASSERT( mbedtls_reader_commit( &rd ) == 0 );
+            TEST_ASSERT( mbedtls_mps_reader_commit( &rd ) == 0 );
             break;
 
         default:
@@ -1914,13 +1914,13 @@ void mbedtls_mps_reader_pausing( int option )
     }
 
     /* In all cases, fetch the rest of the second buffer. */
-    TEST_ASSERT( mbedtls_reader_get( &rd, 90, &tmp, NULL ) == 0 );
+    TEST_ASSERT( mbedtls_mps_reader_get( &rd, 90, &tmp, NULL ) == 0 );
     TEST_ASSERT( memcmp( tmp, bufB + 10, 90 ) == 0 );
-    TEST_ASSERT( mbedtls_reader_commit( &rd ) == 0 );
+    TEST_ASSERT( mbedtls_mps_reader_commit( &rd ) == 0 );
 
     /* Wrapup */
-    TEST_ASSERT( mbedtls_reader_reclaim( &rd, NULL ) == 0 );
-    mbedtls_reader_free( &rd );
+    TEST_ASSERT( mbedtls_mps_reader_reclaim( &rd, NULL ) == 0 );
+    mbedtls_mps_reader_free( &rd );
 }
 /* END_CASE */
 
@@ -1930,7 +1930,7 @@ void mbedtls_mps_reader_pausing_multiple_feeds( int option )
     unsigned char bufA[100], bufB[100];
     unsigned char *tmp;
     unsigned char acc[70];
-    mbedtls_reader rd;
+    mbedtls_mps_reader rd;
     mbedtls_mps_size_t fetch_len;
     for( int i=0; (unsigned) i < sizeof( bufA ); i++ )
         bufA[i] = (unsigned char) i;
@@ -1938,46 +1938,46 @@ void mbedtls_mps_reader_pausing_multiple_feeds( int option )
         bufB[i] = ~ ((unsigned char) i);
 
     /* Preparation (lower layer) */
-    mbedtls_reader_init( &rd, acc, sizeof( acc ) );
-    TEST_ASSERT( mbedtls_reader_feed( &rd, bufA, sizeof( bufA ) ) == 0 );
+    mbedtls_mps_reader_init( &rd, acc, sizeof( acc ) );
+    TEST_ASSERT( mbedtls_mps_reader_feed( &rd, bufA, sizeof( bufA ) ) == 0 );
 
     /* Consumption (upper layer) */
     /* Ask for more than what's available. */
-    TEST_ASSERT( mbedtls_reader_get( &rd, 80, &tmp, NULL ) == 0 );
+    TEST_ASSERT( mbedtls_mps_reader_get( &rd, 80, &tmp, NULL ) == 0 );
     TEST_ASSERT( memcmp( tmp, bufA, 80 ) == 0 );
-    TEST_ASSERT( mbedtls_reader_commit( &rd ) == 0 );
+    TEST_ASSERT( mbedtls_mps_reader_commit( &rd ) == 0 );
     /* 20 left, ask for 70 -> 50 overhead */
-    TEST_ASSERT( mbedtls_reader_get( &rd, 70, &tmp, NULL ) ==
-                 MBEDTLS_ERR_READER_OUT_OF_DATA );
+    TEST_ASSERT( mbedtls_mps_reader_get( &rd, 70, &tmp, NULL ) ==
+                 MBEDTLS_ERR_MPS_READER_OUT_OF_DATA );
 
     /* Preparation */
-    TEST_ASSERT( mbedtls_reader_reclaim( &rd, NULL ) == 0 );
+    TEST_ASSERT( mbedtls_mps_reader_reclaim( &rd, NULL ) == 0 );
     switch( option )
     {
         case 0: /* 10 + 10 + 80 byte feed */
-            TEST_ASSERT( mbedtls_reader_feed( &rd, bufB, 10 ) ==
-                         MBEDTLS_ERR_READER_NEED_MORE );
-            TEST_ASSERT( mbedtls_reader_feed( &rd, bufB + 10, 10 ) ==
-                         MBEDTLS_ERR_READER_NEED_MORE );
-            TEST_ASSERT( mbedtls_reader_feed( &rd, bufB + 20, 80 ) == 0 );
+            TEST_ASSERT( mbedtls_mps_reader_feed( &rd, bufB, 10 ) ==
+                         MBEDTLS_ERR_MPS_READER_NEED_MORE );
+            TEST_ASSERT( mbedtls_mps_reader_feed( &rd, bufB + 10, 10 ) ==
+                         MBEDTLS_ERR_MPS_READER_NEED_MORE );
+            TEST_ASSERT( mbedtls_mps_reader_feed( &rd, bufB + 20, 80 ) == 0 );
             break;
 
         case 1: /* 50 x 1byte */
             for( int num_feed=0; num_feed<49; num_feed++ )
             {
-                TEST_ASSERT( mbedtls_reader_feed( &rd, bufB + num_feed, 1 ) ==
-                             MBEDTLS_ERR_READER_NEED_MORE );
+                TEST_ASSERT( mbedtls_mps_reader_feed( &rd, bufB + num_feed, 1 ) ==
+                             MBEDTLS_ERR_MPS_READER_NEED_MORE );
             }
-            TEST_ASSERT( mbedtls_reader_feed( &rd, bufB + 49, 1 ) == 0 );
+            TEST_ASSERT( mbedtls_mps_reader_feed( &rd, bufB + 49, 1 ) == 0 );
             break;
 
         case 2: /* 49 x 1byte + 51bytes */
             for( int num_feed=0; num_feed<49; num_feed++ )
             {
-                TEST_ASSERT( mbedtls_reader_feed( &rd, bufB + num_feed, 1 ) ==
-                             MBEDTLS_ERR_READER_NEED_MORE );
+                TEST_ASSERT( mbedtls_mps_reader_feed( &rd, bufB + num_feed, 1 ) ==
+                             MBEDTLS_ERR_MPS_READER_NEED_MORE );
             }
-            TEST_ASSERT( mbedtls_reader_feed( &rd, bufB + 49, 51 ) == 0 );
+            TEST_ASSERT( mbedtls_mps_reader_feed( &rd, bufB + 49, 51 ) == 0 );
             break;
 
         default:
@@ -1986,10 +1986,10 @@ void mbedtls_mps_reader_pausing_multiple_feeds( int option )
     }
 
     /* Consumption */
-    TEST_ASSERT( mbedtls_reader_get( &rd, 70, &tmp, NULL ) == 0 );
+    TEST_ASSERT( mbedtls_mps_reader_get( &rd, 70, &tmp, NULL ) == 0 );
     TEST_ASSERT( memcmp( tmp, bufA + 80, 20 ) == 0 );
     TEST_ASSERT( memcmp( tmp + 20, bufB, 50 ) == 0 );
-    TEST_ASSERT( mbedtls_reader_get( &rd, 1000, &tmp, &fetch_len ) == 0 );
+    TEST_ASSERT( mbedtls_mps_reader_get( &rd, 1000, &tmp, &fetch_len ) == 0 );
     switch( option )
     {
         case 0:
@@ -2008,11 +2008,11 @@ void mbedtls_mps_reader_pausing_multiple_feeds( int option )
             TEST_ASSERT( 0 );
             break;
     }
-    TEST_ASSERT( mbedtls_reader_commit( &rd ) == 0 );
+    TEST_ASSERT( mbedtls_mps_reader_commit( &rd ) == 0 );
 
     /* Wrapup */
-    TEST_ASSERT( mbedtls_reader_reclaim( &rd, NULL ) == 0 );
-    mbedtls_reader_free( &rd );
+    TEST_ASSERT( mbedtls_mps_reader_reclaim( &rd, NULL ) == 0 );
+    mbedtls_mps_reader_free( &rd );
 }
 /* END_CASE */
 
@@ -2022,64 +2022,64 @@ void mbedtls_mps_reader_commit_in_old()
     unsigned char bufA[100], bufB[100];
     unsigned char *tmp;
     unsigned char acc[40];
-    mbedtls_reader rd;
+    mbedtls_mps_reader rd;
     for( int i=0; (unsigned) i < sizeof( bufA ); i++ )
         bufA[i] = (unsigned char) i;
     for( int i=0; (unsigned) i < sizeof( bufB ); i++ )
         bufB[i] = ~ ((unsigned char) i);
 
     /* Preparation (lower layer) */
-    mbedtls_reader_init( &rd, acc, sizeof( acc ) );
-    TEST_ASSERT( mbedtls_reader_feed( &rd, bufA, sizeof( bufA ) ) == 0 );
+    mbedtls_mps_reader_init( &rd, acc, sizeof( acc ) );
+    TEST_ASSERT( mbedtls_mps_reader_feed( &rd, bufA, sizeof( bufA ) ) == 0 );
 
 #if defined(MBEDTLS_MPS_STATE_VALIDATION)
-    TEST_ASSERT( mbedtls_reader_feed( &rd, bufA, sizeof( bufA ) ) ==
+    TEST_ASSERT( mbedtls_mps_reader_feed( &rd, bufA, sizeof( bufA ) ) ==
                  MBEDTLS_ERR_MPS_OPERATION_UNEXPECTED );
 #endif /* MBEDTLS_MPS_STATE_VALIDATION */
 
     /* Consumption (upper layer) */
     /* Ask for more than what's available. */
-    TEST_ASSERT( mbedtls_reader_get( &rd, 80, &tmp, NULL ) == 0 );
+    TEST_ASSERT( mbedtls_mps_reader_get( &rd, 80, &tmp, NULL ) == 0 );
     TEST_ASSERT( memcmp( tmp, bufA, 80 ) == 0 );
-    TEST_ASSERT( mbedtls_reader_commit( &rd ) == 0 );
-    TEST_ASSERT( mbedtls_reader_get( &rd, 10, &tmp, NULL ) == 0 );
+    TEST_ASSERT( mbedtls_mps_reader_commit( &rd ) == 0 );
+    TEST_ASSERT( mbedtls_mps_reader_get( &rd, 10, &tmp, NULL ) == 0 );
     TEST_ASSERT( memcmp( tmp, bufA + 80, 10 ) == 0 );
-    TEST_ASSERT( mbedtls_reader_get( &rd, 20, &tmp, NULL ) ==
-                 MBEDTLS_ERR_READER_OUT_OF_DATA );
-    TEST_ASSERT( mbedtls_reader_get( &rd, 10, &tmp, NULL ) ==
+    TEST_ASSERT( mbedtls_mps_reader_get( &rd, 20, &tmp, NULL ) ==
+                 MBEDTLS_ERR_MPS_READER_OUT_OF_DATA );
+    TEST_ASSERT( mbedtls_mps_reader_get( &rd, 10, &tmp, NULL ) ==
                  MBEDTLS_ERR_MPS_OPERATION_UNEXPECTED );
     /* Preparation */
-    TEST_ASSERT( mbedtls_reader_reclaim( &rd, NULL ) == 0 );
-    TEST_ASSERT( mbedtls_reader_feed( &rd, bufB, 5 ) ==
-                 MBEDTLS_ERR_READER_NEED_MORE );
-    TEST_ASSERT( mbedtls_reader_feed( &rd, bufB + 5, 3 ) ==
-                 MBEDTLS_ERR_READER_NEED_MORE );
-    TEST_ASSERT( mbedtls_reader_feed( &rd, bufB + 8, sizeof( bufB ) - 8 ) ==
+    TEST_ASSERT( mbedtls_mps_reader_reclaim( &rd, NULL ) == 0 );
+    TEST_ASSERT( mbedtls_mps_reader_feed( &rd, bufB, 5 ) ==
+                 MBEDTLS_ERR_MPS_READER_NEED_MORE );
+    TEST_ASSERT( mbedtls_mps_reader_feed( &rd, bufB + 5, 3 ) ==
+                 MBEDTLS_ERR_MPS_READER_NEED_MORE );
+    TEST_ASSERT( mbedtls_mps_reader_feed( &rd, bufB + 8, sizeof( bufB ) - 8 ) ==
                  0 );
 
 #if defined(MBEDTLS_MPS_STATE_VALIDATION)
-    TEST_ASSERT( mbedtls_reader_feed( &rd, bufB, sizeof( bufB ) ) ==
+    TEST_ASSERT( mbedtls_mps_reader_feed( &rd, bufB, sizeof( bufB ) ) ==
                  MBEDTLS_ERR_MPS_OPERATION_UNEXPECTED );
 #endif /* MBEDTLS_MPS_STATE_VALIDATION */
 
     /* Consumption */
-    TEST_ASSERT( mbedtls_reader_get( &rd, 10, &tmp, NULL ) == 0 );
+    TEST_ASSERT( mbedtls_mps_reader_get( &rd, 10, &tmp, NULL ) == 0 );
     TEST_ASSERT( memcmp( tmp, bufA + 80, 10 ) == 0 );
-    TEST_ASSERT( mbedtls_reader_get( &rd, 20, &tmp, NULL ) == 0 );
+    TEST_ASSERT( mbedtls_mps_reader_get( &rd, 20, &tmp, NULL ) == 0 );
     TEST_ASSERT( memcmp( tmp, bufA + 90, 10 ) == 0 );
     TEST_ASSERT( memcmp( tmp + 10, bufB, 10 ) == 0 );
     /* Wrapup */
-    mbedtls_reader_free( &rd );
+    mbedtls_mps_reader_free( &rd );
 }
 /* END_CASE */
 
 /* BEGIN_CASE depends_on:TEST_SUITE_MPS_READER */
-void mbedtls_reader_inconsistent_usage( int option )
+void mbedtls_mps_reader_inconsistent_usage( int option )
 {
     unsigned char bufA[100], bufB[100];
     unsigned char *tmp;
     unsigned char acc[40];
-    mbedtls_reader rd;
+    mbedtls_mps_reader rd;
     int success = 0;
     for( int i=0; (unsigned) i < sizeof( bufA ); i++ )
         bufA[i] = (unsigned char) i;
@@ -2087,23 +2087,23 @@ void mbedtls_reader_inconsistent_usage( int option )
         bufB[i] = ~ ((unsigned char) i);
 
     /* Preparation (lower layer) */
-    mbedtls_reader_init( &rd, acc, sizeof( acc ) );
-    TEST_ASSERT( mbedtls_reader_feed( &rd, bufA, sizeof( bufA ) ) == 0 );
+    mbedtls_mps_reader_init( &rd, acc, sizeof( acc ) );
+    TEST_ASSERT( mbedtls_mps_reader_feed( &rd, bufA, sizeof( bufA ) ) == 0 );
     /* Consumption (upper layer) */
-    TEST_ASSERT( mbedtls_reader_get( &rd, 80, &tmp, NULL ) == 0 );
-    TEST_ASSERT( mbedtls_reader_commit( &rd ) == 0 );
-    TEST_ASSERT( mbedtls_reader_get( &rd, 10, &tmp, NULL ) == 0 );
-    TEST_ASSERT( mbedtls_reader_get( &rd, 20, &tmp, NULL ) ==
-                 MBEDTLS_ERR_READER_OUT_OF_DATA );
+    TEST_ASSERT( mbedtls_mps_reader_get( &rd, 80, &tmp, NULL ) == 0 );
+    TEST_ASSERT( mbedtls_mps_reader_commit( &rd ) == 0 );
+    TEST_ASSERT( mbedtls_mps_reader_get( &rd, 10, &tmp, NULL ) == 0 );
+    TEST_ASSERT( mbedtls_mps_reader_get( &rd, 20, &tmp, NULL ) ==
+                 MBEDTLS_ERR_MPS_READER_OUT_OF_DATA );
     /* Preparation */
-    TEST_ASSERT( mbedtls_reader_reclaim( &rd, NULL ) == 0 );
-    TEST_ASSERT( mbedtls_reader_feed( &rd, bufB, sizeof( bufB ) ) == 0 );
+    TEST_ASSERT( mbedtls_mps_reader_reclaim( &rd, NULL ) == 0 );
+    TEST_ASSERT( mbedtls_mps_reader_feed( &rd, bufB, sizeof( bufB ) ) == 0 );
     /* Consumption */
     switch( option )
     {
         case 0:
             /* Ask for buffered data in a single chunk, no commit */
-            TEST_ASSERT( mbedtls_reader_get( &rd, 30, &tmp, NULL ) == 0 );
+            TEST_ASSERT( mbedtls_mps_reader_get( &rd, 30, &tmp, NULL ) == 0 );
             TEST_ASSERT( memcmp( tmp, bufA + 80, 20 ) == 0 );
             TEST_ASSERT( memcmp( tmp + 20, bufB, 10 ) == 0 );
             success = 1;
@@ -2111,40 +2111,40 @@ void mbedtls_reader_inconsistent_usage( int option )
 
         case 1:
             /* Ask for buffered data in a single chunk, with commit */
-            TEST_ASSERT( mbedtls_reader_get( &rd, 30, &tmp, NULL ) == 0 );
+            TEST_ASSERT( mbedtls_mps_reader_get( &rd, 30, &tmp, NULL ) == 0 );
             TEST_ASSERT( memcmp( tmp, bufA + 80, 20 ) == 0 );
             TEST_ASSERT( memcmp( tmp + 20, bufB, 10 ) == 0 );
-            TEST_ASSERT( mbedtls_reader_commit( &rd ) == 0 );
+            TEST_ASSERT( mbedtls_mps_reader_commit( &rd ) == 0 );
             success = 1;
             break;
 
         case 2:
             /* Ask for more than was requested when pausing, #1 */
-            TEST_ASSERT( mbedtls_reader_get( &rd, 31, &tmp, NULL ) ==
-                         MBEDTLS_ERR_READER_INCONSISTENT_REQUESTS );
+            TEST_ASSERT( mbedtls_mps_reader_get( &rd, 31, &tmp, NULL ) ==
+                         MBEDTLS_ERR_MPS_READER_INCONSISTENT_REQUESTS );
             break;
 
         case 3:
             /* Ask for more than was requested when pausing #2 */
-            TEST_ASSERT( mbedtls_reader_get( &rd, (mbedtls_mps_size_t) -1, &tmp, NULL ) ==
-                         MBEDTLS_ERR_READER_INCONSISTENT_REQUESTS );
+            TEST_ASSERT( mbedtls_mps_reader_get( &rd, (mbedtls_mps_size_t) -1, &tmp, NULL ) ==
+                         MBEDTLS_ERR_MPS_READER_INCONSISTENT_REQUESTS );
             break;
 
         case 4:
             /* Asking for buffered data in different
              * chunks than before CAN fail. */
-            TEST_ASSERT( mbedtls_reader_get( &rd, 15, &tmp, NULL ) == 0 );
+            TEST_ASSERT( mbedtls_mps_reader_get( &rd, 15, &tmp, NULL ) == 0 );
             TEST_ASSERT( memcmp( tmp, bufA + 80, 15 ) == 0 );
-            TEST_ASSERT( mbedtls_reader_get( &rd, 10, &tmp, NULL ) ==
-                         MBEDTLS_ERR_READER_INCONSISTENT_REQUESTS );
+            TEST_ASSERT( mbedtls_mps_reader_get( &rd, 10, &tmp, NULL ) ==
+                         MBEDTLS_ERR_MPS_READER_INCONSISTENT_REQUESTS );
             break;
 
         case 5:
             /* Asking for buffered data different chunks
              * than before NEED NOT fail - no commits */
-            TEST_ASSERT( mbedtls_reader_get( &rd, 15, &tmp, NULL ) == 0 );
+            TEST_ASSERT( mbedtls_mps_reader_get( &rd, 15, &tmp, NULL ) == 0 );
             TEST_ASSERT( memcmp( tmp, bufA + 80, 15 ) == 0 );
-            TEST_ASSERT( mbedtls_reader_get( &rd, 15, &tmp, NULL ) == 0 );
+            TEST_ASSERT( mbedtls_mps_reader_get( &rd, 15, &tmp, NULL ) == 0 );
             TEST_ASSERT( memcmp( tmp, bufA + 95, 5 ) == 0 );
             TEST_ASSERT( memcmp( tmp + 5, bufB, 10 ) == 0 );
             success = 1;
@@ -2153,10 +2153,10 @@ void mbedtls_reader_inconsistent_usage( int option )
         case 6:
             /* Asking for buffered data different chunks
              * than before NEED NOT fail - intermediate commit */
-            TEST_ASSERT( mbedtls_reader_get( &rd, 15, &tmp, NULL ) == 0 );
+            TEST_ASSERT( mbedtls_mps_reader_get( &rd, 15, &tmp, NULL ) == 0 );
             TEST_ASSERT( memcmp( tmp, bufA + 80, 15 ) == 0 );
-            TEST_ASSERT( mbedtls_reader_commit( &rd ) == 0 );
-            TEST_ASSERT( mbedtls_reader_get( &rd, 15, &tmp, NULL ) == 0 );
+            TEST_ASSERT( mbedtls_mps_reader_commit( &rd ) == 0 );
+            TEST_ASSERT( mbedtls_mps_reader_get( &rd, 15, &tmp, NULL ) == 0 );
             TEST_ASSERT( memcmp( tmp, bufA + 95, 5 ) == 0 );
             TEST_ASSERT( memcmp( tmp + 5, bufB, 10 ) == 0 );
             success = 1;
@@ -2165,25 +2165,25 @@ void mbedtls_reader_inconsistent_usage( int option )
         case 7:
             /* Asking for buffered data different chunks
              * than before NEED NOT fail - end commit */
-            TEST_ASSERT( mbedtls_reader_get( &rd, 15, &tmp, NULL ) == 0 );
+            TEST_ASSERT( mbedtls_mps_reader_get( &rd, 15, &tmp, NULL ) == 0 );
             TEST_ASSERT( memcmp( tmp, bufA + 80, 15 ) == 0 );
-            TEST_ASSERT( mbedtls_reader_get( &rd, 15, &tmp, NULL ) == 0 );
+            TEST_ASSERT( mbedtls_mps_reader_get( &rd, 15, &tmp, NULL ) == 0 );
             TEST_ASSERT( memcmp( tmp, bufA + 95, 5 ) == 0 );
             TEST_ASSERT( memcmp( tmp + 5, bufB, 10 ) == 0 );
-            TEST_ASSERT( mbedtls_reader_commit( &rd ) == 0 );
+            TEST_ASSERT( mbedtls_mps_reader_commit( &rd ) == 0 );
             success = 1;
             break;
 
         case 8:
             /* Asking for buffered data different chunks
              * than before NEED NOT fail - intermediate & end commit */
-            TEST_ASSERT( mbedtls_reader_get( &rd, 15, &tmp, NULL ) == 0 );
+            TEST_ASSERT( mbedtls_mps_reader_get( &rd, 15, &tmp, NULL ) == 0 );
             TEST_ASSERT( memcmp( tmp, bufA + 80, 15 ) == 0 );
-            TEST_ASSERT( mbedtls_reader_get( &rd, 15, &tmp, NULL ) == 0 );
-            TEST_ASSERT( mbedtls_reader_commit( &rd ) == 0 );
+            TEST_ASSERT( mbedtls_mps_reader_get( &rd, 15, &tmp, NULL ) == 0 );
+            TEST_ASSERT( mbedtls_mps_reader_commit( &rd ) == 0 );
             TEST_ASSERT( memcmp( tmp, bufA + 95, 5 ) == 0 );
             TEST_ASSERT( memcmp( tmp + 5, bufB, 10 ) == 0 );
-            TEST_ASSERT( mbedtls_reader_commit( &rd ) == 0 );
+            TEST_ASSERT( mbedtls_mps_reader_commit( &rd ) == 0 );
             success = 1;
             break;
 
@@ -2195,16 +2195,16 @@ void mbedtls_reader_inconsistent_usage( int option )
     if( success == 1 )
     {
         /* In all succeeding cases, fetch the rest of the second buffer. */
-        TEST_ASSERT( mbedtls_reader_get( &rd, 90, &tmp, NULL ) == 0 );
+        TEST_ASSERT( mbedtls_mps_reader_get( &rd, 90, &tmp, NULL ) == 0 );
         TEST_ASSERT( memcmp( tmp, bufB + 10, 90 ) == 0 );
-        TEST_ASSERT( mbedtls_reader_commit( &rd ) == 0 );
+        TEST_ASSERT( mbedtls_mps_reader_commit( &rd ) == 0 );
 
         /* Wrapup */
-        TEST_ASSERT( mbedtls_reader_reclaim( &rd, NULL ) == 0 );
+        TEST_ASSERT( mbedtls_mps_reader_reclaim( &rd, NULL ) == 0 );
     }
 
     /* Wrapup */
-    mbedtls_reader_free( &rd );
+    mbedtls_mps_reader_free( &rd );
 }
 /* END_CASE */
 
@@ -2250,7 +2250,7 @@ void mbedtls_mps_reader_random_usage( int num_out_chunks,
     int mode = 0; /* Lower layer (0) or Upper layer (1) */
     int reclaimed = 1; /* Have to call reclaim at least once before
                         * returning the reader to the upper layer. */
-    mbedtls_reader rd;
+    mbedtls_mps_reader rd;
 
     if( acc_size > 0 )
     {
@@ -2267,7 +2267,7 @@ void mbedtls_mps_reader_random_usage( int num_out_chunks,
     TEST_ASSERT( outgoing != NULL );
     TEST_ASSERT( incoming != NULL );
 
-    mbedtls_reader_init( &rd, acc, acc_size );
+    mbedtls_mps_reader_init( &rd, acc, acc_size );
 
     cur_out_chunk = 0;
     in_commit = 0;
@@ -2283,7 +2283,7 @@ void mbedtls_mps_reader_random_usage( int num_out_chunks,
             if( rand_op == 0 )
             {
                 /* Reclaim */
-                ret = mbedtls_reader_reclaim( &rd, NULL );
+                ret = mbedtls_mps_reader_reclaim( &rd, NULL );
 
                 if( ret == 0 )
                 {
@@ -2306,9 +2306,9 @@ void mbedtls_mps_reader_random_usage( int num_out_chunks,
                 TEST_ASSERT( tmp != NULL );
 
                 TEST_ASSERT( mbedtls_test_rnd_std_rand( NULL, tmp, tmp_size ) == 0 );
-                ret = mbedtls_reader_feed( &rd, tmp, tmp_size );
+                ret = mbedtls_mps_reader_feed( &rd, tmp, tmp_size );
 
-                if( ret == 0 || ret == MBEDTLS_ERR_READER_NEED_MORE )
+                if( ret == 0 || ret == MBEDTLS_ERR_MPS_READER_NEED_MORE )
                 {
                     cur_out_chunk++;
                     memcpy( outgoing + out_pos, tmp, tmp_size );
@@ -2347,13 +2347,13 @@ void mbedtls_mps_reader_random_usage( int num_out_chunks,
                 get_size = ( rand() % max_request ) + 1;
                 if( rand_op == 0 )
                 {
-                    ret = mbedtls_reader_get( &rd, get_size, &chunk_get,
+                    ret = mbedtls_mps_reader_get( &rd, get_size, &chunk_get,
                                               &real_size );
                 }
                 else
                 {
                     real_size = get_size;
-                    ret = mbedtls_reader_get( &rd, get_size, &chunk_get, NULL );
+                    ret = mbedtls_mps_reader_get( &rd, get_size, &chunk_get, NULL );
                 }
 
                 /* Check if output is in accordance with what was written */
@@ -2369,7 +2369,7 @@ void mbedtls_mps_reader_random_usage( int num_out_chunks,
             }
             else if( rand_op == 2 ) /* Commit */
             {
-                ret = mbedtls_reader_commit( &rd );
+                ret = mbedtls_mps_reader_commit( &rd );
                 if( ret == 0 )
                 {
                     in_commit += in_fetch;
@@ -2387,7 +2387,7 @@ void mbedtls_mps_reader_random_usage( int num_out_chunks,
     }
 
     /* Cleanup */
-    mbedtls_reader_free( &rd );
+    mbedtls_mps_reader_free( &rd );
     free( incoming );
     free( outgoing );
     free( acc );
@@ -2401,53 +2401,53 @@ void mbedtls_mps_reader_ext_basic( )
     /* This test checks whether the extended reader correctly
      * checks for the global bounds of the logical buffer. */
 
-    mbedtls_reader_ext rd_ext;
-    mbedtls_reader rd;
+    mbedtls_mps_reader_ext rd_ext;
+    mbedtls_mps_reader rd;
     unsigned char buf[75];
     unsigned char *tmp;
     mbedtls_mps_size_t tmp_sz;
 
     /* Initialize reader and extended reader separately. */
-    TEST_ASSERT( mbedtls_reader_init_ext( &rd_ext, 100 ) == 0 );
-    mbedtls_reader_init( &rd, NULL, 0 );
+    TEST_ASSERT( mbedtls_mps_reader_init_ext( &rd_ext, 100 ) == 0 );
+    mbedtls_mps_reader_init( &rd, NULL, 0 );
     for( size_t idx=0; idx < sizeof( buf ); idx++ )
         buf[idx] = (unsigned char) idx;
 
     /* Prepare reader and bind it to extended reader */
-    TEST_ASSERT( mbedtls_reader_feed( &rd, buf, sizeof( buf ) ) == 0 );
-    TEST_ASSERT( mbedtls_reader_attach( &rd_ext, &rd ) == 0 );
+    TEST_ASSERT( mbedtls_mps_reader_feed( &rd, buf, sizeof( buf ) ) == 0 );
+    TEST_ASSERT( mbedtls_mps_reader_attach( &rd_ext, &rd ) == 0 );
 
     /* Do actual fetching */
-    TEST_ASSERT( mbedtls_reader_get_ext( &rd_ext, 101, &tmp, NULL ) ==
-                 MBEDTLS_ERR_READER_BOUNDS_VIOLATION );
+    TEST_ASSERT( mbedtls_mps_reader_get_ext( &rd_ext, 101, &tmp, NULL ) ==
+                 MBEDTLS_ERR_MPS_READER_BOUNDS_VIOLATION );
 
     /* ([C]ommit, [F]etch) = (0,0) */
-    TEST_ASSERT( mbedtls_reader_get_ext( &rd_ext, 50, &tmp, NULL ) == 0 );
+    TEST_ASSERT( mbedtls_mps_reader_get_ext( &rd_ext, 50, &tmp, NULL ) == 0 );
     /* Now (C,F) = (0,50) */
-    TEST_ASSERT( mbedtls_reader_get_ext( &rd_ext, 10, &tmp, NULL ) == 0 );
+    TEST_ASSERT( mbedtls_mps_reader_get_ext( &rd_ext, 10, &tmp, NULL ) == 0 );
     /* Now (C,F) = (0,60) */
-    TEST_ASSERT( mbedtls_reader_commit_ext( &rd_ext ) == 0 );
+    TEST_ASSERT( mbedtls_mps_reader_commit_ext( &rd_ext ) == 0 );
     /* Now (C,F) = (60,60) */
-    TEST_ASSERT( mbedtls_reader_get_ext( &rd_ext, 41, &tmp, NULL ) ==
-                 MBEDTLS_ERR_READER_BOUNDS_VIOLATION );
+    TEST_ASSERT( mbedtls_mps_reader_get_ext( &rd_ext, 41, &tmp, NULL ) ==
+                 MBEDTLS_ERR_MPS_READER_BOUNDS_VIOLATION );
     /* Now (C,F) = (60,60) */
-    TEST_ASSERT( mbedtls_reader_get_ext( &rd_ext, 40,
+    TEST_ASSERT( mbedtls_mps_reader_get_ext( &rd_ext, 40,
                                          &tmp, &tmp_sz ) == 0 );
     TEST_ASSERT( tmp_sz == 15 );
     /* Now (C,F) = (60,75) */
-    TEST_ASSERT( mbedtls_reader_get_ext( &rd_ext, 26, &tmp, &tmp_sz ) ==
-                 MBEDTLS_ERR_READER_BOUNDS_VIOLATION );
-    TEST_ASSERT( mbedtls_reader_get_ext( &rd_ext, 25, &tmp, NULL ) ==
-                 MBEDTLS_ERR_READER_OUT_OF_DATA );
-    TEST_ASSERT( mbedtls_reader_get_ext( &rd_ext, 25, &tmp, &tmp_sz ) == 0 );
+    TEST_ASSERT( mbedtls_mps_reader_get_ext( &rd_ext, 26, &tmp, &tmp_sz ) ==
+                 MBEDTLS_ERR_MPS_READER_BOUNDS_VIOLATION );
+    TEST_ASSERT( mbedtls_mps_reader_get_ext( &rd_ext, 25, &tmp, NULL ) ==
+                 MBEDTLS_ERR_MPS_READER_OUT_OF_DATA );
+    TEST_ASSERT( mbedtls_mps_reader_get_ext( &rd_ext, 25, &tmp, &tmp_sz ) == 0 );
     TEST_ASSERT( tmp_sz == 0 );
     /* Now still (C,F) = (60,75) */
 
-    TEST_ASSERT( mbedtls_reader_detach( &rd_ext ) == 0 );
+    TEST_ASSERT( mbedtls_mps_reader_detach( &rd_ext ) == 0 );
 
 exit:
 
-    mbedtls_reader_free_ext( &rd_ext );
+    mbedtls_mps_reader_free_ext( &rd_ext );
 }
 /* END_CASE */
 
@@ -2457,61 +2457,61 @@ void mbedtls_mps_reader_ext_group_open_close( )
     /* This test checks whether the extended reader correctly
      * checks for the global bounds of the logical buffer. */
 
-    mbedtls_reader_ext rd_ext;
-    mbedtls_reader rd;
+    mbedtls_mps_reader_ext rd_ext;
+    mbedtls_mps_reader rd;
     unsigned char buf[75];
     unsigned char *tmp;
     mbedtls_mps_size_t tmp_sz;
 
     /* Initialize reader and extended reader separately. */
-    TEST_ASSERT( mbedtls_reader_init_ext( &rd_ext, 100 ) == 0 );
-    mbedtls_reader_init( &rd, NULL, 0 );
+    TEST_ASSERT( mbedtls_mps_reader_init_ext( &rd_ext, 100 ) == 0 );
+    mbedtls_mps_reader_init( &rd, NULL, 0 );
     for( size_t idx=0; idx < sizeof( buf ); idx++ )
         buf[idx] = (unsigned char) idx;
 
     /* Prepare reader and bind it to extended reader */
-    TEST_ASSERT( mbedtls_reader_feed( &rd, buf, sizeof( buf ) ) == 0 );
-    TEST_ASSERT( mbedtls_reader_attach( &rd_ext, &rd ) == 0 );
+    TEST_ASSERT( mbedtls_mps_reader_feed( &rd, buf, sizeof( buf ) ) == 0 );
+    TEST_ASSERT( mbedtls_mps_reader_attach( &rd_ext, &rd ) == 0 );
 
     /* Do actual fetching */
-    TEST_ASSERT( mbedtls_reader_get_ext( &rd_ext, 101, &tmp, NULL ) ==
-                 MBEDTLS_ERR_READER_BOUNDS_VIOLATION );
+    TEST_ASSERT( mbedtls_mps_reader_get_ext( &rd_ext, 101, &tmp, NULL ) ==
+                 MBEDTLS_ERR_MPS_READER_BOUNDS_VIOLATION );
 
     /* ([C]ommit, [F]etch) = (0,0) */
-    TEST_ASSERT( mbedtls_reader_get_ext( &rd_ext, 50, &tmp, NULL ) == 0 );
+    TEST_ASSERT( mbedtls_mps_reader_get_ext( &rd_ext, 50, &tmp, NULL ) == 0 );
     /* Now (C,F) = (0,50) */
-    TEST_ASSERT( mbedtls_reader_group_open( &rd_ext, 51 ) ==
-                 MBEDTLS_ERR_READER_BOUNDS_VIOLATION );
-    TEST_ASSERT( mbedtls_reader_group_open( &rd_ext, 20 ) == 0 );
+    TEST_ASSERT( mbedtls_mps_reader_group_open( &rd_ext, 51 ) ==
+                 MBEDTLS_ERR_MPS_READER_BOUNDS_VIOLATION );
+    TEST_ASSERT( mbedtls_mps_reader_group_open( &rd_ext, 20 ) == 0 );
     /* Now (C,F) have a sub-group in the range from 50-70 */
-    TEST_ASSERT( mbedtls_reader_get_ext( &rd_ext, 21, &tmp, NULL ) ==
-                 MBEDTLS_ERR_READER_BOUNDS_VIOLATION );
-    TEST_ASSERT( mbedtls_reader_get_ext( &rd_ext, 10, &tmp, NULL ) == 0 );
+    TEST_ASSERT( mbedtls_mps_reader_get_ext( &rd_ext, 21, &tmp, NULL ) ==
+                 MBEDTLS_ERR_MPS_READER_BOUNDS_VIOLATION );
+    TEST_ASSERT( mbedtls_mps_reader_get_ext( &rd_ext, 10, &tmp, NULL ) == 0 );
     /* Now (C,F) = (0,60) */
     /* Cannot close group yet */
-    TEST_ASSERT( mbedtls_reader_group_close( &rd_ext ) ==
-                 MBEDTLS_ERR_READER_BOUNDS_VIOLATION );
-    TEST_ASSERT( mbedtls_reader_get_ext( &rd_ext, 10, &tmp, NULL ) == 0 );
+    TEST_ASSERT( mbedtls_mps_reader_group_close( &rd_ext ) ==
+                 MBEDTLS_ERR_MPS_READER_BOUNDS_VIOLATION );
+    TEST_ASSERT( mbedtls_mps_reader_get_ext( &rd_ext, 10, &tmp, NULL ) == 0 );
     /* Now (C,F) = (0,70) */
-    TEST_ASSERT( mbedtls_reader_get_ext( &rd_ext, 1, &tmp, NULL ) ==
-                 MBEDTLS_ERR_READER_BOUNDS_VIOLATION );
-    TEST_ASSERT( mbedtls_reader_group_close( &rd_ext ) == 0 );
+    TEST_ASSERT( mbedtls_mps_reader_get_ext( &rd_ext, 1, &tmp, NULL ) ==
+                 MBEDTLS_ERR_MPS_READER_BOUNDS_VIOLATION );
+    TEST_ASSERT( mbedtls_mps_reader_group_close( &rd_ext ) == 0 );
     /* Now only open group is 0-100 again */
-    TEST_ASSERT( mbedtls_reader_commit_ext( &rd_ext ) == 0 );
+    TEST_ASSERT( mbedtls_mps_reader_commit_ext( &rd_ext ) == 0 );
     /* Now (C,F) = (70,70) */
-    TEST_ASSERT( mbedtls_reader_get_ext( &rd_ext, 1, &tmp, NULL ) == 0 );
+    TEST_ASSERT( mbedtls_mps_reader_get_ext( &rd_ext, 1, &tmp, NULL ) == 0 );
     /* Now (C,F) = (70,71) */
-    TEST_ASSERT( mbedtls_reader_get_ext( &rd_ext, 30, &tmp, NULL ) ==
-                 MBEDTLS_ERR_READER_BOUNDS_VIOLATION );
-    TEST_ASSERT( mbedtls_reader_get_ext( &rd_ext, 29, &tmp, &tmp_sz ) == 0 );
+    TEST_ASSERT( mbedtls_mps_reader_get_ext( &rd_ext, 30, &tmp, NULL ) ==
+                 MBEDTLS_ERR_MPS_READER_BOUNDS_VIOLATION );
+    TEST_ASSERT( mbedtls_mps_reader_get_ext( &rd_ext, 29, &tmp, &tmp_sz ) == 0 );
     TEST_ASSERT( tmp_sz == 4 );
     /* Now (C,F) = (70, 75) */
 
-    TEST_ASSERT( mbedtls_reader_detach( &rd_ext ) == 0 );
+    TEST_ASSERT( mbedtls_mps_reader_detach( &rd_ext ) == 0 );
 
 exit:
 
-    mbedtls_reader_free_ext( &rd_ext );
+    mbedtls_mps_reader_free_ext( &rd_ext );
 }
 /* END_CASE */
 
@@ -2521,42 +2521,42 @@ void mbedtls_mps_reader_ext_many_groups( )
     /* This test checks whether the extended reader correctly
      * checks for the global bounds of the logical buffer. */
 
-    mbedtls_reader_ext rd_ext;
-    mbedtls_reader rd;
+    mbedtls_mps_reader_ext rd_ext;
+    mbedtls_mps_reader rd;
     unsigned char buf[75];
     unsigned char *tmp;
 
     /* Initialize reader and extended reader separately. */
-    TEST_ASSERT( mbedtls_reader_init_ext( &rd_ext, 100 ) == 0 );
-    mbedtls_reader_init( &rd, NULL, 0 );
+    TEST_ASSERT( mbedtls_mps_reader_init_ext( &rd_ext, 100 ) == 0 );
+    mbedtls_mps_reader_init( &rd, NULL, 0 );
     for( size_t idx=0; idx < sizeof( buf ); idx++ )
         buf[idx] = (unsigned char) idx;
 
     /* Prepare reader and bind it to extended reader */
-    TEST_ASSERT( mbedtls_reader_feed( &rd, buf, sizeof( buf ) ) == 0 );
-    TEST_ASSERT( mbedtls_reader_attach( &rd_ext, &rd ) == 0 );
+    TEST_ASSERT( mbedtls_mps_reader_feed( &rd, buf, sizeof( buf ) ) == 0 );
+    TEST_ASSERT( mbedtls_mps_reader_attach( &rd_ext, &rd ) == 0 );
 
-    for( size_t cur_grp=1; cur_grp < MBEDTLS_READER_MAX_GROUPS; cur_grp++ )
+    for( size_t cur_grp=1; cur_grp < MBEDTLS_MPS_READER_MAX_GROUPS; cur_grp++ )
     {
-        TEST_ASSERT( mbedtls_reader_get_ext( &rd_ext, 100 - 2 * cur_grp + 3,
+        TEST_ASSERT( mbedtls_mps_reader_get_ext( &rd_ext, 100 - 2 * cur_grp + 3,
                                              &tmp, NULL ) ==
-                     MBEDTLS_ERR_READER_BOUNDS_VIOLATION );
-        TEST_ASSERT( mbedtls_reader_get_ext( &rd_ext, 1, &tmp, NULL ) == 0 );
-        TEST_ASSERT( mbedtls_reader_group_open( &rd_ext,
+                     MBEDTLS_ERR_MPS_READER_BOUNDS_VIOLATION );
+        TEST_ASSERT( mbedtls_mps_reader_get_ext( &rd_ext, 1, &tmp, NULL ) == 0 );
+        TEST_ASSERT( mbedtls_mps_reader_group_open( &rd_ext,
                                                 100 - 2 * ( cur_grp - 1 ) ) ==
-                     MBEDTLS_ERR_READER_BOUNDS_VIOLATION );
-        TEST_ASSERT( mbedtls_reader_group_open( &rd_ext,
+                     MBEDTLS_ERR_MPS_READER_BOUNDS_VIOLATION );
+        TEST_ASSERT( mbedtls_mps_reader_group_open( &rd_ext,
                                                 100 - 2 * cur_grp ) == 0 );
     }
 
-    TEST_ASSERT( mbedtls_reader_group_open( &rd_ext, 1 ) ==
-                 MBEDTLS_ERR_READER_TOO_MANY_GROUPS );
+    TEST_ASSERT( mbedtls_mps_reader_group_open( &rd_ext, 1 ) ==
+                 MBEDTLS_ERR_MPS_READER_TOO_MANY_GROUPS );
 
-    TEST_ASSERT( mbedtls_reader_detach( &rd_ext ) == 0 );
+    TEST_ASSERT( mbedtls_mps_reader_detach( &rd_ext ) == 0 );
 
 exit:
 
-    mbedtls_reader_free_ext( &rd_ext );
+    mbedtls_mps_reader_free_ext( &rd_ext );
 }
 /* END_CASE */
 
@@ -4214,13 +4214,13 @@ void mbedtls_mps_l2_basic( int mode,
     TEST_ASSERT( in_srv.type == ty_A );
 
     /* Step 3: Request record contents from writer. */
-    TEST_ASSERT( mbedtls_reader_get( in_srv.rd, rec_sz, &buf, &sz ) == 0 );
+    TEST_ASSERT( mbedtls_mps_reader_get( in_srv.rd, rec_sz, &buf, &sz ) == 0 );
 
     /* Step 4: Process and commti record contents. */
     TEST_ASSERT( sz == (unsigned) rec_sz );
     for( uint8_t idx = 0; idx < sz; idx++ )
         TEST_ASSERT( buf[idx] == idx );
-    TEST_ASSERT( mbedtls_reader_commit( in_srv.rd ) == 0 );
+    TEST_ASSERT( mbedtls_mps_reader_commit( in_srv.rd ) == 0 );
 
     /* Step 5: Close record. */
     TEST_ASSERT( mps_l2_read_done( &srv_l2 ) == 0 );
@@ -4231,11 +4231,11 @@ void mbedtls_mps_l2_basic( int mode,
     TEST_ASSERT( mps_l2_read_start( &srv_l2, &in_srv ) == 0 );
     TEST_ASSERT( in_srv.epoch == epoch_init );
     TEST_ASSERT( in_srv.type == ty_B );
-    TEST_ASSERT( mbedtls_reader_get( in_srv.rd, 2 * rec_sz, &buf, &sz ) == 0 );
+    TEST_ASSERT( mbedtls_mps_reader_get( in_srv.rd, 2 * rec_sz, &buf, &sz ) == 0 );
     TEST_ASSERT( sz == (unsigned) ( 2 * rec_sz ) );
     for( uint8_t idx = 0; idx < sz; idx++ )
         TEST_ASSERT( buf[idx] == ( sz - idx ) );
-    TEST_ASSERT( mbedtls_reader_commit( in_srv.rd ) == 0 );
+    TEST_ASSERT( mbedtls_mps_reader_commit( in_srv.rd ) == 0 );
     TEST_ASSERT( mps_l2_read_done( &srv_l2 ) == 0 );
 
 exit:
@@ -4331,8 +4331,8 @@ void mbedtls_mps_l2_non_packable_type( int mode,
     TEST_ASSERT( in_srv.epoch == epoch_init );
     TEST_ASSERT( in_srv.type  == ty_A );
 
-    TEST_ASSERT( mbedtls_reader_get( in_srv.rd, 5, &buf, NULL ) == 0 );
-    TEST_ASSERT( mbedtls_reader_commit( in_srv.rd ) == 0 );
+    TEST_ASSERT( mbedtls_mps_reader_get( in_srv.rd, 5, &buf, NULL ) == 0 );
+    TEST_ASSERT( mbedtls_mps_reader_commit( in_srv.rd ) == 0 );
 
     /* Attempting to close should fail immediately, because more
      * data of type ty_A is available that wasn't requested. */
@@ -4371,10 +4371,10 @@ void mbedtls_mps_l2_non_packable_type( int mode,
     TEST_ASSERT( in_cli.epoch == epoch_init );
     TEST_ASSERT( in_cli.type  == ty_A );
 
-    TEST_ASSERT( mbedtls_reader_get( in_cli.rd, 10, &buf, &sz ) == 0 );
+    TEST_ASSERT( mbedtls_mps_reader_get( in_cli.rd, 10, &buf, &sz ) == 0 );
     /* We should see only 5 bytes */
     TEST_ASSERT( sz == 5 );
-    TEST_ASSERT( mbedtls_reader_commit( in_cli.rd ) == 0 );
+    TEST_ASSERT( mbedtls_mps_reader_commit( in_cli.rd ) == 0 );
     TEST_ASSERT( mps_l2_read_done( &cli_l2 ) == 0 );
 
     /*
@@ -4385,10 +4385,10 @@ void mbedtls_mps_l2_non_packable_type( int mode,
     TEST_ASSERT( in_cli.epoch == epoch_init );
     TEST_ASSERT( in_cli.type  == ty_A );
 
-    TEST_ASSERT( mbedtls_reader_get( in_cli.rd, 10, &buf, &sz ) == 0 );
+    TEST_ASSERT( mbedtls_mps_reader_get( in_cli.rd, 10, &buf, &sz ) == 0 );
     /* We should see only 5 bytes */
     TEST_ASSERT( sz == 5 );
-    TEST_ASSERT( mbedtls_reader_commit( in_cli.rd ) == 0 );
+    TEST_ASSERT( mbedtls_mps_reader_commit( in_cli.rd ) == 0 );
     TEST_ASSERT( mps_l2_read_done( &cli_l2 ) == 0 );
 
 exit:
@@ -4639,11 +4639,11 @@ void mbedtls_mps_l2_bad_record( int mode,
         TEST_ASSERT( mps_l2_read_start( &srv_l2, &in_srv ) == 0 );
         TEST_ASSERT( in_srv.type == ty_A );
 
-        TEST_ASSERT( mbedtls_reader_get( in_srv.rd, rec_sz, &buf, &sz ) == 0 );
+        TEST_ASSERT( mbedtls_mps_reader_get( in_srv.rd, rec_sz, &buf, &sz ) == 0 );
         TEST_ASSERT( sz == (unsigned) rec_sz );
         for( uint8_t idx = 0; idx < sz; idx++ )
             TEST_ASSERT( buf[idx] == ((uint8_t) ( sz - idx ) ) );
-        TEST_ASSERT( mbedtls_reader_commit( in_srv.rd ) == 0 );
+        TEST_ASSERT( mbedtls_mps_reader_commit( in_srv.rd ) == 0 );
         TEST_ASSERT( mps_l2_read_done( &srv_l2 ) == 0 );
 
         TEST_ASSERT( mps_l2_read_start( &srv_l2, &in_srv ) ==
@@ -4839,11 +4839,11 @@ void mbedtls_mps_l2_anti_replay( int variant )
             TEST_ASSERT( mps_l2_read_start( &srv_l2, &in_srv ) == 0 );
             TEST_ASSERT( in_srv.epoch == epoch_init );
             TEST_ASSERT( in_srv.type == ty_A );
-            TEST_ASSERT( mbedtls_reader_get( in_srv.rd, rec_sz, &buf, &sz ) == 0 );
+            TEST_ASSERT( mbedtls_mps_reader_get( in_srv.rd, rec_sz, &buf, &sz ) == 0 );
             TEST_ASSERT( sz == (unsigned) rec_sz );
             for( uint8_t idx = 0; idx < sz; idx++ )
                 TEST_ASSERT( buf[idx] == idx );
-            TEST_ASSERT( mbedtls_reader_commit( in_srv.rd ) == 0 );
+            TEST_ASSERT( mbedtls_mps_reader_commit( in_srv.rd ) == 0 );
             TEST_ASSERT( mps_l2_read_done( &srv_l2 ) == 0 );
 
             TEST_ASSERT( mps_l2_get_last_sequence_number( &srv_l2, epoch_init, &in_ctr ) == 0 );
@@ -4863,11 +4863,11 @@ void mbedtls_mps_l2_anti_replay( int variant )
             TEST_ASSERT( mps_l2_read_start( &srv_l2, &in_srv ) == 0 );
             TEST_ASSERT( in_srv.epoch == epoch_init );
             TEST_ASSERT( in_srv.type == ty_A );
-            TEST_ASSERT( mbedtls_reader_get( in_srv.rd, rec_sz, &buf, &sz ) == 0 );
+            TEST_ASSERT( mbedtls_mps_reader_get( in_srv.rd, rec_sz, &buf, &sz ) == 0 );
             TEST_ASSERT( sz == (unsigned) rec_sz );
             for( uint8_t idx = 0; idx < sz; idx++ )
                 TEST_ASSERT( buf[idx] == idx );
-            TEST_ASSERT( mbedtls_reader_commit( in_srv.rd ) == 0 );
+            TEST_ASSERT( mbedtls_mps_reader_commit( in_srv.rd ) == 0 );
             TEST_ASSERT( mps_l2_read_done( &srv_l2 ) == 0 );
 
             TEST_ASSERT( mps_l2_get_last_sequence_number( &srv_l2, epoch_init, &in_ctr ) == 0 );
@@ -4876,11 +4876,11 @@ void mbedtls_mps_l2_anti_replay( int variant )
             TEST_ASSERT( mps_l2_read_start( &srv_l2, &in_srv ) == 0 );
             TEST_ASSERT( in_srv.epoch == epoch_init );
             TEST_ASSERT( in_srv.type == ty_A );
-            TEST_ASSERT( mbedtls_reader_get( in_srv.rd, rec_sz, &buf, &sz ) == 0 );
+            TEST_ASSERT( mbedtls_mps_reader_get( in_srv.rd, rec_sz, &buf, &sz ) == 0 );
             TEST_ASSERT( sz == (unsigned) rec_sz );
             for( uint8_t idx = 0; idx < sz; idx++ )
                 TEST_ASSERT( buf[idx] == idx + 1 );
-            TEST_ASSERT( mbedtls_reader_commit( in_srv.rd ) == 0 );
+            TEST_ASSERT( mbedtls_mps_reader_commit( in_srv.rd ) == 0 );
             TEST_ASSERT( mps_l2_read_done( &srv_l2 ) == 0 );
 
             TEST_ASSERT( mps_l2_get_last_sequence_number( &srv_l2, epoch_init, &in_ctr ) == 0 );
@@ -4901,11 +4901,11 @@ void mbedtls_mps_l2_anti_replay( int variant )
             TEST_ASSERT( mps_l2_read_start( &srv_l2, &in_srv ) == 0 );
             TEST_ASSERT( in_srv.epoch == epoch_init );
             TEST_ASSERT( in_srv.type == ty_A );
-            TEST_ASSERT( mbedtls_reader_get( in_srv.rd, rec_sz, &buf, &sz ) == 0 );
+            TEST_ASSERT( mbedtls_mps_reader_get( in_srv.rd, rec_sz, &buf, &sz ) == 0 );
             TEST_ASSERT( sz == (unsigned) rec_sz );
             for( uint8_t idx = 0; idx < sz; idx++ )
                 TEST_ASSERT( buf[idx] == idx );
-            TEST_ASSERT( mbedtls_reader_commit( in_srv.rd ) == 0 );
+            TEST_ASSERT( mbedtls_mps_reader_commit( in_srv.rd ) == 0 );
             TEST_ASSERT( mps_l2_read_done( &srv_l2 ) == 0 );
 
             TEST_ASSERT( mps_l2_get_last_sequence_number( &srv_l2, epoch_init, &in_ctr ) == 0 );
@@ -4916,11 +4916,11 @@ void mbedtls_mps_l2_anti_replay( int variant )
                 TEST_ASSERT( mps_l2_read_start( &srv_l2, &in_srv ) == 0 );
                 TEST_ASSERT( in_srv.epoch == epoch_init );
                 TEST_ASSERT( in_srv.type == ty_A );
-                TEST_ASSERT( mbedtls_reader_get( in_srv.rd, rec_sz, &buf, &sz ) == 0 );
+                TEST_ASSERT( mbedtls_mps_reader_get( in_srv.rd, rec_sz, &buf, &sz ) == 0 );
                 TEST_ASSERT( sz == (unsigned) rec_sz );
                 for( uint8_t idx = 0; idx < sz; idx++ )
                     TEST_ASSERT( buf[idx] == idx + 1 );
-                TEST_ASSERT( mbedtls_reader_commit( in_srv.rd ) == 0 );
+                TEST_ASSERT( mbedtls_mps_reader_commit( in_srv.rd ) == 0 );
                 TEST_ASSERT( mps_l2_read_done( &srv_l2 ) == 0 );
 
                 TEST_ASSERT( mps_l2_get_last_sequence_number( &srv_l2, epoch_init, &in_ctr ) == 0 );
@@ -5082,16 +5082,16 @@ void mbedtls_mps_l2_pausing( int accumulator_too_small,
     TEST_ASSERT( in_srv.epoch == epoch_init );
     TEST_ASSERT( in_srv.type == ty_A );
     /* Read first half of first type-A record. */
-    TEST_ASSERT( mbedtls_reader_get( in_srv.rd, msg_chunk_size_A / 2,
+    TEST_ASSERT( mbedtls_mps_reader_get( in_srv.rd, msg_chunk_size_A / 2,
                                      &buf, &sz ) == 0 );
     TEST_ASSERT( sz == msg_chunk_size_A / 2 );
     for( uint8_t idx = 0; idx < sz; idx++ )
         TEST_ASSERT( buf[idx] == idx );
-    TEST_ASSERT( mbedtls_reader_commit( in_srv.rd ) == 0 );
+    TEST_ASSERT( mbedtls_mps_reader_commit( in_srv.rd ) == 0 );
     /* Attempt to read more, exceeding the record bounds. */
-    TEST_ASSERT( mbedtls_reader_get( in_srv.rd, msg_chunk_size_A,
+    TEST_ASSERT( mbedtls_mps_reader_get( in_srv.rd, msg_chunk_size_A,
                                      &buf, NULL ) ==
-                 MBEDTLS_ERR_READER_OUT_OF_DATA );
+                 MBEDTLS_ERR_MPS_READER_OUT_OF_DATA );
     /* Pause reading. */
 
     TEST_ASSERT( mps_l2_read_done( &srv_l2 ) ==
@@ -5118,12 +5118,12 @@ void mbedtls_mps_l2_pausing( int accumulator_too_small,
     TEST_ASSERT( in_srv.epoch == epoch_init );
     TEST_ASSERT( in_srv.type == ty_B );
     /* Read and process its entire contents. */
-    TEST_ASSERT( mbedtls_reader_get( in_srv.rd, msg_chunk_size_B,
+    TEST_ASSERT( mbedtls_mps_reader_get( in_srv.rd, msg_chunk_size_B,
                                      &buf, &sz ) == 0 );
     TEST_ASSERT( sz == msg_chunk_size_B );
     for( uint8_t idx = 0; idx < sz; idx++ )
         TEST_ASSERT( buf[idx] == idx );
-    TEST_ASSERT( mbedtls_reader_commit( in_srv.rd ) == 0 );
+    TEST_ASSERT( mbedtls_mps_reader_commit( in_srv.rd ) == 0 );
     TEST_ASSERT( mps_l2_read_done( &srv_l2 ) == 0 );
 
     /* Open the type-A stream again and retry the request
@@ -5133,7 +5133,7 @@ void mbedtls_mps_l2_pausing( int accumulator_too_small,
     TEST_ASSERT( in_srv.type == ty_A );
 
     /* ... now it should work thanks to the reader's pausing ability. */
-    TEST_ASSERT( mbedtls_reader_get( in_srv.rd, msg_chunk_size_A,
+    TEST_ASSERT( mbedtls_mps_reader_get( in_srv.rd, msg_chunk_size_A,
                                      &buf, &sz ) == 0 );
 
     TEST_ASSERT( sz == msg_chunk_size_A );
@@ -5146,7 +5146,7 @@ void mbedtls_mps_l2_pausing( int accumulator_too_small,
         TEST_ASSERT( buf[msg_chunk_size_A / 2 + idx] ==
                      ( msg_chunk_size_A - idx ) );
     }
-    TEST_ASSERT( mbedtls_reader_commit( in_srv.rd ) == 0 );
+    TEST_ASSERT( mbedtls_mps_reader_commit( in_srv.rd ) == 0 );
     TEST_ASSERT( mps_l2_read_done( &srv_l2 ) == 0 );
 
 #endif /* MBEDTLS_MPS_SUPPORT_TWO_INTERLEAVED_MESSAGES < 2 */
@@ -5307,12 +5307,12 @@ void mbedtls_mps_l2_switch_epoch( int mode,
     TEST_ASSERT( in_srv.epoch == epoch_init );
     TEST_ASSERT( in_srv.type == ty_A );
 
-    TEST_ASSERT( mbedtls_reader_get( in_srv.rd, 20, &buf, &sz ) == 0 );
+    TEST_ASSERT( mbedtls_mps_reader_get( in_srv.rd, 20, &buf, &sz ) == 0 );
 
     TEST_ASSERT( sz == 20 );
     for( uint8_t idx = 0; idx < sz; idx++ )
         TEST_ASSERT( buf[idx] == idx );
-    TEST_ASSERT( mbedtls_reader_commit( in_srv.rd ) == 0 );
+    TEST_ASSERT( mbedtls_mps_reader_commit( in_srv.rd ) == 0 );
 
     TEST_ASSERT( mps_l2_read_done( &srv_l2 ) == 0 );
 
@@ -5331,12 +5331,12 @@ void mbedtls_mps_l2_switch_epoch( int mode,
     TEST_ASSERT( in_srv.epoch == epoch_crypt );
     TEST_ASSERT( in_srv.type == ty_B );
 
-    TEST_ASSERT( mbedtls_reader_get( in_srv.rd, 20, &buf, &sz ) == 0 );
+    TEST_ASSERT( mbedtls_mps_reader_get( in_srv.rd, 20, &buf, &sz ) == 0 );
 
     TEST_ASSERT( sz == 20 );
     for( uint8_t idx = 0; idx < sz; idx++ )
         TEST_ASSERT( buf[idx] == idx );
-    TEST_ASSERT( mbedtls_reader_commit( in_srv.rd ) == 0 );
+    TEST_ASSERT( mbedtls_mps_reader_commit( in_srv.rd ) == 0 );
 
     TEST_ASSERT( mps_l2_read_done( &srv_l2 ) == 0 );
 
@@ -5427,14 +5427,14 @@ void mbedtls_mps_l2_queueing( int allocator_buffer_sz,
         TEST_ASSERT( mps_l2_read_start( &srv_l2, &in_srv ) == 0 );
         TEST_ASSERT( in_srv.epoch == epoch_init );
         TEST_ASSERT( in_srv.type == ty_A );
-        TEST_ASSERT( mbedtls_reader_get( in_srv.rd,
+        TEST_ASSERT( mbedtls_mps_reader_get( in_srv.rd,
                                          (size_t) msg_size - server_read_pos,
                                          &buf, &sz ) == 0 );
         for( uint8_t idx = 0; idx < sz; idx++ )
             TEST_ASSERT( buf[idx] == (uint8_t) ( server_read_pos + idx ) );
 
         server_read_pos += sz;
-        TEST_ASSERT( mbedtls_reader_commit( in_srv.rd ) == 0 );
+        TEST_ASSERT( mbedtls_mps_reader_commit( in_srv.rd ) == 0 );
         TEST_ASSERT( mps_l2_read_done( &srv_l2 ) == 0 );
     }
 
@@ -5634,13 +5634,13 @@ void mbedtls_mps_l2_many_epochs( int mode,
             TEST_ASSERT( in_srv.epoch == (mbedtls_mps_epoch_id) rd );
             TEST_ASSERT( in_srv.type == ty_A );
 
-            ret = mbedtls_reader_get( in_srv.rd, 20, &buf, NULL );
-            TEST_ASSERT( ret == MBEDTLS_ERR_READER_OUT_OF_DATA || ret == 0 );
+            ret = mbedtls_mps_reader_get( in_srv.rd, 20, &buf, NULL );
+            TEST_ASSERT( ret == MBEDTLS_ERR_MPS_READER_OUT_OF_DATA || ret == 0 );
             if( ret == 0 )
                 for( uint8_t idx = 0; idx < 20; idx++ )
                     TEST_ASSERT( buf[idx] == idx );
 
-            TEST_ASSERT( mbedtls_reader_commit( in_srv.rd ) == 0 );
+            TEST_ASSERT( mbedtls_mps_reader_commit( in_srv.rd ) == 0 );
             TEST_ASSERT( mps_l2_read_done( &srv_l2 ) == 0 );
             if( ret == 0 )
                 break;
@@ -5675,13 +5675,13 @@ void mbedtls_mps_l2_many_epochs( int mode,
             TEST_ASSERT( in_srv.epoch == (mbedtls_mps_epoch_id) ( rd + 1 ) );
             TEST_ASSERT( in_srv.type == ty_B );
 
-            ret = mbedtls_reader_get( in_srv.rd, 20, &buf, NULL );
-            TEST_ASSERT( ret == MBEDTLS_ERR_READER_OUT_OF_DATA || ret == 0 );
+            ret = mbedtls_mps_reader_get( in_srv.rd, 20, &buf, NULL );
+            TEST_ASSERT( ret == MBEDTLS_ERR_MPS_READER_OUT_OF_DATA || ret == 0 );
             if( ret == 0 )
                 for( uint8_t idx = 0; idx < 20; idx++ )
                     TEST_ASSERT( buf[idx] == idx );
 
-            TEST_ASSERT( mbedtls_reader_commit( in_srv.rd ) == 0 );
+            TEST_ASSERT( mbedtls_mps_reader_commit( in_srv.rd ) == 0 );
             TEST_ASSERT( mps_l2_read_done( &srv_l2 ) == 0 );
             if( ret == 0 )
                 break;
@@ -5804,12 +5804,12 @@ void mbedtls_mps_l2_piggyback_data( int mode,
     TEST_ASSERT( in_srv.epoch == epoch_init );
     TEST_ASSERT( in_srv.type == ty_A );
 
-    TEST_ASSERT( mbedtls_reader_get( in_srv.rd, 10, &buf, &sz ) == 0 );
+    TEST_ASSERT( mbedtls_mps_reader_get( in_srv.rd, 10, &buf, &sz ) == 0 );
 
     TEST_ASSERT( sz == 10 );
     for( uint8_t idx = 0; idx < sz; idx++ )
         TEST_ASSERT( buf[idx] == idx );
-    TEST_ASSERT( mbedtls_reader_commit( in_srv.rd ) == 0 );
+    TEST_ASSERT( mbedtls_mps_reader_commit( in_srv.rd ) == 0 );
 
     TEST_ASSERT( mps_l2_read_done( &srv_l2 ) == 0 );
 
@@ -6082,14 +6082,14 @@ void mbedtls_mps_l2_random( int allocator_buffer_sz,
             printf( " READ START DONE\n" );
 
             TEST_ASSERT( in.type == chunk->type );
-            ret = mbedtls_reader_get( in.rd, data_requested, &buf,
+            ret = mbedtls_mps_reader_get( in.rd, data_requested, &buf,
                                       &data_obtained );
             TEST_ASSERT( ret == 0 );
             TEST_ASSERT( memcmp( buf, chunk->buf + chunk->read_progress,
                                  data_obtained ) == 0 );
             chunk->read_progress += data_obtained;
 
-            TEST_ASSERT( mbedtls_reader_commit( in.rd ) == 0 );
+            TEST_ASSERT( mbedtls_mps_reader_commit( in.rd ) == 0 );
             TEST_ASSERT( mps_l2_read_done( endpoint[self] ) == 0 );
 
             printf( "     PROGRESS %u / %u\n",
@@ -6580,14 +6580,14 @@ void mbedtls_mps_l3_basic_handshake(
     }
 
     /* Fetch next chunk of incoming data */
-    TEST_ASSERT( mbedtls_reader_get_ext( hs_in.rd_ext, 20, &tmp, NULL ) == 0 );
+    TEST_ASSERT( mbedtls_mps_reader_get_ext( hs_in.rd_ext, 20, &tmp, NULL ) == 0 );
 
     /* Process incoming data */
     for( size_t idx=0; idx<10; idx++ )
         TEST_ASSERT( tmp[idx] == (unsigned char) idx );
 
     /* Commit last incoming chunk and update state */
-    TEST_ASSERT( mbedtls_reader_commit_ext( hs_in.rd_ext ) == 0 );
+    TEST_ASSERT( mbedtls_mps_reader_commit_ext( hs_in.rd_ext ) == 0 );
 
     /* Signal that message has been processed. */
     TEST_ASSERT( mps_l3_read_consume( &srv_l3 ) == 0 );
@@ -7047,10 +7047,10 @@ repeat:
                 case 0:
 
                     /* Fetch next chunk of incoming data */
-                    res = mbedtls_reader_get_ext( hs_in.rd_ext, 4, &tmp, NULL );
+                    res = mbedtls_mps_reader_get_ext( hs_in.rd_ext, 4, &tmp, NULL );
                     TEST_ASSERT( res == 0 ||
-                                 res == MBEDTLS_ERR_READER_OUT_OF_DATA );
-                    if( res == MBEDTLS_ERR_READER_OUT_OF_DATA )
+                                 res == MBEDTLS_ERR_MPS_READER_OUT_OF_DATA );
+                    if( res == MBEDTLS_ERR_MPS_READER_OUT_OF_DATA )
                     {
                         pause = 1;
                         break;
@@ -7062,7 +7062,7 @@ repeat:
                                      (uint8_t)( msgs_remaining + idx ) );
 
                     /* Commit last incoming chunk and update state */
-                    TEST_ASSERT( mbedtls_reader_commit_ext(
+                    TEST_ASSERT( mbedtls_mps_reader_commit_ext(
                                      hs_in.rd_ext ) == 0 );
                     recv_state = 1;
 
@@ -7077,11 +7077,11 @@ repeat:
                 case 1:
 
                     /* Fetch next chunk of incoming data */
-                    res = mbedtls_reader_get_ext( hs_in.rd_ext, 4,
+                    res = mbedtls_mps_reader_get_ext( hs_in.rd_ext, 4,
                                                   &tmp, NULL );
                     TEST_ASSERT( res == 0 ||
-                                 res == MBEDTLS_ERR_READER_OUT_OF_DATA );
-                    if( res == MBEDTLS_ERR_READER_OUT_OF_DATA )
+                                 res == MBEDTLS_ERR_MPS_READER_OUT_OF_DATA );
+                    if( res == MBEDTLS_ERR_MPS_READER_OUT_OF_DATA )
                     {
                         pause = 1;
                         break;
@@ -7093,7 +7093,7 @@ repeat:
                                      (uint8_t) ( 4 + msgs_remaining + idx ) );
 
                     /* Commit last incoming chunk and update state */
-                    TEST_ASSERT( mbedtls_reader_commit_ext(
+                    TEST_ASSERT( mbedtls_mps_reader_commit_ext(
                                      hs_in.rd_ext ) == 0 );
                     recv_state = 2;
 
@@ -7205,14 +7205,14 @@ void mbedtls_mps_l3_basic_application( int mode,
     TEST_ASSERT( mps_l3_read_app( &srv_l3, &app_in ) == 0 );
 
     /* Fetch next chunk of incoming data */
-    TEST_ASSERT( mbedtls_reader_get( app_in.rd , 10, &tmp, NULL ) == 0 );
+    TEST_ASSERT( mbedtls_mps_reader_get( app_in.rd , 10, &tmp, NULL ) == 0 );
 
     /* Process incoming data */
     for( size_t idx=0; idx<10; idx++ )
         TEST_ASSERT( tmp[idx] == (unsigned char) idx );
 
     /* Commit last incoming chunk and update state */
-    TEST_ASSERT( mbedtls_reader_commit( app_in.rd ) == 0 );
+    TEST_ASSERT( mbedtls_mps_reader_commit( app_in.rd ) == 0 );
 
     /* Signal that message has been processed. */
     TEST_ASSERT( mps_l3_read_consume( &srv_l3 ) == 0 );
@@ -7789,11 +7789,11 @@ recv_start:
                 case 0:
 
                     /* Fetch next chunk of incoming data */
-                    res = mbedtls_reader_get_ext( hs_in.rd_ext, 3,
+                    res = mbedtls_mps_reader_get_ext( hs_in.rd_ext, 3,
                                                   &tmp, NULL );
                     TEST_ASSERT( res == 0 ||
-                                 res == MBEDTLS_ERR_READER_OUT_OF_DATA );
-                    if( res == MBEDTLS_ERR_READER_OUT_OF_DATA )
+                                 res == MBEDTLS_ERR_MPS_READER_OUT_OF_DATA );
+                    if( res == MBEDTLS_ERR_MPS_READER_OUT_OF_DATA )
                     {
                         pause = 1;
                         break;
@@ -7805,7 +7805,7 @@ recv_start:
                                      (uint8_t)( msgs_remaining + idx ) );
 
                     /* Commit last incoming chunk and update state */
-                    TEST_ASSERT( mbedtls_reader_commit_ext(
+                    TEST_ASSERT( mbedtls_mps_reader_commit_ext(
                                      hs_in.rd_ext ) == 0 );
                     recv_state = 1;
 
@@ -7820,11 +7820,11 @@ recv_start:
                 case 1:
 
                     /* Fetch next chunk of incoming data */
-                    res = mbedtls_reader_get_ext( hs_in.rd_ext, 5,
+                    res = mbedtls_mps_reader_get_ext( hs_in.rd_ext, 5,
                                                   &tmp, NULL );
                     TEST_ASSERT( res == 0 ||
-                                 res == MBEDTLS_ERR_READER_OUT_OF_DATA );
-                    if( res == MBEDTLS_ERR_READER_OUT_OF_DATA )
+                                 res == MBEDTLS_ERR_MPS_READER_OUT_OF_DATA );
+                    if( res == MBEDTLS_ERR_MPS_READER_OUT_OF_DATA )
                     {
                         pause = 1;
                         break;
@@ -7836,7 +7836,7 @@ recv_start:
                                      (uint8_t) ( 3 + msgs_remaining + idx ) );
 
                     /* Commit last incoming chunk and update state */
-                    TEST_ASSERT( mbedtls_reader_commit_ext(
+                    TEST_ASSERT( mbedtls_mps_reader_commit_ext(
                                      hs_in.rd_ext ) == 0 );
                     recv_state = 2;
 
@@ -8177,14 +8177,14 @@ void mbedtls_mps_l3_random( int allocator_buffer_sz,
                     ret = mps_l3_read_handshake( endpoint[self], &hs_in );
                     TEST_ASSERT( ret == 0 );
 
-                    ret = mbedtls_reader_get_ext( hs_in.rd_ext ,
+                    ret = mbedtls_mps_reader_get_ext( hs_in.rd_ext ,
                                                   data_requested, &buf,
                                                   &data_obtained );
                     TEST_ASSERT( ret == 0 );
                     TEST_ASSERT( memcmp( buf, chunk->data.hs.buf +
                                          chunk->data.hs.read_progress,
                                          data_obtained ) == 0 );
-                    TEST_ASSERT( mbedtls_reader_commit_ext( hs_in.rd_ext ) == 0 );
+                    TEST_ASSERT( mbedtls_mps_reader_commit_ext( hs_in.rd_ext ) == 0 );
 
                     chunk->data.hs.read_progress += data_obtained;
 
@@ -8228,14 +8228,14 @@ void mbedtls_mps_l3_random( int allocator_buffer_sz,
 
                     printf( "Requested amount of data: %u\n",
                             (unsigned) data_requested );
-                    ret = mbedtls_reader_get( app_in.rd ,
+                    ret = mbedtls_mps_reader_get( app_in.rd ,
                                               data_requested, &buf,
                                               &data_obtained );
                     TEST_ASSERT( ret == 0 );
                     TEST_ASSERT( memcmp( buf, chunk->data.app.buf +
                                          chunk->data.app.read_progress,
                                          data_obtained ) == 0 );
-                    TEST_ASSERT( mbedtls_reader_commit( app_in.rd ) == 0 );
+                    TEST_ASSERT( mbedtls_mps_reader_commit( app_in.rd ) == 0 );
 
                     chunk->data.app.read_progress += data_obtained;
                     TEST_ASSERT( mps_l3_read_consume( endpoint[self] ) == 0 );
@@ -8686,14 +8686,14 @@ void mbedtls_mps_l4_basic_handshake(
     TEST_ASSERT( hs_in.length == 20 );
 
     /* Fetch next chunk of incoming data */
-    TEST_ASSERT( mbedtls_reader_get_ext( hs_in.handle, 20, &tmp, NULL ) == 0 );
+    TEST_ASSERT( mbedtls_mps_reader_get_ext( hs_in.handle, 20, &tmp, NULL ) == 0 );
 
     /* Process incoming data */
     for( size_t idx=0; idx<10; idx++ )
         TEST_ASSERT( tmp[idx] == (unsigned char) idx );
 
     /* Commit last incoming chunk and update state */
-    TEST_ASSERT( mbedtls_reader_commit_ext( hs_in.handle ) == 0 );
+    TEST_ASSERT( mbedtls_mps_reader_commit_ext( hs_in.handle ) == 0 );
 
     /* Signal that message has been processed. */
     TEST_ASSERT( mbedtls_mps_read_consume( &srv_l4 ) == 0 );
@@ -9053,9 +9053,9 @@ void mbedtls_mps_l4_hs_inconsistent_continuation( int variant )
     TEST_ASSERT( mbedtls_mps_read_handshake( &srv_l4, &hs_in_srv ) == 0 );
     TEST_ASSERT( mbedtls_mps_read_set_flags( &srv_l4,
                                  MBEDTLS_MPS_FLIGHT_END ) == 0 );
-    TEST_ASSERT( mbedtls_reader_get_ext( hs_in_srv.handle, 10,
+    TEST_ASSERT( mbedtls_mps_reader_get_ext( hs_in_srv.handle, 10,
                                          &tmp, NULL ) == 0 );
-    TEST_ASSERT( mbedtls_reader_commit_ext( hs_in_srv.handle ) == 0 );
+    TEST_ASSERT( mbedtls_mps_reader_commit_ext( hs_in_srv.handle ) == 0 );
     TEST_ASSERT( mbedtls_mps_read_consume( &srv_l4 ) == 0 );
 
     hs_out_srv.type = 0;
@@ -9185,9 +9185,9 @@ void mbedtls_mps_l4_hs_inconsistent_continuation( int variant )
     {
         TEST_ASSERT( mbedtls_mps_read( &srv_l4 ) == MBEDTLS_MPS_MSG_HS );
         TEST_ASSERT( mbedtls_mps_read_handshake( &srv_l4, &hs_in_srv ) == 0 );
-        TEST_ASSERT( mbedtls_reader_get_ext( hs_in_srv.handle, 20,
+        TEST_ASSERT( mbedtls_mps_reader_get_ext( hs_in_srv.handle, 20,
                                              &tmp, NULL ) == 0 );
-        TEST_ASSERT( mbedtls_reader_commit_ext( hs_in_srv.handle ) == 0 );
+        TEST_ASSERT( mbedtls_mps_reader_commit_ext( hs_in_srv.handle ) == 0 );
         TEST_ASSERT( mbedtls_mps_read_consume( &srv_l4 ) == 0 );
 
         TEST_ASSERT( mbedtls_mps_set_incoming_keys( &srv_l4, srv_epoch[1] ) == 0 );
@@ -9327,14 +9327,14 @@ void mbedtls_mps_l4_disruption( int mode,
     TEST_ASSERT( hs_in.length == 20 );
 
     /* Fetch next chunk of incoming data */
-    TEST_ASSERT( mbedtls_reader_get_ext( hs_in.handle, 20, &tmp, NULL ) == 0 );
+    TEST_ASSERT( mbedtls_mps_reader_get_ext( hs_in.handle, 20, &tmp, NULL ) == 0 );
 
     /* Process incoming data */
     for( size_t idx=0; idx<10; idx++ )
         TEST_ASSERT( tmp[idx] == (unsigned char) idx );
 
     /* Commit last incoming chunk and update state */
-    TEST_ASSERT( mbedtls_reader_commit_ext( hs_in.handle ) == 0 );
+    TEST_ASSERT( mbedtls_mps_reader_commit_ext( hs_in.handle ) == 0 );
 
     /* An orderly shutdown cannot happen in the middle of a handshake. */
     TEST_ASSERT( mbedtls_mps_read_set_flags( &srv_l4,
@@ -9397,14 +9397,14 @@ void mbedtls_mps_l4_disruption( int mode,
         TEST_ASSERT( hs_in.length == 20 );
 
         /* Fetch next chunk of incoming data */
-        TEST_ASSERT( mbedtls_reader_get_ext( hs_in.handle, 20, &tmp, NULL ) == 0 );
+        TEST_ASSERT( mbedtls_mps_reader_get_ext( hs_in.handle, 20, &tmp, NULL ) == 0 );
 
         /* Process incoming data */
         for( size_t idx=0; idx<10; idx++ )
             TEST_ASSERT( tmp[idx] == (unsigned char) idx );
 
         /* Commit last incoming chunk and update state */
-        TEST_ASSERT( mbedtls_reader_commit_ext( hs_in.handle ) == 0 );
+        TEST_ASSERT( mbedtls_mps_reader_commit_ext( hs_in.handle ) == 0 );
 
         /* An orderly shutdown cannot happen in the middle of a handshake. */
         TEST_ASSERT( mbedtls_mps_read_set_flags( &cli_l4,
@@ -9544,14 +9544,14 @@ void mbedtls_mps_l4_dtls_fragmentation( int allocator_buffer_sz,
             TEST_ASSERT( hs_in.len         == ( hs_len + iteration) );
             TEST_ASSERT( hs_in.seq_nr      == iteration             );
 
-            TEST_ASSERT( mbedtls_reader_get_ext( hs_in.rd_ext ,
+            TEST_ASSERT( mbedtls_mps_reader_get_ext( hs_in.rd_ext ,
                                                  hs_in.frag_len,
                                                  &tmp, NULL ) == 0 );
             for( size_t idx=0; idx<(unsigned) hs_in.frag_len; idx++ )
                 TEST_ASSERT( tmp[idx] == (unsigned char)( hs_offset + idx ) );
 
             /* Commit last incoming chunk and update state */
-            TEST_ASSERT( mbedtls_reader_commit_ext( hs_in.rd_ext ) == 0 );
+            TEST_ASSERT( mbedtls_mps_reader_commit_ext( hs_in.rd_ext ) == 0 );
 
             /* Signal that message fragment has been processed. */
             TEST_ASSERT( mps_l3_read_consume( &srv_l3 ) == 0 );
@@ -9760,11 +9760,11 @@ void mbedtls_mps_l4_dtls_reassembly( int allocator_buffer_sz,
         TEST_ASSERT( hs_in.length == hs_len    );
         TEST_ASSERT( hs_in.type   == iteration );
 
-        TEST_ASSERT( mbedtls_reader_get_ext( hs_in.handle, hs_in.length,
+        TEST_ASSERT( mbedtls_mps_reader_get_ext( hs_in.handle, hs_in.length,
                                              &tmp, NULL ) == 0 );
         for( size_t idx=0; idx<(unsigned) ( hs_len ); idx++ )
             TEST_ASSERT( tmp[idx] == (unsigned char) idx );
-        TEST_ASSERT( mbedtls_reader_commit_ext( hs_in.handle ) == 0 );
+        TEST_ASSERT( mbedtls_mps_reader_commit_ext( hs_in.handle ) == 0 );
         TEST_ASSERT( mbedtls_mps_read_consume( &srv_l4 ) == 0 );
 
     }
@@ -10327,9 +10327,9 @@ void mbedtls_mps_l4_flight_exchange( int mode,
             TEST_ASSERT( hs_in.length == hs_len + iteration );
             TEST_ASSERT( hs_in.type   == iteration );
 
-            ret = mbedtls_reader_get_ext( hs_in.handle, hs_in.length,
+            ret = mbedtls_mps_reader_get_ext( hs_in.handle, hs_in.length,
                                           &tmp, NULL );
-            if( ret == MBEDTLS_ERR_READER_OUT_OF_DATA )
+            if( ret == MBEDTLS_ERR_MPS_READER_OUT_OF_DATA )
             {
                 TEST_ASSERT( mbedtls_mps_read_pause( receiver ) == 0 );
                 continue;
@@ -10338,7 +10338,7 @@ void mbedtls_mps_l4_flight_exchange( int mode,
 
             for( size_t idx=0; idx<(unsigned) ( hs_len + iteration ); idx++ )
                 TEST_ASSERT( tmp[idx] == (unsigned char) idx );
-            TEST_ASSERT( mbedtls_reader_commit_ext( hs_in.handle ) == 0 );
+            TEST_ASSERT( mbedtls_mps_reader_commit_ext( hs_in.handle ) == 0 );
 
             if( iteration == (unsigned) ( num_hs - 1 ) )
             {

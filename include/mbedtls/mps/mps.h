@@ -856,7 +856,7 @@ struct mbedtls_mps
         union
         {
             mbedtls_mps_alert_t alert;
-            mbedtls_reader*     app;
+            mbedtls_mps_reader*     app;
             mps_l3_handshake_in hs;
         } data;
 
@@ -1053,8 +1053,8 @@ struct mbedtls_mps
                      *
                      *  TODO: Document in which states this is valid.
                      */
-                    mbedtls_reader         rd;
-                    mbedtls_reader_ext rd_ext;
+                    mbedtls_mps_reader         rd;
+                    mbedtls_mps_reader_ext rd_ext;
 
                     /*! The array of structures representing future and/or
                      *  partially received handshake messages. */
@@ -1099,7 +1099,7 @@ struct mbedtls_mps
                             /*! The extended reader owned by Layer 3 giving rise to the
                              *  contents of the handshake message. This is valid if and
                              *  only if \c status is #MPS_REASSEMBLY_NO_FRAGMENTATION */
-                            mbedtls_reader_ext *rd_ext_l3;
+                            mbedtls_mps_reader_ext *rd_ext_l3;
 
                             /*! The reassembly buffer holding the partially received
                              *  handshake message. This is valid if and only if
@@ -1300,7 +1300,7 @@ typedef struct
 {
     uint8_t   type;             /*!< Type of handshake message           */
     size_t  length;             /*!< Length of entire handshake message  */
-    mbedtls_reader_ext *handle; /*!< Reader to retrieve message contents */
+    mbedtls_mps_reader_ext *handle; /*!< Reader to retrieve message contents */
 
     uint8_t add[8];             /*!< Opaque, additional data to be used for
                                  *   checksum calculations. */
@@ -1377,7 +1377,7 @@ int mbedtls_mps_read_handshake( mbedtls_mps *mps,
  *              will silently fail.
  */
 int mbedtls_mps_read_application( mbedtls_mps *mps,
-                                  mbedtls_reader **rd );
+                                  mbedtls_mps_reader **rd );
 
 /**
  * \brief       Get the type of a pending alert message.
@@ -1415,7 +1415,7 @@ int mbedtls_mps_read_set_flags( mbedtls_mps *mps, mbedtls_mps_msg_flags flags );
  * \brief          Pause the reading of an incoming handshake message.
  *
  *                 When a handshake message has been received, the user of the
- *                 MPS can query its contents through mbedtls_reader_get_ext(),
+ *                 MPS can query its contents through mbedtls_mps_reader_get_ext(),
  *                 using the reader returned from mbedtls_mps_read_handshake().
  *                 If the handshake message is only partially available - for
  *                 example, because it was fragments on the TLS record layer -

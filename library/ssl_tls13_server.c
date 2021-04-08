@@ -1843,7 +1843,7 @@ int ssl_read_early_data_process( mbedtls_ssl_context* ssl );
 
 #if defined(MBEDTLS_SSL_USE_MPS)
 static int ssl_early_data_fetch( mbedtls_ssl_context* ssl,
-                                 mbedtls_reader **reader );
+                                 mbedtls_mps_reader **reader );
 #else
 static int ssl_early_data_fetch( mbedtls_ssl_context* ssl,
                                  unsigned char** buf,
@@ -1879,17 +1879,17 @@ int ssl_read_early_data_process( mbedtls_ssl_context* ssl )
         unsigned char *buf;
         size_t buflen;
 #if defined(MBEDTLS_SSL_USE_MPS)
-        mbedtls_reader *rd;
+        mbedtls_mps_reader *rd;
 #endif /* MBEDTLS_SSL_USE_MPS */
 
 #if defined(MBEDTLS_SSL_USE_MPS)
         MBEDTLS_SSL_PROC_CHK( ssl_early_data_fetch( ssl, &rd ) );
-        MBEDTLS_SSL_PROC_CHK( mbedtls_reader_get( rd,
+        MBEDTLS_SSL_PROC_CHK( mbedtls_mps_reader_get( rd,
                                                   MBEDTLS_MPS_SIZE_MAX,
                                                   &buf,
                                                   &buflen ) );
         MBEDTLS_SSL_PROC_CHK( ssl_read_early_data_parse( ssl, buf, buflen ) );
-        MBEDTLS_SSL_PROC_CHK( mbedtls_reader_commit( rd ) );
+        MBEDTLS_SSL_PROC_CHK( mbedtls_mps_reader_commit( rd ) );
         MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read_consume( &ssl->mps.l4 ) );
 
 #else /* MBEDTLS_SSL_USE_MPS */
@@ -1922,7 +1922,7 @@ cleanup:
 
 #if defined(MBEDTLS_SSL_USE_MPS)
 static int ssl_early_data_fetch( mbedtls_ssl_context *ssl,
-                                 mbedtls_reader **rd )
+                                 mbedtls_mps_reader **rd )
 {
     int ret;
     MBEDTLS_SSL_PROC_CHK_NEG( mbedtls_mps_read( &ssl->mps.l4 ) );

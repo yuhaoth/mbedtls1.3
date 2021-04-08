@@ -27,8 +27,8 @@
 #define MBEDTLS_MPS_ERR_BASE    ( 1 << 10 )
 #endif
 
-#ifndef MBEDTLS_READER_ERR_BASE
-#define MBEDTLS_READER_ERR_BASE ( 1 << 11 )
+#ifndef MBEDTLS_MPS_READER_ERR_BASE
+#define MBEDTLS_MPS_READER_ERR_BASE ( 1 << 11 )
 #endif
 
 #ifndef MBEDTLS_WRITER_ERR_BASE
@@ -38,8 +38,8 @@
 #define MBEDTLS_MPS_MAKE_ERROR(code) \
     ( -( MBEDTLS_MPS_ERR_BASE | (code) ) )
 
-#define MBEDTLS_READER_MAKE_ERROR(code) \
-    ( -( MBEDTLS_READER_ERR_BASE | (code) ) )
+#define MBEDTLS_MPS_READER_MAKE_ERROR(code) \
+    ( -( MBEDTLS_MPS_READER_ERR_BASE | (code) ) )
 
 #define MBEDTLS_WRITER_MAKE_ERROR(code) \
     ( -( MBEDTLS_WRITER_ERR_BASE | (code) ) )
@@ -235,7 +235,7 @@ typedef uint8_t mbedtls_mps_epoch_offset_t;
     {                                                            \
         if( !(cond) )                                            \
         {                                                        \
-            TRACE( trace_error, string );                        \
+            MBEDTLS_MPS_TRACE( trace_error, string );                        \
             MPS_CHK( MBEDTLS_ERR_MPS_OPERATION_UNEXPECTED );     \
         }                                                        \
     } while( 0 )
@@ -245,8 +245,8 @@ typedef uint8_t mbedtls_mps_epoch_offset_t;
     {                                                            \
         if( !(cond) )                                            \
         {                                                        \
-            TRACE( trace_error, string );                        \
-            RETURN( MBEDTLS_ERR_MPS_OPERATION_UNEXPECTED );      \
+            MBEDTLS_MPS_TRACE( trace_error, string );                        \
+            MBEDTLS_MPS_TRACE_RETURN( MBEDTLS_ERR_MPS_OPERATION_UNEXPECTED );      \
         }                                                        \
     } while( 0 )
 
@@ -273,7 +273,7 @@ typedef uint8_t mbedtls_mps_epoch_offset_t;
     {                                                            \
         if( !(cond) )                                            \
         {                                                        \
-            TRACE( trace_error, string );                        \
+            MBEDTLS_MPS_TRACE( trace_error, string );                        \
             MPS_CHK( MBEDTLS_ERR_MPS_INTERNAL_ERROR );           \
         }                                                        \
     } while( 0 )
@@ -283,8 +283,8 @@ typedef uint8_t mbedtls_mps_epoch_offset_t;
     {                                                            \
         if( !(cond) )                                            \
         {                                                        \
-            TRACE( trace_error, string );                        \
-            RETURN( MBEDTLS_ERR_MPS_INTERNAL_ERROR );            \
+            MBEDTLS_MPS_TRACE( trace_error, string );                        \
+            MBEDTLS_MPS_TRACE_RETURN( MBEDTLS_ERR_MPS_INTERNAL_ERROR );            \
         }                                                        \
     } while( 0 )
 

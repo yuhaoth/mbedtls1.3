@@ -249,7 +249,7 @@ MBEDTLS_MPS_STATIC int l2_type_ignore( mbedtls_mps_l2 *ctx,
 /* Print human-readable description of epoch usage flags. */
 MBEDTLS_MPS_STATIC void l2_print_usage( unsigned usage );
 
-#if defined(MBEDTLS_MPS_TRACE)
+#if defined(MBEDTLS_MPS_ENABLE_TRACE)
 static inline const char * l2_epoch_usage_to_string(
     mbedtls_mps_epoch_usage usage )
 {
@@ -265,7 +265,7 @@ static inline const char * l2_epoch_usage_to_string(
 
     return( "NONE" );
 }
-#endif /* MBEDTLS_MPS_TRACE */
+#endif /* MBEDTLS_MPS_ENABLE_TRACE */
 
 /* Internal macro used to indicate internal usage of an epoch,
  * e.g. because data it still pending to be dispatched.
