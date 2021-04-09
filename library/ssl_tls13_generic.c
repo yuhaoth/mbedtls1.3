@@ -1544,22 +1544,6 @@ exit:
     return( ret );
 }
 
-int mbedtls_increment_sequence_number( unsigned char *sequenceNumber, unsigned char *nonce, size_t ivlen ) {
-
-    if( ivlen == 0 ) return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
-
-    for ( size_t i = ivlen - 1; i > ivlen - 8; i-- ) {
-        sequenceNumber[i]++;
-        nonce[i] ^= ( sequenceNumber[i] - 1 ) ^ sequenceNumber[i];
-        if( sequenceNumber[i] != 0 )
-        {
-            return ( 0 );
-        }
-    }
-
-    return( MBEDTLS_ERR_SSL_COUNTER_WRAPPING );
-}
-
     /*
      * The mbedtls_ssl_create_verify_structure() creates the verify structure.
      * As input, it requires the transcript hash.
