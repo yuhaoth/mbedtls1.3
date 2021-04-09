@@ -235,7 +235,7 @@ typedef uint8_t mbedtls_mps_epoch_offset_t;
     {                                                            \
         if( !(cond) )                                            \
         {                                                        \
-            MBEDTLS_MPS_TRACE( trace_error, string );                        \
+            MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_ERROR, string );                        \
             MPS_CHK( MBEDTLS_ERR_MPS_OPERATION_UNEXPECTED );     \
         }                                                        \
     } while( 0 )
@@ -245,7 +245,7 @@ typedef uint8_t mbedtls_mps_epoch_offset_t;
     {                                                            \
         if( !(cond) )                                            \
         {                                                        \
-            MBEDTLS_MPS_TRACE( trace_error, string );                        \
+            MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_ERROR, string );                        \
             MBEDTLS_MPS_TRACE_RETURN( MBEDTLS_ERR_MPS_OPERATION_UNEXPECTED );      \
         }                                                        \
     } while( 0 )
@@ -273,7 +273,7 @@ typedef uint8_t mbedtls_mps_epoch_offset_t;
     {                                                            \
         if( !(cond) )                                            \
         {                                                        \
-            MBEDTLS_MPS_TRACE( trace_error, string );                        \
+            MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_ERROR, string );                        \
             MPS_CHK( MBEDTLS_ERR_MPS_INTERNAL_ERROR );           \
         }                                                        \
     } while( 0 )
@@ -283,7 +283,7 @@ typedef uint8_t mbedtls_mps_epoch_offset_t;
     {                                                            \
         if( !(cond) )                                            \
         {                                                        \
-            MBEDTLS_MPS_TRACE( trace_error, string );                        \
+            MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_ERROR, string );                        \
             MBEDTLS_MPS_TRACE_RETURN( MBEDTLS_ERR_MPS_INTERNAL_ERROR );            \
         }                                                        \
     } while( 0 )

@@ -268,11 +268,11 @@ int l1_fetch_stream( mps_l1_stream_read *p,
     read_ptr += br;
     while( data_need > 0 )
     {
-        MBEDTLS_MPS_TRACE( trace_comment, "attempt to receive %u", (unsigned) data_need );
+        MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_COMMENT, "attempt to receive %u", (unsigned) data_need );
         ret = recv( recv_ctx, read_ptr, data_need );
         if( ret < 0 )
             break;
-        MBEDTLS_MPS_TRACE( trace_comment, "got %u", (unsigned) ret );
+        MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_COMMENT, "got %u", (unsigned) ret );
 
         /* TODO: FIX! */
 #if( MAX_INT > SIZE_MAX )
@@ -395,7 +395,7 @@ int l1_flush_stream( mps_l1_stream_write *p )
         ret = send( send_ctx, buf, data_remaining );
         if( ret <= 0 )
         {
-            MBEDTLS_MPS_TRACE( trace_comment, "send failed with %d", ret );
+            MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_COMMENT, "send failed with %d", ret );
             /* The underlying transport's send callback should return
              * WANT_WRITE instead of 0 if no data can currently be sent.
              * Fail with a fatal internal error if this spec is not obeyed. */
@@ -542,12 +542,12 @@ int l1_check_flush_stream( mps_l1_stream_write *p )
      */
     if( br > 0 && br >= 4 * bl / 5 )
     {
-        MBEDTLS_MPS_TRACE( trace_comment, "L1 check flush -- flush" );
+        MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_COMMENT, "L1 check flush -- flush" );
         p->status = MPS_L1_STREAM_STATUS_FLUSH;
         MBEDTLS_MPS_TRACE_RETURN( 0 );
     }
 
-    MBEDTLS_MPS_TRACE( trace_comment, "L1 check flush -- no flush" );
+    MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_COMMENT, "L1 check flush -- no flush" );
     MBEDTLS_MPS_TRACE_RETURN( 0 );
 }
 
@@ -572,7 +572,7 @@ int l1_dispatch_stream( mps_l1_stream_write *p,
     data_remaining = br - bl;
     if( len > data_remaining )
     {
-        MBEDTLS_MPS_TRACE( trace_comment, "out of bounds %u > %u",
+        MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_COMMENT, "out of bounds %u > %u",
                (unsigned) len, (unsigned) data_remaining );
         MBEDTLS_MPS_TRACE_RETURN( MBEDTLS_ERR_MPS_REQUEST_OUT_OF_BOUNDS );
     }
@@ -761,7 +761,7 @@ int l1_ensure_in_dgram( mps_l1_dgram_read *p )
     ml = p->msg_len;
     if( ml == 0 )
     {
-        MBEDTLS_MPS_TRACE( trace_comment, "Request datagram from underlying transport." );
+        MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_COMMENT, "Request datagram from underlying transport." );
         /* Q: Will the underlying transport error out
          *    if the receive buffer is not large enough
          *    to hold the entire datagram? */
@@ -784,7 +784,7 @@ int l1_ensure_in_dgram( mps_l1_dgram_read *p )
         if( ml > bl )
             MBEDTLS_MPS_TRACE_RETURN( MBEDTLS_ERR_MPS_BAD_TRANSPORT );
 
-        MBEDTLS_MPS_TRACE( trace_comment, "Obtained datagram of size %u", (unsigned) ml );
+        MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_COMMENT, "Obtained datagram of size %u", (unsigned) ml );
         p->msg_len = ml;
     }
 
@@ -809,9 +809,9 @@ int l1_fetch_dgram( mps_l1_dgram_read *p,
     if( ret != 0 )
         MBEDTLS_MPS_TRACE_RETURN( ret );
 
-    MBEDTLS_MPS_TRACE( trace_comment, "* Datagram length: %u", (unsigned) p->msg_len     );
-    MBEDTLS_MPS_TRACE( trace_comment, "* Window base:     %u", (unsigned) p->window_base );
-    MBEDTLS_MPS_TRACE( trace_comment, "* Window length:   %u", (unsigned) p->window_len  );
+    MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_COMMENT, "* Datagram length: %u", (unsigned) p->msg_len     );
+    MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_COMMENT, "* Window base:     %u", (unsigned) p->window_base );
+    MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_COMMENT, "* Window length:   %u", (unsigned) p->window_len  );
 
     wb = p->window_base;
     wl = p->window_len;
@@ -830,7 +830,7 @@ int l1_fetch_dgram( mps_l1_dgram_read *p,
     data_avail = ml - ( wb + wl );
     if( data_need > data_avail )
     {
-        MBEDTLS_MPS_TRACE( trace_error, "Read request goes beyond the datagram boundary - requested %u, available %u",
+        MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_ERROR, "Read request goes beyond the datagram boundary - requested %u, available %u",
                (unsigned) data_need, (unsigned) data_avail );
         MBEDTLS_MPS_TRACE_RETURN( MBEDTLS_ERR_MPS_REQUEST_OUT_OF_BOUNDS );
     }
@@ -860,7 +860,7 @@ int l1_consume_dgram( mps_l1_dgram_read *p )
 
     if( wb + wl == ml )
     {
-        MBEDTLS_MPS_TRACE( trace_comment, "Reached the end of the datagram." );
+        MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_COMMENT, "Reached the end of the datagram." );
 
         /*
          * Releasing the buffer as soon as a datagram
@@ -886,7 +886,7 @@ int l1_consume_dgram( mps_l1_dgram_read *p )
     }
     else
     {
-        MBEDTLS_MPS_TRACE( trace_comment, "More data left in the current datagram." );
+        MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_COMMENT, "More data left in the current datagram." );
         p->window_base = wb + wl;
         p->window_len  = 0;
     }
@@ -930,11 +930,11 @@ int l1_write_dgram( mps_l1_dgram_write *p,
     flush = p->flush;
     if( flush )
     {
-        MBEDTLS_MPS_TRACE( trace_comment, "Need to flush first" );
+        MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_COMMENT, "Need to flush first" );
         ret = l1_flush_dgram( p );
         if( ret != 0 )
         {
-            MBEDTLS_MPS_TRACE( trace_error, "Flush failed with %d", ret );
+            MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_ERROR, "Flush failed with %d", ret );
             MBEDTLS_MPS_TRACE_RETURN( ret );
         }
     }
@@ -992,12 +992,12 @@ int l1_check_flush_dgram( mps_l1_dgram_write *p )
      * data is available. */
     if( br > 0 && br >= 4 * bl / 5 )
     {
-        MBEDTLS_MPS_TRACE( trace_comment, "L1 check flush -- flush" );
+        MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_COMMENT, "L1 check flush -- flush" );
         p->flush = 1;
         MBEDTLS_MPS_TRACE_RETURN( 0 );
     }
 
-    MBEDTLS_MPS_TRACE( trace_comment, "L1 check flush -- no flush" );
+    MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_COMMENT, "L1 check flush -- no flush" );
     MBEDTLS_MPS_TRACE_RETURN( 0 );
 }
 
@@ -1015,11 +1015,11 @@ int l1_flush_dgram( mps_l1_dgram_write *p )
     buf = p->buf;
     if( buf == NULL )
     {
-        MBEDTLS_MPS_TRACE( trace_error, "No outgoing datagram open." );
+        MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_ERROR, "No outgoing datagram open." );
         MBEDTLS_MPS_TRACE_RETURN( 0 );
     }
 
-    MBEDTLS_MPS_TRACE( trace_comment, "Datagram size: %u", (unsigned) p->bytes_ready );
+    MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_COMMENT, "Datagram size: %u", (unsigned) p->bytes_ready );
 
     br = p->bytes_ready;
 
@@ -1028,7 +1028,7 @@ int l1_flush_dgram( mps_l1_dgram_write *p )
     ret = send( send_ctx, buf, br );
     if( ret <= 0 )
     {
-        MBEDTLS_MPS_TRACE( trace_comment, "send failed with %d", ret );
+        MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_COMMENT, "send failed with %d", ret );
         /* The underlying transport's send callback should return
          * WANT_WRITE instead of 0 if no data can currently be sent.
          * Fail with a fatal internal error if this spec is not obeyed. */

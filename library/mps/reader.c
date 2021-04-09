@@ -600,13 +600,13 @@ int mbedtls_mps_reader_get_ext( mbedtls_mps_reader_ext *rd_ext,
     MBEDTLS_MPS_STATE_VALIDATE_RAW( rd_ext->rd != NULL,
                 "mbedtls_mps_reader_get_ext() without underlying reader" );
 
-    MBEDTLS_MPS_TRACE( trace_comment, "* Fetch offset: %u", (unsigned) rd_ext->ofs_fetch );
-    MBEDTLS_MPS_TRACE( trace_comment, "* Group end:    %u",
+    MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_COMMENT, "* Fetch offset: %u", (unsigned) rd_ext->ofs_fetch );
+    MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_COMMENT, "* Group end:    %u",
            (unsigned) rd_ext->grp_end[rd_ext->cur_grp] );
     logic_avail = rd_ext->grp_end[rd_ext->cur_grp] - rd_ext->ofs_fetch;
     if( desired > logic_avail )
     {
-        MBEDTLS_MPS_TRACE( trace_comment, "Requesting more data (%u) than logically available (%u)",
+        MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_COMMENT, "Requesting more data (%u) than logically available (%u)",
                (unsigned) desired, (unsigned) logic_avail );
         MBEDTLS_MPS_TRACE_RETURN( MBEDTLS_ERR_MPS_READER_BOUNDS_VIOLATION );
     }

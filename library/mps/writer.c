@@ -75,7 +75,7 @@ int mbedtls_writer_feed( mbedtls_writer *wr,
         mbedtls_mps_size_t qa, qr;
         qr = wr->queue_remaining;
         qa = wr->queue_next;
-        MBEDTLS_MPS_TRACE( trace_comment, "Queue data pending to be dispatched: %u",
+        MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_COMMENT, "Queue data pending to be dispatched: %u",
                (unsigned) wr->queue_remaining );
 
         /* Copy as much data from the queue to
@@ -94,7 +94,7 @@ int mbedtls_writer_feed( mbedtls_writer *wr,
         if( qr > 0 )
         {
             /* More data waiting in the queue */
-            MBEDTLS_MPS_TRACE( trace_comment, "There are %u bytes remaining in the queue.",
+            MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_COMMENT, "There are %u bytes remaining in the queue.",
                    (unsigned) qr );
 
             qa += copy_from_queue;
@@ -104,7 +104,7 @@ int mbedtls_writer_feed( mbedtls_writer *wr,
         }
 
         /* The queue is empty. */
-        MBEDTLS_MPS_TRACE( trace_comment, "Queue is empty" );
+        MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_COMMENT, "Queue is empty" );
         wr->queue_next = 0;
         wr->queue_remaining = 0;
 
@@ -130,7 +130,7 @@ int mbedtls_writer_reclaim( mbedtls_writer *wr,
 {
     mbedtls_mps_size_t commit, ol;
     MBEDTLS_MPS_TRACE_INIT( "writer_reclaim" );
-    MBEDTLS_MPS_TRACE( trace_comment," * Force reclaim: %u", (unsigned) force );
+    MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_COMMENT," * Force reclaim: %u", (unsigned) force );
 
     /* Check that the writer is in consuming mode. */
     MBEDTLS_MPS_STATE_VALIDATE_RAW(
@@ -141,8 +141,8 @@ int mbedtls_writer_reclaim( mbedtls_writer *wr,
     commit = wr->committed;
     ol = wr->out_len;
 
-    MBEDTLS_MPS_TRACE( trace_comment, "* Committed: %u Bytes", (unsigned) commit );
-    MBEDTLS_MPS_TRACE( trace_comment, "* Buffer length: %u Bytes", (unsigned) ol );
+    MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_COMMENT, "* Committed: %u Bytes", (unsigned) commit );
+    MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_COMMENT, "* Buffer length: %u Bytes", (unsigned) ol );
 
     if( commit <= ol )
     {
@@ -176,7 +176,7 @@ int mbedtls_writer_reclaim( mbedtls_writer *wr,
     if( queued != NULL )
     {
         mbedtls_mps_size_t qr = wr->queue_remaining;
-        MBEDTLS_MPS_TRACE( trace_comment, "%u Bytes are queued for dispatching.",
+        MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_COMMENT, "%u Bytes are queued for dispatching.",
                 (unsigned) wr->queue_remaining );
         *queued = qr;
     }
@@ -224,7 +224,7 @@ int mbedtls_writer_get( mbedtls_writer *wr,
     /* Check if we're already serving from the queue */
     if( end > ol )
     {
-        MBEDTLS_MPS_TRACE( trace_comment, "already serving from the queue, attempt to continue" );
+        MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_COMMENT, "already serving from the queue, attempt to continue" );
 
         ql = wr->queue_len;
         /* If we're serving from the queue, queue_next denotes
@@ -238,13 +238,13 @@ int mbedtls_writer_get( mbedtls_writer *wr,
         {
             if( buflen == NULL )
             {
-                MBEDTLS_MPS_TRACE( trace_comment, "not enough space remaining in queue" );
+                MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_COMMENT, "not enough space remaining in queue" );
                 MBEDTLS_MPS_TRACE_RETURN( MBEDTLS_ERR_WRITER_OUT_OF_DATA );
             }
             desired = ql - qo;
         }
 
-        MBEDTLS_MPS_TRACE( trace_comment, "serving %u bytes from queue", (unsigned) desired );
+        MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_COMMENT, "serving %u bytes from queue", (unsigned) desired );
 
         queue = wr->queue;
         end += desired;
@@ -260,11 +260,11 @@ int mbedtls_writer_get( mbedtls_writer *wr,
     /* We're still serving from the output buffer.
      * Check if there's enough space left in it. */
     or = ol - end;
-    MBEDTLS_MPS_TRACE( trace_comment, "%u bytes remaining in output buffer",
+    MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_COMMENT, "%u bytes remaining in output buffer",
            (unsigned) or );
     if( or < desired )
     {
-        MBEDTLS_MPS_TRACE( trace_comment, "need %u, but only %u remains in write buffer",
+        MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_COMMENT, "need %u, but only %u remains in write buffer",
                (unsigned) desired, (unsigned) or );
 
         queue  = wr->queue;
@@ -282,7 +282,7 @@ int mbedtls_writer_get( mbedtls_writer *wr,
             overflow = ( end + desired < end );
             if( overflow || desired > ql )
             {
-                MBEDTLS_MPS_TRACE( trace_comment, "queue present but too small, need %u but only got %u",
+                MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_COMMENT, "queue present but too small, need %u but only got %u",
                        (unsigned) desired, (unsigned) ql );
                 MBEDTLS_MPS_TRACE_RETURN( MBEDTLS_ERR_WRITER_OUT_OF_DATA );
             }
@@ -297,7 +297,7 @@ int mbedtls_writer_get( mbedtls_writer *wr,
 
             /* Remember the overlap between queue and output buffer. */
             wr->queue_next = or;
-            MBEDTLS_MPS_TRACE( trace_comment, "served from queue, qo %u",
+            MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_COMMENT, "served from queue, qo %u",
                    (unsigned) wr->queue_next );
 
             MBEDTLS_MPS_TRACE_RETURN( 0 );
@@ -307,7 +307,7 @@ int mbedtls_writer_get( mbedtls_writer *wr,
          * in the output buffer, provided the user allows it. */
         if( buflen == NULL )
         {
-            MBEDTLS_MPS_TRACE( trace_comment, "no queue present" );
+            MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_COMMENT, "no queue present" );
             MBEDTLS_MPS_TRACE_RETURN( MBEDTLS_ERR_WRITER_OUT_OF_DATA );
         }
 
@@ -338,7 +338,7 @@ int mbedtls_writer_commit_partial( mbedtls_writer *wr,
     mbedtls_mps_size_t out_len, copy_from_queue;
     unsigned char *out, *queue;
     MBEDTLS_MPS_TRACE_INIT( "writer_commit_partial" );
-    MBEDTLS_MPS_TRACE( trace_comment, "* Omit %u bytes", (unsigned) omit );
+    MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_COMMENT, "* Omit %u bytes", (unsigned) omit );
 
     MBEDTLS_MPS_STATE_VALIDATE_RAW(
         wr->state == MBEDTLS_WRITER_CONSUMING,
@@ -426,11 +426,11 @@ int mbedtls_writer_get_ext( mbedtls_writer_ext *wr_ext,
         "Extended writer is blocked." );
 
     logic_avail = wr_ext->grp_end[wr_ext->cur_grp] - wr_ext->ofs_fetch;
-    MBEDTLS_MPS_TRACE( trace_comment, "desired %u, logic_avail %u",
+    MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_COMMENT, "desired %u, logic_avail %u",
            (unsigned) desired, (unsigned) logic_avail );
     if( desired > logic_avail )
     {
-        MBEDTLS_MPS_TRACE( trace_comment, "bounds violation!" );
+        MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_COMMENT, "bounds violation!" );
         MBEDTLS_MPS_TRACE_RETURN( MBEDTLS_ERR_WRITER_BOUNDS_VIOLATION );
     }
 
@@ -441,7 +441,7 @@ int mbedtls_writer_get_ext( mbedtls_writer_ext *wr_ext,
     if( buflen != NULL )
         desired = *buflen;
 
-    MBEDTLS_MPS_TRACE( trace_comment, "increase fetch offset from %u to %u",
+    MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_COMMENT, "increase fetch offset from %u to %u",
            (unsigned) wr_ext->ofs_fetch,
            (unsigned) ( wr_ext->ofs_fetch + desired )  );
 
@@ -472,7 +472,7 @@ int mbedtls_writer_commit_partial_ext( mbedtls_writer_ext *wr,
 
     if( omit > ofs_fetch - ofs_commit )
     {
-        MBEDTLS_MPS_TRACE( trace_error, "Try to omit %u bytes from commit, but only %u are uncommitted.",
+        MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_ERROR, "Try to omit %u bytes from commit, but only %u are uncommitted.",
                (unsigned) omit, (unsigned)( ofs_fetch - ofs_commit ) );
         MBEDTLS_MPS_TRACE_RETURN( MBEDTLS_ERR_WRITER_BOUNDS_VIOLATION );
     }
@@ -481,7 +481,7 @@ int mbedtls_writer_commit_partial_ext( mbedtls_writer_ext *wr,
 
     if( wr->passthrough == MBEDTLS_WRITER_EXT_PASS )
     {
-        MBEDTLS_MPS_TRACE( trace_comment, "Forward commit to underlying writer" );
+        MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_COMMENT, "Forward commit to underlying writer" );
         ret = mbedtls_writer_commit_partial( wr->wr, omit );
         if( ret != 0 )
             MBEDTLS_MPS_TRACE_RETURN( ret );
@@ -563,13 +563,13 @@ int mbedtls_writer_detach( mbedtls_writer_ext *wr_ext,
     if( uncommitted != NULL )
     {
         *uncommitted = wr_ext->ofs_fetch - wr_ext->ofs_commit;
-        MBEDTLS_MPS_TRACE( trace_comment, "Uncommitted: %u",
+        MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_COMMENT, "Uncommitted: %u",
                (unsigned) *uncommitted );
     }
     if( committed != NULL )
     {
         *committed = wr_ext->ofs_commit;
-        MBEDTLS_MPS_TRACE( trace_comment, "Committed: %u",
+        MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_COMMENT, "Committed: %u",
                (unsigned) *committed );
     }
 
@@ -582,12 +582,12 @@ int mbedtls_writer_detach( mbedtls_writer_ext *wr_ext,
 int mbedtls_writer_check_done( mbedtls_writer_ext *wr_ext )
 {
     MBEDTLS_MPS_TRACE_INIT( "writer_check_done" );
-    MBEDTLS_MPS_TRACE( trace_comment, "* Commit: %u", (unsigned) wr_ext->ofs_commit );
-    MBEDTLS_MPS_TRACE( trace_comment, "* Group end: %u", (unsigned) wr_ext->grp_end[0] );
+    MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_COMMENT, "* Commit: %u", (unsigned) wr_ext->ofs_commit );
+    MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_COMMENT, "* Group end: %u", (unsigned) wr_ext->grp_end[0] );
 
     if( wr_ext->cur_grp > 0 )
     {
-        MBEDTLS_MPS_TRACE( trace_comment, "cur_grp > 0" );
+        MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_COMMENT, "cur_grp > 0" );
         MBEDTLS_MPS_TRACE_RETURN( MBEDTLS_ERR_WRITER_BOUNDS_VIOLATION );
     }
 
