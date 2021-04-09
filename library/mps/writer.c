@@ -418,8 +418,7 @@ void mbedtls_writer_init_ext( mbedtls_writer_ext *wr_ext,
         { .wr = NULL,
           .grp_end = { 0 },
           .cur_grp = 0,
-          .ofs_fetch = 0,
-          .passthrough = MBEDTLS_WRITER_EXT_PASS };
+          .ofs_fetch = 0 };
 
     *wr_ext = writer_ext_zero;
     wr_ext->grp_end[0] = size;
@@ -440,9 +439,6 @@ int mbedtls_writer_get_ext( mbedtls_writer_ext *wr_ext,
     MBEDTLS_MPS_TRACE_INIT( "writer_get_ext: desired %u", (unsigned) desired );
 
     MBEDTLS_MPS_STATE_VALIDATE_RAW( wr_ext->wr != NULL, "No writer attached" );
-    MBEDTLS_MPS_STATE_VALIDATE_RAW(
-        wr_ext->passthrough != MBEDTLS_WRITER_EXT_BLOCK,
-        "Extended writer is blocked." );
 
     logic_avail = wr_ext->grp_end[wr_ext->cur_grp] - wr_ext->ofs_fetch;
     MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_COMMENT, "desired %u, logic_avail %u",
@@ -482,9 +478,6 @@ int mbedtls_writer_commit_partial_ext( mbedtls_writer_ext *wr,
                 (unsigned) omit );
 
     MBEDTLS_MPS_STATE_VALIDATE_RAW( wr->wr != NULL, "No writer attached" );
-    MBEDTLS_MPS_STATE_VALIDATE_RAW(
-        wr->passthrough != MBEDTLS_WRITER_EXT_BLOCK,
-        "Extended writer is blocked." );
 
     ofs_fetch  = wr->ofs_fetch;
     ofs_commit = wr->ofs_commit;
@@ -498,22 +491,12 @@ int mbedtls_writer_commit_partial_ext( mbedtls_writer_ext *wr,
 
     ofs_commit = ofs_fetch - omit;
 
-    if( wr->passthrough == MBEDTLS_WRITER_EXT_PASS )
-    {
-        MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_COMMENT, "Forward commit to underlying writer" );
-        ret = mbedtls_writer_commit_partial( wr->wr, omit );
-        if( ret != 0 )
-            MBEDTLS_MPS_TRACE_RETURN( ret );
+    MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_COMMENT, "Forward commit to underlying writer" );
+    ret = mbedtls_writer_commit_partial( wr->wr, omit );
+    if( ret != 0 )
+        MBEDTLS_MPS_TRACE_RETURN( ret );
 
-        ofs_fetch = ofs_commit;
-    }
-
-    if( wr->passthrough == MBEDTLS_WRITER_EXT_HOLD &&
-        omit > 0 )
-    {
-        MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_COMMENT, "Partial commit, blocking writer" );
-        wr->passthrough = MBEDTLS_WRITER_EXT_BLOCK;
-    }
+    ofs_fetch = ofs_commit;
 
     wr->ofs_fetch  = ofs_fetch;
     wr->ofs_commit = ofs_commit;
@@ -560,13 +543,11 @@ int mbedtls_writer_group_close( mbedtls_writer_ext *wr_ext )
 }
 
 int mbedtls_writer_attach( mbedtls_writer_ext *wr_ext,
-                           mbedtls_writer *wr,
-                           int pass )
+                           mbedtls_writer *wr )
 {
     MBEDTLS_MPS_TRACE_INIT( "mbedtls_writer_attach" );
     MBEDTLS_MPS_STATE_VALIDATE_RAW( wr_ext->wr == NULL, "Writer attached" );
 
-    wr_ext->passthrough = pass;
     wr_ext->wr = wr;
 
     MBEDTLS_MPS_TRACE_RETURN( 0 );

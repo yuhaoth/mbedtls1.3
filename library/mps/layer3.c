@@ -932,7 +932,6 @@ MBEDTLS_MPS_STATIC int l3_check_write_hs_hdr( mps_l3 *l3 )
 int mps_l3_write_handshake( mps_l3 *l3, mps_l3_handshake_out *out )
 {
     int res;
-    int32_t len;
     mbedtls_mps_l2* const l2 = mbedtls_mps_l3_get_l2( l3 );
     mbedtls_mps_transport_type const mode =
         mbedtls_mps_l3_conf_get_mode( &l3->conf );
@@ -1087,21 +1086,8 @@ int mps_l3_write_handshake( mps_l3 *l3, mps_l3_handshake_out *out )
             MBEDTLS_MPS_TRACE_RETURN( res );
     }
 
-
-#if defined(MBEDTLS_MPS_PROTO_TLS)
-    MBEDTLS_MPS_IF_TLS( mode )
-        len = out->len;
-#endif /* MBEDTLS_MPS_PROTO_TLS */
-#if defined(MBEDTLS_MPS_PROTO_DTLS)
-    MBEDTLS_MPS_ELSE_IF_DTLS( mode )
-        len = out->frag_len;
-#endif /* MBEDTLS_MPS_PROTO_DTLS */
-
     MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_COMMENT, "Bind raw writer to extended writer" );
-    res = mbedtls_writer_attach( &l3->io.out.hs.wr_ext, l3->io.out.raw_out,
-                                 len != MBEDTLS_MPS_SIZE_UNKNOWN
-                                 ? MBEDTLS_WRITER_EXT_PASS
-                                 : MBEDTLS_WRITER_EXT_HOLD );
+    res = mbedtls_writer_attach( &l3->io.out.hs.wr_ext, l3->io.out.raw_out );
     if( res != 0 )
         MBEDTLS_MPS_TRACE_RETURN( res );
 
