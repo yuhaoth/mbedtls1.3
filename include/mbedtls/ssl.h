@@ -1607,6 +1607,7 @@ struct mbedtls_ssl_context
     mbedtls_ssl_set_timer_t *f_set_timer;       /*!< set timer callback */
     mbedtls_ssl_get_timer_t *f_get_timer;       /*!< get timer callback */
 
+#if !defined(MBEDTLS_SSL_USE_MPS)
     /*
      * Record layer (incoming data)
      */
@@ -1652,7 +1653,7 @@ struct mbedtls_ssl_context
     size_t in_hslen;            /*!< current handshake message length,
                                      including the handshake header   */
     int nb_zero;                /*!< # of 0-length encrypted messages */
-
+#endif /* !MBEDTLS_SSL_USE_MPS */
 
     /* The following two variables indicate if and, if yes,
      * what kind of alert or warning is pending to be sent.
@@ -1678,6 +1679,7 @@ struct mbedtls_ssl_context
                                         *   within a single datagram.  */
 #endif /* MBEDTLS_SSL_PROTO_DTLS */
 
+#if !defined(MBEDTLS_SSL_USE_MPS)
     /*
      * Record layer (outgoing data)
      */
@@ -1704,9 +1706,6 @@ struct mbedtls_ssl_context
 
     unsigned char cur_out_ctr[8]; /*!<  Outgoing record sequence  number. */
 
-#if defined(MBEDTLS_SSL_PROTO_DTLS)
-    uint16_t mtu;               /*!< path mtu, used to fragment outgoing messages */
-#endif /* MBEDTLS_SSL_PROTO_DTLS */
 
 #if defined(MBEDTLS_ZLIB_SUPPORT)
     unsigned char *compress_buf;        /*!<  zlib data buffer        */
@@ -1714,6 +1713,11 @@ struct mbedtls_ssl_context
 #if defined(MBEDTLS_SSL_CBC_RECORD_SPLITTING)
     signed char split_done;     /*!< current record already splitted? */
 #endif /* MBEDTLS_SSL_CBC_RECORD_SPLITTING */
+#endif /* !MBEDTLS_SSL_USE_MPS */
+
+#if defined(MBEDTLS_SSL_PROTO_DTLS)
+    uint16_t mtu;               /*!< path mtu, used to fragment outgoing messages */
+#endif /* MBEDTLS_SSL_PROTO_DTLS */
 
     /*
      * PKI layer
@@ -1946,7 +1950,7 @@ void mbedtls_ssl_conf_transport( mbedtls_ssl_config *conf, int transport );
  * the right time(s), which may not be obvious, while REQUIRED always perform
  * the verification as soon as possible. For example, REQUIRED was protecting
  * against the "triple handshake" attack even before it was found.
- * 
+ *
  * \note In any mode, the signatures of the certificates in CertificateVerify
  * messages are always verified.
  */

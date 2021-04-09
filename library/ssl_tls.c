@@ -4416,8 +4416,11 @@ int mbedtls_ssl_setup( mbedtls_ssl_context *ssl,
                        const mbedtls_ssl_config *conf )
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
+
+#if !defined(MBEDTLS_SSL_USE_MPS)
     size_t in_buf_len = MBEDTLS_SSL_IN_BUFFER_LEN;
     size_t out_buf_len = MBEDTLS_SSL_OUT_BUFFER_LEN;
+#endif /* !MBEDTLS_SSL_USE_MPS */
 
     ssl->conf = conf;
 
@@ -4425,6 +4428,7 @@ int mbedtls_ssl_setup( mbedtls_ssl_context *ssl,
      * Prepare base structures
      */
 
+#if !defined(MBEDTLS_SSL_USE_MPS)
     /* Set to NULL in case of an error condition */
     ssl->out_buf = NULL;
 
@@ -4484,7 +4488,7 @@ int mbedtls_ssl_setup( mbedtls_ssl_context *ssl,
         ssl->in_msg = ssl->in_buf + 13;
     }
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
-
+#endif /* !MBEDTLS_SSL_USE_MPS */
 
     if( ( ret = ssl_handshake_init( ssl ) ) != 0 )
         goto error;
@@ -4504,10 +4508,12 @@ int mbedtls_ssl_setup( mbedtls_ssl_context *ssl,
     return( 0 );
 
 error:
-    mbedtls_free( ssl->in_buf );
-    mbedtls_free( ssl->out_buf );
 
     ssl->conf = NULL;
+
+#if !defined(MBEDTLS_SSL_USE_MPS)
+    mbedtls_free( ssl->in_buf );
+    mbedtls_free( ssl->out_buf );
 
 #if defined(MBEDTLS_SSL_VARIABLE_BUFFER_LENGTH)
     ssl->in_buf_len = 0;
@@ -4527,6 +4533,7 @@ error:
     ssl->out_len = NULL;
     ssl->out_iv = NULL;
     ssl->out_msg = NULL;
+#endif /* MBEDTLS_SSL_USE_MPS */
 
     return( ret );
 }
@@ -4541,6 +4548,8 @@ error:
 int mbedtls_ssl_session_reset_int( mbedtls_ssl_context *ssl, int partial )
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
+
+#if !defined(MBEDTLS_SSL_USE_MPS)
 #if defined(MBEDTLS_SSL_VARIABLE_BUFFER_LENGTH)
     size_t in_buf_len = ssl->in_buf_len;
     size_t out_buf_len = ssl->out_buf_len;
@@ -4548,6 +4557,7 @@ int mbedtls_ssl_session_reset_int( mbedtls_ssl_context *ssl, int partial )
     size_t in_buf_len = MBEDTLS_SSL_IN_BUFFER_LEN;
     size_t out_buf_len = MBEDTLS_SSL_OUT_BUFFER_LEN;
 #endif
+#endif /* !MBEDTLS_SSL_USE_MPS */
 
 #if !defined(MBEDTLS_SSL_DTLS_CLIENT_PORT_REUSE) ||     \
     !defined(MBEDTLS_SSL_SRV_C)
@@ -4569,6 +4579,7 @@ int mbedtls_ssl_session_reset_int( mbedtls_ssl_context *ssl, int partial )
 #endif
     ssl->secure_renegotiation = MBEDTLS_SSL_LEGACY_RENEGOTIATION;
 
+#if !defined(MBEDTLS_SSL_USE_MPS)
     ssl->in_offt = NULL;
 
 #if !defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
@@ -4603,12 +4614,6 @@ int mbedtls_ssl_session_reset_int( mbedtls_ssl_context *ssl, int partial )
 
     memset( ssl->cur_out_ctr, 0, sizeof( ssl->cur_out_ctr ) );
 
-    ssl->transform_in = NULL;
-    ssl->transform_out = NULL;
-
-    ssl->session_in = NULL;
-    ssl->session_out = NULL;
-
     memset( ssl->out_buf, 0, out_buf_len );
 
 #if defined(MBEDTLS_SSL_DTLS_CLIENT_PORT_REUSE) && defined(MBEDTLS_SSL_SRV_C)
@@ -4618,6 +4623,13 @@ int mbedtls_ssl_session_reset_int( mbedtls_ssl_context *ssl, int partial )
         ssl->in_left = 0;
         memset( ssl->in_buf, 0, in_buf_len );
     }
+#endif /* !MBEDTLS_SSL_USE_MPS */
+
+    ssl->transform_in = NULL;
+    ssl->transform_out = NULL;
+
+    ssl->session_in = NULL;
+    ssl->session_out = NULL;
 
 #if defined(MBEDTLS_SSL_HW_RECORD_ACCEL)
     if( mbedtls_ssl_hw_record_reset != NULL )
@@ -4847,9 +4859,9 @@ int mbedtls_ssl_set_session( mbedtls_ssl_context *ssl, const mbedtls_ssl_session
 #if defined(MBEDTLS_SSL_NEW_SESSION_TICKET) && defined(MBEDTLS_SSL_CLI_C)
     if( ssl->conf->endpoint == MBEDTLS_SSL_IS_CLIENT )
     {
-        mbedtls_ssl_set_hs_psk( ssl, ssl->session_negotiate->key, 
+        mbedtls_ssl_set_hs_psk( ssl, ssl->session_negotiate->key,
                                      ssl->session_negotiate->resumption_key_len );
-        MBEDTLS_SSL_DEBUG_BUF( 5, "ticket: key", ssl->session_negotiate->key, 
+        MBEDTLS_SSL_DEBUG_BUF( 5, "ticket: key", ssl->session_negotiate->key,
                                      ssl->session_negotiate->resumption_key_len );
     }
 #endif /* MBEDTLS_SSL_NEW_SESSION_TICKET && MBEDTLS_SSL_CLI_C */
@@ -5956,7 +5968,7 @@ static unsigned char ssl_serialized_session_header[] = {
  *
  *  Note: The format below is used by TLS/DTLS versions prior to 1.3.
  *        The ticket format used in TLS/DTLS 1.3 is shown further below.
- * 
+ *
  *                               // In this version, `session_format` determines
  *                               // the setting of those compile-time
  *                               // configuration options which influence
@@ -5985,7 +5997,7 @@ static unsigned char ssl_serialized_session_header[] = {
  *  uint8 ciphersuite[2];
  *  uint32 ticket_lifetime;
  *  uint32 ticket_age_add;
- *  uint8 ticket_flags; 
+ *  uint8 ticket_flags;
  *  opaque resumption_key<0..255>;
  *  opaque ticket<0..2^16>;
  *  uint64 ticket_received;
@@ -6017,7 +6029,7 @@ static int ssl_session_save( const mbedtls_ssl_session *session,
 #endif /* MBEDTLS_X509_CRT_PARSE_C */
 #endif /* MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER */
 
-    if( session == NULL ) 
+    if( session == NULL )
         return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
 
 #if defined(MBEDTLS_SSL_NEW_SESSION_TICKET)
@@ -6423,7 +6435,7 @@ static int ssl_session_load( mbedtls_ssl_session *session,
 
         if( session->resumption_key_len > (size_t)( end - p ) )
             return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
-        
+
         memcpy( session->key, p, session->resumption_key_len );
         p += session->resumption_key_len;
 
@@ -7818,8 +7830,10 @@ void mbedtls_ssl_free( mbedtls_ssl_context *ssl )
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> free" ) );
 
 #if defined(MBEDTLS_SSL_USE_MPS)
+
     ssl_mps_free( ssl );
-#endif /* MBEDTLS_SSL_USE_MPS */
+
+#else /* MBEDTLS_SSL_USE_MPS */
 
     if( ssl->out_buf != NULL )
     {
@@ -7854,6 +7868,8 @@ void mbedtls_ssl_free( mbedtls_ssl_context *ssl )
         mbedtls_free( ssl->compress_buf );
     }
 #endif
+
+#endif /* MBEDTLS_SSL_USE_MPS */
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER)
     if( ssl->transform )

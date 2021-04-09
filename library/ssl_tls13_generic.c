@@ -1233,6 +1233,7 @@ int mbedtls_ssl_parse_signature_algorithms_ext( mbedtls_ssl_context *ssl,
 }
 #endif /* MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED */
 
+#if !defined(MBEDTLS_SSL_USE_MPS)
 void mbedtls_ssl_set_inbound_transform( mbedtls_ssl_context *ssl,
                                        mbedtls_ssl_transform *transform )
 {
@@ -1254,6 +1255,7 @@ void mbedtls_ssl_set_outbound_transform( mbedtls_ssl_context *ssl,
     ssl->transform_out = transform;
     memset( ssl->cur_out_ctr, 0, 8 );
 }
+#endif /* !MBEDTLS_SSL_USE_MPS */
 
 /* mbedtls_ssl_generate_handshake_traffic_keys() generates keys necessary for
  * protecting the handshake messages, as described in Section 7 of TLS 1.3. */
@@ -2690,7 +2692,6 @@ static int ssl_write_certificate_coordinate( mbedtls_ssl_context* ssl )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1,
                   ( "Switch to handshake traffic keys for outbound traffic" ) );
-        mbedtls_ssl_set_outbound_transform( ssl, ssl->transform_handshake );
 
 #if defined(MBEDTLS_SSL_USE_MPS)
         {
@@ -2702,6 +2703,8 @@ static int ssl_write_certificate_coordinate( mbedtls_ssl_context* ssl )
             if( ret != 0 )
                 return( ret );
         }
+#else
+        mbedtls_ssl_set_outbound_transform( ssl, ssl->transform_handshake );
 #endif /* MBEDTLS_SSL_USE_MPS */
     }
 #endif /* MBEDTLS_SSL_CLI_C */
@@ -3047,7 +3050,6 @@ static int ssl_read_certificate_coordinate( mbedtls_ssl_context* ssl )
     if( ssl->conf->endpoint == MBEDTLS_SSL_IS_SERVER )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "Switch to handshake keys for inbound traffic" ) );
-        mbedtls_ssl_set_inbound_transform( ssl, ssl->transform_handshake );
 
 #if defined(MBEDTLS_SSL_USE_MPS)
         {
@@ -3057,6 +3059,8 @@ static int ssl_read_certificate_coordinate( mbedtls_ssl_context* ssl )
             if( ret != 0 )
                 return( ret );
         }
+#else
+        mbedtls_ssl_set_inbound_transform( ssl, ssl->transform_handshake );
 #endif /* MBEDTLS_SSL_USE_MPS */
     }
 #endif /* MBEDTLS_SSL_SRV_C */
@@ -4117,11 +4121,13 @@ int mbedtls_ssl_handshake_key_derivation( mbedtls_ssl_context *ssl, mbedtls_ssl_
         return( ret );
     }
 
+#if !defined(MBEDTLS_SSL_USE_MPS)
     /*
      * Set the in_msg pointer to the correct location based on IV length
      * For TLS 1.3 the record layer header has changed and hence we need to accomodate for it.
      */
     ssl->in_msg = ssl->in_iv;
+#endif /* MBEDTLS_SSL_USE_MPS */
 
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= mbedtls_ssl_handshake_key_derivation" ) );
     return( 0 );
@@ -4258,9 +4264,11 @@ static int ssl_finished_out_prepare( mbedtls_ssl_context* ssl )
     /*
      * Set the out_msg pointer to the correct location based on IV length
      */
+#if !defined(MBEDTLS_SSL_USE_MPS)
 #if !defined(MBEDTLS_SSL_PROTO_DTLS)
     ssl->out_msg = ssl->out_iv;
 #endif /* MBEDTLS_SSL_PROTO_DTLS */
+#endif /* !MBEDTLS_SSL_USE_MPS */
 
     /* Compute transcript of handshake up to now. */
     ret = ssl->handshake->calc_finished( ssl,

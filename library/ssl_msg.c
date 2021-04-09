@@ -91,7 +91,9 @@ int mbedtls_ssl_check_timer( mbedtls_ssl_context *ssl )
     return( 0 );
 }
 
+#if !defined(MBEDTLS_SSL_USE_MPS)
 static uint32_t ssl_get_hs_total_len( mbedtls_ssl_context const *ssl );
+#endif /* !MBEDTLS_SSL_USE_MPS */
 
 #if defined(MBEDTLS_SSL_RECORD_CHECKING)
 static int ssl_parse_record_header( mbedtls_ssl_context const *ssl,
@@ -2049,6 +2051,7 @@ static int ssl_decompress_buf( mbedtls_ssl_context *ssl )
 
 #endif /* MBEDTLS_SSL_PROTO_TLS1_2 */
 
+#if !defined(MBEDTLS_SSL_USE_MPS)
 /*
  * Fill the input message buffer by appending data to it.
  * The amount of data already fetched is in ssl->in_left.
@@ -2285,6 +2288,7 @@ int mbedtls_ssl_fetch_input( mbedtls_ssl_context *ssl, size_t nb_want )
 
     return( 0 );
 }
+#endif /* !MBEDTLS_SSL_USE_MPS */
 
 #if defined(MBEDTLS_SSL_USE_MPS)
 int mbedtls_ssl_flush_output( mbedtls_ssl_context *ssl )
@@ -3220,6 +3224,7 @@ static size_t ssl_get_reassembly_buffer_size( size_t msg_len,
 
 #endif /* MBEDTLS_SSL_PROTO_DTLS */
 
+#if !defined(MBEDTLS_SSL_USE_MPS)
 static uint32_t ssl_get_hs_total_len( mbedtls_ssl_context const *ssl )
 {
     return( ( ssl->in_msg[1] << 16 ) |
@@ -3387,6 +3392,9 @@ void mbedtls_ssl_update_handshake_status( mbedtls_ssl_context *ssl )
     }
 #endif
 }
+
+#endif /* !MBEDTLS_SSL_USE_MPS */
+
 
 /*
  * DTLS anti-replay: RFC 6347 4.1.2.6
@@ -5361,6 +5369,7 @@ int mbedtls_ssl_parse_change_cipher_spec( mbedtls_ssl_context *ssl )
  *       and the caller has to make sure there's space for this.
  */
 
+#if !defined(MBEDTLS_SSL_USE_MPS)
 static size_t ssl_transform_get_explicit_iv_len(
                         mbedtls_ssl_transform const *transform )
 {
@@ -5479,7 +5488,16 @@ void mbedtls_ssl_reset_in_out_pointers( mbedtls_ssl_context *ssl )
     mbedtls_ssl_update_out_pointers( ssl, NULL /* no transform enabled */ );
     mbedtls_ssl_update_in_pointers ( ssl );
 }
+#endif /* ! MBEDTLS_SSL_USE_MPS */
 
+#if defined(MBEDTLS_SSL_USE_MPS)
+size_t mbedtls_ssl_get_bytes_avail( const mbedtls_ssl_context *ssl )
+{
+    /* TODO: Implement */
+    ((void) ssl);
+    return( 0 );
+}
+#else /* MBEDTLS_SSL_USE_MPS */
 /*
  * SSL get accessors
  */
@@ -5487,11 +5505,18 @@ size_t mbedtls_ssl_get_bytes_avail( const mbedtls_ssl_context *ssl )
 {
     return( ssl->in_offt == NULL ? 0 : ssl->in_msglen );
 }
+#endif /* MBEDTLS_SSL_USE_MPS */
 
 int mbedtls_ssl_check_pending( const mbedtls_ssl_context *ssl )
 {
-    /* TODO: Check this for TLS 1.3! */
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+    if( ssl->minor_ver == MBEDTLS_SSL_MINOR_VERSION_4 )
+    {
+        return( MBEDTLS_ERR_SSL_FEATURE_UNAVAILABLE );
+    }
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 
+#if defined(MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER)
     /*
      * Case A: We're currently holding back
      * a message for further processing.
@@ -5543,6 +5568,10 @@ int mbedtls_ssl_check_pending( const mbedtls_ssl_context *ssl )
 
     MBEDTLS_SSL_DEBUG_MSG( 3, ( "ssl_check_pending: nothing pending" ) );
     return( 0 );
+
+#endif /* MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER */
+
+    return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
 }
 
 int mbedtls_ssl_get_record_expansion( const mbedtls_ssl_context *ssl )
@@ -5646,8 +5675,13 @@ static int ssl_check_ctr_renegotiate( mbedtls_ssl_context *ssl )
  * trigger renegotiations. In (D)TLS 1.3, renegotiation has been replaced
  * by a number of specific post-handshake messages.
  */
+#if defined(MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER)
 static int ssl_handle_hs_message_post_handshake_tls12( mbedtls_ssl_context *ssl );
+#endif
+
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
 static int ssl_handle_hs_message_post_handshake_tls13( mbedtls_ssl_context *ssl );
+#endif
 
 static int ssl_handle_hs_message_post_handshake( mbedtls_ssl_context *ssl )
 {
@@ -5657,11 +5691,17 @@ static int ssl_handle_hs_message_post_handshake( mbedtls_ssl_context *ssl )
     {
         return( ssl_handle_hs_message_post_handshake_tls13( ssl ) );
     }
-    else
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+
+#if defined(MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER)
+    if( ssl->minor_ver <= MBEDTLS_SSL_MINOR_VERSION_3 )
     {
         return( ssl_handle_hs_message_post_handshake_tls12( ssl ) );
     }
+#endif /* MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER */
+
+    /* Should never happen */
+    return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
 }
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
@@ -5717,6 +5757,7 @@ static int ssl_handle_hs_message_post_handshake_tls13( mbedtls_ssl_context *ssl 
 }
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 
+#if defined(MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER)
 static int ssl_handle_hs_message_post_handshake_tls12( mbedtls_ssl_context *ssl )
 {
     /*
@@ -5830,6 +5871,7 @@ static int ssl_handle_hs_message_post_handshake_tls12( mbedtls_ssl_context *ssl 
 
     return( 0 );
 }
+#endif /* MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER */
 
 #if defined(MBEDTLS_SSL_USE_MPS)
 int mbedtls_ssl_read( mbedtls_ssl_context *ssl, unsigned char *buf, size_t len )

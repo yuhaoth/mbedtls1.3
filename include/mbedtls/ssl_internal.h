@@ -1734,7 +1734,12 @@ static inline size_t mbedtls_ssl_in_hdr_len( const mbedtls_ssl_context *ssl )
 
 static inline size_t mbedtls_ssl_out_hdr_len( const mbedtls_ssl_context *ssl )
 {
+#if !defined(MBEDTLS_SSL_USE_MPS)
     return( (size_t) ( ssl->out_iv - ssl->out_hdr ) );
+#else
+    ((void) ssl);
+    return( 5 );
+#endif /* MBEDTLS_SSL_USE_MPS */
 }
 
 static inline size_t mbedtls_ssl_hs_hdr_len( const mbedtls_ssl_context *ssl )
