@@ -405,13 +405,6 @@ static int ssl_calc_finished_tls_sha256(
 
     mbedtls_sha256_clone( &sha256, &ssl->handshake->fin_sha256 );
 
-    /*
-      #if !defined(MBEDTLS_SHA256_ALT)
-      MBEDTLS_SSL_DEBUG_BUF( 4, "finished sha2 state", ( unsigned char * )
-      sha256.state, sizeof( sha256.state ) );
-      #endif
-    */
-
     if( ( ret = mbedtls_sha256_finish_ret( &sha256, transcript ) ) != 0 )
     {
         MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_sha256_finish_ret", ret );
@@ -3436,29 +3429,6 @@ static int ssl_read_certificate_postprocess( mbedtls_ssl_context* ssl )
     if( ssl->conf->endpoint == MBEDTLS_SSL_IS_SERVER )
     {
         mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_CLIENT_CERTIFICATE_VERIFY );
-
-        /*
-          if( ret != 0 ) {
-          MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_parse_certificate", ret );
-          switch ( ret ) {
-          case MBEDTLS_ERR_SSL_BAD_HS_CERTIFICATE:
-          mbedtls_ssl_send_alert_message( ssl, MBEDTLS_SSL_ALERT_LEVEL_FATAL, MBEDTLS_SSL_ALERT_MSG_BAD_CERT );
-          break;
-          case MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE:
-          mbedtls_ssl_send_alert_message( ssl, MBEDTLS_SSL_ALERT_LEVEL_FATAL, MBEDTLS_SSL_ALERT_MSG_UNEXPECTED_MESSAGE );
-          break;
-          case MBEDTLS_ERR_SSL_NO_CLIENT_CERTIFICATE:
-          mbedtls_ssl_send_alert_message( ssl, MBEDTLS_SSL_ALERT_LEVEL_FATAL, MBEDTLS_SSL_ALERT_MSG_CERT_REQUIRED );
-          break;
-          case MBEDTLS_ERR_SSL_CA_CHAIN_REQUIRED:
-          mbedtls_ssl_send_alert_message( ssl, MBEDTLS_SSL_ALERT_LEVEL_FATAL, MBEDTLS_SSL_ALERT_MSG_UNKNOWN_CA );
-          break;
-          default:
-          mbedtls_ssl_send_alert_message( ssl, MBEDTLS_SSL_ALERT_LEVEL_FATAL, MBEDTLS_SSL_ALERT_MSG_UNSUPPORTED_CERT );
-          }
-          return ( ret );
-          }
-	*/
     }
     else
 #endif /* MBEDTLS_SSL_SRV_C */
