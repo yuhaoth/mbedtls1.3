@@ -3974,8 +3974,7 @@ MBEDTLS_MPS_STATIC int mps_dtls_frag_out_start( mbedtls_mps_handshake_out_intern
     msg_len = metadata->len;
     mbedtls_writer_init( &hs->wr, queue, queue_len );
     mbedtls_writer_init_ext( &hs->wr_ext, msg_len );
-    MPS_CHK( mbedtls_writer_attach( &hs->wr_ext, &hs->wr,
-                                    MBEDTLS_WRITER_EXT_PASS ) );
+    MPS_CHK( mbedtls_writer_attach( &hs->wr_ext, &hs->wr ) );
 
     MBEDTLS_MPS_ASSERT( mode == MPS_DTLS_FRAG_OUT_START_USE_L3 ||
                         mode == MPS_DTLS_FRAG_OUT_START_QUEUE_ONLY,

@@ -200,17 +200,6 @@ struct mbedtls_writer
     mbedtls_writer_state_t state;
 };
 
-/** Configures whether commits to the extended writer should be passed
- *  through to the underlying writer or not. Possible values are:
- *  - #MBEDTLS_WRITER_EXT_PASS
- *  - #MBEDTLS_WRITER_EXT_HOLD
- *  - #MBEDTLS_WRITER_EXT_BLOCK.
- */
-typedef unsigned char mbedtls_writer_ext_passthrough_t;
-#define MBEDTLS_WRITER_EXT_PASS   ( (mbedtls_writer_ext_passthrough_t) 0 )
-#define MBEDTLS_WRITER_EXT_HOLD   ( (mbedtls_writer_ext_passthrough_t) 1 )
-#define MBEDTLS_WRITER_EXT_BLOCK  ( (mbedtls_writer_ext_passthrough_t) 2 )
-
 /** The type of indices for groups in extended writers. */
 typedef unsigned char mbedtls_writer_ext_grp_index_t;
 
@@ -242,9 +231,6 @@ struct mbedtls_writer_ext
      *  The group of index 0 always exists and represents
      *  the entire logical message buffer. */
     mbedtls_writer_ext_grp_index_t cur_grp;
-    /** Indicates whether commits should be passed to the underlying writer.
-     *  See ::mbedtls_writer_ext_passthrough_t. */
-    mbedtls_writer_ext_passthrough_t passthrough;
 };
 
 /**
@@ -595,26 +581,13 @@ int mbedtls_writer_group_close( mbedtls_writer_ext *writer );
  *
  * \param wr_ext    The extended writer context to use.
  * \param wr        The writer to bind to the extended writer \p wr_ext.
- * \param pass      Indicates whether commits should be passed through
- *                  to the underlying writer. Possible values are:
- *                  - #MBEDTLS_WRITER_EXT_PASS: All commits are passed
- *                    through to the underlying reader. An unlimited
- *                    number of partial commits is possible.
- *                  - #MBEDTLS_WRITER_EXT_HOLD: Commits are remembered
- *                    but not yet passed to the underlying reader, and
- *                    only a single partial commit is possible, after
- *                    which the writer gets blocked. The information
- *                    about committed and uncommitted data is returned
- *                    when detaching the underlying writer via
- *                    mbedtls_writer_detach().
  *
  * \return          \c 0 on success.
  * \return          A negative error code \c MBEDTLS_ERR_WRITER_XXX on failure.
  *
  */
 int mbedtls_writer_attach( mbedtls_writer_ext *wr_ext,
-                           mbedtls_writer *wr,
-                           int pass );
+                           mbedtls_writer *wr );
 /**
  * \brief             Detach a writer from an extended writer.
  *
