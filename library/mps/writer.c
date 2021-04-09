@@ -123,12 +123,54 @@ int mbedtls_writer_feed( mbedtls_writer *wr,
     MBEDTLS_MPS_TRACE_RETURN( 0 );
 }
 
+static inline int mps_writer_fragment_committed( mbedtls_writer *wr )
+{
+    mbedtls_mps_size_t const committed = wr->committed;
+    mbedtls_mps_size_t const out_len   = wr->out_len;
+
+    return( committed >= out_len );
+}
+
+static inline int mps_writer_committed_data_in_queue( mbedtls_writer *wr )
+{
+    mbedtls_mps_size_t const commit  = wr->committed;
+    mbedtls_mps_size_t const out_len = wr->out_len;
+    mbedtls_mps_size_t const overlap = wr->queue_next;
+
+    return( commit > out_len - overlap );
+}
+
+static inline void mps_writer_copy_queue_to_fragment( mbedtls_writer *wr )
+{
+    mbedtls_mps_size_t queue_size, copy_from_queue;
+    mbedtls_mps_size_t queue_overlap, commit, out_len;
+    unsigned char * const queue = wr->queue;
+    unsigned char * out = wr->out;
+
+    if( !mps_writer_committed_data_in_queue( wr ) )
+        return;
+
+    commit = wr->committed;
+    out_len = wr->out_len;
+    queue_overlap = wr->queue_next;
+
+    queue_size = commit - ( out_len - queue_overlap );
+    copy_from_queue =
+        queue_size > queue_overlap ? queue_overlap : queue_size;
+
+    if( copy_from_queue != 0 )
+    {
+        out += out_len - queue_overlap;
+        memcpy( out, queue, copy_from_queue );
+    }
+}
+
 int mbedtls_writer_reclaim( mbedtls_writer *wr,
                             mbedtls_mps_size_t *olen,
                             mbedtls_mps_size_t *queued,
                             int force )
 {
-    mbedtls_mps_size_t commit, ol;
+    mbedtls_mps_size_t commit, out_len;
     MBEDTLS_MPS_TRACE_INIT( "writer_reclaim" );
     MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_COMMENT," * Force reclaim: %u", (unsigned) force );
 
@@ -137,48 +179,37 @@ int mbedtls_writer_reclaim( mbedtls_writer *wr,
         wr->state == MBEDTLS_WRITER_CONSUMING,
         "Can't reclaim output buffer outside of consuming mode." );
 
-    /* Check if there's space left unused. */
     commit = wr->committed;
-    ol = wr->out_len;
+    out_len = wr->out_len;
+    wr->end = commit;
 
-    MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_COMMENT, "* Committed: %u Bytes", (unsigned) commit );
-    MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_COMMENT, "* Buffer length: %u Bytes", (unsigned) ol );
-
-    if( commit <= ol )
+    if( olen != NULL )
     {
-        if( olen != NULL )
-            *olen = commit;
+        mbedtls_mps_size_t const committed_data_in_frag =
+            commit > out_len ? out_len : commit;
+
+        *olen = committed_data_in_frag;
+    }
+
+    /* Copy head of queue to tail of fragment.  */
+    mps_writer_copy_queue_to_fragment( wr );
+
+    /* Check if there's space left unused. */
+    if( !mps_writer_fragment_committed( wr ) )
+    {
         if( queued != NULL )
             *queued = 0;
 
-        /* queue_next must be 0 if end <= ol */
         wr->queue_next = 0;
 
-        if( commit < ol && force == 0 )
-        {
-            wr->end = commit;
+        if( force == 0 )
             MBEDTLS_MPS_TRACE_RETURN( MBEDTLS_ERR_WRITER_DATA_LEFT );
-        }
     }
     else
     {
-        /* The committed parts of the queue that
-         * have no overlap with the current outgoing
-         * data buffer need to be dispatched on
-         * the next call(s) to mbedtls_writer_fetch. */
-        wr->queue_remaining = commit - ol;
-        /* No need to modify wr->queue_next */
-
-        if( olen != NULL )
-            *olen = ol;
-    }
-
-    if( queued != NULL )
-    {
-        mbedtls_mps_size_t qr = wr->queue_remaining;
-        MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_COMMENT, "%u Bytes are queued for dispatching.",
-                (unsigned) wr->queue_remaining );
-        *queued = qr;
+        wr->queue_remaining = commit - out_len;
+        if( queued != NULL )
+            *queued = wr->queue_remaining;
     }
 
     wr->end = 0;
@@ -205,6 +236,15 @@ int mbedtls_writer_bytes_written( mbedtls_writer *wr,
     MBEDTLS_MPS_TRACE_RETURN( 0 );
 }
 
+static inline int mps_writer_queue_in_use( mbedtls_writer *wr )
+{
+    mbedtls_mps_size_t const end     = wr->end;
+    mbedtls_mps_size_t const out_len = wr->out_len;
+    mbedtls_mps_size_t const overlap = wr->queue_next;
+
+    return( end > out_len - overlap );
+}
+
 int mbedtls_writer_get( mbedtls_writer *wr,
                         mbedtls_mps_size_t desired,
                         unsigned char **buffer,
@@ -220,31 +260,29 @@ int mbedtls_writer_get( mbedtls_writer *wr,
     out = wr->out;
     end = wr->end;
     ol = wr->out_len;
+    qn = wr->queue_next;
 
     /* Check if we're already serving from the queue */
-    if( end > ol )
+    if( mps_writer_queue_in_use( wr ) )
     {
         MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_COMMENT, "already serving from the queue, attempt to continue" );
 
         ql = wr->queue_len;
-        /* If we're serving from the queue, queue_next denotes
-         * the size of the overlap between queue and output buffer. */
-        qn = wr->queue_next;
-        qo = qn + ( end - ol );
-        MBEDTLS_MPS_TRACE( trace_comment, "queue overlap %u, queue used %u, queue remaining %u",
-               (unsigned) qn, (unsigned) qo, (unsigned) ( ql - qo ) );
+        qo = end - ( ol - qn );
 
         if( ql - qo < desired )
         {
             if( buflen == NULL )
             {
-                MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_COMMENT, "not enough space remaining in queue" );
+                MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_COMMENT,
+                                   "not enough space remaining in queue" );
                 MBEDTLS_MPS_TRACE_RETURN( MBEDTLS_ERR_WRITER_OUT_OF_DATA );
             }
             desired = ql - qo;
         }
 
-        MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_COMMENT, "serving %u bytes from queue", (unsigned) desired );
+        MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_COMMENT,
+                           "serving %u bytes from queue", (unsigned) desired );
 
         queue = wr->queue;
         end += desired;
@@ -257,15 +295,14 @@ int mbedtls_writer_get( mbedtls_writer *wr,
         MBEDTLS_MPS_TRACE_RETURN( 0 );
     }
 
-    /* We're still serving from the output buffer.
-     * Check if there's enough space left in it. */
     or = ol - end;
-    MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_COMMENT, "%u bytes remaining in output buffer",
-           (unsigned) or );
+    MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_COMMENT,
+                       "%u bytes remaining in output buffer", (unsigned) or );
     if( or < desired )
     {
-        MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_COMMENT, "need %u, but only %u remains in write buffer",
-               (unsigned) desired, (unsigned) or );
+        MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_COMMENT,
+                           "need %u, but only %u remains in write buffer",
+                           (unsigned) desired, (unsigned) or );
 
         queue  = wr->queue;
         ql     = wr->queue_len;
@@ -282,7 +319,8 @@ int mbedtls_writer_get( mbedtls_writer *wr,
             overflow = ( end + desired < end );
             if( overflow || desired > ql )
             {
-                MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_COMMENT, "queue present but too small, need %u but only got %u",
+                MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_COMMENT,
+                       "queue present but too small, need %u but only got %u",
                        (unsigned) desired, (unsigned) ql );
                 MBEDTLS_MPS_TRACE_RETURN( MBEDTLS_ERR_WRITER_OUT_OF_DATA );
             }
@@ -297,8 +335,9 @@ int mbedtls_writer_get( mbedtls_writer *wr,
 
             /* Remember the overlap between queue and output buffer. */
             wr->queue_next = or;
-            MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_COMMENT, "served from queue, qo %u",
-                   (unsigned) wr->queue_next );
+            MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_COMMENT,
+                               "served from queue, overlap %u",
+                               (unsigned) wr->queue_next );
 
             MBEDTLS_MPS_TRACE_RETURN( 0 );
         }
@@ -334,9 +373,8 @@ int mbedtls_writer_commit( mbedtls_writer *wr )
 int mbedtls_writer_commit_partial( mbedtls_writer *wr,
                                    mbedtls_mps_size_t omit )
 {
-    mbedtls_mps_size_t to_be_committed, commit, end, queue_overlap;
-    mbedtls_mps_size_t out_len, copy_from_queue;
-    unsigned char *out, *queue;
+    mbedtls_mps_size_t to_be_committed, commit, end;
+    mbedtls_mps_size_t out_len, queue_overlap;
     MBEDTLS_MPS_TRACE_INIT( "writer_commit_partial" );
     MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_COMMENT, "* Omit %u bytes", (unsigned) omit );
 
@@ -344,41 +382,22 @@ int mbedtls_writer_commit_partial( mbedtls_writer *wr,
         wr->state == MBEDTLS_WRITER_CONSUMING,
         "Attempt to request write-buffer outside consuming mode." );
 
-    out           = wr->out;
-    queue_overlap = wr->queue_next;
     commit        = wr->committed;
     end           = wr->end;
     out_len       = wr->out_len;
+    queue_overlap = wr->queue_next;
 
     if( omit > end - commit )
         MBEDTLS_MPS_TRACE_RETURN( MBEDTLS_ERR_WRITER_INVALID_ARG );
 
     to_be_committed = end - omit;
 
-    MBEDTLS_MPS_TRACE( trace_comment, "* Last commit:       %u", (unsigned) commit );
-    MBEDTLS_MPS_TRACE( trace_comment, "* End of last fetch: %u", (unsigned) end );
-    MBEDTLS_MPS_TRACE( trace_comment, "* New commit:        %u", (unsigned) to_be_committed );
-
-    if( end     > out_len &&
-        commit  < out_len &&
-        to_be_committed > out_len - queue_overlap )
-    {
-        /* Copy the beginning of the queue to
-         * the end of the outgoing data buffer. */
-        copy_from_queue = to_be_committed - ( out_len - queue_overlap );
-        if( copy_from_queue > queue_overlap )
-            copy_from_queue = queue_overlap;
-
-        MBEDTLS_MPS_TRACE( trace_comment, "copy %u bytes from queue to output buffer",
-               (unsigned) copy_from_queue );
-
-        queue = wr->queue;
-        out   += out_len - queue_overlap;
-        memcpy( out, queue, copy_from_queue );
-    }
-
-    if( to_be_committed < out_len )
+    if( to_be_committed <= out_len - queue_overlap )
         wr->queue_next = 0;
+
+    MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_COMMENT, "* Last commit:       %u", (unsigned) commit );
+    MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_COMMENT, "* End of last fetch: %u", (unsigned) end );
+    MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_COMMENT, "* New commit:        %u", (unsigned) to_be_committed );
 
     wr->end       = to_be_committed;
     wr->committed = to_be_committed;
@@ -492,7 +511,7 @@ int mbedtls_writer_commit_partial_ext( mbedtls_writer_ext *wr,
     if( wr->passthrough == MBEDTLS_WRITER_EXT_HOLD &&
         omit > 0 )
     {
-        MBEDTLS_MPS_TRACE( trace_comment, "Partial commit, blocking writer" );
+        MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_COMMENT, "Partial commit, blocking writer" );
         wr->passthrough = MBEDTLS_WRITER_EXT_BLOCK;
     }
 
