@@ -37,27 +37,27 @@ MBEDTLS_MPS_STATIC int l3_check_write_hs_hdr_dtls( mps_l3 *l3 );
 MBEDTLS_MPS_STATIC int l3_check_write_hs_hdr( mps_l3 *l3 );
 
 #if defined(MBEDTLS_MPS_PROTO_TLS)
-MBEDTLS_MPS_STATIC int l3_parse_hs_header_tls( mbedtls_reader *rd,
+MBEDTLS_MPS_STATIC int l3_parse_hs_header_tls( mbedtls_mps_reader *rd,
                                                mps_l3_hs_in_internal *in );
 MBEDTLS_MPS_STATIC int l3_write_hs_header_tls( mps_l3_hs_out_internal *hs );
 #endif /* MBEDTLS_MPS_PROTO_TLS */
 
 #if defined(MBEDTLS_MPS_PROTO_DTLS)
-MBEDTLS_MPS_STATIC int l3_parse_hs_header_dtls( mbedtls_reader *rd,
+MBEDTLS_MPS_STATIC int l3_parse_hs_header_dtls( mbedtls_mps_reader *rd,
                                                 mps_l3_hs_in_internal *in );
 MBEDTLS_MPS_STATIC int l3_write_hs_header_dtls( mps_l3_hs_out_internal *hs );
 #endif /* MBEDTLS_MPS_PROTO_DTLS */
 
-MBEDTLS_MPS_STATIC int l3_parse_hs_header( uint8_t mode, mbedtls_reader *rd,
+MBEDTLS_MPS_STATIC int l3_parse_hs_header( uint8_t mode, mbedtls_mps_reader *rd,
                                mps_l3_hs_in_internal *in );
 
 /*
  * Other message types
  */
 
-MBEDTLS_MPS_STATIC int l3_parse_alert( mbedtls_reader *rd,
+MBEDTLS_MPS_STATIC int l3_parse_alert( mbedtls_mps_reader *rd,
                            mps_l3_alert_in_internal *alert );
-MBEDTLS_MPS_STATIC int l3_parse_ccs( mbedtls_reader *rd );
+MBEDTLS_MPS_STATIC int l3_parse_ccs( mbedtls_mps_reader *rd );
 
 /*
  * Miscellanious

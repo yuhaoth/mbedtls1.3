@@ -27,9 +27,9 @@
 
 #include "layer1_internal.h"
 
-#if defined(MBEDTLS_MPS_TRACE)
-static int trace_id = TRACE_BIT_LAYER_1;
-#endif /* MBEDTLS_MPS_TRACE */
+#if defined(MBEDTLS_MPS_ENABLE_TRACE)
+static int mbedtls_mps_trace_id = MBEDTLS_MPS_TRACE_BIT_LAYER_1;
+#endif /* MBEDTLS_MPS_ENABLE_TRACE */
 
 #include <string.h>
 
@@ -238,7 +238,7 @@ int l1_fetch_stream( mps_l1_stream_read *p,
     unsigned char *read_ptr;
     void *recv_ctx;
     mps_l0_recv_t *recv;
-    TRACE_INIT( "l1_fetch_stream, desired %u", (unsigned) len );
+    MBEDTLS_MPS_TRACE_INIT( "l1_fetch_stream, desired %u", (unsigned) len );
 
     /* OPTIMIZATION:
      * This refers to the potential removal of `buf` from
@@ -253,12 +253,12 @@ int l1_fetch_stream( mps_l1_stream_read *p,
     ret = l1_acquire_if_unset( &p->buf, &p->buf_len,
                                p->alloc, MPS_ALLOC_L1_IN );
     if( ret != 0 )
-        RETURN( ret );
+        MBEDTLS_MPS_TRACE_RETURN( ret );
 
     read_ptr = p->buf;
     bl = p->buf_len;
     if( len > bl )
-        RETURN( MBEDTLS_ERR_MPS_BUFFER_TOO_SMALL );
+        MBEDTLS_MPS_TRACE_RETURN( MBEDTLS_ERR_MPS_BUFFER_TOO_SMALL );
 
     br = p->bytes_read;
     data_need = br <= len ? len - br : 0;
@@ -268,16 +268,16 @@ int l1_fetch_stream( mps_l1_stream_read *p,
     read_ptr += br;
     while( data_need > 0 )
     {
-        TRACE( trace_comment, "attempt to receive %u", (unsigned) data_need );
+        MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_COMMENT, "attempt to receive %u", (unsigned) data_need );
         ret = recv( recv_ctx, read_ptr, data_need );
         if( ret < 0 )
             break;
-        TRACE( trace_comment, "got %u", (unsigned) ret );
+        MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_COMMENT, "got %u", (unsigned) ret );
 
         /* TODO: FIX! */
 #if( MAX_INT > SIZE_MAX )
         if( ret > (int) SIZE_MAX )
-            RETURN( MBEDTLS_ERR_MPS_BAD_TRANSPORT );
+            MBEDTLS_MPS_TRACE_RETURN( MBEDTLS_ERR_MPS_BAD_TRANSPORT );
 #endif
 
         /* Now we know that we can safely cast. */
@@ -287,7 +287,7 @@ int l1_fetch_stream( mps_l1_stream_read *p,
         /* Double-check that the external Layer 0 obeys its spec;
          * if it doesn't, we'd otherwise underflow data_need. */
         if( data_fetched > data_need )
-            RETURN( MBEDTLS_ERR_MPS_BAD_TRANSPORT );
+            MBEDTLS_MPS_TRACE_RETURN( MBEDTLS_ERR_MPS_BAD_TRANSPORT );
 
         data_need -= data_fetched;
         read_ptr  += data_fetched;
@@ -303,7 +303,7 @@ int l1_fetch_stream( mps_l1_stream_read *p,
     else
         p->bytes_fetched = 0;
 
-    RETURN( ret );
+    MBEDTLS_MPS_TRACE_RETURN( ret );
 }
 
 /*@
@@ -315,7 +315,7 @@ int l1_consume_stream( mps_l1_stream_read *p )
 {
     unsigned char *buf;
     mbedtls_mps_size_t bf, br, not_yet_fetched;
-    TRACE_INIT( "l1_consume_stream" );
+    MBEDTLS_MPS_TRACE_INIT( "l1_consume_stream" );
 
     bf = p->bytes_fetched;
     br = p->bytes_read;
@@ -342,7 +342,7 @@ int l1_consume_stream( mps_l1_stream_read *p )
         p->buf_len = 0;
     }
 
-    RETURN( 0 );
+    MBEDTLS_MPS_TRACE_RETURN( 0 );
 }
 
 /*@
@@ -358,7 +358,7 @@ int l1_flush_stream( mps_l1_stream_write *p )
     mps_l1_stream_state status;
     mps_l0_send_t *send;
     void *send_ctx;
-    TRACE_INIT( "L1 flush stream" );
+    MBEDTLS_MPS_TRACE_INIT( "L1 flush stream" );
 
     /* Flush is called in the following situations:
      * (1) By the user, after data has been dispatched
@@ -395,7 +395,7 @@ int l1_flush_stream( mps_l1_stream_write *p )
         ret = send( send_ctx, buf, data_remaining );
         if( ret <= 0 )
         {
-            TRACE( trace_comment, "send failed with %d", ret );
+            MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_COMMENT, "send failed with %d", ret );
             /* The underlying transport's send callback should return
              * WANT_WRITE instead of 0 if no data can currently be sent.
              * Fail with a fatal internal error if this spec is not obeyed. */
@@ -407,7 +407,7 @@ int l1_flush_stream( mps_l1_stream_write *p )
         /* TODO: FIX */
 #if( MAX_INT > SIZE_MAX )
         if( ret > (int) SIZE_MAX )
-            RETURN( MBEDTLS_ERR_MPS_BAD_TRANSPORT );
+            MBEDTLS_MPS_TRACE_RETURN( MBEDTLS_ERR_MPS_BAD_TRANSPORT );
 #endif
 
         /* Now we know that we can safely cast. */
@@ -417,7 +417,7 @@ int l1_flush_stream( mps_l1_stream_write *p )
         /* Double-check that the external Layer 0 obeys its
          * spec to prevent an underflow in data_remaining. */
         if( data_written > data_remaining )
-            RETURN( MBEDTLS_ERR_MPS_BAD_TRANSPORT );
+            MBEDTLS_MPS_TRACE_RETURN( MBEDTLS_ERR_MPS_BAD_TRANSPORT );
 
         data_remaining -= data_written;
         buf += data_written;
@@ -433,7 +433,7 @@ int l1_flush_stream( mps_l1_stream_write *p )
     else
         p->bytes_written = bw;
 
-    RETURN( ret );
+    MBEDTLS_MPS_TRACE_RETURN( ret );
 }
 
 /*@
@@ -449,7 +449,7 @@ int l1_write_stream( mps_l1_stream_write *p,
     mps_l1_stream_state status;
     mbedtls_mps_size_t bl, br, data_remaining;
     unsigned char* buf;
-    TRACE_INIT( "l1_write_stream" );
+    MBEDTLS_MPS_TRACE_INIT( "l1_write_stream" );
 
     status = p->status;
 
@@ -461,7 +461,7 @@ int l1_write_stream( mps_l1_stream_write *p,
     {
         ret = l1_flush_stream( p );
         if( ret != 0 )
-            RETURN( ret );
+            MBEDTLS_MPS_TRACE_RETURN( ret );
     }
 
     /* The flush call either succeeded and reset the state
@@ -476,7 +476,7 @@ int l1_write_stream( mps_l1_stream_write *p,
     ret = l1_acquire_if_unset( &p->buf, &p->buf_len,
                                p->alloc, MPS_ALLOC_L1_OUT );
     if( ret != 0 )
-        RETURN( ret );
+        MBEDTLS_MPS_TRACE_RETURN( ret );
 
     br = p->bytes_ready;
     bl = p->buf_len;
@@ -493,7 +493,7 @@ int l1_write_stream( mps_l1_stream_write *p,
     *dst = buf;
     *buflen = data_remaining;
     p->status = MPS_L1_STREAM_STATUS_WRITE;
-    RETURN( 0 );
+    MBEDTLS_MPS_TRACE_RETURN( 0 );
 }
 
 MBEDTLS_MPS_INLINE int l1_write_dependency_stream( mps_l1_stream_write *p )
@@ -528,7 +528,7 @@ int l1_check_flush_stream( mps_l1_stream_write *p )
     mbedtls_mps_size_t bl, br;
     br = p->bytes_ready;
     bl = p->buf_len;
-    TRACE_INIT( "l1_check_flush_stream:  %u / %u bytes written",
+    MBEDTLS_MPS_TRACE_INIT( "l1_check_flush_stream:  %u / %u bytes written",
            (unsigned) br, (unsigned) bl );
 
     /* Several heuristics for flushing are conceivable,
@@ -542,13 +542,13 @@ int l1_check_flush_stream( mps_l1_stream_write *p )
      */
     if( br > 0 && br >= 4 * bl / 5 )
     {
-        TRACE( trace_comment, "L1 check flush -- flush" );
+        MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_COMMENT, "L1 check flush -- flush" );
         p->status = MPS_L1_STREAM_STATUS_FLUSH;
-        RETURN( 0 );
+        MBEDTLS_MPS_TRACE_RETURN( 0 );
     }
 
-    TRACE( trace_comment, "L1 check flush -- no flush" );
-    RETURN( 0 );
+    MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_COMMENT, "L1 check flush -- no flush" );
+    MBEDTLS_MPS_TRACE_RETURN( 0 );
 }
 
 /*@
@@ -562,7 +562,7 @@ int l1_dispatch_stream( mps_l1_stream_write *p,
 {
     mbedtls_mps_size_t bl, br, data_remaining;
     mps_l1_stream_state status = p->status;
-    TRACE_INIT( "L1 dispatch %u", (unsigned) len );
+    MBEDTLS_MPS_TRACE_INIT( "L1 dispatch %u", (unsigned) len );
 
     MBEDTLS_MPS_STATE_VALIDATE_RAW( status == MPS_L1_STREAM_STATUS_WRITE,
                                     "Invalid state in l1_dispatch_stream()" );
@@ -572,9 +572,9 @@ int l1_dispatch_stream( mps_l1_stream_write *p,
     data_remaining = br - bl;
     if( len > data_remaining )
     {
-        TRACE( trace_comment, "out of bounds %u > %u",
+        MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_COMMENT, "out of bounds %u > %u",
                (unsigned) len, (unsigned) data_remaining );
-        RETURN( MBEDTLS_ERR_MPS_REQUEST_OUT_OF_BOUNDS );
+        MBEDTLS_MPS_TRACE_RETURN( MBEDTLS_ERR_MPS_REQUEST_OUT_OF_BOUNDS );
     }
 
     br += len;
@@ -599,7 +599,7 @@ int l1_dispatch_stream( mps_l1_stream_write *p,
      *
      */
 
-    RETURN( l1_check_flush_stream( p ) );
+    MBEDTLS_MPS_TRACE_RETURN( l1_check_flush_stream( p ) );
 }
 
 #endif /* MBEDTLS_MPS_PROTO_TLS */
@@ -746,13 +746,13 @@ int l1_ensure_in_dgram( mps_l1_dgram_read *p )
     void* recv_ctx;
     mps_l0_recv_t *recv;
     int ret;
-    TRACE_INIT( "l1_ensure_in_dgram" );
+    MBEDTLS_MPS_TRACE_INIT( "l1_ensure_in_dgram" );
 
     /* 1. Ensure that a buffer is available to receive data */
     ret = l1_acquire_if_unset( &p->buf, &p->buf_len,
                                p->alloc, MPS_ALLOC_L1_IN );
     if( ret != 0 )
-        RETURN( ret );
+        MBEDTLS_MPS_TRACE_RETURN( ret );
 
     buf = p->buf;
     bl = p->buf_len;
@@ -761,7 +761,7 @@ int l1_ensure_in_dgram( mps_l1_dgram_read *p )
     ml = p->msg_len;
     if( ml == 0 )
     {
-        TRACE( trace_comment, "Request datagram from underlying transport." );
+        MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_COMMENT, "Request datagram from underlying transport." );
         /* Q: Will the underlying transport error out
          *    if the receive buffer is not large enough
          *    to hold the entire datagram? */
@@ -769,12 +769,12 @@ int l1_ensure_in_dgram( mps_l1_dgram_read *p )
         recv_ctx = p->recv_ctx;
         ret = recv( recv_ctx, buf, bl );
         if( ret <= 0 )
-            RETURN( ret );
+            MBEDTLS_MPS_TRACE_RETURN( ret );
 
         /* TODO: FIX */
 #if( MAX_INT > SIZE_MAX )
         if( ret > (int) SIZE_MAX )
-            RETURN( MBEDTLS_ERR_MPS_BAD_TRANSPORT );
+            MBEDTLS_MPS_TRACE_RETURN( MBEDTLS_ERR_MPS_BAD_TRANSPORT );
 #endif
 
         /* Now we know that we can safely cast. */
@@ -782,13 +782,13 @@ int l1_ensure_in_dgram( mps_l1_dgram_read *p )
 
         /* Double-check that the external Layer 0 obeys its spec. */
         if( ml > bl )
-            RETURN( MBEDTLS_ERR_MPS_BAD_TRANSPORT );
+            MBEDTLS_MPS_TRACE_RETURN( MBEDTLS_ERR_MPS_BAD_TRANSPORT );
 
-        TRACE( trace_comment, "Obtained datagram of size %u", (unsigned) ml );
+        MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_COMMENT, "Obtained datagram of size %u", (unsigned) ml );
         p->msg_len = ml;
     }
 
-    RETURN( 0 );
+    MBEDTLS_MPS_TRACE_RETURN( 0 );
 }
 
 MBEDTLS_MPS_INLINE
@@ -803,15 +803,15 @@ int l1_fetch_dgram( mps_l1_dgram_read *p,
 
     unsigned char *buf;
 
-    TRACE_INIT( "l1_fetch_dgram, len %u", (unsigned) len );
+    MBEDTLS_MPS_TRACE_INIT( "l1_fetch_dgram, len %u", (unsigned) len );
 
     ret = l1_ensure_in_dgram( p );
     if( ret != 0 )
-        RETURN( ret );
+        MBEDTLS_MPS_TRACE_RETURN( ret );
 
-    TRACE( trace_comment, "* Datagram length: %u", (unsigned) p->msg_len     );
-    TRACE( trace_comment, "* Window base:     %u", (unsigned) p->window_base );
-    TRACE( trace_comment, "* Window length:   %u", (unsigned) p->window_len  );
+    MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_COMMENT, "* Datagram length: %u", (unsigned) p->msg_len     );
+    MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_COMMENT, "* Window base:     %u", (unsigned) p->window_base );
+    MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_COMMENT, "* Window length:   %u", (unsigned) p->window_len  );
 
     wb = p->window_base;
     wl = p->window_len;
@@ -830,9 +830,9 @@ int l1_fetch_dgram( mps_l1_dgram_read *p,
     data_avail = ml - ( wb + wl );
     if( data_need > data_avail )
     {
-        TRACE( trace_error, "Read request goes beyond the datagram boundary - requested %u, available %u",
+        MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_ERROR, "Read request goes beyond the datagram boundary - requested %u, available %u",
                (unsigned) data_need, (unsigned) data_avail );
-        RETURN( MBEDTLS_ERR_MPS_REQUEST_OUT_OF_BOUNDS );
+        MBEDTLS_MPS_TRACE_RETURN( MBEDTLS_ERR_MPS_REQUEST_OUT_OF_BOUNDS );
     }
 
     wl += data_need;
@@ -840,7 +840,7 @@ int l1_fetch_dgram( mps_l1_dgram_read *p,
 
     p->window_len = wl;
     *dst = buf + wb;
-    RETURN( 0 );
+    MBEDTLS_MPS_TRACE_RETURN( 0 );
 }
 
 MBEDTLS_MPS_INLINE
@@ -849,7 +849,7 @@ int l1_consume_dgram( mps_l1_dgram_read *p )
     int ret;
     mbedtls_mps_size_t wl, wb, ml;
 
-    TRACE_INIT( "l1_consume_dgram" );
+    MBEDTLS_MPS_TRACE_INIT( "l1_consume_dgram" );
 
     MBEDTLS_MPS_STATE_VALIDATE_RAW( p->buf != NULL,
                 "l1_consume_dgram() called, but no datagram available" );
@@ -860,7 +860,7 @@ int l1_consume_dgram( mps_l1_dgram_read *p )
 
     if( wb + wl == ml )
     {
-        TRACE( trace_comment, "Reached the end of the datagram." );
+        MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_COMMENT, "Reached the end of the datagram." );
 
         /*
          * Releasing the buffer as soon as a datagram
@@ -876,7 +876,7 @@ int l1_consume_dgram( mps_l1_dgram_read *p )
          */
         ret = mps_alloc_release( p->alloc, MPS_ALLOC_L1_IN );
         if( ret != 0 )
-            RETURN( ret );
+            MBEDTLS_MPS_TRACE_RETURN( ret );
 
         p->window_base = 0;
         p->window_len  = 0;
@@ -886,12 +886,12 @@ int l1_consume_dgram( mps_l1_dgram_read *p )
     }
     else
     {
-        TRACE( trace_comment, "More data left in the current datagram." );
+        MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_COMMENT, "More data left in the current datagram." );
         p->window_base = wb + wl;
         p->window_len  = 0;
     }
 
-    RETURN( 0 );
+    MBEDTLS_MPS_TRACE_RETURN( 0 );
 }
 
 MBEDTLS_MPS_INLINE int l1_write_dependency_dgram( mps_l1_dgram_write *p )
@@ -925,17 +925,17 @@ int l1_write_dgram( mps_l1_dgram_write *p,
     unsigned char *buf;
     mbedtls_mps_size_t bl, br;
     uint8_t flush;
-    TRACE_INIT( "l1_write_dgram" );
+    MBEDTLS_MPS_TRACE_INIT( "l1_write_dgram" );
 
     flush = p->flush;
     if( flush )
     {
-        TRACE( trace_comment, "Need to flush first" );
+        MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_COMMENT, "Need to flush first" );
         ret = l1_flush_dgram( p );
         if( ret != 0 )
         {
-            TRACE( trace_error, "Flush failed with %d", ret );
-            RETURN( ret );
+            MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_ERROR, "Flush failed with %d", ret );
+            MBEDTLS_MPS_TRACE_RETURN( ret );
         }
     }
 
@@ -952,7 +952,7 @@ int l1_write_dgram( mps_l1_dgram_write *p,
 
     *dst    = buf;
     *dstlen = bl - br;
-    RETURN( 0 );
+    MBEDTLS_MPS_TRACE_RETURN( 0 );
 }
 
 MBEDTLS_MPS_INLINE
@@ -961,7 +961,7 @@ int l1_dispatch_dgram( mps_l1_dgram_write *p,
                        mbedtls_mps_size_t *pending )
 {
     mbedtls_mps_size_t br;
-    TRACE_INIT( "l1_dispatch_dgram, length %u", (unsigned) len );
+    MBEDTLS_MPS_TRACE_INIT( "l1_dispatch_dgram, length %u", (unsigned) len );
 
     MBEDTLS_MPS_STATE_VALIDATE_RAW( p->buf != NULL,
                   "l1_dispatch_dgram() called, but no datagram open" );
@@ -975,7 +975,7 @@ int l1_dispatch_dgram( mps_l1_dgram_write *p,
     if( pending != NULL )
         *pending = br;
 
-    RETURN( l1_check_flush_dgram( p ) );
+    MBEDTLS_MPS_TRACE_RETURN( l1_check_flush_dgram( p ) );
 }
 
 MBEDTLS_MPS_INLINE
@@ -984,7 +984,7 @@ int l1_check_flush_dgram( mps_l1_dgram_write *p )
     mbedtls_mps_size_t bl, br;
     br = p->bytes_ready;
     bl = p->buf_len;
-    TRACE_INIT( "l1_check_flush_dgram:  %u / %u bytes written",
+    MBEDTLS_MPS_TRACE_INIT( "l1_check_flush_dgram:  %u / %u bytes written",
            (unsigned) br, (unsigned) bl );
 
     /* Several heuristics for flushing are conceivable,
@@ -992,13 +992,13 @@ int l1_check_flush_dgram( mps_l1_dgram_write *p )
      * data is available. */
     if( br > 0 && br >= 4 * bl / 5 )
     {
-        TRACE( trace_comment, "L1 check flush -- flush" );
+        MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_COMMENT, "L1 check flush -- flush" );
         p->flush = 1;
-        RETURN( 0 );
+        MBEDTLS_MPS_TRACE_RETURN( 0 );
     }
 
-    TRACE( trace_comment, "L1 check flush -- no flush" );
-    RETURN( 0 );
+    MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_COMMENT, "L1 check flush -- no flush" );
+    MBEDTLS_MPS_TRACE_RETURN( 0 );
 }
 
 MBEDTLS_MPS_INLINE
@@ -1010,16 +1010,16 @@ int l1_flush_dgram( mps_l1_dgram_write *p )
     unsigned char *buf;
     mbedtls_mps_size_t br;
 
-    TRACE_INIT( "l1_flush_dgram" );
+    MBEDTLS_MPS_TRACE_INIT( "l1_flush_dgram" );
 
     buf = p->buf;
     if( buf == NULL )
     {
-        TRACE( trace_error, "No outgoing datagram open." );
-        RETURN( 0 );
+        MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_ERROR, "No outgoing datagram open." );
+        MBEDTLS_MPS_TRACE_RETURN( 0 );
     }
 
-    TRACE( trace_comment, "Datagram size: %u", (unsigned) p->bytes_ready );
+    MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_COMMENT, "Datagram size: %u", (unsigned) p->bytes_ready );
 
     br = p->bytes_ready;
 
@@ -1028,25 +1028,25 @@ int l1_flush_dgram( mps_l1_dgram_write *p )
     ret = send( send_ctx, buf, br );
     if( ret <= 0 )
     {
-        TRACE( trace_comment, "send failed with %d", ret );
+        MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_COMMENT, "send failed with %d", ret );
         /* The underlying transport's send callback should return
          * WANT_WRITE instead of 0 if no data can currently be sent.
          * Fail with a fatal internal error if this spec is not obeyed. */
         if( ret == 0 )
             ret = MBEDTLS_ERR_MPS_BAD_TRANSPORT;
 
-        RETURN( ret );
+        MBEDTLS_MPS_TRACE_RETURN( ret );
     }
 
 #if( MAX_INT > SIZE_MAX )
     if( ret > (int) SIZE_MAX )
-        RETURN( MBEDTLS_ERR_MPS_BAD_TRANSPORT );
+        MBEDTLS_MPS_TRACE_RETURN( MBEDTLS_ERR_MPS_BAD_TRANSPORT );
 #endif
 
     if( (size_t) ret != br )
     {
         /* Couldn't deliver the datagram to Layer 0 at once. */
-        RETURN( MBEDTLS_ERR_MPS_BAD_TRANSPORT );
+        MBEDTLS_MPS_TRACE_RETURN( MBEDTLS_ERR_MPS_BAD_TRANSPORT );
     }
 
     l1_release_if_set( &p->buf, p->alloc, MPS_ALLOC_L1_OUT );
@@ -1056,7 +1056,7 @@ int l1_flush_dgram( mps_l1_dgram_write *p )
     p->buf_len     = 0;
 
     p->flush = 0;
-    RETURN( 0 );
+    MBEDTLS_MPS_TRACE_RETURN( 0 );
 }
 
 #endif /* MBEDTLS_MPS_PROTO_DTLS */
@@ -1076,7 +1076,7 @@ int mps_l1_init( mps_l1 *ctx, uint8_t mode,
                  void *send_ctx, mps_l0_send_t *send,
                  void *recv_ctx, mps_l0_recv_t *recv )
 {
-    TRACE_INIT( "mps_l1_init, mode %u", (unsigned) mode );
+    MBEDTLS_MPS_TRACE_INIT( "mps_l1_init, mode %u", (unsigned) mode );
 
 #if defined(MBEDTLS_MPS_PROTO_TLS)
     MBEDTLS_MPS_IF_TLS( mode )
@@ -1100,7 +1100,7 @@ int mps_l1_init( mps_l1 *ctx, uint8_t mode,
 #else
     ((void) mode);
 #endif /* MBEDTLS_MPS_PROTO_BOTH */
-    RETURN( 0 );
+    MBEDTLS_MPS_TRACE_RETURN( 0 );
 }
 
 int mps_l1_set_bio( mps_l1 *ctx,
@@ -1109,7 +1109,7 @@ int mps_l1_set_bio( mps_l1 *ctx,
 {
     mbedtls_mps_transport_type const mode =
         mbedtls_mps_l1_get_mode( ctx );
-    TRACE_INIT( "mps_l1_set_bio" );
+    MBEDTLS_MPS_TRACE_INIT( "mps_l1_set_bio" );
 
 #if defined(MBEDTLS_MPS_PROTO_TLS)
     MBEDTLS_MPS_IF_TLS( mode )
@@ -1128,7 +1128,7 @@ int mps_l1_set_bio( mps_l1 *ctx,
     }
 #endif /* MBEDTLS_MPS_PROTO_DTLS */
 
-    RETURN( 0 );
+    MBEDTLS_MPS_TRACE_RETURN( 0 );
 }
 
 void mps_l1_free( mps_l1 *ctx )
@@ -1264,7 +1264,7 @@ int mps_l1_skip( mps_l1 *ctx )
     mbedtls_mps_transport_type const mode =
         mbedtls_mps_l1_get_mode( ctx );
 
-    TRACE_INIT( "mps_l1_skip" );
+    MBEDTLS_MPS_TRACE_INIT( "mps_l1_skip" );
 
     MBEDTLS_MPS_STATE_VALIDATE_RAW( MBEDTLS_MPS_IS_DTLS( mode ),
                                     "mps_l1_skip() only for DTLS." );
@@ -1277,7 +1277,7 @@ int mps_l1_skip( mps_l1 *ctx )
     p->msg_len     = 0;
     p->buf         = NULL;
     p->buf_len     = 0;
-    RETURN( 0 );
+    MBEDTLS_MPS_TRACE_RETURN( 0 );
 }
 #endif /* MBEDTLS_MPS_PROTO_DTLS */
 

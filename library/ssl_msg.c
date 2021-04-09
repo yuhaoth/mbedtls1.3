@@ -5837,7 +5837,7 @@ int mbedtls_ssl_read( mbedtls_ssl_context *ssl, unsigned char *buf, size_t len )
     int ret, msg_type;
     size_t data_read;
     unsigned char *src;
-    mbedtls_reader *rd;
+    mbedtls_mps_reader *rd;
 
     ret = mbedtls_ssl_handle_pending_alert( ssl );
     if( ret != 0 )
@@ -5877,9 +5877,9 @@ int mbedtls_ssl_read( mbedtls_ssl_context *ssl, unsigned char *buf, size_t len )
         return( MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE );
 
     MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read_application( &ssl->mps.l4, &rd ) );
-    MBEDTLS_SSL_PROC_CHK( mbedtls_reader_get( rd, len, &src, &data_read ) );
+    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_reader_get( rd, len, &src, &data_read ) );
     memcpy( buf, src, data_read );
-    MBEDTLS_SSL_PROC_CHK( mbedtls_reader_commit( rd ) );
+    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_reader_commit( rd ) );
     MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read_consume( &ssl->mps.l4 ) );
     return( data_read );
 

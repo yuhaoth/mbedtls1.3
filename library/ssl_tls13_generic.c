@@ -172,12 +172,12 @@ int mbedtls_ssl_mps_fetch_full_hs_msg( mbedtls_ssl_context *ssl,
     if( msg.type != hs_type )
         return( MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE );
 
-    ret = mbedtls_reader_get_ext( msg.handle,
+    ret = mbedtls_mps_reader_get_ext( msg.handle,
                                   msg.length,
                                   buf,
                                   NULL );
 
-    if( ret == MBEDTLS_ERR_READER_OUT_OF_DATA )
+    if( ret == MBEDTLS_ERR_MPS_READER_OUT_OF_DATA )
     {
         MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read_pause( &ssl->mps.l4 ) );
         ret = MBEDTLS_ERR_SSL_WANT_READ;
@@ -186,7 +186,7 @@ int mbedtls_ssl_mps_fetch_full_hs_msg( mbedtls_ssl_context *ssl,
     {
         MBEDTLS_SSL_PROC_CHK( ret );
 
-        /* *buf already set in mbedtls_reader_get_ext() */
+        /* *buf already set in mbedtls_mps_reader_get_ext() */
         *buflen = msg.length;
     }
 
@@ -203,7 +203,7 @@ int mbedtls_ssl_mps_hs_consume_full_hs_msg( mbedtls_ssl_context *ssl )
     MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read_handshake( &ssl->mps.l4,
                                                       &msg ) );
 
-    MBEDTLS_SSL_PROC_CHK( mbedtls_reader_commit_ext( msg.handle ) );
+    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_reader_commit_ext( msg.handle ) );
     MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read_consume( &ssl->mps.l4 ) );
 
 cleanup:
