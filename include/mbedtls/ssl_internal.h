@@ -1450,7 +1450,6 @@ void mbedtls_ssl_set_inbound_transform( mbedtls_ssl_context *ssl,
 void mbedtls_ssl_set_outbound_transform( mbedtls_ssl_context *ssl,
                                          mbedtls_ssl_transform *transform );
 
-int mbedtls_ssl_tls1_3_derive_master_secret(mbedtls_ssl_context* ssl);
 int mbedtls_ssl_write_encrypted_extension(mbedtls_ssl_context* ssl);
 
 #if defined(MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE)
