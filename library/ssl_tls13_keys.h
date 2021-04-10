@@ -95,7 +95,7 @@ extern const struct mbedtls_ssl_tls1_3_labels_struct mbedtls_ssl_tls1_3_labels;
  *
  * The structure is computed per TLS 1.3 specification as:
  *   - 64 bytes of octet 32,
- *   - 33 bytes for the context string 
+ *   - 33 bytes for the context string
  *        (which is either "TLS 1.3, client CertificateVerify"
  *         or "TLS 1.3, server CertificateVerify"),
  *   - 1 byte for the octet 0x0, which servers as a separator,
@@ -300,5 +300,9 @@ int mbedtls_ssl_tls1_3_evolve_secret(
                    const unsigned char *secret_old,
                    const unsigned char *input, size_t input_len,
                    unsigned char *secret_new );
+
+/* TODO: Document */
+int mbedtls_ssl_generate_application_traffic_keys( mbedtls_ssl_context* ssl,
+                                                   mbedtls_ssl_key_set* traffic_keys );
 
 #endif /* MBEDTLS_SSL_TLS1_3_KEYS_H */
