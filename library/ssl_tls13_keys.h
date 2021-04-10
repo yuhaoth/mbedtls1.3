@@ -310,5 +310,6 @@ int mbedtls_ssl_handshake_key_derivation( mbedtls_ssl_context* ssl,
                                           mbedtls_ssl_key_set* traffic_keys );
 int mbedtls_ssl_generate_handshake_traffic_keys( mbedtls_ssl_context* ssl,
                                                  mbedtls_ssl_key_set* traffic_keys );
+int mbedtls_ssl_generate_resumption_master_secret( mbedtls_ssl_context* ssl );
 
 #endif /* MBEDTLS_SSL_TLS1_3_KEYS_H */

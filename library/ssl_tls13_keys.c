@@ -1309,4 +1309,117 @@ exit:
 
     return( ret );
 }
+
+#if defined(MBEDTLS_SSL_NEW_SESSION_TICKET)
+/* Generate resumption_master_secret for use with the ticket exchange. */
+int mbedtls_ssl_generate_resumption_master_secret( mbedtls_ssl_context *ssl )
+{
+    int ret = 0;
+    const mbedtls_md_info_t *md_info;
+    const mbedtls_ssl_ciphersuite_t *suite_info;
+    unsigned char hash[MBEDTLS_MD_MAX_SIZE];
+
+#if defined(MBEDTLS_SHA256_C)
+    mbedtls_sha256_context sha256;
+#endif
+
+#if defined(MBEDTLS_SHA512_C)
+    mbedtls_sha512_context sha512;
+#endif
+
+    suite_info = ssl->handshake->ciphersuite_info;
+
+    md_info = mbedtls_md_info_from_type( suite_info->mac );
+    if( md_info == NULL )
+    {
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "mbedtls_md info for %d not found",
+                                    ssl->handshake->ciphersuite_info->mac ) );
+        return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
+    }
+
+#if defined(MBEDTLS_SHA256_C)
+    if( mbedtls_hash_size_for_ciphersuite( suite_info ) == 32 )
+    {
+        mbedtls_sha256_clone( &sha256, &ssl->handshake->fin_sha256 );
+
+        if( ( ret = mbedtls_sha256_finish_ret( &sha256, hash ) ) != 0 )
+        {
+            MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_sha256_finish_ret", ret );
+            goto exit;
+        }
+    }
+    else
+#endif /* MBEDTLS_SHA256_C */
+#if defined(MBEDTLS_SHA512_C)
+    if( mbedtls_hash_size_for_ciphersuite( suite_info ) == 48 )
+    {
+        mbedtls_sha512_clone( &sha512, &ssl->handshake->fin_sha512 );
+
+        if( ( ret = mbedtls_sha512_finish_ret( &sha512, hash ) ) != 0 )
+        {
+            MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_sha512_finish_ret", ret );
+            goto exit;
+        }
+    }
+    else
+#endif /* MBEDTLS_SHA512_C */
+    {
+        /* Should never happen */
+        return ( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
+    }
+
+    /*
+     * Compute resumption_master_secret with
+     *   mbedtls_ssl_tls1_3_derive_secret( Master Secret,
+     *                                     "res master",
+     *                                     ClientHello...client Finished )
+     */
+
+    ret = mbedtls_ssl_tls1_3_derive_secret( mbedtls_md_get_type( md_info ),
+                         ssl->handshake->master_secret,
+                         mbedtls_hash_size_for_ciphersuite( suite_info ),
+                         MBEDTLS_SSL_TLS1_3_LBL_WITH_LEN( res_master ),
+                         hash, mbedtls_hash_size_for_ciphersuite( suite_info ),
+                         MBEDTLS_SSL_TLS1_3_CONTEXT_HASHED,
+                         ssl->session_negotiate->resumption_master_secret,
+                         mbedtls_hash_size_for_ciphersuite( suite_info ) );
+
+    if( ret != 0 )
+        goto exit;
+
+    MBEDTLS_SSL_DEBUG_BUF( 5, "resumption_master_secret",
+                           ssl->session_negotiate->resumption_master_secret,
+                           mbedtls_hash_size_for_ciphersuite( suite_info ) );
+
+
+exit:
+#if defined(MBEDTLS_SHA256_C)
+    if( mbedtls_hash_size_for_ciphersuite( suite_info ) == 32 )
+    {
+        mbedtls_sha256_free( &sha256 );
+    }
+    else
+#endif
+#if defined(MBEDTLS_SHA512_C)
+    if( mbedtls_hash_size_for_ciphersuite( suite_info ) == 48 )
+    {
+        mbedtls_sha512_free( &sha512 );
+    }
+    else
+#endif
+    {
+        /* Should never happen */
+        return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
+    }
+
+    return( ret );
+}
+#else /* MBEDTLS_SSL_NEW_SESSION_TICKET */
+int mbedtls_ssl_generate_resumption_master_secret( mbedtls_ssl_context *ssl )
+{
+    ((void) ssl);
+    return( 0 );
+}
+#endif /* MBEDTLS_SSL_NEW_SESSION_TICKET */
+
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
