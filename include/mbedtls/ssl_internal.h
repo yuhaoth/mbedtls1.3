@@ -1420,15 +1420,6 @@ int mbedtls_ssl_tls13_populate_transform( mbedtls_ssl_transform *transform,
                                           mbedtls_ssl_key_set const *traffic_keys,
                                           mbedtls_ssl_context *ssl /* DEBUG ONLY */ );
 
-#if defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
-int mbedtls_ssl_create_binder( mbedtls_ssl_context *ssl,
-                               int is_external,
-                               unsigned char *psk, size_t psk_len,
-                               const mbedtls_md_info_t *md,
-                               const mbedtls_ssl_ciphersuite_t *suite_info,
-                               unsigned char *result );
-#endif /* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED */
-
 int mbedtls_ssl_mps_fetch_full_hs_msg( mbedtls_ssl_context *ssl,
                                        unsigned hs_type,
                                        unsigned char **buf,
