@@ -215,10 +215,6 @@ static int ssl_write_early_data_prepare( mbedtls_ssl_context* ssl )
         return( ret );
     }
 
-#if defined(MBEDTLS_SSL_PROTO_DTLS)
-    traffic_keys.epoch = 1;
-#endif /* MBEDTLS_SSL_PROTO_DTLS */
-
 #if defined(MBEDTLS_SSL_USE_MPS)
     {
         mbedtls_ssl_transform *transform_earlydata =
@@ -267,14 +263,6 @@ static int ssl_write_early_data_prepare( mbedtls_ssl_context* ssl )
 
 #endif /* MBEDTLS_SSL_USE_MPS */
 
-#if defined(MBEDTLS_SSL_PROTO_DTLS)
-    /* epoch value( 1 ) is used for messages protected using keys derived
-     *	from early_traffic_secret.
-     */
-    ssl->in_epoch = 1;
-    ssl->out_epoch = 1;
-#endif /* MBEDTLS_SSL_PROTO_DTLS */
-
     return( 0 );
 }
 
@@ -318,13 +306,7 @@ static int ssl_write_early_data_coordinate( mbedtls_ssl_context* ssl )
 
 static int ssl_write_early_data_postprocess( mbedtls_ssl_context* ssl )
 {
-
-#if defined(MBEDTLS_SSL_PROTO_DTLS)
-    if ( ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_DATAGRAM )
-        mbedtls_ssl_send_flight_completed( ssl );
-#endif
     mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_SERVER_HELLO );
-
     return ( 0 );
 }
 
@@ -1481,11 +1463,6 @@ static int ssl_client_hello_process( mbedtls_ssl_context* ssl )
     MBEDTLS_SSL_DEBUG_BUF( 3, "ClientHello", ssl->out_msg, ssl->out_msglen );
 
 
-#if defined(MBEDTLS_SSL_PROTO_DTLS)
-    if( ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_DATAGRAM )
-        mbedtls_ssl_send_flight_completed( ssl );
-#endif
-
     /* Dispatch message */
     MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_write_handshake_msg_ext(
                               ssl, 0 /* no checksum update */ ) );
@@ -1665,19 +1642,8 @@ static int ssl_client_hello_write_partial( mbedtls_ssl_context* ssl,
     if( ssl->handshake->ctls == MBEDTLS_SSL_TLS13_CTLS_DO_NOT_USE )
 #endif /* MBEDTLS_SSL_TLS13_CTLS */
     {
-#if defined(MBEDTLS_SSL_PROTO_DTLS)
-        if( ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_DATAGRAM )
-        {
-            *buf++ = 0xfe; /* 254 */
-            *buf++ = 0xfd; /* 253 */
-        }
-        else
-#else
-        {
-            *buf++ = 0x03;
-            *buf++ = 0x03;
-        }
-#endif /* MBEDTLS_SSL_PROTO_DTLS */
+        *buf++ = 0x03;
+        *buf++ = 0x03;
         buflen -= version_len;
     }
 
@@ -1732,29 +1698,6 @@ static int ssl_client_hello_write_partial( mbedtls_ssl_context* ssl,
         buflen -= 1;
     }
 #endif /* MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE */
-
-#if defined(MBEDTLS_SSL_PROTO_DTLS)
-    /*
-     * DTLS cookie
-     */
-
-    if( ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_DATAGRAM )
-    {
-        /* For DTLS 1.3 we don't put the cookie in the ClientHello header
-         * but rather into an extension.
-         */
-        MBEDTLS_SSL_DEBUG_MSG( 3, ( "DTLS 1.3: no cookie in header" ) );
-
-        if( buflen < 1 )
-        {
-            MBEDTLS_SSL_DEBUG_MSG( 1, ( "buffer too small to hold ClientHello" ) );
-            return( MBEDTLS_ERR_SSL_BUFFER_TOO_SMALL );
-        }
-
-        *buf++ = 0; /* Cookie length set to zero */
-        buflen -= 1;
-    }
-#endif /* MBEDTLS_SSL_PROTO_DTLS */
 
     /*
      * Ciphersuite list
@@ -1983,26 +1926,12 @@ static int ssl_parse_supported_version_ext( mbedtls_ssl_context* ssl,
 {
     ((void) ssl);
 
-#if defined(MBEDTLS_SSL_PROTO_DTLS)
-    if( ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_DATAGRAM )
+    if( len != 2 ||
+        buf[0] != MBEDTLS_SSL_MAJOR_VERSION_3 ||
+        buf[1] != MBEDTLS_SSL_MINOR_VERSION_4 )
     {
-        /* TODO: Remove magic numbers */
-        if( len != 2 && buf[0] != 254 && buf[1] != 253 )
-        {
-            MBEDTLS_SSL_DEBUG_MSG( 1, ( "unexpected version" ) );
-            return( MBEDTLS_ERR_SSL_BAD_HS_SERVER_HELLO );
-        }
-    }
-    else
-#endif /* MBEDTLS_SSL_PROTO_DTLS */
-    {
-        if( len != 2 ||
-            buf[0] != MBEDTLS_SSL_MAJOR_VERSION_3 ||
-            buf[1] != MBEDTLS_SSL_MINOR_VERSION_4 )
-        {
-            MBEDTLS_SSL_DEBUG_MSG( 1, ( "unexpected version" ) );
-            return( MBEDTLS_ERR_SSL_BAD_HS_SERVER_HELLO );
-        }
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "unexpected version" ) );
+        return( MBEDTLS_ERR_SSL_BAD_HS_SERVER_HELLO );
     }
 
 #if defined(MBEDTLS_SSL_NEW_SESSION_TICKET)
@@ -2641,14 +2570,6 @@ static int ssl_certificate_request_parse( mbedtls_ssl_context* ssl,
 
 static int ssl_certificate_request_postprocess( mbedtls_ssl_context* ssl )
 {
-#if defined(MBEDTLS_SSL_PROTO_DTLS)
-    if( ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_DATAGRAM )
-    {
-        mbedtls_ack_add_record( ssl, MBEDTLS_SSL_HS_CERTIFICATE_REQUEST,
-                                MBEDTLS_SSL_ACK_RECORDS_RECEIVED );
-    }
-#endif /* MBEDTLS_SSL_PROTO_DTLS */
-
     mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_SERVER_CERTIFICATE );
     return( 0 );
 }
@@ -2881,15 +2802,9 @@ static int ssl_encrypted_extensions_parse( mbedtls_ssl_context* ssl,
     return( ret );
 }
 
-static int ssl_encrypted_extensions_postprocess( mbedtls_ssl_context* ssl ) {
-
-#if defined(MBEDTLS_SSL_PROTO_DTLS)
-    if( ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_DATAGRAM )
-        mbedtls_ack_add_record( ssl, MBEDTLS_SSL_HS_ENCRYPTED_EXTENSION, MBEDTLS_SSL_ACK_RECORDS_RECEIVED );
-#endif /* MBEDTLS_SSL_PROTO_DTLS */
-
+static int ssl_encrypted_extensions_postprocess( mbedtls_ssl_context* ssl )
+{
     mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_CERTIFICATE_REQUEST );
-
     return( 0 );
 }
 
@@ -3592,18 +3507,6 @@ static int ssl_server_hello_postprocess( mbedtls_ssl_context* ssl )
     mbedtls_ssl_set_inbound_transform( ssl, ssl->transform_handshake );
 #endif /* MBEDTLS_SSL_USE_MPS */
 
-#if defined(MBEDTLS_SSL_PROTO_DTLS)
-    traffic_keys.epoch = 2;
-#endif /* MBEDTLS_SSL_PROTO_DTLS */
-
-#if defined(MBEDTLS_SSL_PROTO_DTLS)
-    /* epoch value ( 2 ) is used for messages
-     * protected using keys derived from the handshake_traffic_secret
-     */
-    ssl->in_epoch = 2;
-    ssl->out_epoch = 2;
-#endif /* MBEDTLS_SSL_PROTO_DTLS */
-
     mbedtls_platform_zeroize( &traffic_keys, sizeof( traffic_keys ) );
 
     return( 0 );
@@ -4096,10 +3999,6 @@ static int ssl_hrr_postprocess( mbedtls_ssl_context* ssl,
     ssl->handshake->update_checksum( ssl, orig_buf, orig_msg_len );
 #endif /* MBEDTLS_SSL_USE_MPS */
 
-#if defined(MBEDTLS_SSL_PROTO_DTLS)
-    mbedtls_ssl_recv_flight_completed( ssl );
-#endif /* MBEDTLS_SSL_PROTO_DTLS */
-
     return( 0 );
 }
 
@@ -4119,15 +4018,6 @@ int mbedtls_ssl_handshake_client_step( mbedtls_ssl_context *ssl )
 
     if( ( ret = mbedtls_ssl_flush_output( ssl ) ) != 0 )
         return( ret );
-
-#if defined(MBEDTLS_SSL_PROTO_DTLS)
-    if( ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_DATAGRAM &&
-        ssl->handshake->retransmit_state == MBEDTLS_SSL_RETRANS_SENDING )
-    {
-        if( ( ret = mbedtls_ssl_resend( ssl ) ) != 0 )
-            return( ret );
-    }
-#endif /* MBEDTLS_SSL_PROTO_DTLS */
 
     switch ( ssl->state )
     {
@@ -4163,15 +4053,6 @@ int mbedtls_ssl_handshake_client_step( mbedtls_ssl_context *ssl )
             }
 #endif /* MBEDTLS_ECP_C */
 
-#if defined(MBEDTLS_SSL_PROTO_DTLS)
-            /* nothing sent or received so far */
-            if( ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_DATAGRAM )
-            {
-                mbedtls_ack_clear_all( ssl, MBEDTLS_SSL_ACK_RECORDS_SENT );
-                mbedtls_ack_clear_all( ssl, MBEDTLS_SSL_ACK_RECORDS_RECEIVED );
-            }
-#endif /* MBEDTLS_SSL_PROTO_DTLS */
-
 #if defined(MBEDTLS_SSL_NEW_SESSION_TICKET)
             ssl->session_negotiate->endpoint = ssl->conf->endpoint;
 #endif /* MBEDTLS_SSL_NEW_SESSION_TICKET */
@@ -4180,29 +4061,6 @@ int mbedtls_ssl_handshake_client_step( mbedtls_ssl_context *ssl )
             /* ----- WRITE CLIENT HELLO ----*/
 
         case MBEDTLS_SSL_CLIENT_HELLO:
-            /* Reset pointers to buffers */
-#if defined(MBEDTLS_SSL_PROTO_DTLS)
-            if( ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_DATAGRAM )
-            {
-                ssl->out_hdr = ssl->out_buf;
-                ssl->out_ctr = ssl->out_buf + 3;
-                ssl->out_len = ssl->out_buf + 11;
-                ssl->out_iv = ssl->out_buf + 13;
-                ssl->out_msg = ssl->out_buf + 13;
-
-                ssl->in_hdr = ssl->in_buf;
-                ssl->in_ctr = ssl->in_buf + 3;
-                ssl->in_len = ssl->in_buf + 11;
-                ssl->in_iv = ssl->in_buf + 13;
-                ssl->in_msg = ssl->in_buf + 13;
-            }
-#endif /* MBEDTLS_SSL_PROTO_DTLS */
-
-#if defined(MBEDTLS_SSL_PROTO_DTLS)
-            /* epoch value ( 0 ) is used with unencrypted messages */
-            ssl->in_epoch = 0;
-            ssl->out_epoch = 0;
-#endif /* MBEDTLS_SSL_PROTO_DTLS */
 
             ret = ssl_client_hello_process( ssl );
             if( ret != 0 )
@@ -4210,21 +4068,12 @@ int mbedtls_ssl_handshake_client_step( mbedtls_ssl_context *ssl )
                 MBEDTLS_SSL_DEBUG_RET( 1, "ssl_write_client_hello", ret );
                 break;
             }
-#if defined(MBEDTLS_SSL_PROTO_DTLS)
-            if( ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_DATAGRAM )
-                mbedtls_ack_add_record( ssl, MBEDTLS_SSL_HS_CLIENT_HELLO, MBEDTLS_SSL_ACK_RECORDS_SENT );
-#endif /* MBEDTLS_SSL_PROTO_DTLS */
 
 #if defined(MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE)
             mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_CLIENT_CCS_AFTER_CLIENT_HELLO );
 #else
             mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_EARLY_APP_DATA );
 #endif /* MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE */
-
-#if defined(MBEDTLS_SSL_PROTO_DTLS)
-            if( ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_DATAGRAM )
-                mbedtls_ssl_send_flight_completed( ssl );
-#endif
 
 #if defined(MBEDTLS_SSL_USE_MPS)
             ret = mbedtls_mps_flush( &ssl->mps.l4 );
@@ -4280,18 +4129,9 @@ int mbedtls_ssl_handshake_client_step( mbedtls_ssl_context *ssl )
                 break;
             }
 
-#if	defined(MBEDTLS_SSL_PROTO_DTLS)
-            if( ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_DATAGRAM )
-                mbedtls_ack_clear_all( ssl, MBEDTLS_SSL_ACK_RECORDS_SENT );
-#endif /* MBEDTLS_SSL_PROTO_DTLS */
-
             if( ssl->handshake->hello_retry_requests_received > 0 )
             {
                 /* If we received the HRR msg then we send another ClientHello */
-#if	defined(MBEDTLS_SSL_PROTO_DTLS)
-                if( ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_DATAGRAM )
-                    mbedtls_ack_add_record( ssl, MBEDTLS_SSL_HS_HELLO_RETRY_REQUEST, MBEDTLS_SSL_ACK_RECORDS_RECEIVED );
-#endif /* MBEDTLS_SSL_PROTO_DTLS */
 #if defined(MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE)
                 /* If not offering early data, the client sends a dummy
                  * change_cipher_spec record immediately before its
@@ -4305,12 +4145,6 @@ int mbedtls_ssl_handshake_client_step( mbedtls_ssl_context *ssl )
             }
             else
             {
-                /* Otherwise we continue with the handshake */
-#if	defined(MBEDTLS_SSL_PROTO_DTLS)
-                if( ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_DATAGRAM )
-                    mbedtls_ack_add_record( ssl, MBEDTLS_SSL_HS_SERVER_HELLO, MBEDTLS_SSL_ACK_RECORDS_RECEIVED );
-#endif /* MBEDTLS_SSL_PROTO_DTLS */
-
                 mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_ENCRYPTED_EXTENSIONS );
             }
             break;
@@ -4342,16 +4176,6 @@ int mbedtls_ssl_handshake_client_step( mbedtls_ssl_context *ssl )
             }
             mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_SECOND_SERVER_HELLO );
 
-#if defined(MBEDTLS_SSL_PROTO_DTLS)
-            if( ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_DATAGRAM )
-                mbedtls_ack_add_record( ssl, MBEDTLS_SSL_HS_CLIENT_HELLO, MBEDTLS_SSL_ACK_RECORDS_SENT );
-#endif /* MBEDTLS_SSL_PROTO_DTLS */
-
-#if defined(MBEDTLS_SSL_PROTO_DTLS)
-            if( ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_DATAGRAM )
-                mbedtls_ssl_send_flight_completed( ssl );
-#endif
-
 #if defined(MBEDTLS_SSL_USE_MPS)
             ret = mbedtls_mps_flush( &ssl->mps.l4 );
             if( ret != 0 )
@@ -4375,11 +4199,6 @@ int mbedtls_ssl_handshake_client_step( mbedtls_ssl_context *ssl )
                 MBEDTLS_SSL_DEBUG_RET( 1, "ssl_parse_server_hello", ret );
                 break;
             }
-
-#if	defined(MBEDTLS_SSL_PROTO_DTLS)
-            if( ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_DATAGRAM )
-                mbedtls_ack_clear_all( ssl, MBEDTLS_SSL_ACK_RECORDS_SENT );
-#endif /* MBEDTLS_SSL_PROTO_DTLS */
 
             /* if we received a second HRR we abort */
             if( ssl->handshake->hello_retry_requests_received == 2 )
@@ -4454,10 +4273,6 @@ int mbedtls_ssl_handshake_client_step( mbedtls_ssl_context *ssl )
                 MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_finished_in_process", ret );
                 break;
             }
-#if	defined(MBEDTLS_SSL_PROTO_DTLS)
-            if( ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_DATAGRAM )
-                mbedtls_ack_add_record( ssl, MBEDTLS_SSL_HS_FINISHED, MBEDTLS_SSL_ACK_RECORDS_RECEIVED );
-#endif /* MBEDTLS_SSL_PROTO_DTLS */
 
             mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_END_OF_EARLY_DATA );
             break;
@@ -4529,27 +4344,6 @@ int mbedtls_ssl_handshake_client_step( mbedtls_ssl_context *ssl )
                 break;
             }
             break;
-
-#if defined(MBEDTLS_SSL_PROTO_DTLS)
-
-            /* ----- READ ACK ----*/
-
-        case MBEDTLS_SSL_HANDSHAKE_FINISH_ACK:
-            /* The server needs to reply with an ACK message after parsing
-             * the Finish message from the client.
-             */
-/*		ret = mbedtls_ssl_parse_ack( ssl ); */
-/*		if( ret != 0 ) { */
-/*			MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_parse_ack", ret ); */
-/*			return ( ret ); */
-/*		} */
-
-            if( ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_DATAGRAM )
-                mbedtls_ack_clear_all( ssl, MBEDTLS_SSL_ACK_RECORDS_SENT );
-
-            mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_FLUSH_BUFFERS );
-            break;
-#endif  /* MBEDTLS_SSL_PROTO_DTLS */
 
         case MBEDTLS_SSL_FLUSH_BUFFERS:
             MBEDTLS_SSL_DEBUG_MSG( 2, ( "handshake: done" ) );

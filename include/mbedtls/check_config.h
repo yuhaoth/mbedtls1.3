@@ -981,10 +981,6 @@
 #error "The new session ticket concept is only available with TLS 1.3 and is not compatible with RFC 5077-style session tickets."
 #endif
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && defined(MBEDTLS_SSL_PROTO_DTLS) && !defined(MBEDTLS_SSL_COOKIE_C)
-#error "Cookie functionality needs to be enabled for DTLS 1.3"
-#endif
-
 #if defined(MBEDTLS_SSL_TLS13_CTLS) && !defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
 #error "cTLS can only be used in context with TLS and/or DTLS 1.3"
 #endif
