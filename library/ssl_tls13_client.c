@@ -4103,60 +4103,6 @@ static int ssl_hrr_postprocess( mbedtls_ssl_context* ssl,
     return( 0 );
 }
 
-#if !defined(foobar)
-static void mbedtls_patch_pointers( mbedtls_ssl_context* ssl )
-{
-    ( ( void )ssl );
-}
-#else
-static void mbedtls_patch_pointers( mbedtls_ssl_context* ssl )
-{
-    /* In case we negotiated the use of CIDs then we need to
-     * adjust the pointers to various header fields. If we
-     * did not negotiate the use of a CID or our peer requested
-     * us not to add a CID value to the record header then the
-     * out_cid_len or in_cid_len will be zero.
-     */
-#if	defined(MBEDTLS_SSL_PROTO_DTLS)
-#if defined(MBEDTLS_CID)
-    size_t out_cid_len = ssl->out_cid_len;
-    size_t in_cid_len = ssl->in_cid_len;
-#else
-    size_t out_cid_len = 0;
-    size_t in_cid_len = 0;
-#endif /* MBEDTLS_CID */
-
-    if( ( ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_DATAGRAM ) &&
-        ( out_cid_len > 0 ) )
-    {
-        ssl->out_hdr = ssl->out_buf;
-        ssl->out_ctr = ssl->out_buf + 1 + out_cid_len;
-        ssl->out_len = ssl->out_buf + mbedtls_ssl_hdr_len( ssl, MBEDTLS_SSL_DIRECTION_OUT, ssl->transform_negotiate ) - 2;
-        ssl->out_iv = ssl->out_buf + mbedtls_ssl_hdr_len( ssl, MBEDTLS_SSL_DIRECTION_OUT, ssl->transform_negotiate );
-        /* ssl->out_msg = ssl->out_buf + mbedtls_ssl_hdr_len( ssl, MBEDTLS_SSL_DIRECTION_OUT ) + ssl->transform_negotiate->ivlen -
-           ssl->transform_negotiate->fixed_ivlen; */
-        ssl->out_msg = ssl->out_iv;
-    }
-
-    if( ( ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_DATAGRAM ) &&
-        ( in_cid_len > 0 ) )
-    {
-        ssl->in_hdr = ssl->in_buf;
-        ssl->in_ctr = ssl->in_buf + 1 + in_cid_len;
-        ssl->in_len = ssl->in_buf + mbedtls_ssl_hdr_len( ssl, MBEDTLS_SSL_DIRECTION_IN, ssl->transform_negotiate ) - 2;
-        ssl->in_iv = ssl->in_buf + mbedtls_ssl_hdr_len( ssl, MBEDTLS_SSL_DIRECTION_IN, ssl->transform_negotiate );
-        /* ssl->in_msg = ssl->in_buf + mbedtls_ssl_hdr_len( ssl, MBEDTLS_SSL_DIRECTION_OUT ) + ssl->transform_negotiate->ivlen -
-           ssl->transform_negotiate->fixed_ivlen; */
-        ssl->in_msg = ssl->in_iv;
-    }
-    else
-#endif /* MBEDTLS_SSL_PROTO_DTLS */
-    {
-        ( ( void )ssl );
-    }
-}
-#endif /* foobar */
-
 /*
  * TLS and DTLS 1.3 State Maschine -- client side
  */
@@ -4364,7 +4310,6 @@ int mbedtls_ssl_handshake_client_step( mbedtls_ssl_context *ssl )
                 if( ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_DATAGRAM )
                     mbedtls_ack_add_record( ssl, MBEDTLS_SSL_HS_SERVER_HELLO, MBEDTLS_SSL_ACK_RECORDS_RECEIVED );
 #endif /* MBEDTLS_SSL_PROTO_DTLS */
-                mbedtls_patch_pointers( ssl );
 
                 mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_ENCRYPTED_EXTENSIONS );
             }
@@ -4443,7 +4388,6 @@ int mbedtls_ssl_handshake_client_step( mbedtls_ssl_context *ssl )
                 mbedtls_ssl_send_alert_message( ssl, MBEDTLS_SSL_ALERT_LEVEL_FATAL, MBEDTLS_SSL_ALERT_MSG_UNEXPECTED_MESSAGE );
                 return ( MBEDTLS_ERR_SSL_BAD_HS_TOO_MANY_HRR );
             }
-            mbedtls_patch_pointers( ssl );
             mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_ENCRYPTED_EXTENSIONS );
             break;
 
