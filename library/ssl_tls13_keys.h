@@ -95,7 +95,7 @@ extern const struct mbedtls_ssl_tls1_3_labels_struct mbedtls_ssl_tls1_3_labels;
  *
  * The structure is computed per TLS 1.3 specification as:
  *   - 64 bytes of octet 32,
- *   - 33 bytes for the context string 
+ *   - 33 bytes for the context string
  *        (which is either "TLS 1.3, client CertificateVerify"
  *         or "TLS 1.3, server CertificateVerify"),
  *   - 1 byte for the octet 0x0, which servers as a separator,
@@ -300,5 +300,27 @@ int mbedtls_ssl_tls1_3_evolve_secret(
                    const unsigned char *secret_old,
                    const unsigned char *input, size_t input_len,
                    unsigned char *secret_new );
+
+/* TODO: Document */
+int mbedtls_ssl_generate_application_traffic_keys( mbedtls_ssl_context* ssl,
+                                                   mbedtls_ssl_key_set* traffic_keys );
+int mbedtls_ssl_generate_early_data_keys( mbedtls_ssl_context *ssl,
+                                          mbedtls_ssl_key_set *traffic_keys );
+int mbedtls_ssl_handshake_key_derivation( mbedtls_ssl_context* ssl,
+                                          mbedtls_ssl_key_set* traffic_keys );
+int mbedtls_ssl_generate_handshake_traffic_keys( mbedtls_ssl_context* ssl,
+                                                 mbedtls_ssl_key_set* traffic_keys );
+int mbedtls_ssl_generate_resumption_master_secret( mbedtls_ssl_context* ssl );
+
+#if defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
+int mbedtls_ssl_create_binder( mbedtls_ssl_context *ssl,
+                               int is_external,
+                               unsigned char *psk, size_t psk_len,
+                               const mbedtls_md_info_t *md,
+                               const mbedtls_ssl_ciphersuite_t *suite_info,
+                               unsigned char *result );
+#endif /* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED */
+
+int mbedtls_ssl_tls1_3_derive_master_secret( mbedtls_ssl_context* ssl );
 
 #endif /* MBEDTLS_SSL_TLS1_3_KEYS_H */
