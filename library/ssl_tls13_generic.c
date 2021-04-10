@@ -3418,12 +3418,10 @@ static int ssl_read_certificate_validate( mbedtls_ssl_context* ssl )
 
 static int ssl_read_certificate_postprocess( mbedtls_ssl_context* ssl )
 {
-
-#if	defined(MBEDTLS_SSL_PROTO_DTLS)
+#if defined(MBEDTLS_SSL_PROTO_DTLS)
     if( ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_DATAGRAM )
         mbedtls_ack_add_record( ssl, MBEDTLS_SSL_HS_CERTIFICATE, MBEDTLS_SSL_ACK_RECORDS_RECEIVED );
 #endif /* MBEDTLS_SSL_PROTO_DTLS */
-
 
 #if defined(MBEDTLS_SSL_SRV_C)
     if( ssl->conf->endpoint == MBEDTLS_SSL_IS_SERVER )
@@ -4765,8 +4763,10 @@ void mbedtls_ssl_conf_cid( mbedtls_ssl_config *conf, unsigned int cid )
 
 
 #if defined(MBEDTLS_ZERO_RTT)
-void mbedtls_ssl_conf_early_data( mbedtls_ssl_config *conf, int early_data, char *buffer, unsigned int len, int( *early_data_callback )( mbedtls_ssl_context *,
-                                                                                                                                         unsigned char *, size_t ) )
+void mbedtls_ssl_conf_early_data( mbedtls_ssl_config *conf, int early_data,
+                        char *buffer, unsigned int len,
+                        int(*early_data_callback)( mbedtls_ssl_context *,
+                                                   unsigned char *, size_t ) )
 {
 #if !defined(MBEDTLS_SSL_SRV_C)
     ( (void ) early_data_callback );
