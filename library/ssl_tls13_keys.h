@@ -304,5 +304,7 @@ int mbedtls_ssl_tls1_3_evolve_secret(
 /* TODO: Document */
 int mbedtls_ssl_generate_application_traffic_keys( mbedtls_ssl_context* ssl,
                                                    mbedtls_ssl_key_set* traffic_keys );
+int mbedtls_ssl_generate_early_data_keys( mbedtls_ssl_context *ssl,
+                                          mbedtls_ssl_key_set *traffic_keys );
 
 #endif /* MBEDTLS_SSL_TLS1_3_KEYS_H */
