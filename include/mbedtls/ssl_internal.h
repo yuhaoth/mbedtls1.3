@@ -1471,7 +1471,6 @@ int mbedtls_ssl_generate_early_data_keys( mbedtls_ssl_context* ssl,
                                           mbedtls_ssl_key_set* traffic_keys );
 int mbedtls_ssl_generate_resumption_master_secret(mbedtls_ssl_context* ssl);
 int mbedtls_ssl_write_encrypted_extension(mbedtls_ssl_context* ssl);
-int mbedtls_increment_sequence_number(unsigned char* sequenceNumber, unsigned char* nonce, size_t ivlen);
 
 #if defined(MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE)
 int mbedtls_ssl_write_change_cipher_spec(mbedtls_ssl_context* ssl);
