@@ -128,16 +128,6 @@
 #define MBEDTLS_SSL_RENEGOTIATION_DONE          2   /* Done or aborted */
 #define MBEDTLS_SSL_RENEGOTIATION_PENDING       3   /* Requested (server only) */
 
-
-/* For use with cTLS only */
-#define MBEDTLS_SSL_TLS13_CTLS_DO_NOT_USE         0
-#define MBEDTLS_SSL_TLS13_CTLS_USE                1
-
-// Constants for use with varint data type introduced by cTLS
-#define MBEDTLS_VARINT_HDR_1 128
-#define MBEDTLS_VARINT_HDR_2 64
-enum varint_length_enum { VARINT_LENGTH_FAILURE = 0, VARINT_LENGTH_1_BYTE = 1, VARINT_LENGTH_2_BYTE = 2, VARINT_LENGTH_3_BYTE = 3 };
-
 #define MBEDTLS_SSL_PROC_CHK(f)     \
     do {                                                        \
         ret = (f);                                              \
@@ -852,9 +842,6 @@ struct mbedtls_ssl_handshake_params
     int extensions_present;             /*!< which extension were present; the */
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && defined(MBEDTLS_SSL_TLS13_CTLS)
-    uint8_t ctls; /* value of 1 indicates we are using ctls */
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL && MBEDTLS_SSL_TLS13_CTLS */
 #if (defined(MBEDTLS_SSL_SESSION_TICKETS) || (defined(MBEDTLS_SSL_NEW_SESSION_TICKET) && defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)))
     int new_session_ticket;             /*!< use NewSessionTicket?    */
 #endif /* MBEDTLS_SSL_SESSION_TICKETS || ( MBEDTLS_SSL_NEW_SESSION_TICKET && MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL ) */
@@ -1310,14 +1297,6 @@ int mbedtls_ssl_new_session_ticket_process(mbedtls_ssl_context* ssl);
 int ssl_parse_encrypted_extensions_early_data_ext( mbedtls_ssl_context *ssl,
     const unsigned char *buf, size_t len );
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL && MBEDTLS_ZERO_RTT && MBEDTLS_SSL_CLI_C */
-
-#if defined(MBEDTLS_SSL_TLS13_CTLS)
-static enum varint_length_enum set_varint_length(uint32_t input, uint32_t* output);
-static uint8_t get_varint_length(const uint8_t input);
-static uint32_t get_varint_value(const uint32_t input);
-#endif /* MBEDTLS_SSL_TLS13_CTLS */
-
-
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
 

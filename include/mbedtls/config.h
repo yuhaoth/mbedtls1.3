@@ -1783,36 +1783,6 @@
  */
 //#define MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE
 
- /**
- * \def MBEDTLS_SSL_TLS13_CTLS_RANDOM_MAX_LENGTH
- *
- * Sets the maximum length for the random
- * in the ClientHello and the ServerHello.
- * (in bytes). This value MUST NOT be larger
- * than 32 bytes.
- *
- */
-#define MBEDTLS_SSL_TLS13_CTLS_RANDOM_MAX_LENGTH 32
-
-
- /**
- * \def MBEDTLS_SSL_TLS13_CTLS
- *
- * Enable support for Compact TLS (cTLS).
- *
- * Compact TLS (cTLS) is a non-interoperable variant of the TLS 1.3 protocol
- * that keeps the handshake logic of TLS 1.3 but applies compression techniques
- * to reduce the transmission bandwidth of a handshake.
- *
- * \warning cTLS is _not_ interoperable with native TLS 1.3. If you want to use it,
- *          you need to make sure out-of-band that the peer supports it.
- *
- * Uncomment to use the cTLS variant of TLS 1.3.
- *
- */
-//#define MBEDTLS_SSL_TLS13_CTLS
-
-
 /**
 *  \def MBEDTLS_SSL_EARLY_DATA_MAX_DELAY
 *
