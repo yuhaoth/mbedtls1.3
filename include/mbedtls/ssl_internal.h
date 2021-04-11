@@ -1641,12 +1641,9 @@ void mbedtls_ssl_read_version( int *major, int *minor, int transport,
 
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
-static inline size_t mbedtls_ssl_hdr_len(const mbedtls_ssl_context* ssl, const int direction, mbedtls_ssl_transform* transform)
+static inline size_t mbedtls_ssl_hdr_len(const mbedtls_ssl_context* ssl,
+                                         mbedtls_ssl_transform* transform)
 {
-#if !defined(MBEDTLS_CID)
-    ((void) direction);
-#endif /* MBEDTLS_CID */
-
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
     if (ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_DATAGRAM) {
 
@@ -1661,13 +1658,6 @@ static inline size_t mbedtls_ssl_hdr_len(const mbedtls_ssl_context* ssl, const i
          */
         len = 1 /* unified header */ + 2 /* sequence number */ + 2 /* length */;
 
-        /* Check whether it includes a CID */
-#if defined(MBEDTLS_CID)
-        if (direction == MBEDTLS_SSL_DIRECTION_OUT)
-            len += ssl->out_cid_len;
-        else
-            len += ssl->in_cid_len;
-#endif /* MBEDTLS_CID */
         return (len);
     }
     else
@@ -1738,12 +1728,6 @@ void mbedtls_ssl_recv_flight_completed( mbedtls_ssl_context *ssl );
 int mbedtls_ssl_resend( mbedtls_ssl_context *ssl );
 int mbedtls_ssl_flight_transmit( mbedtls_ssl_context *ssl );
 #endif
-
-
-#if defined(MBEDTLS_CID)
-int mbedtls_ssl_parse_cid_ext(mbedtls_ssl_context* ssl, const unsigned char* buf, size_t len);
-void mbedtls_ssl_write_cid_ext(mbedtls_ssl_context* ssl, unsigned char* buf, size_t* olen);
-#endif /* MBEDTLS_CID */
 
 /* Visible for testing purposes only */
 #if defined(MBEDTLS_SSL_DTLS_ANTI_REPLAY)

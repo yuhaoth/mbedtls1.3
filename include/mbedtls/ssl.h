@@ -244,18 +244,6 @@
 #define MBEDTLS_SSL_CID_DISABLED                0
 #define MBEDTLS_SSL_CID_ENABLED                 1
 
- /* This is for the old CID functionality */
- // CID flags for session
-#define MBEDTLS_CID_DISABLED 0
-#define MBEDTLS_CID_ENABLED 1
-
-// CID settings for configuration
-#define MBEDTLS_CID_CONF_DISABLED 0
-#define MBEDTLS_CID_CONF_ENABLED 1
-#define MBEDTLS_CID_CONF_ZERO_LENGTH 2
-
-
-
 #define MBEDTLS_SSL_ETM_DISABLED                0
 #define MBEDTLS_SSL_ETM_ENABLED                 1
 
@@ -1194,10 +1182,6 @@ struct mbedtls_ssl_session
  */
     int process_early_data; /*!< Indication about using early data or not on the server side */
 #endif /* MBEDTLS_ZERO_RTT && MBEDTLS_SSL_SRV_C */
-
-#if defined(MBEDTLS_CID)
-    unsigned int cid;           /*!< flag about CID usage           */
-#endif /* MBEDTLS_CID */
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 
 };
@@ -1502,11 +1486,6 @@ struct mbedtls_ssl_config
                                              *   record with unexpected CID
                                              *   should lead to failure.    */
 #endif /* MBEDTLS_SSL_DTLS_CONNECTION_ID */
-
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && defined(MBEDTLS_CID)
-    unsigned int cid : 2;
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL && MBEDTLS_CID */
-
 };
 
 
@@ -1621,11 +1600,6 @@ struct mbedtls_ssl_context
                                  *   (the end is marked by in_len).   */
 #endif /* MBEDTLS_SSL_DTLS_CONNECTION_ID */
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && defined(MBEDTLS_CID)
-    unsigned char in_cid[MBEDTLS_CID_MAX_SIZE]; /* cid value of incoming data */
-    uint8_t in_cid_len; /* length of the incoming cid value */
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL && MBEDTLS_CID */
-
     unsigned char *in_len;      /*!< two-bytes message length field   */
     unsigned char *in_iv;       /*!< ivlen-byte IV                    */
     unsigned char *in_msg;      /*!< message contents (in_iv+ivlen)   */
@@ -1690,11 +1664,6 @@ struct mbedtls_ssl_context
     unsigned char *out_cid;     /*!< The start of the CID;
                                  *   (the end is marked by in_len).   */
 #endif /* MBEDTLS_SSL_DTLS_CONNECTION_ID */
-
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && defined(MBEDTLS_CID)
-    unsigned char out_cid[MBEDTLS_CID_MAX_SIZE]; /* cid value of outgoing data */
-    uint8_t out_cid_len; /* length of the outgoing cid value */
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL && MBEDTLS_CID */
 
     unsigned char *out_len;     /*!< two-bytes message length field   */
     unsigned char *out_iv;      /*!< ivlen-byte IV                    */
@@ -3887,23 +3856,6 @@ void mbedtls_ssl_conf_fallback( mbedtls_ssl_config *conf, char fallback );
  */
 void mbedtls_ssl_conf_encrypt_then_mac( mbedtls_ssl_config *conf, char etm );
 #endif /* MBEDTLS_SSL_ENCRYPT_THEN_MAC */
-
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && defined(MBEDTLS_CID)
-/**
-* \brief           Enable or disable Connection ID
-*                  (Default: MBEDTLS_CID_DISABLE)
-**
-* \param conf      SSL configuration
-* \param cid       MBEDTLS_CID_DISABLE or MBEDTLS_CID_DONT_USE or MBEDTLS_CID_USE
-**
-* \note            MBEDTLS_CID_DISABLE indicates that the CID functionality is not
-*                  to be used for this session (even though the CID code is compiled in).
-*                  MBEDTLS_CID_DONT_USE indicates that we do not want to use a CID value
-*                  for outgoing records.
-*                  MBEDTLS_CID_USE implies that a CID value will be put in outgoing records.
-*/
-void mbedtls_ssl_conf_cid(mbedtls_ssl_config* conf, unsigned int cid);
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL && MBEDTLS_CID */
 
 #if defined(MBEDTLS_SSL_EXTENDED_MASTER_SECRET)
 /**

@@ -2164,7 +2164,7 @@ static int ssl_client_hello_fetch( mbedtls_ssl_context* ssl,
     buf = ssl->in_hdr;
 
     MBEDTLS_SSL_DEBUG_BUF( 4, "record header", buf,
-             mbedtls_ssl_hdr_len( ssl, MBEDTLS_SSL_DIRECTION_IN, NULL ) );
+             mbedtls_ssl_hdr_len( ssl, NULL ) );
 
     /*
      * TLS Client Hello
@@ -2192,8 +2192,8 @@ static int ssl_client_hello_fetch( mbedtls_ssl_context* ssl,
 
             MBEDTLS_SSL_DEBUG_MSG( 3, ( "CCS, message len.: %d", msg_len ) );
 
-            if( ( ret = mbedtls_ssl_fetch_input( ssl, mbedtls_ssl_hdr_len( ssl,
-                                    MBEDTLS_SSL_DIRECTION_IN, NULL ) + msg_len ) ) != 0 )
+            if( ( ret = mbedtls_ssl_fetch_input( ssl,
+                            mbedtls_ssl_hdr_len( ssl, NULL ) + msg_len ) ) != 0 )
             {
                 MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_fetch_input", ret );
                 return( MBEDTLS_ERR_SSL_BAD_HS_CHANGE_CIPHER_SPEC );
@@ -2236,7 +2236,8 @@ static int ssl_client_hello_fetch( mbedtls_ssl_context* ssl,
         return( MBEDTLS_ERR_SSL_BAD_HS_CLIENT_HELLO );
     }
 
-    if( ( ret = mbedtls_ssl_fetch_input( ssl, mbedtls_ssl_hdr_len( ssl, MBEDTLS_SSL_DIRECTION_IN, ssl->transform_in ) + msg_len ) ) != 0 )
+    if( ( ret = mbedtls_ssl_fetch_input( ssl,
+                      mbedtls_ssl_hdr_len( ssl, ssl->transform_in ) + msg_len ) ) != 0 )
     {
         MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_fetch_input", ret );
         return( MBEDTLS_ERR_SSL_BAD_HS_CLIENT_HELLO );
@@ -2308,11 +2309,6 @@ static void ssl_debug_print_client_hello_exts( mbedtls_ssl_context *ssl )
     MBEDTLS_SSL_DEBUG_MSG( 3, ( "- SUPPORTED_VERSION_EXTENSION ( %s )",
                                 ( ( ssl->handshake->extensions_present & SUPPORTED_VERSION_EXTENSION ) > 0 ) ?
                                 "TRUE" : "FALSE" ) );
-#if defined(MBEDTLS_CID)
-    MBEDTLS_SSL_DEBUG_MSG( 3, ( "- CID_EXTENSION  ( %s )",
-                                ( ( ssl->handshake->extensions_present & CID_EXTENSION ) > 0 ) ?
-                                "TRUE" : "FALSE" ) );
-#endif /* MBEDTLS_CID */
 #if defined ( MBEDTLS_SSL_SERVER_NAME_INDICATION )
     MBEDTLS_SSL_DEBUG_MSG( 3, ( "- SERVERNAME_EXTENSION    ( %s )",
                                 ( ( ssl->handshake->extensions_present & SERVERNAME_EXTENSION ) > 0 ) ?
@@ -2692,24 +2688,6 @@ static int ssl_client_hello_parse( mbedtls_ssl_context* ssl,
                 ssl->handshake->extensions_present |= SERVERNAME_EXTENSION;
                 break;
 #endif /* MBEDTLS_SSL_SERVER_NAME_INDICATION */
-
-#if defined(MBEDTLS_CID)
-            case MBEDTLS_TLS_EXT_CID:
-                MBEDTLS_SSL_DEBUG_MSG( 3, ( "found CID extension" ) );
-                if( ssl->conf->cid == MBEDTLS_CID_CONF_DISABLED )
-                    break;
-
-                ret = ssl_parse_cid_ext( ssl, ext + 4, ext_size );
-                if( ret != 0 )
-                {
-                    final_ret = MBEDTLS_ERR_SSL_BAD_HS_CID_EXT;
-                }
-                else if( ret == 0 ) /* cid extension present and processed succesfully */
-                {
-                    ssl->handshake->extensions_present |= CID_EXTENSION;
-                }
-                break;
-#endif /* MBEDTLS_CID */
 
 #if defined(MBEDTLS_SSL_COOKIE_C)
             case MBEDTLS_TLS_EXT_COOKIE:
@@ -4128,20 +4106,6 @@ static int ssl_server_hello_write( mbedtls_ssl_context* ssl,
 
     total_ext_len += cur_ext_len;
     buf += cur_ext_len;
-
-#if defined(MBEDTLS_CID)
-    if( ssl->handshake->extensions_present & CID_EXTENSION )
-    {
-        if( ( ret = ssl_write_cid_ext( ssl, buf, end, &cur_ext_len ) ) != 0 )
-        {
-            MBEDTLS_SSL_DEBUG_RET( 1, "ssl_write_cid_ext", ret );
-            return( ret );
-        }
-
-        total_ext_len += cur_ext_len;
-        buf += cur_ext_len;
-    }
-#endif /* MBEDTLS_CID */
 
     MBEDTLS_SSL_DEBUG_BUF( 4, "server hello extensions", extension_start, total_ext_len );
 

@@ -1828,12 +1828,6 @@ static int ssl_client_hello_write_partial( mbedtls_ssl_context* ssl,
     buf += cur_ext_len;
 #endif /* MBEDTLS_SSL_SERVER_NAME_INDICATION */
 
-#if defined(MBEDTLS_CID)
-    ssl_write_cid_ext( ssl, buf, end, &cur_ext_len );
-    total_ext_len += cur_ext_len;
-    buf += cur_ext_len;
-#endif
-
 #if defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
     /* For PSK-based ciphersuites we need the pre-shared-key extension
      * and the psk_key_exchange_modes extension.
@@ -3346,19 +3340,6 @@ static int ssl_server_hello_parse( mbedtls_ssl_context* ssl,
 
         switch ( ext_id )
         {
-
-#if defined(MBEDTLS_CID)
-            case MBEDTLS_TLS_EXT_CID:
-                MBEDTLS_SSL_DEBUG_MSG( 3, ( "found CID extension" ) );
-                if( ssl->conf->cid == MBEDTLS_CID_CONF_DISABLED )
-                    break;
-
-                ret = ssl_parse_cid_ext( ssl, ext + 4, ext_size );
-                if( ret != 0 )
-                    return( ret );
-                break;
-#endif /* MBEDTLS_CID */
-
             case MBEDTLS_TLS_EXT_SUPPORTED_VERSIONS:
                 MBEDTLS_SSL_DEBUG_MSG( 3, ( "found supported_versions extension" ) );
 
@@ -3438,15 +3419,6 @@ static int ssl_server_hello_postprocess( mbedtls_ssl_context* ssl )
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "Unknown key exchange." ) );
         return( MBEDTLS_ERR_SSL_BAD_HS_SERVER_HELLO );
     }
-
-#if defined(MBEDTLS_CID)
-    /* Server does not want to use CID -> recover resources */
-    if( ssl->session_negotiate->cid == MBEDTLS_CID_DISABLED &&
-        ssl->in_cid_len > 0 ) {
-        free( ssl->in_cid );
-        ssl->in_cid_len = 0;
-    }
-#endif /* MBEDTLS_CID */
 
     /* Generate handshake keying material */
     ret = mbedtls_ssl_handshake_key_derivation( ssl, &traffic_keys );
