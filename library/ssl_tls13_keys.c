@@ -561,13 +561,6 @@ int mbedtls_ssl_generate_early_data_keys( mbedtls_ssl_context *ssl,
         return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
     }
 
-#if defined(MBEDTLS_SSL_PROTO_DTLS) && defined(MBEDTLS_SSL_DTLS_ANTI_REPLAY)
-    if( ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_DATAGRAM )
-    {
-        ssl_dtls_replay_reset( ssl );
-    }
-#endif /* MBEDTLS_SSL_PROTO_DTLS && MBEDTLS_SSL_DTLS_ANTI_REPLAY */
-
     if( ciphersuite_info->mac == MBEDTLS_MD_SHA256 )
     {
 #if defined(MBEDTLS_SHA256_C)
