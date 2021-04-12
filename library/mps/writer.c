@@ -21,6 +21,7 @@
 
 #include "mbedtls/mps/writer.h"
 #include "mbedtls/mps/trace.h"
+#include "mbedtls/mps/error.h"
 
 #if defined(MBEDTLS_MPS_SEPARATE_LAYERS) ||     \
     defined(MBEDTLS_MPS_TOP_TRANSLATION_UNIT)

@@ -239,6 +239,14 @@
             MBEDTLS_ERR_MPS_WANT_WRITE ) )                              \
     MBEDTLS_MPS_ERROR_INFO_WRAP(                                        \
         MBEDTLS_MPS_MAKE_ERROR_INFO(                                    \
+            ( MBEDTLS_MPS_ERROR_FLAGS_EXTERNAL ),                       \
+            MBEDTLS_ERR_SSL_WANT_READ ) )                               \
+    MBEDTLS_MPS_ERROR_INFO_WRAP(                                        \
+        MBEDTLS_MPS_MAKE_ERROR_INFO(                                    \
+            ( MBEDTLS_MPS_ERROR_FLAGS_EXTERNAL  ),                      \
+            MBEDTLS_ERR_SSL_WANT_WRITE ) )                              \
+    MBEDTLS_MPS_ERROR_INFO_WRAP(                                        \
+        MBEDTLS_MPS_MAKE_ERROR_INFO(                                    \
             ( MBEDTLS_MPS_ERROR_FLAGS_EXTERNAL |                        \
               MBEDTLS_MPS_ERROR_FLAGS_FATAL ),                          \
             MBEDTLS_ERR_MPS_BAD_TRANSFORM ) )                           \
