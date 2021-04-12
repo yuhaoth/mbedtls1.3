@@ -377,15 +377,15 @@ int mps_l2_init( mbedtls_mps_l2 *ctx, mps_l1 *l1,
 #endif /* !MBEDTLS_MPS_CONF_EMPTY_FLAG */
 
 #if !defined(MBEDTLS_MPS_CONF_MAX_PLAIN_OUT)
-    ctx->conf.max_plain_out = 1000;
+    ctx->conf.max_plain_out = 16384;
 #endif /* MBEDTLS_MPS_CONF_MAX_PLAIN_OUT */
 
 #if !defined(MBEDTLS_MPS_CONF_MAX_PLAIN_IN)
-    ctx->conf.max_plain_in  = 1000;
+    ctx->conf.max_plain_in  = 16384;
 #endif /* MBEDTLS_MPS_CONF_MAX_PLAIN_IN */
 
 #if !defined(MBEDTLS_MPS_CONF_MAX_CIPHER_IN)
-    ctx->conf.max_cipher_in = 1000;
+    ctx->conf.max_cipher_in = 16384;
 #endif /* !MBEDTLS_MPS_CONF_MAX_CIPHER_IN */
 
     ctx->conf.f_rng = f_rng;
