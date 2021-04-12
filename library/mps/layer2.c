@@ -23,6 +23,14 @@
 #include "mbedtls/mps/trace.h"
 #include "mbedtls/mps/common.h"
 
+#if defined(MBEDTLS_PLATFORM_C)
+#include "mbedtls/platform.h"
+#else
+#include <stdlib.h>
+#define mbedtls_calloc    calloc
+#define mbedtls_free      free
+#endif
+
 #if defined(MBEDTLS_MPS_SEPARATE_LAYERS) ||     \
     defined(MBEDTLS_MPS_TOP_TRANSLATION_UNIT)
 
@@ -320,21 +328,21 @@ int mps_l2_init( mbedtls_mps_l2 *ctx, mps_l1 *l1,
     {
         MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_COMMENT, "Allocating L2 writer queue of size %u Bytes",
                (unsigned) max_write );
-        queue = malloc( max_write );
+        queue = mbedtls_calloc( 1, max_write );
     }
     if( max_read > 0 )
     {
         MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_COMMENT, "Allocating L2 reader accumulator of size %u Bytes",
                (unsigned) max_read );
-        accumulator = malloc( max_read );
+        accumulator = mbedtls_calloc( 1, max_read );
     }
 
     if( ( max_write > 0  && queue       == NULL ) ||
         ( max_read  > 0  && accumulator == NULL ) )
     {
         MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_ERROR, "Failed to allocate queue or accumulator." );
-        free( queue );
-        free( accumulator );
+        mbedtls_free( queue );
+        mbedtls_free( accumulator );
         MBEDTLS_MPS_TRACE_RETURN( MBEDTLS_ERR_MPS_OUT_OF_MEMORY );
     }
 #else
