@@ -3004,7 +3004,7 @@ static int ssl_server_hello_parse( mbedtls_ssl_context* ssl,
 
     /* Check for minimal length */
     /* struct {
-     * 	  ProtocolVersion legacy_version = 0x0303;
+     *    ProtocolVersion legacy_version = 0x0303;
      *    Random random;
      *    opaque legacy_session_id_echo<0..32>;
      *    CipherSuite cipher_suite;
