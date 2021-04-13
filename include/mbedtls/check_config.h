@@ -880,18 +880,8 @@
 #endif
 
 #if defined(MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE) && \
-    defined(MBEDTLS_SSL_TLS13_CTLS)
-#error "cTLS cannot be used in combination with the TLS 1.3 compatibility mode."
-#endif
-
-#if defined(MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE) && \
     !defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
 #error "MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE defined, but not all prerequesites."
-#endif
-
-#if defined(MBEDTLS_SSL_TLS13_CTLS) && \
-    !defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
-#error "MBEDTLS_SSL_TLS13_CTLS defined, but not all prerequesites."
 #endif
 
 /*
@@ -979,14 +969,6 @@
 
 #if  defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && defined(MBEDTLS_SSL_NEW_SESSION_TICKET) && defined(MBEDTLS_SSL_SESSION_TICKETS)
 #error "The new session ticket concept is only available with TLS 1.3 and is not compatible with RFC 5077-style session tickets."
-#endif
-
-#if defined(MBEDTLS_SSL_TLS13_CTLS) && !defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
-#error "cTLS can only be used in context with TLS and/or DTLS 1.3"
-#endif
-
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && defined(MBEDTLS_SSL_TLS13_CTLS) && !defined(MBEDTLS_CTLS_RANDOM_MAX_LENGTH)
-#define MBEDTLS_SSL_TLS13_CTLS_RANDOM_MAX_LENGTH 32
 #endif
 
  /* Either SHA-256 or SHA-512 must be enabled.

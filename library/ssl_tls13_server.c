@@ -350,35 +350,27 @@ static int ssl_parse_key_shares_ext(
     unsigned char *start = (unsigned char*)buf;
     unsigned char *old;
 
-#if !defined(MBEDTLS_SSL_TLS13_CTLS)
     size_t n;
     unsigned int ks_entry_size;
-#endif /* MBEDTLS_SSL_TLS13_CTLS */
 
     int match_found = 0;
 
     const mbedtls_ecp_group_id *gid;
 
-    /* With CTLS there is only one key share */
-#if defined(MBEDTLS_SSL_TLS13_CTLS)
-    if( ssl->handshake->ctls == MBEDTLS_SSL_TLS13_CTLS_DO_NOT_USE )
-#endif /* MBEDTLS_SSL_TLS13_CTLS */
+    /* Pick the first KeyShareEntry  */
+    n = ( buf[0] << 8 ) | buf[1];
+
+    if( n + 2 > len )
     {
-        /* Pick the first KeyShareEntry  */
-        n = ( buf[0] << 8 ) | buf[1];
-
-        if( n + 2 > len )
-        {
-            MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad key share extension in client hello message" ) );
-            return( MBEDTLS_ERR_SSL_BAD_HS_CLIENT_HELLO );
-        }
-        start += 2;
-
-        /* We try to find a suitable key share entry and copy it to the
-         * handshake context. Later, we have to find out whether we can do
-         * something with the provided key share or whether we have to
-         * dismiss it and send a HelloRetryRequest message. */
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad key share extension in client hello message" ) );
+        return( MBEDTLS_ERR_SSL_BAD_HS_CLIENT_HELLO );
     }
+    start += 2;
+
+    /* We try to find a suitable key share entry and copy it to the
+     * handshake context. Later, we have to find out whether we can do
+     * something with the provided key share or whether we have to
+     * dismiss it and send a HelloRetryRequest message. */
 
     /*
      * Ephemeral ECDH parameters:
@@ -443,7 +435,6 @@ static int ssl_parse_key_shares_ext(
         }
     skip_parsing_key_share_entry:
 
-#if !defined(MBEDTLS_SSL_TLS13_CTLS)
         /* we jump to the next key share entry, if there is one */
         ks_entry_size = ( ( old[2] << 8 ) | ( old[3] ) );
         /* skip named group id + length field + key share entry length */
@@ -455,9 +446,6 @@ static int ssl_parse_key_shares_ext(
             final_ret = MBEDTLS_ERR_SSL_BAD_HS_WRONG_KEY_SHARE;
             extensions_available = 0;
         }
-#else
-        ( (void ) buf );
-#endif /* MBEDTLS_SSL_TLS13_CTLS */
     }
 
 finish_key_share_parsing:
@@ -2507,70 +2495,42 @@ static int ssl_client_hello_parse( mbedtls_ssl_context* ssl,
      * We ignore the version field in the ClientHello.
      * We use the version field in the extension.
      */
-#if defined(MBEDTLS_SSL_TLS13_CTLS)
-    if( ssl->handshake->ctls == MBEDTLS_SSL_TLS13_CTLS_USE )
-    {
-        buf += 1; /* skip version */
-    }
-    else
-#endif /* MBEDTLS_SSL_TLS13_CTLS */
-    {
-        buf += 2; /* skip version */
-    }
-
+    buf += 2; /* skip version */
 
     /*
      * Save client random
      */
-#if defined(MBEDTLS_SSL_TLS13_CTLS)
-    if( ssl->handshake->ctls == MBEDTLS_SSL_TLS13_CTLS_USE )
+    MBEDTLS_SSL_DEBUG_BUF( 3, "client hello, random bytes", buf, 32 );
+
+    memcpy( &ssl->handshake->randbytes[0], buf, 32 );
+    buf += 32; /* skip random bytes */
+
+    /*
+     * Parse session ID
+     */
+    sess_len = buf[0];
+    buf++; /* skip session id length */
+
+    if( sess_len > 32 )
     {
-        MBEDTLS_SSL_DEBUG_BUF( 3, "client hello, random bytes", buf, 16 );
-
-        memcpy( &ssl->handshake->randbytes[0], buf, 16 );
-        buf += 16; /* skip random bytes */
-    }
-    else
-#endif /* MBEDTLS_SSL_TLS13_CTLS */
-    {
-        MBEDTLS_SSL_DEBUG_BUF( 3, "client hello, random bytes", buf, 32 );
-
-        memcpy( &ssl->handshake->randbytes[0], buf, 32 );
-        buf += 32; /* skip random bytes */
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad client hello message" ) );
+        return( MBEDTLS_ERR_SSL_BAD_HS_CLIENT_HELLO );
     }
 
+    ssl->session_negotiate->id_len = sess_len;
 
-#if defined(MBEDTLS_SSL_TLS13_CTLS)
-    if( ssl->handshake->ctls == MBEDTLS_SSL_TLS13_CTLS_DO_NOT_USE )
-#endif /* MBEDTLS_SSL_TLS13_CTLS */
-    {
-        /*
-         * Parse session ID
-         */
-        sess_len = buf[0];
-        buf++; /* skip session id length */
+    /* Note that this field is echoed even if
+     * the client's value corresponded to a cached pre-TLS 1.3 session
+     * which the server has chosen not to resume. A client which
+     * receives a legacy_session_id_echo field that does not match what
+     * it sent in the ClientHello MUST abort the handshake with an
+     * "illegal_parameter" alert.
+     */
+    MBEDTLS_SSL_DEBUG_MSG( 3, ( "client hello, session id length ( %d )", sess_len ) );
+    MBEDTLS_SSL_DEBUG_BUF( 3, "client hello, session id", buf, sess_len );
 
-        if( sess_len > 32 )
-        {
-            MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad client hello message" ) );
-            return( MBEDTLS_ERR_SSL_BAD_HS_CLIENT_HELLO );
-        }
-
-        ssl->session_negotiate->id_len = sess_len;
-
-        /* Note that this field is echoed even if
-         * the client�s value corresponded to a cached pre-TLS 1.3 session
-         * which the server has chosen not to resume. A client which
-         * receives a legacy_session_id_echo field that does not match what
-         * it sent in the ClientHello MUST abort the handshake with an
-         * "illegal_parameter" alert.
-         */
-        MBEDTLS_SSL_DEBUG_MSG( 3, ( "client hello, session id length ( %d )", sess_len ) );
-        MBEDTLS_SSL_DEBUG_BUF( 3, "client hello, session id", buf, sess_len );
-
-        memcpy( &ssl->session_negotiate->id[0], buf, sess_len ); /* write session id */
-        buf += sess_len;
-    }
+    memcpy( &ssl->session_negotiate->id[0], buf, sess_len ); /* write session id */
+    buf += sess_len;
 
     ciph_len = ( buf[0] << 8 ) | ( buf[1] );
 
@@ -2593,35 +2553,30 @@ static int ssl_client_hello_parse( mbedtls_ssl_context* ssl,
     /* skip ciphersuites for now */
     buf += ciph_len;
 
-#if defined(MBEDTLS_SSL_TLS13_CTLS)
-    if( ssl->handshake->ctls == MBEDTLS_SSL_TLS13_CTLS_DO_NOT_USE )
-#endif /* MBEDTLS_SSL_TLS13_CTLS */
+    /*
+     * For TLS 1.3 we are not using compression.
+     */
+    comp_len = buf[0];
+
+    if( buf + comp_len > end )
     {
-        /*
-         * For TLS 1.3 we are not using compression.
-         */
-        comp_len = buf[0];
-
-        if( buf + comp_len > end )
-        {
-            MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad client hello message" ) );
-            return( MBEDTLS_ERR_SSL_BAD_HS_CLIENT_HELLO );
-        }
-
-        buf++; /* skip compression length */
-        MBEDTLS_SSL_DEBUG_BUF( 3, "client hello, compression",
-                              buf, comp_len );
-
-        /* Determine whether we are indeed using null compression */
-        if( ( comp_len != 1 ) && ( buf[1] == 0 ) )
-        {
-            MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad client hello message" ) );
-            return( MBEDTLS_ERR_SSL_BAD_HS_CLIENT_HELLO );
-        }
-
-        /* skip compression */
-        buf++;
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad client hello message" ) );
+        return( MBEDTLS_ERR_SSL_BAD_HS_CLIENT_HELLO );
     }
+
+    buf++; /* skip compression length */
+    MBEDTLS_SSL_DEBUG_BUF( 3, "client hello, compression",
+                          buf, comp_len );
+
+    /* Determine whether we are indeed using null compression */
+    if( ( comp_len != 1 ) && ( buf[1] == 0 ) )
+    {
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad client hello message" ) );
+        return( MBEDTLS_ERR_SSL_BAD_HS_CLIENT_HELLO );
+    }
+
+    /* skip compression */
+    buf++;
 
     /*
      * Check the extension length
@@ -3619,14 +3574,9 @@ static int ssl_write_hello_retry_request_write( mbedtls_ssl_context* ssl,
      *
      *  In cTLS the version number is elided.
      */
-#if defined(MBEDTLS_SSL_TLS13_CTLS)
-    if( ssl->handshake->ctls == MBEDTLS_SSL_TLS13_CTLS_DO_NOT_USE )
-#endif /* MBEDTLS_SSL_TLS13_CTLS */
-    {
-        *p++ = 0x03;
-        *p++ = 0x03;
-        MBEDTLS_SSL_DEBUG_BUF( 3, "server version", p - 2, 2 );
-    }
+    *p++ = 0x03;
+    *p++ = 0x03;
+    MBEDTLS_SSL_DEBUG_BUF( 3, "server version", p - 2, 2 );
 
     /* write magic string (as a replacement for the random value) */
     memcpy( p, &magic_hrr_string[0], 32 );
@@ -3910,23 +3860,10 @@ static int ssl_server_hello_prepare( mbedtls_ssl_context* ssl )
 {
     int ret;
 
-#if defined(MBEDTLS_SSL_TLS13_CTLS)
-    if( ssl->handshake->ctls == MBEDTLS_SSL_TLS13_CTLS_USE )
-    {
+    if( ( ret = ssl->conf->f_rng( ssl->conf->p_rng, ssl->handshake->randbytes + 32, 32 ) ) != 0 )
+        return( ret );
 
-        if( ( ret = ssl->conf->f_rng( ssl->conf->p_rng, ssl->handshake->randbytes + 16, 16 ) ) != 0 )
-            return( ret );
-
-        MBEDTLS_SSL_DEBUG_BUF( 3, "server hello, random bytes", ssl->handshake->randbytes + 16, 16 );
-    }
-    else
-#endif /* MBEDTLS_SSL_TLS13_CTLS */
-    {
-        if( ( ret = ssl->conf->f_rng( ssl->conf->p_rng, ssl->handshake->randbytes + 32, 32 ) ) != 0 )
-            return( ret );
-
-        MBEDTLS_SSL_DEBUG_BUF( 3, "server hello, random bytes", ssl->handshake->randbytes + 32, 32 );
-    }
+    MBEDTLS_SSL_DEBUG_BUF( 3, "server hello, random bytes", ssl->handshake->randbytes + 32, 32 );
 
 #if defined(MBEDTLS_HAVE_TIME)
     ssl->session_negotiate->start = time( NULL );
@@ -3963,16 +3900,7 @@ static int ssl_server_hello_write( mbedtls_ssl_context* ssl,
     unsigned char* start = buf;
     unsigned char* end = buf + buflen;
 
-#if defined(MBEDTLS_SSL_TLS13_CTLS)
-    if( ssl->handshake->ctls == MBEDTLS_SSL_TLS13_CTLS_USE )
-    {
-        rand_bytes_len = MBEDTLS_SSL_TLS13_CTLS_RANDOM_MAX_LENGTH;
-    }
-    else
-#endif /* MBEDTLS_SSL_TLS13_CTLS */
-    {
-        rand_bytes_len = 32;
-    }
+    rand_bytes_len = 32;
 
     /* Ensure we have enough room for ServerHello
      * up to but excluding the extensions. */
@@ -3993,31 +3921,15 @@ static int ssl_server_hello_write( mbedtls_ssl_context* ssl,
      * The header is set by ssl_write_record.
      * For DTLS 1.3 the other fields are adjusted.
      */
-#if defined(MBEDTLS_SSL_TLS13_CTLS)
-    if( ssl->handshake->ctls == MBEDTLS_SSL_TLS13_CTLS_USE )
-    {
-        buf++; /* skip handshake type */
-        buflen--;
-    } else
-#endif /* MBEDTLS_SSL_TLS13_CTLS */
-    {
-        buf += 4; /* skip handshake type + length */
-        buflen -=4;
-    }
+    buf += 4; /* skip handshake type + length */
+    buflen -=4;
 #endif /* MBEDTLS_SSL_USE_MPS */
 
     /* Version */
-#if defined(MBEDTLS_SSL_TLS13_CTLS)
-    if( ssl->handshake->ctls == MBEDTLS_SSL_TLS13_CTLS_DO_NOT_USE )
-    {
-#endif /* MBEDTLS_SSL_TLS13_CTLS */
-        *buf++ = (unsigned char)0x3;
-        *buf++ = (unsigned char)0x3;
-        MBEDTLS_SSL_DEBUG_MSG( 3, ( "server hello, chosen version: [0x3:0x3]" ) );
-        buflen -= 2;
-#if defined(MBEDTLS_SSL_TLS13_CTLS)
-    }
-#endif /* MBEDTLS_SSL_TLS13_CTLS */
+    *buf++ = (unsigned char)0x3;
+    *buf++ = (unsigned char)0x3;
+    MBEDTLS_SSL_DEBUG_MSG( 3, ( "server hello, chosen version: [0x3:0x3]" ) );
+    buflen -= 2;
 
     /* Write random bytes */
     memcpy( buf, ssl->handshake->randbytes + 32, rand_bytes_len );
@@ -4031,18 +3943,13 @@ static int ssl_server_hello_write( mbedtls_ssl_context* ssl,
 #endif /* MBEDTLS_HAVE_TIME */
 
     /* Write legacy session id */
-#if defined(MBEDTLS_SSL_TLS13_CTLS)
-    if( ssl->handshake->ctls == MBEDTLS_SSL_TLS13_CTLS_DO_NOT_USE )
-#endif /* MBEDTLS_SSL_TLS13_CTLS */
-    {
-        *buf++ = (unsigned char)ssl->session_negotiate->id_len;
-        buflen--;
-        memcpy( buf, &ssl->session_negotiate->id[0], ssl->session_negotiate->id_len );
-        buf += ssl->session_negotiate->id_len;
-        MBEDTLS_SSL_DEBUG_MSG( 3, ( "session id length ( %d )", ssl->session_negotiate->id_len ) );
-        MBEDTLS_SSL_DEBUG_BUF( 3, "session id", ssl->session_negotiate->id, ssl->session_negotiate->id_len );
-        buflen -= ssl->session_negotiate->id_len;
-    }
+    *buf++ = (unsigned char)ssl->session_negotiate->id_len;
+    buflen--;
+    memcpy( buf, &ssl->session_negotiate->id[0], ssl->session_negotiate->id_len );
+    buf += ssl->session_negotiate->id_len;
+    MBEDTLS_SSL_DEBUG_MSG( 3, ( "session id length ( %d )", ssl->session_negotiate->id_len ) );
+    MBEDTLS_SSL_DEBUG_BUF( 3, "session id", ssl->session_negotiate->id, ssl->session_negotiate->id_len );
+    buflen -= ssl->session_negotiate->id_len;
 
     /* write selected ciphersuite ( 2 bytes ) */
     *buf++ = (unsigned char)( ssl->session_negotiate->ciphersuite >> 8 );
@@ -4050,14 +3957,9 @@ static int ssl_server_hello_write( mbedtls_ssl_context* ssl,
     buflen -= 2;
     MBEDTLS_SSL_DEBUG_MSG( 3, ( "server hello, chosen ciphersuite: %s ( id=%d )", mbedtls_ssl_get_ciphersuite_name( ssl->session_negotiate->ciphersuite ), ssl->session_negotiate->ciphersuite ) );
 
-#if defined(MBEDTLS_SSL_TLS13_CTLS)
-    if( ssl->handshake->ctls == MBEDTLS_SSL_TLS13_CTLS_DO_NOT_USE )
-#endif /* MBEDTLS_SSL_TLS13_CTLS */
-    {
-        /* write legacy_compression_method ( 0 ) */
-        *buf++ = 0x0;
-        buflen--;
-    }
+    /* write legacy_compression_method ( 0 ) */
+    *buf++ = 0x0;
+    buflen--;
 
     /* First write extensions, then the total length */
     extension_start = buf;
@@ -4325,12 +4227,7 @@ static int ssl_certificate_request_write( mbedtls_ssl_context* ssl,
      * messages. For post-authentication handshake messages
      * this request context would be set to a non-zero value.
      */
-#if defined(MBEDTLS_SSL_TLS13_CTLS)
-    if( ssl->handshake->ctls == MBEDTLS_SSL_TLS13_CTLS_DO_NOT_USE )
-#endif /* MBEDTLS_SSL_TLS13_CTLS */
-    {
-        *p++ = 0x0;
-    }
+    *p++ = 0x0;
 
     /*
      * Write extensions
