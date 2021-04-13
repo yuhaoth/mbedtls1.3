@@ -37,6 +37,7 @@
 #include "mbedtls/mps/trace.h"
 
 #include "mbedtls/platform_util.h"
+#include "mbedtls/ssl.h"
 
 #include <string.h>
 

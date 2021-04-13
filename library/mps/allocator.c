@@ -21,7 +21,13 @@
 
 #include "../../include/mbedtls/mps/allocator.h"
 
+#if defined(MBEDTLS_PLATFORM_C)
+#include "mbedtls/platform.h"
+#else
 #include <stdlib.h>
+#define mbedtls_calloc    calloc
+#define mbedtls_free      free
+#endif
 
 int mps_alloc_init( mps_alloc *ctx,
                     mbedtls_mps_size_t l1_len )
@@ -29,12 +35,12 @@ int mps_alloc_init( mps_alloc *ctx,
     ctx->l1_in_len  = l1_len;
     ctx->l1_out_len = l1_len;
 
-    ctx->l1_in  = malloc( l1_len );
-    ctx->l1_out = malloc( l1_len );
+    ctx->l1_in  = mbedtls_calloc( 1, l1_len );
+    ctx->l1_out = mbedtls_calloc( 1, l1_len );
     if( ctx->l1_in == NULL || ctx->l1_out == NULL )
     {
-        free( ctx->l1_in );
-        free( ctx->l1_out );
+        mbedtls_free( ctx->l1_in );
+        mbedtls_free( ctx->l1_out );
         ctx->l1_in = ctx->l1_out = NULL;
         return( MBEDTLS_ERR_MPS_ALLOC_OUT_OF_SPACE );
     }
@@ -46,8 +52,8 @@ int mps_alloc_init( mps_alloc *ctx,
 int mps_alloc_free( mps_alloc *ctx )
 {
     mps_alloc zero = { 0, NULL, 0, NULL, 0 };
-    free( ctx->l1_in );
-    free( ctx->l1_out );
+    mbedtls_free( ctx->l1_in );
+    mbedtls_free( ctx->l1_out );
     *ctx = zero;
     return( 0 );
 }
