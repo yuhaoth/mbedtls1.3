@@ -2520,7 +2520,7 @@ static int ssl_client_hello_parse( mbedtls_ssl_context* ssl,
     ssl->session_negotiate->id_len = sess_len;
 
     /* Note that this field is echoed even if
-     * the client�s value corresponded to a cached pre-TLS 1.3 session
+     * the client's value corresponded to a cached pre-TLS 1.3 session
      * which the server has chosen not to resume. A client which
      * receives a legacy_session_id_echo field that does not match what
      * it sent in the ClientHello MUST abort the handshake with an
