@@ -155,7 +155,8 @@
 #define MBEDTLS_MPS_MAKE_ERROR_INFO( flags, name )      \
     #name, name, flags
 
-#define MBEDTLS_MPS_ERROR_INFO_WRAP( x ) MBEDTLS_MPS_ERROR_INFO(x)
+#define EXPAND(x) x
+#define MBEDTLS_MPS_ERROR_INFO_WRAP( x ) EXPAND(MBEDTLS_MPS_ERROR_INFO(x))
 
 #define MBEDTLS_ERR_MPS_ERROR_LIST                                      \
     MBEDTLS_MPS_ERROR_INFO_WRAP(                                             \
