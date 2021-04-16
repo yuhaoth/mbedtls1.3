@@ -260,6 +260,9 @@
     <ClInclude Include="..\..\3rdparty\everest\include\everest\Hacl_Curve25519.h" />
     <ClInclude Include="..\..\3rdparty\everest\include\everest\kremlib.h" />
     <ClInclude Include="..\..\3rdparty\everest\include\everest\x25519.h" />
+    <ClInclude Include="..\..\library\mps\layer1_internal.h" />
+    <ClInclude Include="..\..\library\mps\layer2_internal.h" />
+    <ClInclude Include="..\..\library\mps\layer3_internal.h" />    
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\library\aes.c" />
@@ -359,6 +362,15 @@
     <ClCompile Include="..\..\library\ssl_tls13_client.c" />
     <ClCompile Include="..\..\library\ssl_tls13_generic.c" />
     <ClCompile Include="..\..\library\ssl_tls13_server.c" />
+    <ClCompile Include="..\..\library\mps\allocator.c" />
+    <ClCompile Include="..\..\library\mps\layer1.c" />
+    <ClCompile Include="..\..\library\mps\layer2.c" />
+    <ClCompile Include="..\..\library\mps\layer3.c" />
+    <ClCompile Include="..\..\library\mps\mps.c" />
+    <ClCompile Include="..\..\library\mps\reader.c" />
+    <ClCompile Include="..\..\library\mps\trace.c" />
+    <ClCompile Include="..\..\library\mps\transform.c" />
+    <ClCompile Include="..\..\library\mps\writer.c" />    
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
