@@ -1620,44 +1620,9 @@ void mbedtls_ssl_read_version( int *major, int *minor, int transport,
 
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
-static inline size_t mbedtls_ssl_hdr_len(const mbedtls_ssl_context* ssl,
-                                         mbedtls_ssl_transform* transform)
-{
-#if defined(MBEDTLS_SSL_PROTO_DTLS)
-    if (ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_DATAGRAM) {
-
-        int len;
-
-        /* We are dealing with a plaintext DTLS 1.3 packet if transform is NULL */
-        if (transform == NULL)  return(13);
-
-        /* If the DTLS 1.3 packet is encrypted then we need to deterine the header size.
-         * For the moment we assumed a 16-bit sequence number and that the length field
-         * is included in the payload.
-         */
-        len = 1 /* unified header */ + 2 /* sequence number */ + 2 /* length */;
-
-        return (len);
-    }
-    else
-#else
-    {
-        ((void)transform);
-        ((void)ssl);
-    }
-#endif /* MBEDTLS_SSL_PROTO_DTLS */
-    return(5); /* TLS 1.3 header */
-}
-#else
 static inline size_t mbedtls_ssl_hdr_len(const mbedtls_ssl_context* ssl)
 {
-#if defined(MBEDTLS_SSL_PROTO_DTLS)
-    if (ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_DATAGRAM) {
-        return(13);
-    }
-#else
-    ((void)ssl);
-#endif
+    ((void) ssl);
     return(5);
 }
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
