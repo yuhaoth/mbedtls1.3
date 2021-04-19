@@ -19,6 +19,8 @@
 #if !defined(MBEDTLS_SSL_TLS1_3_KEYS_H)
 #define MBEDTLS_SSL_TLS1_3_KEYS_H
 
+#include "mbedtls/ssl_internal.h"
+
 /* The maximum size of the intermediate key material.
  * The IKM can be a
  * - 0-string of length corresponding to the size of the
@@ -300,30 +302,6 @@ int mbedtls_ssl_tls1_3_evolve_secret(
                    const unsigned char *secret_old,
                    const unsigned char *input, size_t input_len,
                    unsigned char *secret_new );
-
-typedef struct
-{
-    unsigned char binder_key                  [ MBEDTLS_MD_MAX_SIZE ];
-    unsigned char client_early_traffic_secret [ MBEDTLS_MD_MAX_SIZE ];
-    unsigned char early_exporter_master_secret[ MBEDTLS_MD_MAX_SIZE ];
-    size_t secret_len;
-} mbedtls_ssl_tls1_3_early_secrets;
-
-typedef struct
-{
-    unsigned char client_handshake_traffic_secret[ MBEDTLS_MD_MAX_SIZE ];
-    unsigned char server_handshake_traffic_secret[ MBEDTLS_MD_MAX_SIZE ];
-    size_t secret_len;
-} mbedtls_ssl_tls1_3_handshake_secrets;
-
-typedef struct
-{
-    unsigned char client_application_traffic_secret_N[ MBEDTLS_MD_MAX_SIZE ];
-    unsigned char server_application_traffic_secret_N[ MBEDTLS_MD_MAX_SIZE ];
-    unsigned char exporter_master_secret             [ MBEDTLS_MD_MAX_SIZE ];
-    unsigned char resumption_master_secret           [ MBEDTLS_MD_MAX_SIZE ];
-    size_t secret_len;
-} mbedtls_ssl_tls1_3_application_secrets;
 
 int mbedtls_ssl_tls1_3_derive_early_secrets(
           mbedtls_md_type_t md_type,
