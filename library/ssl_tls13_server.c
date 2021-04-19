@@ -547,6 +547,9 @@ int mbedtls_ssl_parse_client_psk_identity_ext(
     size_t psk_len = 0;
     unsigned char const *end_of_psk_identities;
 
+    unsigned char transcript[MBEDTLS_MD_MAX_SIZE];
+    size_t transcript_len;
+
 #if defined(MBEDTLS_SSL_NEW_SESSION_TICKET)
     uint32_t obfuscated_ticket_age;
 #if defined(MBEDTLS_HAVE_TIME)
@@ -803,6 +806,14 @@ psk_parsing_successful:
 
     buf = end_of_psk_identities;
 
+    /* Get current state of handshake transcript. */
+    ret = mbedtls_ssl_get_handshake_transcript( ssl,
+                                                ssl->handshake->ciphersuite_info->mac,
+                                                transcript, sizeof( transcript ),
+                                                &transcript_len );
+    if( ret != 0 )
+        return( ret );
+
     /* read length of psk binder array */
     item_array_length = ( buf[0] << 8 ) | buf[1];
     length_so_far += item_array_length;
@@ -834,6 +845,7 @@ psk_parsing_successful:
                         ssl->handshake->psk,
                         ssl->handshake->psk_len,
                         ssl->handshake->ciphersuite_info->mac,
+                        transcript, transcript_len,
                         server_computed_binder );
         }
         else
@@ -846,6 +858,7 @@ psk_parsing_successful:
                      1 /* external PSK */,
                      (unsigned char *) psk, psk_len,
                      ssl->handshake->ciphersuite_info->mac,
+                     transcript, transcript_len,
                      server_computed_binder );
         }
 

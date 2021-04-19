@@ -317,6 +317,8 @@ int mbedtls_ssl_create_binder( mbedtls_ssl_context *ssl,
                                int is_external,
                                unsigned char *psk, size_t psk_len,
                                const mbedtls_md_type_t md_type,
+                               unsigned char const *transcript,
+                               size_t transcript_len,
                                unsigned char *result );
 #endif /* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED */
 

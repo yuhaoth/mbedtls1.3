@@ -1448,11 +1448,11 @@ int mbedtls_ssl_create_binder( mbedtls_ssl_context *ssl,
                                int is_external,
                                unsigned char *psk, size_t psk_len,
                                const mbedtls_md_type_t md_type,
+                               unsigned char const *transcript,
+                               size_t transcript_len,
                                unsigned char *result )
 {
     int ret = 0;
-    unsigned char transcript[MBEDTLS_MD_MAX_SIZE];
-    size_t transcript_len;
     unsigned char binder_key[MBEDTLS_MD_MAX_SIZE];
     unsigned char finished_key[MBEDTLS_MD_MAX_SIZE];
     mbedtls_md_info_t const *md_info = mbedtls_md_info_from_type( md_type );
@@ -1498,13 +1498,6 @@ int mbedtls_ssl_create_binder( mbedtls_ssl_context *ssl,
         MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_tls1_3_derive_secret", ret );
         return( ret );
     }
-
-    /* Get current state of handshake transcript. */
-    ret = mbedtls_ssl_get_handshake_transcript( ssl, md_type,
-                                                transcript, sizeof( transcript ),
-                                                &transcript_len );
-    if( ret != 0 )
-        return( ret );
 
     /*
      * finished_key =
