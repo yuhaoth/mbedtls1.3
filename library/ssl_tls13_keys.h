@@ -321,6 +321,14 @@ int mbedtls_ssl_tls1_3_derive_application_secrets(
           unsigned char const *transcript, size_t transcript_len,
           mbedtls_ssl_tls1_3_application_secrets *derived_application_secrets );
 
+#if defined(MBEDTLS_SSL_NEW_SESSION_TICKET)
+int mbedtls_ssl_tls1_3_derive_resumption_master_secret(
+          mbedtls_md_type_t md_type,
+          unsigned char const *application_secret,
+          unsigned char const *transcript, size_t transcript_len,
+          mbedtls_ssl_tls1_3_application_secrets *derived_application_secrets );
+#endif /* MBEDTLS_SSL_NEW_SESSION_TICKET */
+
 /* TODO: Document */
 int mbedtls_ssl_generate_application_traffic_keys( mbedtls_ssl_context* ssl,
                                                    mbedtls_ssl_key_set* traffic_keys );

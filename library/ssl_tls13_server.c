@@ -1606,7 +1606,7 @@ static int ssl_write_new_session_ticket_write( mbedtls_ssl_context* ssl,
                            p, MBEDTLS_SSL_TICKET_NONCE_LENGTH );
 
     MBEDTLS_SSL_DEBUG_BUF( 3, "resumption_master_secret",
-                           ssl->session->resumption_master_secret,
+                           ssl->session->app_secrets.resumption_master_secret,
                            hash_length );
 
     /* Computer resumption key
@@ -1615,7 +1615,7 @@ static int ssl_write_new_session_ticket_write( mbedtls_ssl_context* ssl,
      *                    "resumption", ticket_nonce, Hash.length )
      */
     ret = mbedtls_ssl_tls1_3_hkdf_expand_label( suite_info->mac,
-               ssl->session->resumption_master_secret,
+               ssl->session->app_secrets.resumption_master_secret,
                hash_length,
                MBEDTLS_SSL_TLS1_3_LBL_WITH_LEN( resumption ),
                (const unsigned char *) p,
