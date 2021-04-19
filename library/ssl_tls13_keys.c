@@ -1453,11 +1453,11 @@ int mbedtls_ssl_create_binder( mbedtls_ssl_context *ssl,
 {
     int ret = 0;
     int hash_length;
-    unsigned char salt[MBEDTLS_MD_MAX_SIZE];
     unsigned char transcript[MBEDTLS_MD_MAX_SIZE];
     size_t transcript_len;
     unsigned char binder_key[MBEDTLS_MD_MAX_SIZE];
     unsigned char finished_key[MBEDTLS_MD_MAX_SIZE];
+    mbedtls_md_type_t md_type = mbedtls_md_get_type( md );
 
     hash_length = mbedtls_hash_size_for_ciphersuite( suite_info );
     if( hash_length == -1 )
@@ -1466,24 +1466,15 @@ int mbedtls_ssl_create_binder( mbedtls_ssl_context *ssl,
         return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
     }
 
-    /*
-     * Compute Early Secret with HKDF-Extract( 0, PSK )
-     */
-    memset( salt, 0x0, hash_length );
-    ret = mbedtls_hkdf_extract( md, salt, hash_length,
-                                psk, psk_len,
-                                ssl->handshake->early_secret );
+    ret = mbedtls_ssl_tls1_3_evolve_secret( md_type,
+                                            NULL,          /* Old secret */
+                                            psk, psk_len,  /* Input      */
+                                            ssl->handshake->early_secret );
     if( ret != 0 )
     {
-        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_hkdf_extract", ret );
+        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_tls1_3_evolve_secret", ret );
         return( ret );
     }
-
-    MBEDTLS_SSL_DEBUG_MSG( 5, ( "HKDF Extract -- early_secret" ) );
-    MBEDTLS_SSL_DEBUG_BUF( 5, "Salt", salt, hash_length );
-    MBEDTLS_SSL_DEBUG_BUF( 5, "Input", psk, psk_len );
-    MBEDTLS_SSL_DEBUG_BUF( 5, "Output", ssl->handshake->early_secret,
-                           hash_length );
 
     /*
      * Compute binder_key with
