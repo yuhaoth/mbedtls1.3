@@ -1447,24 +1447,16 @@ int mbedtls_ssl_generate_resumption_master_secret( mbedtls_ssl_context *ssl )
 int mbedtls_ssl_create_binder( mbedtls_ssl_context *ssl,
                                int is_external,
                                unsigned char *psk, size_t psk_len,
-                               const mbedtls_md_info_t *md,
-                               const mbedtls_ssl_ciphersuite_t *suite_info,
+                               const mbedtls_md_type_t md_type,
                                unsigned char *result )
 {
     int ret = 0;
-    int hash_length;
     unsigned char transcript[MBEDTLS_MD_MAX_SIZE];
     size_t transcript_len;
     unsigned char binder_key[MBEDTLS_MD_MAX_SIZE];
     unsigned char finished_key[MBEDTLS_MD_MAX_SIZE];
-    mbedtls_md_type_t md_type = mbedtls_md_get_type( md );
-
-    hash_length = mbedtls_hash_size_for_ciphersuite( suite_info );
-    if( hash_length == -1 )
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "should never happen" ) );
-        return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
-    }
+    mbedtls_md_info_t const *md_info = mbedtls_md_info_from_type( md_type );
+    size_t const md_size = mbedtls_md_get_size( md_info );
 
     ret = mbedtls_ssl_tls1_3_evolve_secret( md_type,
                                             NULL,          /* Old secret */
@@ -1484,20 +1476,20 @@ int mbedtls_ssl_create_binder( mbedtls_ssl_context *ssl,
 
     if( !is_external )
     {
-        ret = mbedtls_ssl_tls1_3_derive_secret( mbedtls_md_get_type( md ),
-                            ssl->handshake->early_secret, hash_length,
+        ret = mbedtls_ssl_tls1_3_derive_secret( md_type,
+                            ssl->handshake->early_secret, md_size,
                             MBEDTLS_SSL_TLS1_3_LBL_WITH_LEN( res_binder ),
                             NULL, 0, MBEDTLS_SSL_TLS1_3_CONTEXT_UNHASHED,
-                            binder_key, hash_length );
+                            binder_key, md_size );
         MBEDTLS_SSL_DEBUG_MSG( 5, ( "Derive Early Secret with 'res binder'" ) );
     }
     else
     {
-        ret = mbedtls_ssl_tls1_3_derive_secret( mbedtls_md_get_type( md ),
-                            ssl->handshake->early_secret, hash_length,
+        ret = mbedtls_ssl_tls1_3_derive_secret( md_type,
+                            ssl->handshake->early_secret, md_size,
                             MBEDTLS_SSL_TLS1_3_LBL_WITH_LEN( ext_binder ),
                             NULL, 0, MBEDTLS_SSL_TLS1_3_CONTEXT_UNHASHED,
-                            binder_key, hash_length );
+                            binder_key, md_size );
         MBEDTLS_SSL_DEBUG_MSG( 5, ( "Derive Early Secret with 'ext binder'" ) );
     }
 
@@ -1508,7 +1500,7 @@ int mbedtls_ssl_create_binder( mbedtls_ssl_context *ssl,
     }
 
     /* Get current state of handshake transcript. */
-    ret = mbedtls_ssl_get_handshake_transcript( ssl, suite_info->mac,
+    ret = mbedtls_ssl_get_handshake_transcript( ssl, md_type,
                                                 transcript, sizeof( transcript ),
                                                 &transcript_len );
     if( ret != 0 )
@@ -1522,11 +1514,11 @@ int mbedtls_ssl_create_binder( mbedtls_ssl_context *ssl,
      * but with the BaseKey being the binder_key.
      */
 
-    ret = mbedtls_ssl_tls1_3_hkdf_expand_label( suite_info->mac, binder_key,
-                            hash_length,
+    ret = mbedtls_ssl_tls1_3_hkdf_expand_label( md_type, binder_key,
+                            md_size,
                             MBEDTLS_SSL_TLS1_3_LBL_WITH_LEN( finished ),
                             NULL, 0,
-                            finished_key, hash_length );
+                            finished_key, md_size );
 
     if( ret != 0 )
     {
@@ -1534,10 +1526,10 @@ int mbedtls_ssl_create_binder( mbedtls_ssl_context *ssl,
         goto exit;
     }
 
-    MBEDTLS_SSL_DEBUG_BUF( 3, "finished_key", finished_key, hash_length );
+    MBEDTLS_SSL_DEBUG_BUF( 3, "finished_key", finished_key, md_size );
 
     /* compute mac and write it into the buffer */
-    ret = mbedtls_md_hmac( md, finished_key, hash_length,
+    ret = mbedtls_md_hmac( md_info, finished_key, md_size,
                            transcript, transcript_len,
                            result );
 
@@ -1548,9 +1540,9 @@ int mbedtls_ssl_create_binder( mbedtls_ssl_context *ssl,
     }
 
     MBEDTLS_SSL_DEBUG_MSG( 3, ( "verify_data of psk binder" ) );
-    MBEDTLS_SSL_DEBUG_BUF( 3, "Input", transcript, hash_length );
-    MBEDTLS_SSL_DEBUG_BUF( 3, "Key", finished_key, hash_length );
-    MBEDTLS_SSL_DEBUG_BUF( 3, "Output", result, hash_length );
+    MBEDTLS_SSL_DEBUG_BUF( 3, "Input", transcript, md_size );
+    MBEDTLS_SSL_DEBUG_BUF( 3, "Key", finished_key, md_size );
+    MBEDTLS_SSL_DEBUG_BUF( 3, "Output", result, md_size );
 
 exit:
 

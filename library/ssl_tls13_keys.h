@@ -316,8 +316,7 @@ int mbedtls_ssl_generate_resumption_master_secret( mbedtls_ssl_context* ssl );
 int mbedtls_ssl_create_binder( mbedtls_ssl_context *ssl,
                                int is_external,
                                unsigned char *psk, size_t psk_len,
-                               const mbedtls_md_info_t *md,
-                               const mbedtls_ssl_ciphersuite_t *suite_info,
+                               const mbedtls_md_type_t md_type,
                                unsigned char *result );
 #endif /* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED */
 

@@ -970,8 +970,7 @@ int mbedtls_ssl_write_pre_shared_key_ext( mbedtls_ssl_context *ssl,
         ret = mbedtls_ssl_create_binder( ssl,
                   external_psk,
                   psk, psk_len,
-                  mbedtls_md_info_from_type( suite_info->mac ),
-                  suite_info, p );
+                  suite_info->mac, p );
 
         if( ret != 0 )
         {
