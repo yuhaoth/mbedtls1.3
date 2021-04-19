@@ -840,7 +840,7 @@ psk_parsing_successful:
         if( ssl->handshake->resume == 1 )
         {
             /* Case 1: We are using the PSK from a ticket */
-            ret = mbedtls_ssl_create_binder( ssl,
+            ret = mbedtls_ssl_tls1_3_create_psk_binder( ssl,
                         0 /* resumption PSK */,
                         ssl->handshake->psk,
                         ssl->handshake->psk_len,
@@ -854,7 +854,7 @@ psk_parsing_successful:
             if( ( ret = mbedtls_ssl_get_psk( ssl, &psk, &psk_len ) ) != 0 )
                 return( ret );
 
-            ret = mbedtls_ssl_create_binder( ssl,
+            ret = mbedtls_ssl_tls1_3_create_psk_binder( ssl,
                      1 /* external PSK */,
                      (unsigned char *) psk, psk_len,
                      ssl->handshake->ciphersuite_info->mac,

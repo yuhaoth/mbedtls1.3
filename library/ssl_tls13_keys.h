@@ -313,7 +313,7 @@ int mbedtls_ssl_generate_handshake_traffic_keys( mbedtls_ssl_context* ssl,
 int mbedtls_ssl_generate_resumption_master_secret( mbedtls_ssl_context* ssl );
 
 #if defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
-int mbedtls_ssl_create_binder( mbedtls_ssl_context *ssl,
+int mbedtls_ssl_tls1_3_create_psk_binder( mbedtls_ssl_context *ssl,
                                int is_external,
                                unsigned char *psk, size_t psk_len,
                                const mbedtls_md_type_t md_type,
