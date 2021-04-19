@@ -351,6 +351,8 @@ int mbedtls_ssl_tls1_3_create_psk_binder( mbedtls_ssl_context *ssl,
                                unsigned char *result );
 #endif /* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED */
 
-int mbedtls_ssl_tls1_3_derive_master_secret( mbedtls_ssl_context* ssl );
+int mbedtls_ssl_tls1_3_derive_master_secret( mbedtls_ssl_context *ssl,
+                                             unsigned char *ephemeral,
+                                             size_t ephemeral_len );
 
 #endif /* MBEDTLS_SSL_TLS1_3_KEYS_H */
