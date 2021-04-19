@@ -1055,6 +1055,48 @@ int mbedtls_ssl_tls1_3_set_verify( mbedtls_ssl_context *ssl )
     return( 0 );
 }
 
+int mbedtls_ssl_tls1_3_derive_early_secrets(
+          mbedtls_md_type_t md_type,
+          unsigned char const *early_secret,
+          unsigned char const *transcript, size_t transcript_len,
+          mbedtls_ssl_tls1_3_early_secrets *derived_early_secrets )
+{
+    ((void) md_type);
+    ((void) early_secret);
+    ((void) transcript);
+    ((void) transcript_len);
+    ((void) derived_early_secrets);
+    return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
+}
+
+int mbedtls_ssl_tls1_3_derive_handshake_secrets(
+          mbedtls_md_type_t md_type,
+          unsigned char const *handshake_secret,
+          unsigned char const *transcript, size_t transcript_len,
+          mbedtls_ssl_tls1_3_handshake_secrets *derived_handshake_secrets )
+{
+    ((void) md_type);
+    ((void) handshake_secret);
+    ((void) transcript);
+    ((void) transcript_len);
+    ((void) derived_handshake_secrets);
+    return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
+}
+
+int mbedtls_ssl_tls1_3_derive_application_secrets(
+          mbedtls_md_type_t md_type,
+          unsigned char const *application_secret,
+          unsigned char const *transcript, size_t transcript_len,
+          mbedtls_ssl_tls1_3_application_secrets *derived_application_secrets )
+{
+    ((void) md_type);
+    ((void) application_secret);
+    ((void) transcript);
+    ((void) transcript_len);
+    ((void) derived_application_secrets);
+    return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
+}
+
 /* mbedtls_ssl_generate_handshake_traffic_keys() generates keys necessary for
  * protecting the handshake messages, as described in Section 7 of TLS 1.3. */
 int mbedtls_ssl_generate_handshake_traffic_keys( mbedtls_ssl_context *ssl,

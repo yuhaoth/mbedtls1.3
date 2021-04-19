@@ -301,6 +301,48 @@ int mbedtls_ssl_tls1_3_evolve_secret(
                    const unsigned char *input, size_t input_len,
                    unsigned char *secret_new );
 
+typedef struct
+{
+    unsigned char binder_key                  [ MBEDTLS_MD_MAX_SIZE ];
+    unsigned char client_early_traffic_secret [ MBEDTLS_MD_MAX_SIZE ];
+    unsigned char early_exporter_master_secret[ MBEDTLS_MD_MAX_SIZE ];
+    size_t secret_len;
+} mbedtls_ssl_tls1_3_early_secrets;
+
+typedef struct
+{
+    unsigned char client_handshake_traffic_secret[ MBEDTLS_MD_MAX_SIZE ];
+    unsigned char server_handshake_traffic_secret[ MBEDTLS_MD_MAX_SIZE ];
+    size_t secret_len;
+} mbedtls_ssl_tls1_3_handshake_secrets;
+
+typedef struct
+{
+    unsigned char client_application_traffic_secret_N[ MBEDTLS_MD_MAX_SIZE ];
+    unsigned char server_application_traffic_secret_N[ MBEDTLS_MD_MAX_SIZE ];
+    unsigned char exporter_master_secret             [ MBEDTLS_MD_MAX_SIZE ];
+    unsigned char resumption_master_secret           [ MBEDTLS_MD_MAX_SIZE ];
+    size_t secret_len;
+} mbedtls_ssl_tls1_3_application_secrets;
+
+int mbedtls_ssl_tls1_3_derive_early_secrets(
+          mbedtls_md_type_t md_type,
+          unsigned char const *early_secret,
+          unsigned char const *transcript, size_t transcript_len,
+          mbedtls_ssl_tls1_3_early_secrets *derived_early_secrets );
+
+int mbedtls_ssl_tls1_3_derive_handshake_secrets(
+          mbedtls_md_type_t md_type,
+          unsigned char const *handshake_secret,
+          unsigned char const *transcript, size_t transcript_len,
+          mbedtls_ssl_tls1_3_handshake_secrets *derived_handshake_secrets );
+
+int mbedtls_ssl_tls1_3_derive_application_secrets(
+          mbedtls_md_type_t md_type,
+          unsigned char const *application_secret,
+          unsigned char const *transcript, size_t transcript_len,
+          mbedtls_ssl_tls1_3_application_secrets *derived_application_secrets );
+
 /* TODO: Document */
 int mbedtls_ssl_generate_application_traffic_keys( mbedtls_ssl_context* ssl,
                                                    mbedtls_ssl_key_set* traffic_keys );
