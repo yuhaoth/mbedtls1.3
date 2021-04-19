@@ -831,8 +831,8 @@ struct mbedtls_ssl_handshake_params
     unsigned char server_finished_key[MBEDTLS_MD_MAX_SIZE];
 
 #if defined(MBEDTLS_ZERO_RTT)
+    mbedtls_ssl_tls1_3_early_secrets early_secrets;
     unsigned char binder_key[MBEDTLS_MD_MAX_SIZE];
-    unsigned char client_early_traffic_secret[MBEDTLS_MD_MAX_SIZE];
 
     /*!< Early data indication:
     0  -- MBEDTLS_SSL_EARLY_DATA_DISABLED (for no early data), and
