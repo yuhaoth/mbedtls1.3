@@ -2419,25 +2419,6 @@ static int ssl_finished_out_postprocess( mbedtls_ssl_context* ssl )
 #if defined(MBEDTLS_SSL_SRV_C)
     if( ssl->conf->endpoint == MBEDTLS_SSL_IS_SERVER )
     {
-        size_t transcript_len;
-
-        ret = mbedtls_ssl_get_handshake_transcript( ssl,
-                              ssl->handshake->ciphersuite_info->mac,
-                              ssl->handshake->server_finished_digest,
-                              sizeof(ssl->handshake->server_finished_digest),
-                              &transcript_len );
-        if( ret != 0 )
-        {
-            MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_get_handshake_transcript",
-                                   ret );
-            return( ret );
-        }
-
-        MBEDTLS_SSL_DEBUG_BUF( 3, "Transcript hash (incl. Server.Finished):",
-                               ssl->handshake->server_finished_digest,
-                               transcript_len );
-
-
         mbedtls_ssl_key_set traffic_keys;
         ret = mbedtls_ssl_generate_application_traffic_keys( ssl,
                                                              &traffic_keys );
@@ -2705,94 +2686,6 @@ static int ssl_finished_in_parse( mbedtls_ssl_context* ssl,
 static int ssl_finished_in_postprocess_cli( mbedtls_ssl_context *ssl )
 {
     int ret = 0;
-
-    const mbedtls_ssl_ciphersuite_t *suite_info =
-        mbedtls_ssl_ciphersuite_from_id( ssl->session_negotiate->ciphersuite );
-    const mbedtls_cipher_info_t *cipher_info;
-
-    mbedtls_md_type_t hash_type;
-
-    /* Compute hash over transcript of all messages sent up to the Finished
-     * message sent by the server and store it in the digest variable of the
-     * handshake state. This digest will be needed later when computing the
-     * application traffic secrets. */
-    cipher_info = mbedtls_cipher_info_from_type(
-                                ssl->handshake->ciphersuite_info->cipher );
-    if( cipher_info == NULL )
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "cipher info for %d not found",
-                                  ssl->handshake->ciphersuite_info->cipher ) );
-        return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
-    }
-
-    if( suite_info == NULL )
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "mbedtls_ssl_ciphersuite_from_id in "
-                                  "mbedtls_ssl_generate_handshake_traffic_keys failed" ) );
-        return( MBEDTLS_ERR_SSL_BAD_HS_SERVER_HELLO );
-    }
-
-    hash_type = suite_info->mac;
-
-#if defined(MBEDTLS_SHA256_C)
-    if( hash_type == MBEDTLS_MD_SHA256 )
-    {
-        mbedtls_sha256_context sha256;
-        mbedtls_sha256_init( &sha256 );
-
-        if( ( ret = mbedtls_sha256_starts_ret( &sha256, 0 ) ) != 0 )
-        {
-            MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_sha256_starts_ret", ret );
-            goto exit;
-        }
-
-        mbedtls_sha256_clone( &sha256, &ssl->handshake->fin_sha256 );
-
-        ret = mbedtls_sha256_finish_ret( &sha256,
-                               ssl->handshake->server_finished_digest );
-
-        mbedtls_sha256_free( &sha256 );
-
-        if( ret != 0 )
-        {
-            MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_sha256_finish_ret", ret );
-            goto exit;
-        }
-    }
-    else
-#endif /* MBEDTLS_SHA256_C */
-#if defined(MBEDTLS_SHA512_C)
-    if( hash_type == MBEDTLS_MD_SHA384 )
-    {
-        mbedtls_sha512_context sha512;
-        mbedtls_sha512_init( &sha512 );
-
-        if( ( ret = mbedtls_sha512_starts_ret( &sha512, 1 ) ) != 0 )
-        {
-            MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_sha512_starts_ret", ret );
-            goto exit;
-        }
-
-        mbedtls_sha512_clone( &sha512, &ssl->handshake->fin_sha512 );
-
-        ret = mbedtls_sha512_finish_ret( &sha512,
-                                  ssl->handshake->server_finished_digest );
-
-        mbedtls_sha512_free( &sha512 );
-
-        if( ret != 0 )
-        {
-            MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_sha512_finish_ret", ret );
-            goto exit;
-        }
-    }
-    else
-#endif /* MBEDTLS_SHA512_C */
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "should never happen" ) );
-        return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
-    }
-
     mbedtls_ssl_key_set traffic_keys;
     ret = mbedtls_ssl_generate_application_traffic_keys( ssl, &traffic_keys );
 
@@ -2837,16 +2730,7 @@ static int ssl_finished_in_postprocess_cli( mbedtls_ssl_context *ssl )
     }
 #endif /* MBEDTLS_SSL_USE_MPS */
 
-exit:
-
-    if( ret == 0 )
-    {
-        MBEDTLS_SSL_DEBUG_BUF( 3, "Transcript hash (incl. Srv.Finished):",
-                             ssl->handshake->server_finished_digest,
-                             mbedtls_hash_size_for_ciphersuite( suite_info ) );
-    }
-
-    return( ret );
+    return( 0 );
 }
 #endif /* MBEDTLS_SSL_CLI_C */
 
@@ -3133,7 +3017,7 @@ static int ssl_new_session_ticket_parse( mbedtls_ssl_context* ssl,
         return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
 
     MBEDTLS_SSL_DEBUG_BUF( 3, "resumption_master_secret",
-                           ssl->session->resumption_master_secret,
+                           ssl->session->app_secrets.resumption_master_secret,
                            hash_length );
 
     /* Computer resumption key
@@ -3142,7 +3026,7 @@ static int ssl_new_session_ticket_parse( mbedtls_ssl_context* ssl,
      *                    "resumption", ticket_nonce, Hash.length )
      */
     ret = mbedtls_ssl_tls1_3_hkdf_expand_label( suite_info->mac,
-                    ssl->session->resumption_master_secret,
+                    ssl->session->app_secrets.resumption_master_secret,
                     hash_length,
                     MBEDTLS_SSL_TLS1_3_LBL_WITH_LEN( resumption ),
                     ssl->session->ticket_nonce,

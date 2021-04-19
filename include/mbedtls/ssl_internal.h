@@ -471,6 +471,19 @@ struct mbedtls_ssl_key_set
 };
 typedef struct mbedtls_ssl_key_set mbedtls_ssl_key_set;
 
+typedef struct
+{
+    unsigned char binder_key                  [ MBEDTLS_MD_MAX_SIZE ];
+    unsigned char client_early_traffic_secret [ MBEDTLS_MD_MAX_SIZE ];
+    unsigned char early_exporter_master_secret[ MBEDTLS_MD_MAX_SIZE ];
+} mbedtls_ssl_tls1_3_early_secrets;
+
+typedef struct
+{
+    unsigned char client_handshake_traffic_secret[ MBEDTLS_MD_MAX_SIZE ];
+    unsigned char server_handshake_traffic_secret[ MBEDTLS_MD_MAX_SIZE ];
+} mbedtls_ssl_tls1_3_handshake_secrets;
+
 /*
  * This structure contains the parameters only needed during handshake.
  */
@@ -675,11 +688,6 @@ struct mbedtls_ssl_handshake_params
 
     mbedtls_ssl_tls_prf_cb *tls_prf;
 
-   /* Buffer holding the digest up to, and including,
-     * the Finished message sent by the server.
-     */
-    unsigned char server_finished_digest[MBEDTLS_MD_MAX_SIZE];
-
     /*
      * State-local variables used during the processing
      * of a specific handshake state.
@@ -807,17 +815,14 @@ struct mbedtls_ssl_handshake_params
     unsigned char exporter_secret[MBEDTLS_MD_MAX_SIZE];
     unsigned char early_secret[MBEDTLS_MD_MAX_SIZE];
     unsigned char handshake_secret[MBEDTLS_MD_MAX_SIZE];
-    unsigned char client_handshake_traffic_secret[MBEDTLS_MD_MAX_SIZE];
-    unsigned char server_handshake_traffic_secret[MBEDTLS_MD_MAX_SIZE];
+    mbedtls_ssl_tls1_3_handshake_secrets hs_secrets;
     unsigned char master_secret[MBEDTLS_MD_MAX_SIZE];
-    unsigned char client_traffic_secret[MBEDTLS_MD_MAX_SIZE];
-    unsigned char server_traffic_secret[MBEDTLS_MD_MAX_SIZE];
     unsigned char client_finished_key[MBEDTLS_MD_MAX_SIZE];
     unsigned char server_finished_key[MBEDTLS_MD_MAX_SIZE];
 
 #if defined(MBEDTLS_ZERO_RTT)
+    mbedtls_ssl_tls1_3_early_secrets early_secrets;
     unsigned char binder_key[MBEDTLS_MD_MAX_SIZE];
-    unsigned char client_early_traffic_secret[MBEDTLS_MD_MAX_SIZE];
 
     /*!< Early data indication:
     0  -- MBEDTLS_SSL_EARLY_DATA_DISABLED (for no early data), and

@@ -19,6 +19,8 @@
 #if !defined(MBEDTLS_SSL_TLS1_3_KEYS_H)
 #define MBEDTLS_SSL_TLS1_3_KEYS_H
 
+#include "mbedtls/ssl_internal.h"
+
 /* The maximum size of the intermediate key material.
  * The IKM can be a
  * - 0-string of length corresponding to the size of the
@@ -301,6 +303,32 @@ int mbedtls_ssl_tls1_3_evolve_secret(
                    const unsigned char *input, size_t input_len,
                    unsigned char *secret_new );
 
+int mbedtls_ssl_tls1_3_derive_early_secrets(
+          mbedtls_md_type_t md_type,
+          unsigned char const *early_secret,
+          unsigned char const *transcript, size_t transcript_len,
+          mbedtls_ssl_tls1_3_early_secrets *derived_early_secrets );
+
+int mbedtls_ssl_tls1_3_derive_handshake_secrets(
+          mbedtls_md_type_t md_type,
+          unsigned char const *handshake_secret,
+          unsigned char const *transcript, size_t transcript_len,
+          mbedtls_ssl_tls1_3_handshake_secrets *derived_handshake_secrets );
+
+int mbedtls_ssl_tls1_3_derive_application_secrets(
+          mbedtls_md_type_t md_type,
+          unsigned char const *application_secret,
+          unsigned char const *transcript, size_t transcript_len,
+          mbedtls_ssl_tls1_3_application_secrets *derived_application_secrets );
+
+#if defined(MBEDTLS_SSL_NEW_SESSION_TICKET)
+int mbedtls_ssl_tls1_3_derive_resumption_master_secret(
+          mbedtls_md_type_t md_type,
+          unsigned char const *application_secret,
+          unsigned char const *transcript, size_t transcript_len,
+          mbedtls_ssl_tls1_3_application_secrets *derived_application_secrets );
+#endif /* MBEDTLS_SSL_NEW_SESSION_TICKET */
+
 /* TODO: Document */
 int mbedtls_ssl_generate_application_traffic_keys( mbedtls_ssl_context* ssl,
                                                    mbedtls_ssl_key_set* traffic_keys );
@@ -308,19 +336,23 @@ int mbedtls_ssl_generate_early_data_keys( mbedtls_ssl_context *ssl,
                                           mbedtls_ssl_key_set *traffic_keys );
 int mbedtls_ssl_handshake_key_derivation( mbedtls_ssl_context* ssl,
                                           mbedtls_ssl_key_set* traffic_keys );
+int mbedtls_ssl_tls1_3_set_verify( mbedtls_ssl_context *ssl );
 int mbedtls_ssl_generate_handshake_traffic_keys( mbedtls_ssl_context* ssl,
                                                  mbedtls_ssl_key_set* traffic_keys );
 int mbedtls_ssl_generate_resumption_master_secret( mbedtls_ssl_context* ssl );
 
 #if defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
-int mbedtls_ssl_create_binder( mbedtls_ssl_context *ssl,
+int mbedtls_ssl_tls1_3_create_psk_binder( mbedtls_ssl_context *ssl,
                                int is_external,
                                unsigned char *psk, size_t psk_len,
-                               const mbedtls_md_info_t *md,
-                               const mbedtls_ssl_ciphersuite_t *suite_info,
+                               const mbedtls_md_type_t md_type,
+                               unsigned char const *transcript,
+                               size_t transcript_len,
                                unsigned char *result );
 #endif /* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED */
 
-int mbedtls_ssl_tls1_3_derive_master_secret( mbedtls_ssl_context* ssl );
+int mbedtls_ssl_tls1_3_derive_master_secret( mbedtls_ssl_context *ssl,
+                                             unsigned char *ephemeral,
+                                             size_t ephemeral_len );
 
 #endif /* MBEDTLS_SSL_TLS1_3_KEYS_H */

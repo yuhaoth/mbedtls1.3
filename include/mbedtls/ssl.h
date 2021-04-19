@@ -1084,6 +1084,16 @@ typedef void mbedtls_ssl_async_cancel_t( mbedtls_ssl_context *ssl );
 #endif /* MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED &&
           !MBEDTLS_SSL_KEEP_PEER_CERTIFICATE */
 
+typedef struct
+{
+    unsigned char client_application_traffic_secret_N[ MBEDTLS_MD_MAX_SIZE ];
+    unsigned char server_application_traffic_secret_N[ MBEDTLS_MD_MAX_SIZE ];
+    unsigned char exporter_master_secret             [ MBEDTLS_MD_MAX_SIZE ];
+#if defined(MBEDTLS_SSL_NEW_SESSION_TICKET)
+    unsigned char resumption_master_secret           [ MBEDTLS_MD_MAX_SIZE ];
+#endif /* MBEDTLS_SSL_NEW_SESSION_TICKET */
+} mbedtls_ssl_tls1_3_application_secrets;
+
 /*
  * This structure is used for storing current session data.
  *
@@ -1108,13 +1118,8 @@ struct mbedtls_ssl_session
     size_t id_len;              /*!< session id length  */
     unsigned char id[32];       /*!< session identifier */
     unsigned char master[48];   /*!< the master secret  */
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
-#if defined(MBEDTLS_SHA256_C) && !defined(MBEDTLS_SHA512_C)
-    unsigned char resumption_master_secret[32];
-#else /* MBEDTLS_SHA512_C */
-    unsigned char resumption_master_secret[48];
-#endif /* MBEDTLS_SHA256_C && !MBEDTLS_SHA512_C */
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+
+    mbedtls_ssl_tls1_3_application_secrets app_secrets;
 
 #if defined(MBEDTLS_X509_CRT_PARSE_C)
 #if defined(MBEDTLS_SSL_KEEP_PEER_CERTIFICATE)

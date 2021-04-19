@@ -535,6 +535,9 @@ int mbedtls_ssl_parse_client_psk_identity_ext(
     size_t psk_len = 0;
     unsigned char const *end_of_psk_identities;
 
+    unsigned char transcript[MBEDTLS_MD_MAX_SIZE];
+    size_t transcript_len;
+
 #if defined(MBEDTLS_SSL_NEW_SESSION_TICKET)
     uint32_t obfuscated_ticket_age;
 #if defined(MBEDTLS_HAVE_TIME)
@@ -791,6 +794,14 @@ psk_parsing_successful:
 
     buf = end_of_psk_identities;
 
+    /* Get current state of handshake transcript. */
+    ret = mbedtls_ssl_get_handshake_transcript( ssl,
+                                                ssl->handshake->ciphersuite_info->mac,
+                                                transcript, sizeof( transcript ),
+                                                &transcript_len );
+    if( ret != 0 )
+        return( ret );
+
     /* read length of psk binder array */
     item_array_length = ( buf[0] << 8 ) | buf[1];
     length_so_far += item_array_length;
@@ -817,13 +828,12 @@ psk_parsing_successful:
         if( ssl->handshake->resume == 1 )
         {
             /* Case 1: We are using the PSK from a ticket */
-            ret = mbedtls_ssl_create_binder( ssl,
+            ret = mbedtls_ssl_tls1_3_create_psk_binder( ssl,
                         0 /* resumption PSK */,
                         ssl->handshake->psk,
                         ssl->handshake->psk_len,
-                        mbedtls_md_info_from_type(
-                            ssl->handshake->ciphersuite_info->mac ),
-                        ssl->handshake->ciphersuite_info,
+                        ssl->handshake->ciphersuite_info->mac,
+                        transcript, transcript_len,
                         server_computed_binder );
         }
         else
@@ -832,12 +842,11 @@ psk_parsing_successful:
             if( ( ret = mbedtls_ssl_get_psk( ssl, &psk, &psk_len ) ) != 0 )
                 return( ret );
 
-            ret = mbedtls_ssl_create_binder( ssl,
+            ret = mbedtls_ssl_tls1_3_create_psk_binder( ssl,
                      1 /* external PSK */,
                      (unsigned char *) psk, psk_len,
-                     mbedtls_md_info_from_type(
-                         ssl->handshake->ciphersuite_info->mac ),
-                     ssl->handshake->ciphersuite_info,
+                     ssl->handshake->ciphersuite_info->mac,
+                     transcript, transcript_len,
                      server_computed_binder );
         }
 
@@ -1585,7 +1594,7 @@ static int ssl_write_new_session_ticket_write( mbedtls_ssl_context* ssl,
                            p, MBEDTLS_SSL_TICKET_NONCE_LENGTH );
 
     MBEDTLS_SSL_DEBUG_BUF( 3, "resumption_master_secret",
-                           ssl->session->resumption_master_secret,
+                           ssl->session->app_secrets.resumption_master_secret,
                            hash_length );
 
     /* Computer resumption key
@@ -1594,7 +1603,7 @@ static int ssl_write_new_session_ticket_write( mbedtls_ssl_context* ssl,
      *                    "resumption", ticket_nonce, Hash.length )
      */
     ret = mbedtls_ssl_tls1_3_hkdf_expand_label( suite_info->mac,
-               ssl->session->resumption_master_secret,
+               ssl->session->app_secrets.resumption_master_secret,
                hash_length,
                MBEDTLS_SSL_TLS1_3_LBL_WITH_LEN( resumption ),
                (const unsigned char *) p,
