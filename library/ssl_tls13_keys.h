@@ -308,6 +308,7 @@ int mbedtls_ssl_generate_early_data_keys( mbedtls_ssl_context *ssl,
                                           mbedtls_ssl_key_set *traffic_keys );
 int mbedtls_ssl_handshake_key_derivation( mbedtls_ssl_context* ssl,
                                           mbedtls_ssl_key_set* traffic_keys );
+int mbedtls_ssl_tls1_3_set_verify( mbedtls_ssl_context *ssl );
 int mbedtls_ssl_generate_handshake_traffic_keys( mbedtls_ssl_context* ssl,
                                                  mbedtls_ssl_key_set* traffic_keys );
 int mbedtls_ssl_generate_resumption_master_secret( mbedtls_ssl_context* ssl );
