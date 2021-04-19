@@ -867,14 +867,6 @@ int mbedtls_ssl_handshake_key_derivation( mbedtls_ssl_context *ssl, mbedtls_ssl_
     if( ( ret = mbedtls_ssl_tls1_3_set_verify( ssl ) ) != 0 )
         return( ret );
 
-#if !defined(MBEDTLS_SSL_USE_MPS)
-    /*
-     * Set the in_msg pointer to the correct location based on IV length
-     * For TLS 1.3 the record layer header has changed and hence we need to accomodate for it.
-     */
-    ssl->in_msg = ssl->in_iv;
-#endif /* MBEDTLS_SSL_USE_MPS */
-
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= mbedtls_ssl_handshake_key_derivation" ) );
     return( 0 );
 }
