@@ -3069,7 +3069,6 @@ static int ssl_server_hello_parse( mbedtls_ssl_context* ssl,
     /* skip random bytes */
     buf += 32;
 
-#if defined(MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE)
     /* legacy_session_id_echo */
     if( ssl->session_negotiate->id_len != buf[0] )
     {
@@ -3094,19 +3093,6 @@ static int ssl_server_hello_parse( mbedtls_ssl_context* ssl,
 
     MBEDTLS_SSL_DEBUG_MSG( 3, ( "session id length ( %d )", ssl->session_negotiate->id_len ) );
     MBEDTLS_SSL_DEBUG_BUF( 3, "session id", ssl->session_negotiate->id, ssl->session_negotiate->id_len );
-#else
-    /* Length of the session id must be zero */
-    if( *buf == 0 )
-    {
-        buf++; /* skip session id length */
-    }
-    else
-    {
-        SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_ILLEGAL_PARAMETER,
-                              MBEDTLS_ERR_SSL_BAD_HS_SERVER_HELLO );
-        return( MBEDTLS_ERR_SSL_BAD_HS_SERVER_HELLO );
-    }
-#endif /* MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE */
 
     /* read server-selected ciphersuite, which follows random bytes */
     i = ( buf[0] << 8 ) | buf[1];
@@ -3454,7 +3440,6 @@ static int ssl_hrr_parse( mbedtls_ssl_context* ssl,
     /* skip random bytes */
     buf += 32;
 
-#if defined(MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE)
     /* legacy_session_id_echo */
     if( ssl->session_negotiate->id_len != buf[0] )
     {
@@ -3479,19 +3464,6 @@ static int ssl_hrr_parse( mbedtls_ssl_context* ssl,
 
     MBEDTLS_SSL_DEBUG_MSG( 3, ( "session id length ( %d )", ssl->session_negotiate->id_len ) );
     MBEDTLS_SSL_DEBUG_BUF( 3, "session id", ssl->session_negotiate->id, ssl->session_negotiate->id_len );
-#else
-    /* Length of the session id must be zero */
-    if( *buf == 0 )
-    {
-        buf++; /* skip session id length */
-    }
-    else
-    {
-        SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_ILLEGAL_PARAMETER,
-                              MBEDTLS_ERR_SSL_BAD_HS_HELLO_RETRY_REQUEST );
-        return( MBEDTLS_ERR_SSL_BAD_HS_HELLO_RETRY_REQUEST );
-    }
-#endif /* MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE */
 
     /* read server-selected ciphersuite, which follows random bytes */
     i = ( buf[0] << 8 ) | buf[1];
