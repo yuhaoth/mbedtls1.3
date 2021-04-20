@@ -3817,14 +3817,6 @@ int mbedtls_ssl_handshake_client_step( mbedtls_ssl_context *ssl )
     {
         case MBEDTLS_SSL_HELLO_REQUEST:
             mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_CLIENT_HELLO );
-            /* Reset hello_retry_requests_receive since we have not seen an HRR msg yet. */
-            ssl->handshake->hello_retry_requests_received = 0;
-
-#if defined(MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE)
-            /* Reset session id */
-            memset( ssl->session_negotiate->id, 0, 32 );
-            ssl->session_negotiate->id_len = 0;
-#endif /* MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE */
 
 #if defined(MBEDTLS_ECP_C)
             /* We need to initialize the handshake->key_shares_curve_list. */
