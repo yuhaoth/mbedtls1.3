@@ -1465,15 +1465,6 @@ int mbedtls_ssl_parse_new_session_ticket_server(mbedtls_ssl_context* ssl, unsign
 int mbedtls_ssl_parse_client_psk_identity_ext(mbedtls_ssl_context* ssl, const unsigned char* buf, size_t len);
 #endif /* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED */
 
-#if defined(MBEDTLS_SSL_PROTO_DTLS)
-#define MBEDTLS_SSL_ACK_RECORDS_SENT 0
-#define MBEDTLS_SSL_ACK_RECORDS_RECEIVED 1
-int mbedtls_ssl_parse_ack(mbedtls_ssl_context* ssl);
-int mbedtls_ssl_write_ack(mbedtls_ssl_context* ssl);
-void mbedtls_ack_clear_all(mbedtls_ssl_context* ssl, int mode);
-int mbedtls_ack_add_record(mbedtls_ssl_context* ssl, uint8_t record, int mode);
-#endif /* MBEDTLS_SSL_PROTO_DTLS */
-
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 
 
