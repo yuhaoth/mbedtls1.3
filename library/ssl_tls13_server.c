@@ -2161,7 +2161,7 @@ static int ssl_client_hello_fetch( mbedtls_ssl_context* ssl,
     buf = ssl->in_hdr;
 
     MBEDTLS_SSL_DEBUG_BUF( 4, "record header", buf,
-             mbedtls_ssl_hdr_len( ssl, NULL ) );
+             mbedtls_ssl_hdr_len( ssl ) );
 
     /*
      * TLS Client Hello
@@ -2190,7 +2190,7 @@ static int ssl_client_hello_fetch( mbedtls_ssl_context* ssl,
             MBEDTLS_SSL_DEBUG_MSG( 3, ( "CCS, message len.: %d", msg_len ) );
 
             if( ( ret = mbedtls_ssl_fetch_input( ssl,
-                            mbedtls_ssl_hdr_len( ssl, NULL ) + msg_len ) ) != 0 )
+                            mbedtls_ssl_hdr_len( ssl ) + msg_len ) ) != 0 )
             {
                 MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_fetch_input", ret );
                 return( MBEDTLS_ERR_SSL_BAD_HS_CHANGE_CIPHER_SPEC );
@@ -2234,7 +2234,7 @@ static int ssl_client_hello_fetch( mbedtls_ssl_context* ssl,
     }
 
     if( ( ret = mbedtls_ssl_fetch_input( ssl,
-                      mbedtls_ssl_hdr_len( ssl, ssl->transform_in ) + msg_len ) ) != 0 )
+                      mbedtls_ssl_hdr_len( ssl ) + msg_len ) ) != 0 )
     {
         MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_fetch_input", ret );
         return( MBEDTLS_ERR_SSL_BAD_HS_CLIENT_HELLO );
