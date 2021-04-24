@@ -526,10 +526,10 @@ int mbedtls_ssl_tls1_3_derive_application_secrets(
 
     ret = mbedtls_ssl_tls1_3_derive_secret( md_type,
               application_secret, md_size,
-              MBEDTLS_SSL_TLS1_3_LBL_WITH_LEN( res_master ),
+              MBEDTLS_SSL_TLS1_3_LBL_WITH_LEN( exp_master ),
               transcript, transcript_len,
               MBEDTLS_SSL_TLS1_3_CONTEXT_HASHED,
-              derived_application_secrets->resumption_master_secret,
+              derived_application_secrets->exporter_master_secret,
               md_size );
 
     if( ret != 0 )
