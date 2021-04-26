@@ -1160,8 +1160,10 @@ int mbedtls_ssl_tls1_3_derive_master_secret( mbedtls_ssl_context *ssl,
 
     int ret = 0;
     mbedtls_md_type_t const md_type = ssl->handshake->ciphersuite_info->mac;
+#if defined(MBEDTLS_DEBUG_C)
     mbedtls_md_info_t const * const md_info = mbedtls_md_info_from_type( md_type );
     size_t const md_size = mbedtls_md_get_size( md_info );
+#endif /* MBEDTLS_DEBUG_C */
 
     unsigned char *psk = NULL;
     size_t psk_len = 0;
