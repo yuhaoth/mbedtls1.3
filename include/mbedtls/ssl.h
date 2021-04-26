@@ -1163,7 +1163,7 @@ struct mbedtls_ssl_session
     time_t ticket_received;         /*!< time ticket was received */
 #endif /* MBEDTLS_HAVE_TIME && MBEDTLS_SSL_CLI_C */
 
-#endif /*  MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL || MBEDTLS_SSL_NEW_SESSION_TICKET */
+#endif /*  MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL && MBEDTLS_SSL_NEW_SESSION_TICKET */
 
 
 
