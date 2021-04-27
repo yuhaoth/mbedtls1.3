@@ -814,8 +814,10 @@ struct mbedtls_ssl_handshake_params
 
     unsigned char early_secret[MBEDTLS_MD_MAX_SIZE];
     unsigned char handshake_secret[MBEDTLS_MD_MAX_SIZE];
-    mbedtls_ssl_tls1_3_handshake_secrets hs_secrets;
     unsigned char master_secret[MBEDTLS_MD_MAX_SIZE];
+
+    mbedtls_ssl_tls1_3_handshake_secrets hs_secrets;
+
     unsigned char client_finished_key[MBEDTLS_MD_MAX_SIZE];
     unsigned char server_finished_key[MBEDTLS_MD_MAX_SIZE];
 
