@@ -812,7 +812,6 @@ struct mbedtls_ssl_handshake_params
     unsigned char* ptr_to_psk_ext;
 #endif /* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED */
 
-    unsigned char exporter_secret[MBEDTLS_MD_MAX_SIZE];
     unsigned char early_secret[MBEDTLS_MD_MAX_SIZE];
     unsigned char handshake_secret[MBEDTLS_MD_MAX_SIZE];
     mbedtls_ssl_tls1_3_handshake_secrets hs_secrets;
