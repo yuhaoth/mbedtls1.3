@@ -828,27 +828,22 @@ psk_parsing_successful:
         if( ssl->handshake->resume == 1 )
         {
             /* Case 1: We are using the PSK from a ticket */
-            ret = mbedtls_ssl_tls1_3_create_psk_binder( ssl,
-                        0 /* resumption PSK */,
-                        ssl->handshake->psk,
-                        ssl->handshake->psk_len,
-                        ssl->handshake->ciphersuite_info->mac,
-                        transcript, transcript_len,
-                        server_computed_binder );
+            psk = ssl->handshake->psk;
+            psk_len = ssl->handshake->psk_len;
         }
         else
         {
             /* Case 2: We are using a static PSK, or a dynamic PSK if one is defined */
             if( ( ret = mbedtls_ssl_get_psk( ssl, &psk, &psk_len ) ) != 0 )
                 return( ret );
-
-            ret = mbedtls_ssl_tls1_3_create_psk_binder( ssl,
-                     1 /* external PSK */,
-                     (unsigned char *) psk, psk_len,
-                     ssl->handshake->ciphersuite_info->mac,
-                     transcript, transcript_len,
-                     server_computed_binder );
         }
+
+        ret = mbedtls_ssl_tls1_3_create_psk_binder( ssl,
+                 !( ssl->handshake->resume == 1 ) /* external PSK */,
+                 (unsigned char *) psk, psk_len,
+                 ssl->handshake->ciphersuite_info->mac,
+                 transcript, transcript_len,
+                 server_computed_binder );
 
         /* We do not check for multiple binders */
         if( ret != 0 )
@@ -3009,15 +3004,24 @@ static int ssl_client_hello_postprocess( mbedtls_ssl_context* ssl,
         return( 0 );
     }
 
+    ret = mbedtls_ssl_tls1_3_key_schedule_stage_early_data( ssl );
+    if( ret != 0 )
+    {
+        MBEDTLS_SSL_DEBUG_RET( 1,
+             "mbedtls_ssl_tls1_3_key_schedule_stage_early_data", ret );
+        return( ret );
+    }
+
 #if defined(MBEDTLS_ZERO_RTT)
     if( ssl->handshake->early_data == MBEDTLS_SSL_EARLY_DATA_ON )
     {
         MBEDTLS_SSL_DEBUG_MSG( 3, ( "Generate 0-RTT keys" ) );
 
-        ret = mbedtls_ssl_generate_early_data_keys( ssl, &traffic_keys );
+        ret = mbedtls_ssl_tls1_3_generate_early_data_keys( ssl, &traffic_keys );
         if( ret != 0 )
         {
-            MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_generate_early_data_keys", ret );
+            MBEDTLS_SSL_DEBUG_RET( 1,
+                      "mbedtls_ssl_tls1_3_generate_early_data_keys", ret );
             return( ret );
         }
 
@@ -3262,11 +3266,20 @@ static int ssl_encrypted_extensions_prepare( mbedtls_ssl_context* ssl )
     int ret;
     mbedtls_ssl_key_set traffic_keys;
 
-    /* Derive handshake key material */
-    ret = mbedtls_ssl_handshake_key_derivation( ssl, &traffic_keys );
+    /* Compute handshake secret */
+    ret = mbedtls_ssl_tls1_3_key_schedule_stage_handshake( ssl );
     if( ret != 0 )
     {
-        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_handshake_key_derivation", ret );
+        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_tls1_3_derive_master_secret", ret );
+        return( ret );
+    }
+
+    /* Derive handshake key material */
+    ret = mbedtls_ssl_tls1_3_generate_handshake_traffic_keys( ssl, &traffic_keys );
+    if( ret != 0 )
+    {
+        MBEDTLS_SSL_DEBUG_RET( 1,
+                "mbedtls_ssl_tls1_3_generate_handshake_traffic_keys", ret );
         return( ret );
     }
 
@@ -4480,11 +4493,11 @@ int mbedtls_ssl_handshake_server_step( mbedtls_ssl_context *ssl )
             }
 
             /* Compute resumption_master_secret */
-            ret = mbedtls_ssl_generate_resumption_master_secret( ssl );
-
+            ret = mbedtls_ssl_tls1_3_generate_resumption_master_secret( ssl );
             if( ret != 0 )
             {
-                MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_generate_resumption_master_secret ", ret );
+                MBEDTLS_SSL_DEBUG_RET( 1,
+                          "mbedtls_ssl_tls1_3_generate_resumption_master_secret ", ret );
                 return( ret );
             }
 

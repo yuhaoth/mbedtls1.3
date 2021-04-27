@@ -208,10 +208,21 @@ static int ssl_write_early_data_prepare( mbedtls_ssl_context* ssl )
     int ret;
     mbedtls_ssl_key_set traffic_keys;
 
-    ret = mbedtls_ssl_generate_early_data_keys( ssl, &traffic_keys );
+    /* Start the TLS 1.3 key schedule: Set the PSK and derive early secret. */
+    ret = mbedtls_ssl_tls1_3_key_schedule_stage_early_data( ssl );
     if( ret != 0 )
     {
-        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_generate_early_data_keys", ret );
+        MBEDTLS_SSL_DEBUG_RET( 1,
+             "mbedtls_ssl_tls1_3_key_schedule_stage_early_data", ret );
+        return( ret );
+    }
+
+    /* Derive 0-RTT key material */
+    ret = mbedtls_ssl_tls1_3_generate_early_data_keys( ssl, &traffic_keys );
+    if( ret != 0 )
+    {
+        MBEDTLS_SSL_DEBUG_RET( 1,
+                "mbedtls_ssl_tls1_3_generate_early_data_keys", ret );
         return( ret );
     }
 
@@ -3286,6 +3297,7 @@ static int ssl_server_hello_postprocess( mbedtls_ssl_context* ssl )
 {
     int ret;
     mbedtls_ssl_key_set traffic_keys;
+
     /* We need to set the key exchange algorithm based on the
      * following rules:
      *
@@ -3313,11 +3325,36 @@ static int ssl_server_hello_postprocess( mbedtls_ssl_context* ssl )
         return( MBEDTLS_ERR_SSL_BAD_HS_SERVER_HELLO );
     }
 
-    /* Generate handshake keying material */
-    ret = mbedtls_ssl_handshake_key_derivation( ssl, &traffic_keys );
+    /* Start the TLS 1.3 key schedule: Set the PSK and derive early secret.
+     *
+     * TODO: We don't have to do this in case we offered 0-RTT and the
+     *       server accepted it. In this case, we could skip generating
+     *       the early secret. */
+
+    ret = mbedtls_ssl_tls1_3_key_schedule_stage_early_data( ssl );
     if( ret != 0 )
     {
-        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_handshake_key_derivation", ret );
+        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_tls1_3_establish_early_secret",
+                               ret );
+        return( ret );
+    }
+
+    /* Compute handshake secret */
+    ret = mbedtls_ssl_tls1_3_key_schedule_stage_handshake( ssl );
+    if( ret != 0 )
+    {
+        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_tls1_3_derive_master_secret", ret );
+        return( ret );
+    }
+
+    /* Next evolution in key schedule: Establish handshake secret and
+     * key material. */
+    ret = mbedtls_ssl_tls1_3_generate_handshake_traffic_keys(
+               ssl, &traffic_keys );
+    if( ret != 0 )
+    {
+        MBEDTLS_SSL_DEBUG_RET( 1,
+                "mbedtls_ssl_tls1_3_generate_handshake_traffic_keys", ret );
         return( ret );
     }
 
