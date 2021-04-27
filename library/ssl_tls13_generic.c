@@ -2373,26 +2373,17 @@ static int ssl_finished_out_prepare( mbedtls_ssl_context* ssl )
     int ret;
 
     /* Compute transcript of handshake up to now. */
-    ret = ssl->handshake->calc_finished( ssl,
-                                   ssl->handshake->state_local.finished_out.digest,
-                                   ssl->conf->endpoint );
+    ret = mbedtls_ssl_tls1_3_calc_finished( ssl,
+                    ssl->handshake->state_local.finished_out.digest,
+                    sizeof( ssl->handshake->state_local.finished_out.digest ),
+                    &ssl->handshake->state_local.finished_out.digest_len,
+                    ssl->conf->endpoint );
 
     if( ret != 0 )
     {
          MBEDTLS_SSL_DEBUG_RET( 1, "calc_finished failed", ret );
         return( ret );
     }
-
-#if defined(MBEDTLS_SSL_HW_RECORD_ACCEL)
-    if( mbedtls_ssl_hw_record_activate != NULL )
-    {
-        if( ( ret = mbedtls_ssl_hw_record_activate( ssl, MBEDTLS_SSL_CHANNEL_OUTBOUND ) ) != 0 )
-        {
-            MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_hw_record_activate", ret );
-            return( MBEDTLS_ERR_SSL_HW_ACCEL_FAILED );
-        }
-    }
-#endif /* MBEDTLS_SSL_HW_RECORD_ACCEL */
 
     return( 0 );
 }
@@ -2622,26 +2613,18 @@ cleanup:
 
 static int ssl_finished_in_preprocess( mbedtls_ssl_context* ssl )
 {
-    unsigned int hash_len;
-    const mbedtls_ssl_ciphersuite_t* suite_info;
+    int ret;
 
-    suite_info = mbedtls_ssl_ciphersuite_from_id( ssl->session_negotiate->ciphersuite );
-
-    if( suite_info == NULL )
+    ret = mbedtls_ssl_tls1_3_calc_finished( ssl,
+                    ssl->handshake->state_local.finished_in.digest,
+                    sizeof( ssl->handshake->state_local.finished_in.digest ),
+                    &ssl->handshake->state_local.finished_in.digest_len,
+                    ssl->conf->endpoint ^ 1 );
+    if( ret != 0 )
     {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "mbedtls_ssl_ciphersuite_from_id in ssl_finished_in_preprocess failed" ) );
-        return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
+        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_tls1_3_calc_finished", ret );
+        return( ret );
     }
-
-    hash_len = mbedtls_hash_size_for_ciphersuite( suite_info );
-    if( hash_len == 0 )
-        return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
-
-    ssl->handshake->state_local.finished_in.digest_len = hash_len;
-
-    ssl->handshake->calc_finished( ssl,
-                                   ssl->handshake->state_local.finished_in.digest,
-                                   ssl->conf->endpoint ^ 1 );
 
     return( 0 );
 }
