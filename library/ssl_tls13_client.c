@@ -2617,12 +2617,15 @@ static int ssl_encrypted_extensions_parse( mbedtls_ssl_context* ssl,
                                            unsigned char* buf,
                                            size_t buflen )
 {
-    int ret=0;
+    int ret = 0;
     size_t ext_len;
     unsigned char *ext;
 
-    /* TODO: Add bounds checks! Only then remove the next line. */
-    ((void) buflen );
+    if( buflen < 2 )
+    {
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "Extension buffer length too short - bad encrypted extensions message" ) );
+        return( MBEDTLS_ERR_SSL_BAD_HS_ENCRYPTED_EXTENSIONS );
+    }
 
     ext_len = ( ( buf[0] << 8 ) | ( buf[1] ) );
 
@@ -2630,17 +2633,17 @@ static int ssl_encrypted_extensions_parse( mbedtls_ssl_context* ssl,
     ext = buf;
 
     /* Checking for an extension length that is too short */
-    if( ext_len > 0UL && ext_len < 4UL )
+    if( ext_len > 0 && ext_len < 4 )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "Extension length too short - bad encrypted extensions message" ) );
-        return( MBEDTLS_ERR_SSL_BAD_HS_SERVER_HELLO );
+        return( MBEDTLS_ERR_SSL_BAD_HS_ENCRYPTED_EXTENSIONS );
     }
 
     /* Checking for an extension length that is not aligned with the rest of the message */
     if( buflen != 2 + ext_len )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "Extension length misaligned - bad encrypted extensions message" ) );
-        return( MBEDTLS_ERR_SSL_BAD_HS_SERVER_HELLO );
+        return( MBEDTLS_ERR_SSL_BAD_HS_ENCRYPTED_EXTENSIONS );
     }
 
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "encrypted extensions, total extension length: %d", ext_len ) );
@@ -2649,10 +2652,8 @@ static int ssl_encrypted_extensions_parse( mbedtls_ssl_context* ssl,
 
     while( ext_len )
     {
-        unsigned int ext_id = ( ( ext[0] << 8 )
-                                | ( ext[1] ) );
-        unsigned int ext_size = ( ( ext[2] << 8 )
-                                  | ( ext[3] ) );
+        unsigned int ext_id = ( ( ext[0] << 8 ) | ( ext[1] ) );
+        unsigned int ext_size = ( ( ext[2] << 8 ) | ( ext[3] ) );
 
         if( ext_size + 4 > ext_len )
         {
@@ -2686,7 +2687,7 @@ static int ssl_encrypted_extensions_parse( mbedtls_ssl_context* ssl,
             case MBEDTLS_TLS_EXT_ALPN:
                 MBEDTLS_SSL_DEBUG_MSG( 3, ( "found alpn extension" ) );
 
-                if( ( ret = ssl_parse_alpn_ext( ssl, ext + 4, (size_t)ext_size ) ) != 0 )
+                if( ( ret = ssl_parse_alpn_ext( ssl, ext + 4, (size_t) ext_size ) ) != 0 )
                 {
                     return( ret );
                 }
@@ -2719,6 +2720,7 @@ static int ssl_encrypted_extensions_parse( mbedtls_ssl_context* ssl,
 
             default:
                 MBEDTLS_SSL_DEBUG_MSG( 3, ( "unknown extension found: %d ( ignoring )", ext_id ) );
+                break;
         }
 
         ext_len -= 4 + ext_size;
