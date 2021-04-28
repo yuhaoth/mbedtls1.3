@@ -2421,6 +2421,8 @@ static int ssl_finished_out_postprocess( mbedtls_ssl_context* ssl )
             return( ret );
         }
 
+#if !defined(MBEDTLS_SSL_USE_MPS)
+
         ret = mbedtls_ssl_tls13_populate_transform( ssl->transform_application,
                                                ssl->conf->endpoint,
                                                ssl->session_negotiate->ciphersuite,
@@ -2432,7 +2434,7 @@ static int ssl_finished_out_postprocess( mbedtls_ssl_context* ssl )
             return( ret );
         }
 
-#if defined(MBEDTLS_SSL_USE_MPS)
+#else /* MBEDTLS_SSL_USE_MPS */
         {
             mbedtls_ssl_transform *transform_application =
                 mbedtls_calloc( 1, sizeof( mbedtls_ssl_transform ) );
@@ -2678,6 +2680,7 @@ static int ssl_finished_in_postprocess_cli( mbedtls_ssl_context *ssl )
         return( ret );
     }
 
+#if !defined(MBEDTLS_SSL_USE_MPS)
     ret = mbedtls_ssl_tls13_populate_transform(
                                     ssl->transform_application,
                                     ssl->conf->endpoint,
@@ -2690,7 +2693,8 @@ static int ssl_finished_in_postprocess_cli( mbedtls_ssl_context *ssl )
         return( ret );
     }
 
-#if defined(MBEDTLS_SSL_USE_MPS)
+#else /* MBEDTLS_SSL_USE_MPS */
+
     {
         mbedtls_ssl_transform *transform_application =
             mbedtls_calloc( 1, sizeof( mbedtls_ssl_transform ) );
