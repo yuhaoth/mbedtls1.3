@@ -2623,7 +2623,7 @@ static int ssl_encrypted_extensions_parse( mbedtls_ssl_context* ssl,
 
     if( buflen < 2 )
     {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "Extension buffer length too short - bad encrypted extensions message" ) );
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "EncryptedExtension message too short" ) );
         return( MBEDTLS_ERR_SSL_BAD_HS_ENCRYPTED_EXTENSIONS );
     }
 
@@ -2635,18 +2635,16 @@ static int ssl_encrypted_extensions_parse( mbedtls_ssl_context* ssl,
     /* Checking for an extension length that is too short */
     if( ext_len > 0 && ext_len < 4 )
     {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "Extension length too short - bad encrypted extensions message" ) );
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "EncryptedExtension message too short" ) );
         return( MBEDTLS_ERR_SSL_BAD_HS_ENCRYPTED_EXTENSIONS );
     }
 
     /* Checking for an extension length that is not aligned with the rest of the message */
     if( buflen != 2 + ext_len )
     {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "Extension length misaligned - bad encrypted extensions message" ) );
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "EncryptedExtension lengths misaligned" ) );
         return( MBEDTLS_ERR_SSL_BAD_HS_ENCRYPTED_EXTENSIONS );
     }
-
-    MBEDTLS_SSL_DEBUG_MSG( 2, ( "encrypted extensions, total extension length: %d", ext_len ) );
 
     MBEDTLS_SSL_DEBUG_BUF( 3, "encrypted extensions extensions", ext, ext_len );
 
@@ -2699,14 +2697,14 @@ static int ssl_encrypted_extensions_parse( mbedtls_ssl_context* ssl,
             case MBEDTLS_TLS_EXT_SERVERNAME:
                 MBEDTLS_SSL_DEBUG_MSG( 3, ( "found server_name extension" ) );
 
-                /* The server_name extension is an empty extension */
+                /* The server_name extension should be an empty extension */
 
                 break;
 #endif /* MBEDTLS_SSL_SERVER_NAME_INDICATION */
 
 #if defined(MBEDTLS_ZERO_RTT)
             case MBEDTLS_TLS_EXT_EARLY_DATA:
-                MBEDTLS_SSL_DEBUG_MSG(3, ("found early data extension"));
+                MBEDTLS_SSL_DEBUG_MSG(3, ( "found early data extension" ));
 
                 ret = ssl_parse_encrypted_extensions_early_data_ext(
                     ssl, ext + 4, ext_size );
