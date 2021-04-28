@@ -2671,9 +2671,11 @@ static int ssl_encrypted_extensions_parse( mbedtls_ssl_context* ssl,
             case MBEDTLS_TLS_EXT_MAX_FRAGMENT_LENGTH:
                 MBEDTLS_SSL_DEBUG_MSG( 3, ( "found max_fragment_length extension" ) );
 
-                if( ( ret = ssl_parse_max_fragment_length_ext( ssl,
-                                                               ext + 4, ext_size ) ) != 0 )
+                ret = ssl_parse_max_fragment_length_ext( ssl, ext + 4,
+                        ext_size );
+                if( ret != 0 )
                 {
+                    MBEDTLS_SSL_DEBUG_RET( 1, "ssl_parse_max_fragment_length_ext", ret );
                     return( ret );
                 }
 
@@ -2685,8 +2687,10 @@ static int ssl_encrypted_extensions_parse( mbedtls_ssl_context* ssl,
             case MBEDTLS_TLS_EXT_ALPN:
                 MBEDTLS_SSL_DEBUG_MSG( 3, ( "found alpn extension" ) );
 
-                if( ( ret = ssl_parse_alpn_ext( ssl, ext + 4, ext_size ) ) != 0 )
+                ret = ssl_parse_alpn_ext( ssl, ext + 4, ext_size );
+                if( ret != 0 )
                 {
+                    MBEDTLS_SSL_DEBUG_RET( 1, "ssl_parse_alpn_ext", ret );
                     return( ret );
                 }
 
