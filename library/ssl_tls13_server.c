@@ -3017,7 +3017,8 @@ static int ssl_client_hello_postprocess( mbedtls_ssl_context* ssl,
     {
         MBEDTLS_SSL_DEBUG_MSG( 3, ( "Generate 0-RTT keys" ) );
 
-        ret = mbedtls_ssl_tls1_3_generate_early_data_keys( ssl, &traffic_keys );
+        ret = mbedtls_ssl_tls1_3_generate_early_data_keys(
+            ssl, &traffic_keys );
         if( ret != 0 )
         {
             MBEDTLS_SSL_DEBUG_RET( 1,
@@ -3026,11 +3027,9 @@ static int ssl_client_hello_postprocess( mbedtls_ssl_context* ssl,
         }
 
 #if !defined(MBEDTLS_SSL_USE_MPS)
-        ret = mbedtls_ssl_tls13_populate_transform( ssl->transform_earlydata,
-                                                    ssl->conf->endpoint,
-                                                    ssl->session_negotiate->ciphersuite,
-                                                    &traffic_keys,
-                                                    ssl );
+        ret = mbedtls_ssl_tls13_populate_transform(
+            ssl->transform_earlydata, ssl->conf->endpoint,
+            ssl->session_negotiate->ciphersuite, &traffic_keys, ssl );
         if( ret != 0 )
         {
             MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_tls13_populate_transform", ret );
@@ -3275,11 +3274,11 @@ static int ssl_encrypted_extensions_prepare( mbedtls_ssl_context* ssl )
     }
 
     /* Derive handshake key material */
-    ret = mbedtls_ssl_tls1_3_generate_handshake_traffic_keys( ssl, &traffic_keys );
+    ret = mbedtls_ssl_tls1_3_generate_handshake_keys( ssl, &traffic_keys );
     if( ret != 0 )
     {
         MBEDTLS_SSL_DEBUG_RET( 1,
-                "mbedtls_ssl_tls1_3_generate_handshake_traffic_keys", ret );
+                "mbedtls_ssl_tls1_3_generate_handshake_keys", ret );
         return( ret );
     }
 

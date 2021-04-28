@@ -368,9 +368,9 @@ int mbedtls_ssl_tls1_3_key_schedule_stage_application(
  */
 int mbedtls_ssl_tls1_3_generate_early_data_keys(
     mbedtls_ssl_context *ssl, mbedtls_ssl_key_set *traffic_keys );
-int mbedtls_ssl_tls1_3_generate_handshake_traffic_keys(
+int mbedtls_ssl_tls1_3_generate_handshake_keys(
     mbedtls_ssl_context* ssl, mbedtls_ssl_key_set *traffic_keys );
-int mbedtls_ssl_tls1_3_generate_application_traffic_keys(
+int mbedtls_ssl_tls1_3_generate_application_keys(
     mbedtls_ssl_context* ssl, mbedtls_ssl_key_set *traffic_keys );
 
 /*

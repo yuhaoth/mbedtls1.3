@@ -556,7 +556,8 @@ int mbedtls_ssl_tls1_3_generate_early_data_keys(
     mbedtls_cipher_info_t const *cipher_info;
     size_t keylen, ivlen;
 
-    MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> mbedtls_ssl_tls1_3_generate_early_data_keys" ) );
+    MBEDTLS_SSL_DEBUG_MSG( 2,
+         ( "=> mbedtls_ssl_tls1_3_generate_early_data_keys" ) );
 
     cipher_info = mbedtls_cipher_info_from_type(
                                   ssl->handshake->ciphersuite_info->cipher );
@@ -616,9 +617,9 @@ int mbedtls_ssl_tls1_3_generate_early_data_keys(
 }
 #endif /* MBEDTLS_ZERO_RTT */
 
-/* mbedtls_ssl_tls1_3_generate_handshake_traffic_keys() generates keys necessary for
+/* mbedtls_ssl_tls1_3_generate_handshake_keys() generates keys necessary for
  * protecting the handshake messages, as described in Section 7 of TLS 1.3. */
-int mbedtls_ssl_tls1_3_generate_handshake_traffic_keys(
+int mbedtls_ssl_tls1_3_generate_handshake_keys(
     mbedtls_ssl_context *ssl,
     mbedtls_ssl_key_set *traffic_keys )
 {
@@ -634,7 +635,7 @@ int mbedtls_ssl_tls1_3_generate_handshake_traffic_keys(
     mbedtls_cipher_info_t const *cipher_info;
     size_t keylen, ivlen;
 
-    MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> mbedtls_ssl_tls1_3_generate_handshake_traffic_keys" ) );
+    MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> mbedtls_ssl_tls1_3_generate_handshake_keys" ) );
 
     cipher_info = mbedtls_cipher_info_from_type(
                                   ssl->handshake->ciphersuite_info->cipher );
@@ -719,7 +720,7 @@ int mbedtls_ssl_tls1_3_generate_handshake_traffic_keys(
                            traffic_keys->server_write_iv,
                            traffic_keys->iv_len);
 
-    MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= mbedtls_ssl_tls1_3_generate_handshake_traffic_keys" ) );
+    MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= mbedtls_ssl_tls1_3_generate_handshake_keys" ) );
 
 exit:
 
@@ -729,7 +730,7 @@ exit:
 /* Generate application traffic keys since any records following a 1-RTT Finished message
  * MUST be encrypted under the application traffic key.
  */
-int mbedtls_ssl_tls1_3_generate_application_traffic_keys(
+int mbedtls_ssl_tls1_3_generate_application_keys(
                                         mbedtls_ssl_context *ssl,
                                         mbedtls_ssl_key_set *traffic_keys )
 {

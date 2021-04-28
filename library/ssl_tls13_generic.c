@@ -2421,12 +2421,12 @@ static int ssl_finished_out_postprocess( mbedtls_ssl_context* ssl )
             return( ret );
         }
 
-        ret = mbedtls_ssl_tls1_3_generate_application_traffic_keys(
+        ret = mbedtls_ssl_tls1_3_generate_application_keys(
                      ssl, &traffic_keys );
         if( ret != 0 )
         {
             MBEDTLS_SSL_DEBUG_RET( 1,
-                  "mbedtls_ssl_tls1_3_generate_application_traffic_keys", ret );
+                  "mbedtls_ssl_tls1_3_generate_application_keys", ret );
             return( ret );
         }
 
@@ -2688,12 +2688,12 @@ static int ssl_finished_in_postprocess_cli( mbedtls_ssl_context *ssl )
         return( ret );
     }
 
-    ret = mbedtls_ssl_tls1_3_generate_application_traffic_keys(
+    ret = mbedtls_ssl_tls1_3_generate_application_keys(
         ssl, &traffic_keys );
     if( ret != 0 )
     {
         MBEDTLS_SSL_DEBUG_RET( 1,
-            "mbedtls_ssl_tls1_3_generate_application_traffic_keys", ret );
+            "mbedtls_ssl_tls1_3_generate_application_keys", ret );
         return( ret );
     }
 

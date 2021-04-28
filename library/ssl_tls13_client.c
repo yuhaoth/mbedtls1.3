@@ -218,11 +218,12 @@ static int ssl_write_early_data_prepare( mbedtls_ssl_context* ssl )
     }
 
     /* Derive 0-RTT key material */
-    ret = mbedtls_ssl_tls1_3_generate_early_data_keys( ssl, &traffic_keys );
+    ret = mbedtls_ssl_tls1_3_generate_early_data_keys(
+        ssl, &traffic_keys );
     if( ret != 0 )
     {
         MBEDTLS_SSL_DEBUG_RET( 1,
-                "mbedtls_ssl_tls1_3_generate_early_data_keys", ret );
+            "mbedtls_ssl_tls1_3_generate_early_data_keys", ret );
         return( ret );
     }
 
@@ -3349,12 +3350,12 @@ static int ssl_server_hello_postprocess( mbedtls_ssl_context* ssl )
 
     /* Next evolution in key schedule: Establish handshake secret and
      * key material. */
-    ret = mbedtls_ssl_tls1_3_generate_handshake_traffic_keys(
+    ret = mbedtls_ssl_tls1_3_generate_handshake_keys(
                ssl, &traffic_keys );
     if( ret != 0 )
     {
         MBEDTLS_SSL_DEBUG_RET( 1,
-                "mbedtls_ssl_tls1_3_generate_handshake_traffic_keys", ret );
+                "mbedtls_ssl_tls1_3_generate_handshake_keys", ret );
         return( ret );
     }
 
