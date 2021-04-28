@@ -3069,20 +3069,21 @@ static int ssl_client_hello_postprocess( mbedtls_ssl_context* ssl,
 #if defined(MBEDTLS_SSL_MAX_FRAGMENT_LENGTH)
 static int ssl_write_max_fragment_length_ext( mbedtls_ssl_context *ssl,
                                               unsigned char *buf,
-                                              const unsigned char *end,
+                                              size_t buflen,
                                               size_t *olen )
 {
     unsigned char *p = buf;
 
-    *olen = 0;
-
-    if( ssl->conf->mfl_code == MBEDTLS_SSL_MAX_FRAG_LEN_NONE )
+    if( ssl->session_negotiate->mfl_code == MBEDTLS_SSL_MAX_FRAG_LEN_NONE )
+    {
+        *olen = 0;
         return( 0 );
+    }
 
     MBEDTLS_SSL_DEBUG_MSG( 3,
-        ( "client hello, adding max_fragment_length extension" ) );
+        ( "adding max_fragment_length extension" ) );
 
-    MBEDTLS_SSL_CHK_BUF_PTR( p, end, 5 );
+    MBEDTLS_SSL_CHK_BUF_PTR( p, buf + buflen, 5 );
 
     *p++ = (unsigned char)( ( MBEDTLS_TLS_EXT_MAX_FRAGMENT_LENGTH >> 8 )
                             & 0xFF );
@@ -3392,12 +3393,9 @@ static int ssl_encrypted_extensions_write( mbedtls_ssl_context* ssl,
 #endif /* MBEDTLS_SSL_ALPN */
 
 #if defined(MBEDTLS_SSL_MAX_FRAGMENT_LENGTH)
-    if( ( ret = ssl_write_max_fragment_length_ext( ssl, p, 
-                                                   end - p, &n )  ) != 0 )
-    {
-        MBEDTLS_SSL_DEBUG_RET( 1, "ssl_write_max_fragment_length_ext", ret );
+    ret = ssl_write_max_fragment_length_ext( ssl, p, end - p, &n );
+    if( ret != 0 )
         return( ret );
-    }
     p += n;
 #endif /* MBEDTLS_SSL_MAX_FRAGMENT_LENGTH */
 
