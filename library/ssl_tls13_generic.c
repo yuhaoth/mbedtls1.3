@@ -2645,12 +2645,10 @@ static int ssl_finished_in_parse( mbedtls_ssl_context* ssl,
         return( MBEDTLS_ERR_SSL_BAD_HS_FINISHED );
     }
 
-    MBEDTLS_SSL_DEBUG_MSG( 5, ( "Verify finished message" ) );
-
-    MBEDTLS_SSL_DEBUG_BUF( 5, "Hash ( self-computed ):",
+    MBEDTLS_SSL_DEBUG_BUF( 4, "Hash (self-computed):",
                            ssl->handshake->state_local.finished_in.digest,
                            ssl->handshake->state_local.finished_in.digest_len );
-    MBEDTLS_SSL_DEBUG_BUF( 5, "Hash ( received message ):", buf,
+    MBEDTLS_SSL_DEBUG_BUF( 4, "Hash (received message):", buf,
                            ssl->handshake->state_local.finished_in.digest_len );
 
     /* Semantic validation */
