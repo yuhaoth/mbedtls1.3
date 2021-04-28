@@ -2653,7 +2653,7 @@ static int ssl_encrypted_extensions_parse( mbedtls_ssl_context* ssl,
     while( ext_len )
     {
         unsigned int ext_id = ( ( ext[0] << 8 ) | ( ext[1] ) );
-        unsigned int ext_size = ( ( ext[2] << 8 ) | ( ext[3] ) );
+        size_t ext_size = ( ( ext[2] << 8 ) | ( ext[3] ) );
 
         if( ext_size + 4 > ext_len )
         {
@@ -2687,7 +2687,7 @@ static int ssl_encrypted_extensions_parse( mbedtls_ssl_context* ssl,
             case MBEDTLS_TLS_EXT_ALPN:
                 MBEDTLS_SSL_DEBUG_MSG( 3, ( "found alpn extension" ) );
 
-                if( ( ret = ssl_parse_alpn_ext( ssl, ext + 4, (size_t) ext_size ) ) != 0 )
+                if( ( ret = ssl_parse_alpn_ext( ssl, ext + 4, ext_size ) ) != 0 )
                 {
                     return( ret );
                 }
@@ -2709,7 +2709,7 @@ static int ssl_encrypted_extensions_parse( mbedtls_ssl_context* ssl,
                 MBEDTLS_SSL_DEBUG_MSG(3, ("found early data extension"));
 
                 ret = ssl_parse_encrypted_extensions_early_data_ext(
-                    ssl, ext + 4, (size_t) ext_size );
+                    ssl, ext + 4, ext_size );
                 if( ret != 0 )
                 {
                     MBEDTLS_SSL_DEBUG_RET( 1, "ssl_parse_early_data_ext", ret );
