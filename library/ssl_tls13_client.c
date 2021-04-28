@@ -2531,7 +2531,7 @@ static int ssl_encrypted_extensions_fetch( mbedtls_ssl_context* ssl,
 #endif /* MBEDTLS_SSL_USE_MPS */
 
 static int ssl_encrypted_extensions_parse( mbedtls_ssl_context* ssl,
-                                           unsigned char* buf,
+                                           const unsigned char* buf,
                                            size_t buflen );
 static int ssl_encrypted_extensions_postprocess( mbedtls_ssl_context* ssl );
 
@@ -2614,12 +2614,12 @@ cleanup:
 #endif /* MBEDTLS_SSL_USE_MPS */
 
 static int ssl_encrypted_extensions_parse( mbedtls_ssl_context* ssl,
-                                           unsigned char* buf,
+                                           const unsigned char* buf,
                                            size_t buflen )
 {
     int ret = 0;
     size_t ext_len;
-    unsigned char *ext;
+    const unsigned char *ext;
 
     if( buflen < 2 )
     {
