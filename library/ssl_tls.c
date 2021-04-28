@@ -4087,7 +4087,8 @@ static int ssl_handshake_init( mbedtls_ssl_context *ssl )
     }
 #endif /* MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER */
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && \
+    !defined(MBEDTLS_SSL_USE_MPS)
     ssl->transform_handshake   = mbedtls_calloc( 1, sizeof(mbedtls_ssl_transform) );
     ssl->transform_earlydata   = mbedtls_calloc( 1, sizeof(mbedtls_ssl_transform) );
     ssl->transform_application = mbedtls_calloc( 1, sizeof(mbedtls_ssl_transform) );
@@ -4169,7 +4170,8 @@ static int ssl_handshake_init( mbedtls_ssl_context *ssl )
 #if defined(MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER)
         ssl->transform_negotiate == NULL ||
 #endif
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && \
+    !defined(MBEDTLS_SSL_USE_MPS)
         ssl->transform_handshake   == NULL ||
         ssl->transform_earlydata   == NULL ||
         ssl->transform_application == NULL ||
@@ -4186,7 +4188,8 @@ static int ssl_handshake_init( mbedtls_ssl_context *ssl )
         ssl->transform_negotiate = NULL;
 #endif
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && \
+    !defined(MBEDTLS_SSL_USE_MPS)
         mbedtls_ssl_transform_free( ssl->transform_handshake   );
         mbedtls_ssl_transform_free( ssl->transform_earlydata   );
         mbedtls_ssl_transform_free( ssl->transform_application );
@@ -4212,7 +4215,8 @@ static int ssl_handshake_init( mbedtls_ssl_context *ssl )
     mbedtls_ssl_transform_init( ssl->transform_negotiate );
 #endif
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && \
+    !defined(MBEDTLS_SSL_USE_MPS)
     mbedtls_ssl_transform_init( ssl->transform_handshake   );
     mbedtls_ssl_transform_init( ssl->transform_earlydata   );
     mbedtls_ssl_transform_init( ssl->transform_application );
@@ -4653,6 +4657,7 @@ int mbedtls_ssl_session_reset_int( mbedtls_ssl_context *ssl, int partial )
 #endif /* MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER */
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+#if !defined(MBEDTLS_SSL_USE_MPS)
     mbedtls_ssl_transform_free( ssl->transform_handshake   );
     mbedtls_ssl_transform_free( ssl->transform_earlydata   );
     mbedtls_ssl_transform_free( ssl->transform_application );
@@ -4662,8 +4667,7 @@ int mbedtls_ssl_session_reset_int( mbedtls_ssl_context *ssl, int partial )
     ssl->transform_handshake   = NULL;
     ssl->transform_earlydata   = NULL;
     ssl->transform_application = NULL;
-
-#if defined(MBEDTLS_SSL_USE_MPS)
+#else
     ssl_mps_free( ssl );
     ssl_mps_init( ssl );
 #endif /* MBEDTLS_SSL_USE_MPS */
@@ -7879,7 +7883,8 @@ void mbedtls_ssl_free( mbedtls_ssl_context *ssl )
     }
 #endif
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && \
+    !defined(MBEDTLS_SSL_USE_MPS)
     mbedtls_ssl_transform_free( ssl->transform_handshake   );
     mbedtls_ssl_transform_free( ssl->transform_earlydata   );
     mbedtls_ssl_transform_free( ssl->transform_application );
