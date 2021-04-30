@@ -1604,6 +1604,21 @@ run_test    "TLS 1.3, TLS_AES_128_GCM_SHA256, RSA-certificate, OpenSSL server" \
             0 \
             -c "Certificate Verify: using RSA"
 
+# Test OpenSSL server with resumption
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+requires_config_enabled MBEDTLS_DEBUG_C
+requires_openssl
+run_test    "TLS 1.3, TLS_AES_128_GCM_SHA256, resumption, OpenSSL server" \
+            "$O_SRV" \
+            "$P_CLI  debug_level=5 force_version=tls1_3 server_name=localhost force_ciphersuite=TLS_AES_128_GCM_SHA256 reconnect=1 tickets=1" \
+            0 \
+            -c "Verifying peer X.509 certificate... ok"                          \
+            -c "got ticket"                                                      \
+            -c "client hello, adding psk_key_exchange_modes extension"           \
+            -c "client hello, adding pre_shared_key extension"                   \
+            -c "found pre_shared_key extension"                                  \
+            -c "skip parse certificate$"
+
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
 requires_config_enabled MBEDTLS_DEBUG_C
 requires_config_enabled MBEDTLS_SSL_ALPN
