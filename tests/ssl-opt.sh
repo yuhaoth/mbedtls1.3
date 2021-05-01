@@ -310,6 +310,21 @@ requires_openssl() {
     fi
 }
 
+# skip next test if OpenSSL doesn't support TLS 1.3
+requires_openssl_with_tls1_3() {
+    if [ -z "${OPENSSL_HAS_TLS1_3:-}" ]; then
+        if $OPENSSL_CMD s_server -help 2>&1 | grep "\-tls1_3" >/dev/null
+        then
+            OPENSSL_HAS_TLS1_3="YES"
+        else
+            OPENSSL_HAS_TLS1_3="NO"
+        fi
+    fi
+    if [ "$OPENSSL_HAS_TLS1_3" = "NO" ]; then
+        SKIP_NEXT="YES"
+    fi
+}
+
 # skip next test if GnuTLS-next isn't available
 requires_gnutls_next() {
     if [ -z "${GNUTLS_NEXT_AVAILABLE:-}" ]; then
@@ -1607,7 +1622,7 @@ run_test    "TLS 1.3, TLS_AES_128_GCM_SHA256, RSA-certificate, OpenSSL server" \
 # Test OpenSSL server with resumption
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
 requires_config_enabled MBEDTLS_DEBUG_C
-requires_openssl
+requires_openssl_with_tls1_3
 run_test    "TLS 1.3, TLS_AES_128_GCM_SHA256, resumption, OpenSSL server" \
             "$O_SRV" \
             "$P_CLI  debug_level=5 force_version=tls1_3 server_name=localhost force_ciphersuite=TLS_AES_128_GCM_SHA256 reconnect=1 tickets=1" \
