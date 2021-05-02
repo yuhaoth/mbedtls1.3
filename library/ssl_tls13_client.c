@@ -790,7 +790,7 @@ int mbedtls_ssl_write_pre_shared_key_ext( mbedtls_ssl_context *ssl,
     int hash_len;
     unsigned char *psk_identity;
     size_t psk_identity_len;
-    unsigned char *psk;
+    unsigned char const *psk;
     size_t psk_len;
 
     *total_ext_len = 0;
@@ -986,14 +986,13 @@ int mbedtls_ssl_write_pre_shared_key_ext( mbedtls_ssl_context *ssl,
             return( ret );
 
         ret = mbedtls_ssl_tls1_3_create_psk_binder( ssl,
-                  external_psk,
-                  psk, psk_len,
-                  suite_info->mac,
-                  transcript, transcript_len, p );
-
+                                                    psk, psk_len,
+                                                    suite_info->mac,
+                                                    external_psk,
+                                                    transcript, p );
         if( ret != 0 )
         {
-            MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_write_pre_shared_key_ext()", ret );
+            MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_tls1_3_create_psk_binder", ret );
             return( MBEDTLS_ERR_SSL_BAD_HS_CLIENT_HELLO );
         }
 

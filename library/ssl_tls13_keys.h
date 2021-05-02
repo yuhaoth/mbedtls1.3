@@ -388,11 +388,10 @@ int mbedtls_ssl_tls1_3_calc_finished( mbedtls_ssl_context* ssl,
 
 #if defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
 int mbedtls_ssl_tls1_3_create_psk_binder( mbedtls_ssl_context *ssl,
-                               int is_external,
-                               unsigned char *psk, size_t psk_len,
+                               unsigned char const *psk, size_t psk_len,
                                const mbedtls_md_type_t md_type,
+                               int is_external,
                                unsigned char const *transcript,
-                               size_t transcript_len,
                                unsigned char *result );
 #endif /* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED */
 

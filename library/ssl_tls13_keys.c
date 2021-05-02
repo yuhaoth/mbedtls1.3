@@ -1037,8 +1037,7 @@ int mbedtls_ssl_tls1_3_key_schedule_stage_application(
 static int ssl_tls1_3_calc_finished_core( mbedtls_md_type_t md_type,
                                           unsigned char const *base_key,
                                           unsigned char const *transcript,
-                                          unsigned char *dst,
-                                          size_t *actual_len )
+                                          unsigned char *dst )
 {
     const mbedtls_md_info_t* const md = mbedtls_md_info_from_type( md_type );
     size_t const md_size = mbedtls_md_get_size( md );
@@ -1073,8 +1072,6 @@ static int ssl_tls1_3_calc_finished_core( mbedtls_md_type_t md_type,
     ret = mbedtls_md_hmac( md, finished_key, md_size, transcript, md_size, dst );
     if( ret != 0 )
         goto exit;
-
-    *actual_len = md_size;
 
 exit:
 
@@ -1119,10 +1116,10 @@ int mbedtls_ssl_tls1_3_calc_finished( mbedtls_ssl_context* ssl,
     else
         base_key = ssl->handshake->hs_secrets.server_handshake_traffic_secret;
 
-    ret = ssl_tls1_3_calc_finished_core( md_type, base_key, transcript,
-                                         dst, actual_len );
+    ret = ssl_tls1_3_calc_finished_core( md_type, base_key, transcript, dst );
     if( ret != 0 )
         return( ret );
+    *actual_len = md_size;
 
     MBEDTLS_SSL_DEBUG_BUF( 3, "verify_data for finished message", dst, md_size );
 
@@ -1147,11 +1144,10 @@ int mbedtls_ssl_tls1_3_calc_finished( mbedtls_ssl_context* ssl,
  */
 
 int mbedtls_ssl_tls1_3_create_psk_binder( mbedtls_ssl_context *ssl,
-                               int is_external,
-                               unsigned char *psk, size_t psk_len,
+                               unsigned char const *psk, size_t psk_len,
                                const mbedtls_md_type_t md_type,
+                               int is_external,
                                unsigned char const *transcript,
-                               size_t transcript_len,
                                unsigned char *result )
 {
     int ret = 0;
@@ -1159,9 +1155,6 @@ int mbedtls_ssl_tls1_3_create_psk_binder( mbedtls_ssl_context *ssl,
     unsigned char early_secret[MBEDTLS_MD_MAX_SIZE];
     mbedtls_md_info_t const *md_info = mbedtls_md_info_from_type( md_type );
     size_t const md_size = mbedtls_md_get_size( md_info );
-
-    size_t result_len;
-    ((void) transcript_len);
 
     ret = mbedtls_ssl_tls1_3_evolve_secret( md_type,
                                             NULL,          /* Old secret */
@@ -1209,8 +1202,7 @@ int mbedtls_ssl_tls1_3_create_psk_binder( mbedtls_ssl_context *ssl,
      * but with the BaseKey being the binder_key.
      */
 
-    ret = ssl_tls1_3_calc_finished_core( md_type, binder_key, transcript,
-                                         result, &result_len );
+    ret = ssl_tls1_3_calc_finished_core( md_type, binder_key, transcript, result );
     if( ret != 0 )
         goto exit;
 
