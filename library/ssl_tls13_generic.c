@@ -3075,7 +3075,6 @@ int mbedtls_ssl_write_early_data_ext( mbedtls_ssl_context *ssl,
                                       size_t *olen )
 {
     unsigned char *p = buf;
-    const unsigned char* end = buf + buflen;
 
     *olen = 0;
 
@@ -3086,11 +3085,10 @@ int mbedtls_ssl_write_early_data_ext( mbedtls_ssl_context *ssl,
             return( 0 );
 
         if( ssl->conf->key_exchange_modes != MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_KE ||
-            ssl->conf->early_data == MBEDTLS_SSL_EARLY_DATA_DISABLED ) {
-
+            ssl->conf->early_data == MBEDTLS_SSL_EARLY_DATA_DISABLED )
+        {
             MBEDTLS_SSL_DEBUG_MSG( 2, ( "skip write early_data extension" ) );
             ssl->handshake->early_data = MBEDTLS_SSL_EARLY_DATA_OFF;
-            *olen = 0;
             return( 0 );
         }
     }
@@ -3100,17 +3098,16 @@ int mbedtls_ssl_write_early_data_ext( mbedtls_ssl_context *ssl,
     if( ssl->conf->endpoint == MBEDTLS_SSL_IS_CLIENT )
     {
         if( ssl->conf->key_exchange_modes == MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_ECDHE_ECDSA ||
-            ssl->conf->early_data == MBEDTLS_SSL_EARLY_DATA_DISABLED ) {
-
-            MBEDTLS_SSL_DEBUG_MSG( 5, ( "<= skip write early_data extension" ) );
+            ssl->conf->early_data == MBEDTLS_SSL_EARLY_DATA_DISABLED )
+        {
+            MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= skip write early_data extension" ) );
             ssl->handshake->early_data = MBEDTLS_SSL_EARLY_DATA_OFF;
-            *olen = 0;
             return( 0 );
         }
     }
 #endif /* MBEDTLS_SSL_CLI_C */
 
-    if( (size_t)( end - p ) < 4 )
+    if( buflen < 4 )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "buffer too small" ) );
         return ( MBEDTLS_ERR_SSL_BUFFER_TOO_SMALL );
@@ -3120,7 +3117,7 @@ int mbedtls_ssl_write_early_data_ext( mbedtls_ssl_context *ssl,
     if( ssl->conf->endpoint == MBEDTLS_SSL_IS_CLIENT )
     {
         MBEDTLS_SSL_DEBUG_MSG( 3, ( "client hello, adding early_data extension" ) );
-        /* We're using rejected once we sent the EarlyData extension,
+        /* We're using rejected once we send the EarlyData extension,
            and change it to accepted upon receipt of the server extension. */
         ssl->early_data_status = MBEDTLS_SSL_EARLY_DATA_REJECTED;
     }
