@@ -2396,10 +2396,11 @@ static int ssl_finished_out_postprocess( mbedtls_ssl_context* ssl )
     if( ssl->conf->endpoint == MBEDTLS_SSL_IS_CLIENT )
     {
         /* Compute resumption_master_secret */
-        ret = mbedtls_ssl_generate_resumption_master_secret( ssl );
+        ret = mbedtls_ssl_tls1_3_generate_resumption_master_secret( ssl );
         if( ret != 0 )
         {
-            MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_generate_resumption_master_secret ", ret );
+            MBEDTLS_SSL_DEBUG_RET( 1,
+                    "mbedtls_ssl_tls1_3_generate_resumption_master_secret ", ret );
             return ( ret );
         }
 
@@ -2411,13 +2412,21 @@ static int ssl_finished_out_postprocess( mbedtls_ssl_context* ssl )
     if( ssl->conf->endpoint == MBEDTLS_SSL_IS_SERVER )
     {
         mbedtls_ssl_key_set traffic_keys;
-        ret = mbedtls_ssl_generate_application_traffic_keys( ssl,
-                                                             &traffic_keys );
 
+        ret = mbedtls_ssl_tls1_3_key_schedule_stage_application( ssl );
         if( ret != 0 )
         {
             MBEDTLS_SSL_DEBUG_RET( 1,
-                    "mbedtls_ssl_generate_application_traffic_keys", ret );
+               "mbedtls_ssl_tls1_3_key_schedule_stage_application", ret );
+            return( ret );
+        }
+
+        ret = mbedtls_ssl_tls1_3_generate_application_keys(
+                     ssl, &traffic_keys );
+        if( ret != 0 )
+        {
+            MBEDTLS_SSL_DEBUG_RET( 1,
+                  "mbedtls_ssl_tls1_3_generate_application_keys", ret );
             return( ret );
         }
 
@@ -2670,11 +2679,21 @@ static int ssl_finished_in_postprocess_cli( mbedtls_ssl_context *ssl )
 {
     int ret = 0;
     mbedtls_ssl_key_set traffic_keys;
-    ret = mbedtls_ssl_generate_application_traffic_keys( ssl, &traffic_keys );
 
+    ret = mbedtls_ssl_tls1_3_key_schedule_stage_application( ssl );
     if( ret != 0 )
     {
-        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_generate_application_traffic_keys", ret );
+        MBEDTLS_SSL_DEBUG_RET( 1,
+           "mbedtls_ssl_tls1_3_key_schedule_stage_application", ret );
+        return( ret );
+    }
+
+    ret = mbedtls_ssl_tls1_3_generate_application_keys(
+        ssl, &traffic_keys );
+    if( ret != 0 )
+    {
+        MBEDTLS_SSL_DEBUG_RET( 1,
+            "mbedtls_ssl_tls1_3_generate_application_keys", ret );
         return( ret );
     }
 

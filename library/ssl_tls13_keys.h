@@ -229,6 +229,40 @@ int mbedtls_ssl_tls1_3_derive_secret(
                    int ctx_hashed,
                    unsigned char *dstbuf, size_t buflen );
 
+/*
+ * TLS 1.3 key schedule secret derivations
+ *
+ * Standalone unit-testable wrappers around mbedtls_ssl_tls1_3_derive_secret().
+ *
+ */
+
+int mbedtls_ssl_tls1_3_derive_early_secrets(
+          mbedtls_md_type_t md_type,
+          unsigned char const *early_secret,
+          unsigned char const *transcript, size_t transcript_len,
+          mbedtls_ssl_tls1_3_early_secrets *derived_early_secrets );
+
+int mbedtls_ssl_tls1_3_derive_handshake_secrets(
+          mbedtls_md_type_t md_type,
+          unsigned char const *handshake_secret,
+          unsigned char const *transcript, size_t transcript_len,
+          mbedtls_ssl_tls1_3_handshake_secrets *derived_handshake_secrets );
+
+int mbedtls_ssl_tls1_3_derive_application_secrets(
+          mbedtls_md_type_t md_type,
+          unsigned char const *application_secret,
+          unsigned char const *transcript, size_t transcript_len,
+          mbedtls_ssl_tls1_3_application_secrets *derived_application_secrets );
+
+#if defined(MBEDTLS_SSL_NEW_SESSION_TICKET)
+int mbedtls_ssl_tls1_3_derive_resumption_master_secret(
+          mbedtls_md_type_t md_type,
+          unsigned char const *application_secret,
+          unsigned char const *transcript, size_t transcript_len,
+          mbedtls_ssl_tls1_3_application_secrets *derived_application_secrets );
+#endif /* MBEDTLS_SSL_NEW_SESSION_TICKET */
+
+
 /**
  * \brief Compute the next secret in the TLS 1.3 key schedule
  *
@@ -303,43 +337,48 @@ int mbedtls_ssl_tls1_3_evolve_secret(
                    const unsigned char *input, size_t input_len,
                    unsigned char *secret_new );
 
-int mbedtls_ssl_tls1_3_derive_early_secrets(
-          mbedtls_md_type_t md_type,
-          unsigned char const *early_secret,
-          unsigned char const *transcript, size_t transcript_len,
-          mbedtls_ssl_tls1_3_early_secrets *derived_early_secrets );
+/*
+ * TLS 1.3 key schedule evolutions
+ *
+ *   Early Data -> Handshake -> Application
+ *
+ * Small wrappers around mbedtls_ssl_tls1_3_evolve_secret().
+ */
 
-int mbedtls_ssl_tls1_3_derive_handshake_secrets(
-          mbedtls_md_type_t md_type,
-          unsigned char const *handshake_secret,
-          unsigned char const *transcript, size_t transcript_len,
-          mbedtls_ssl_tls1_3_handshake_secrets *derived_handshake_secrets );
+int mbedtls_ssl_tls1_3_key_schedule_stage_early_data(
+    mbedtls_ssl_context *ssl );
+int mbedtls_ssl_tls1_3_key_schedule_stage_handshake(
+    mbedtls_ssl_context *ssl );
+int mbedtls_ssl_tls1_3_key_schedule_stage_application(
+    mbedtls_ssl_context *ssl );
 
-int mbedtls_ssl_tls1_3_derive_application_secrets(
-          mbedtls_md_type_t md_type,
-          unsigned char const *application_secret,
-          unsigned char const *transcript, size_t transcript_len,
-          mbedtls_ssl_tls1_3_application_secrets *derived_application_secrets );
+/*
+ * Convenience functions combining
+ *
+ *    mbedtls_ssl_tls1_3_key_schedule_stage_xxx()
+ *
+ * with
+ *
+ *    mbedtls_ssl_tls1_3_make_traffic_keys()
+ *
+ * Those functions assume that the key schedule has been moved
+ * to the correct stage via
+ *
+ *    mbedtls_ssl_tls1_3_key_schedule_stage_xxx().
+ */
+int mbedtls_ssl_tls1_3_generate_early_data_keys(
+    mbedtls_ssl_context *ssl, mbedtls_ssl_key_set *traffic_keys );
+int mbedtls_ssl_tls1_3_generate_handshake_keys(
+    mbedtls_ssl_context* ssl, mbedtls_ssl_key_set *traffic_keys );
+int mbedtls_ssl_tls1_3_generate_application_keys(
+    mbedtls_ssl_context* ssl, mbedtls_ssl_key_set *traffic_keys );
 
-#if defined(MBEDTLS_SSL_NEW_SESSION_TICKET)
-int mbedtls_ssl_tls1_3_derive_resumption_master_secret(
-          mbedtls_md_type_t md_type,
-          unsigned char const *application_secret,
-          unsigned char const *transcript, size_t transcript_len,
-          mbedtls_ssl_tls1_3_application_secrets *derived_application_secrets );
-#endif /* MBEDTLS_SSL_NEW_SESSION_TICKET */
+/*
+ * TODO: Document
+ */
 
-/* TODO: Document */
-int mbedtls_ssl_generate_application_traffic_keys( mbedtls_ssl_context* ssl,
-                                                   mbedtls_ssl_key_set* traffic_keys );
-int mbedtls_ssl_generate_early_data_keys( mbedtls_ssl_context *ssl,
-                                          mbedtls_ssl_key_set *traffic_keys );
-int mbedtls_ssl_handshake_key_derivation( mbedtls_ssl_context* ssl,
-                                          mbedtls_ssl_key_set* traffic_keys );
-
-int mbedtls_ssl_generate_handshake_traffic_keys( mbedtls_ssl_context* ssl,
-                                                 mbedtls_ssl_key_set* traffic_keys );
-int mbedtls_ssl_generate_resumption_master_secret( mbedtls_ssl_context* ssl );
+int mbedtls_ssl_tls1_3_generate_resumption_master_secret(
+    mbedtls_ssl_context* ssl );
 
 int mbedtls_ssl_tls1_3_calc_finished( mbedtls_ssl_context* ssl,
                                       unsigned char* dst,
@@ -356,9 +395,5 @@ int mbedtls_ssl_tls1_3_create_psk_binder( mbedtls_ssl_context *ssl,
                                size_t transcript_len,
                                unsigned char *result );
 #endif /* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED */
-
-int mbedtls_ssl_tls1_3_derive_master_secret( mbedtls_ssl_context *ssl,
-                                             unsigned char *ephemeral,
-                                             size_t ephemeral_len );
 
 #endif /* MBEDTLS_SSL_TLS1_3_KEYS_H */
