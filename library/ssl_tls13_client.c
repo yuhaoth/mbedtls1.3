@@ -2627,7 +2627,7 @@ static int ssl_encrypted_extensions_parse( mbedtls_ssl_context* ssl,
         return( MBEDTLS_ERR_SSL_BAD_HS_ENCRYPTED_EXTENSIONS );
     }
 
-    ext_len = ( ( buf[0] << 8 ) | ( buf[1] ) );
+    ext_len = ( ( (size_t) buf[0] << 8 ) | ( (size_t) buf[1] ) );
 
     buf += 2; /* skip extension length */
     ext = buf;
@@ -2650,8 +2650,8 @@ static int ssl_encrypted_extensions_parse( mbedtls_ssl_context* ssl,
 
     while( ext_len )
     {
-        unsigned int ext_id = ( ( ext[0] << 8 ) | ( ext[1] ) );
-        size_t ext_size = ( ( ext[2] << 8 ) | ( ext[3] ) );
+        unsigned int ext_id = ( ( (unsigned int) ext[0] << 8 ) | ( (unsigned int) ext[1] ) );
+        size_t ext_size = ( ( (size_t) ext[2] << 8 ) | ( (size_t) ext[3] ) );
 
         if( ext_size + 4 > ext_len )
         {
