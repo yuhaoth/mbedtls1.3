@@ -310,7 +310,7 @@ int mbedtls_ssl_parse_supported_groups_ext(
         if( curve_info != NULL )
         {
             *curves++ = curve_info;
-            MBEDTLS_SSL_DEBUG_MSG( 5, ( "supported curve: %s", curve_info->name ) );
+            MBEDTLS_SSL_DEBUG_MSG( 4, ( "supported curve: %s", curve_info->name ) );
 
             our_size--;
         }
@@ -640,14 +640,14 @@ int mbedtls_ssl_parse_client_psk_identity_ext(
                      */
                     mbedtls_ssl_set_hs_psk( ssl, ssl->session_negotiate->key,
                                             ssl->session_negotiate->resumption_key_len );
-                    MBEDTLS_SSL_DEBUG_BUF( 5, "Ticket-resumed PSK:", ssl->session_negotiate->key,
+                    MBEDTLS_SSL_DEBUG_BUF( 4, "Ticket-resumed PSK:", ssl->session_negotiate->key,
                                            ssl->session_negotiate->resumption_key_len );
 
                     /* obfuscated ticket age follows the identity field, which is
                      * item_length long, containing the ticket */
                     memcpy( &obfuscated_ticket_age, buf+item_length, 4 );
 
-                    MBEDTLS_SSL_DEBUG_MSG( 5, ( "ticket: obfuscated_ticket_age: %u",
+                    MBEDTLS_SSL_DEBUG_MSG( 4, ( "ticket: obfuscated_ticket_age: %u",
                                                 obfuscated_ticket_age ) );
                     /*
                      * A server MUST validate that the ticket age for the selected PSK identity
@@ -951,7 +951,7 @@ static int ssl_write_server_pre_shared_key_ext( mbedtls_ssl_context *ssl,
 
     *olen = 6;
 
-    MBEDTLS_SSL_DEBUG_MSG( 5, ( "sent selected_identity: %d", selected_identity ) );
+    MBEDTLS_SSL_DEBUG_MSG( 4, ( "sent selected_identity: %d", selected_identity ) );
 
     return( 0 );
 }
@@ -1660,7 +1660,7 @@ static int ssl_write_new_session_ticket_write( mbedtls_ssl_context* ssl,
 
     *olen = p - buf;
 
-    MBEDTLS_SSL_DEBUG_BUF( 5, "ticket", buf, *olen );
+    MBEDTLS_SSL_DEBUG_BUF( 4, "ticket", buf, *olen );
 
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= write new session ticket" ) );
 

@@ -2993,7 +2993,7 @@ static int ssl_new_session_ticket_parse( mbedtls_ssl_context* ssl,
     ssl->session->ticket = ticket;
     ssl->session->ticket_len = ticket_len;
 
-    MBEDTLS_SSL_DEBUG_MSG( 5, ( "ticket->extension length: %d", ext_len ) );
+    MBEDTLS_SSL_DEBUG_MSG( 4, ( "ticket->extension length: %d", ext_len ) );
 
     /* We are not storing any extensions at the moment */
     MBEDTLS_SSL_DEBUG_BUF( 3, "ticket->extension",
@@ -3054,7 +3054,7 @@ static int ssl_new_session_ticket_parse( mbedtls_ssl_context* ssl,
     ssl->session->ticket_received = time( NULL );
 #endif
 
-    MBEDTLS_SSL_DEBUG_BUF( 5, "ticket", buf, buflen );
+    MBEDTLS_SSL_DEBUG_BUF( 4, "ticket", buf, buflen );
 
     return( 0 );
 }
