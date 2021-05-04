@@ -1175,7 +1175,7 @@ int mbedtls_ssl_tls1_3_create_psk_binder( mbedtls_ssl_context *ssl,
     if( !is_external )
     {
         ret = mbedtls_ssl_tls1_3_derive_secret( md_type,
-                            ssl->handshake->early_secret, md_size,
+                            early_secret, md_size,
                             MBEDTLS_SSL_TLS1_3_LBL_WITH_LEN( res_binder ),
                             NULL, 0, MBEDTLS_SSL_TLS1_3_CONTEXT_UNHASHED,
                             binder_key, md_size );
@@ -1184,7 +1184,7 @@ int mbedtls_ssl_tls1_3_create_psk_binder( mbedtls_ssl_context *ssl,
     else
     {
         ret = mbedtls_ssl_tls1_3_derive_secret( md_type,
-                            ssl->handshake->early_secret, md_size,
+                            early_secret, md_size,
                             MBEDTLS_SSL_TLS1_3_LBL_WITH_LEN( ext_binder ),
                             NULL, 0, MBEDTLS_SSL_TLS1_3_CONTEXT_UNHASHED,
                             binder_key, md_size );
