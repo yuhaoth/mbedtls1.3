@@ -4865,7 +4865,7 @@ int mbedtls_ssl_set_session( mbedtls_ssl_context *ssl, const mbedtls_ssl_session
     {
         mbedtls_ssl_set_hs_psk( ssl, ssl->session_negotiate->key,
                                      ssl->session_negotiate->resumption_key_len );
-        MBEDTLS_SSL_DEBUG_BUF( 5, "ticket: key", ssl->session_negotiate->key,
+        MBEDTLS_SSL_DEBUG_BUF( 4, "ticket: key", ssl->session_negotiate->key,
                                      ssl->session_negotiate->resumption_key_len );
     }
 #endif /* MBEDTLS_SSL_NEW_SESSION_TICKET && MBEDTLS_SSL_CLI_C */

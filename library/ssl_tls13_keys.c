@@ -1179,7 +1179,7 @@ int mbedtls_ssl_tls1_3_create_psk_binder( mbedtls_ssl_context *ssl,
                             MBEDTLS_SSL_TLS1_3_LBL_WITH_LEN( res_binder ),
                             NULL, 0, MBEDTLS_SSL_TLS1_3_CONTEXT_UNHASHED,
                             binder_key, md_size );
-        MBEDTLS_SSL_DEBUG_MSG( 3, ( "Derive Early Secret with 'res binder'" ) );
+        MBEDTLS_SSL_DEBUG_MSG( 4, ( "Derive Early Secret with 'res binder'" ) );
     }
     else
     {
@@ -1188,7 +1188,7 @@ int mbedtls_ssl_tls1_3_create_psk_binder( mbedtls_ssl_context *ssl,
                             MBEDTLS_SSL_TLS1_3_LBL_WITH_LEN( ext_binder ),
                             NULL, 0, MBEDTLS_SSL_TLS1_3_CONTEXT_UNHASHED,
                             binder_key, md_size );
-        MBEDTLS_SSL_DEBUG_MSG( 3, ( "Derive Early Secret with 'ext binder'" ) );
+        MBEDTLS_SSL_DEBUG_MSG( 4, ( "Derive Early Secret with 'ext binder'" ) );
     }
 
     if( ret != 0 )

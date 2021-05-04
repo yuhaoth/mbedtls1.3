@@ -719,7 +719,7 @@ static int ssl_write_psk_key_exchange_modes_ext( mbedtls_ssl_context *ssl,
         *p++ = MBEDTLS_SSL_TLS13_PSK_MODE_PURE;
         num_modes++;
 
-        MBEDTLS_SSL_DEBUG_MSG( 5, ( "Adding pure PSK key exchange mode" ) );
+        MBEDTLS_SSL_DEBUG_MSG( 4, ( "Adding pure PSK key exchange mode" ) );
     }
 
     if( mbedtls_ssl_conf_tls13_psk_ecdhe_enabled( ssl ) )
@@ -727,7 +727,7 @@ static int ssl_write_psk_key_exchange_modes_ext( mbedtls_ssl_context *ssl,
         *p++ = MBEDTLS_SSL_TLS13_PSK_MODE_ECDHE;
         num_modes++;
 
-        MBEDTLS_SSL_DEBUG_MSG( 5, ( "Adding PSK-ECDHE key exchange mode" ) );
+        MBEDTLS_SSL_DEBUG_MSG( 4, ( "Adding PSK-ECDHE key exchange mode" ) );
     }
 
     /* Add extension length: PSK mode list length byte + actual PSK mode list length */
@@ -940,7 +940,7 @@ int mbedtls_ssl_write_pre_shared_key_ext( mbedtls_ssl_context *ssl,
                 (uint32_t)( now - ssl->session_negotiate->ticket_received ) +
                 ssl->session_negotiate->ticket_age_add;
 
-            MBEDTLS_SSL_DEBUG_MSG( 5, ( "obfuscated_ticket_age: %u",
+            MBEDTLS_SSL_DEBUG_MSG( 4, ( "obfuscated_ticket_age: %u",
                                         obfuscated_ticket_age ) );
 #endif /* MBEDTLS_HAVE_TIME */
         }
@@ -1132,7 +1132,7 @@ static int ssl_write_supported_groups_ext( mbedtls_ssl_context *ssl,
 #endif
         elliptic_curve_list[elliptic_curve_len++] = info->tls_id >> 8;
         elliptic_curve_list[elliptic_curve_len++] = info->tls_id & 0xFF;
-        MBEDTLS_SSL_DEBUG_MSG( 5, ( "Named Curve: %s ( %x )",
+        MBEDTLS_SSL_DEBUG_MSG( 4, ( "Named Curve: %s ( %x )",
                   mbedtls_ecp_curve_info_from_tls_id( info->tls_id )->name,
                   info->tls_id ) );
     }
@@ -3095,7 +3095,7 @@ static int ssl_server_hello_parse( mbedtls_ssl_context* ssl,
         return( MBEDTLS_ERR_SSL_BAD_HS_SERVER_HELLO );
     }
 
-    MBEDTLS_SSL_DEBUG_BUF( 5, "server hello", buf, buflen );
+    MBEDTLS_SSL_DEBUG_BUF( 4, "server hello", buf, buflen );
 
 #if !defined(MBEDTLS_SSL_USE_MPS)
     /* skip header */
@@ -3474,7 +3474,7 @@ static int ssl_hrr_parse( mbedtls_ssl_context* ssl,
         return( MBEDTLS_ERR_SSL_BAD_HS_HELLO_RETRY_REQUEST );
     }
 
-    MBEDTLS_SSL_DEBUG_BUF( 5, "hello retry request", buf, buflen );
+    MBEDTLS_SSL_DEBUG_BUF( 4, "hello retry request", buf, buflen );
 
 #if !defined(MBEDTLS_SSL_USE_MPS)
     /* skip header */

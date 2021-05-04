@@ -3339,11 +3339,11 @@ int mbedtls_ssl_prepare_handshake_record( mbedtls_ssl_context *ssl )
             memcmp( ssl->in_msg + mbedtls_ssl_hs_hdr_len( ssl ) + 2,
                     &magic_hrr_string[0], 32 ) == 0 )
         {
-            MBEDTLS_SSL_DEBUG_MSG( 5, ( "--- Special HRR Checksum Processing" ) );
+            MBEDTLS_SSL_DEBUG_MSG( 4, ( "--- Special HRR Checksum Processing" ) );
         }
         else
         {
-            MBEDTLS_SSL_DEBUG_MSG( 5, ( "--- Update Checksum ( ssl_prepare_handshake_record )" ) );
+            MBEDTLS_SSL_DEBUG_MSG( 4, ( "--- Update Checksum ( ssl_prepare_handshake_record )" ) );
             ssl->handshake->update_checksum( ssl, ssl->in_msg, ssl->in_hslen );
         }
     }
