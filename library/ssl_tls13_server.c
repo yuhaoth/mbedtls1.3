@@ -839,11 +839,10 @@ psk_parsing_successful:
         }
 
         ret = mbedtls_ssl_tls1_3_create_psk_binder( ssl,
-                 !( ssl->handshake->resume == 1 ) /* external PSK */,
-                 (unsigned char *) psk, psk_len,
+                 psk, psk_len,
                  ssl->handshake->ciphersuite_info->mac,
-                 transcript, transcript_len,
-                 server_computed_binder );
+                 !( ssl->handshake->resume == 1 ) /* external PSK */,
+                 transcript, server_computed_binder );
 
         /* We do not check for multiple binders */
         if( ret != 0 )
