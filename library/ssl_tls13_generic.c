@@ -494,29 +494,28 @@ void mbedtls_ssl_set_outbound_transform( mbedtls_ssl_context *ssl,
 }
 #endif /* !MBEDTLS_SSL_USE_MPS */
 
-    /*
-     * The mbedtls_ssl_create_verify_structure() creates the verify structure.
-     * As input, it requires the transcript hash.
-     *
-     * The structure is computed per TLS 1.3 specification as:
-     *   - 64 bytes of octet 32,
-     *   - 33 bytes for the context string
-     *        (which is either "TLS 1.3, client CertificateVerify"
-     *         or "TLS 1.3, server CertificateVerify"),
-     *   - 1 byte for the octet 0x0, which servers as a separator,
-     *   - 32 or 48 bytes for the Transcript-Hash(Handshake Context, Certificate)
-     *     (depending on the size of the transcript_hash)
-     *
-     * This results in a total size of
-     * - 130 bytes for a SHA256-based transcript hash, or
-     *   (64 + 33 + 1 + 32 bytes)
-     * - 146 bytes for a SHA384-based transcript hash.
-     *   (64 + 33 + 1 + 48 bytes)
-     *
-     * The caller has to ensure that the buffer has this size.
-     */
-static void mbedtls_ssl_create_verify_structure(
-                                        unsigned char *transcript_hash,
+/*
+ * The ssl_create_verify_structure() creates the verify structure.
+ * As input, it requires the transcript hash.
+ *
+ * The structure is computed per TLS 1.3 specification as:
+ *   - 64 bytes of octet 32,
+ *   - 33 bytes for the context string
+ *        (which is either "TLS 1.3, client CertificateVerify"
+ *         or "TLS 1.3, server CertificateVerify"),
+ *   - 1 byte for the octet 0x0, which servers as a separator,
+ *   - 32 or 48 bytes for the Transcript-Hash(Handshake Context, Certificate)
+ *     (depending on the size of the transcript_hash)
+ *
+ * This results in a total size of
+ * - 130 bytes for a SHA256-based transcript hash, or
+ *   (64 + 33 + 1 + 32 bytes)
+ * - 146 bytes for a SHA384-based transcript hash.
+ *   (64 + 33 + 1 + 48 bytes)
+ *
+ * The caller has to ensure that the buffer has this size.
+ */
+static void ssl_create_verify_structure( unsigned char *transcript_hash,
                                         size_t transcript_hash_len,
                                         unsigned char *verify_buffer,
                                         size_t *verify_buffer_len,
@@ -756,7 +755,7 @@ static int ssl_certificate_verify_write( mbedtls_ssl_context* ssl,
 #endif /* MBEDTLS_SSL_USE_MPS */
 
     /* Create verify structure */
-    mbedtls_ssl_create_verify_structure(
+    ssl_create_verify_structure(
             ssl->handshake->state_local.certificate_verify_out.handshake_hash,
             ssl->handshake->state_local.certificate_verify_out.handshake_hash_len,
             verify_buffer,
@@ -975,7 +974,7 @@ int mbedtls_ssl_read_certificate_verify_process( mbedtls_ssl_context* ssl )
                                transcript_len );
 
         /* Create verify structure */
-        mbedtls_ssl_create_verify_structure( transcript,
+        ssl_create_verify_structure( transcript,
                                      transcript_len,
                                      verify_buffer,
                                      &verify_buffer_len,
