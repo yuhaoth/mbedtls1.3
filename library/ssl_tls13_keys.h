@@ -426,10 +426,60 @@ int mbedtls_ssl_tls1_3_evolve_secret(
  * Small wrappers around mbedtls_ssl_tls1_3_evolve_secret().
  */
 
+/**
+ * \brief Begin TLS 1.3 key schedule by calculating early secret
+ *        from chosen PSK.
+ *
+ *        The TLS 1.3 key schedule can be viewed as a simple state machine
+ *        with states Initial -> Early -> Handshake -> Application, and
+ *        this function represents the Initial -> Early transition.
+ *
+ *        In the early stage, mbedtls_ssl_tls1_3_generate_early_data_keys()
+ *        can be used to derive the 0-RTT traffic keys.
+ *
+ * \param ssl  The SSL context to operate on.
+ *
+ * \returns    \c 0 on success.
+ * \returns    A negative error code on failure.
+ */
 int mbedtls_ssl_tls1_3_key_schedule_stage_early_data(
     mbedtls_ssl_context *ssl );
+
+/**
+ * \brief Transition into handshake stage of TLS 1.3 key schedule.
+ *
+ *        The TLS 1.3 key schedule can be viewed as a simple state machine
+ *        with states Initial -> Early -> Handshake -> Application, and
+ *        this function represents the Early -> Handshake transition.
+ *
+ *        In the handshake stage, mbedtls_ssl_tls1_3_generate_handshake_keys()
+ *        can be used to derive the handshake traffic keys.
+ *
+ * \param ssl  The SSL context to operate on. This must be in key schedule
+ *             stage \c Early.
+ *
+ * \returns    \c 0 on success.
+ * \returns    A negative error code on failure.
+ */
 int mbedtls_ssl_tls1_3_key_schedule_stage_handshake(
     mbedtls_ssl_context *ssl );
+
+/**
+ * \brief Transition into application stage of TLS 1.3 key schedule.
+ *
+ *        The TLS 1.3 key schedule can be viewed as a simple state machine
+ *        with states Initial -> Early -> Handshake -> Application, and
+ *        this function represents the Handshake -> Application transition.
+ *
+ *        In the handshake stage, mbedtls_ssl_tls1_3_generate_application_keys()
+ *        can be used to derive the handshake traffic keys.
+ *
+ * \param ssl  The SSL context to operate on. This must be in key schedule
+ *             stage \c Handshake.
+ *
+ * \returns    \c 0 on success.
+ * \returns    A negative error code on failure.
+ */
 int mbedtls_ssl_tls1_3_key_schedule_stage_application(
     mbedtls_ssl_context *ssl );
 
@@ -447,20 +497,85 @@ int mbedtls_ssl_tls1_3_key_schedule_stage_application(
  *
  *    mbedtls_ssl_tls1_3_key_schedule_stage_xxx().
  */
+
+/**
+ * \brief Compute traffic keys for 0-RTT.
+ *
+ * \param ssl  The SSL context to operate on. This must be in key schedule stage
+ *             \c Early, see mbedtls_ssl_tls1_3_key_schedule_stage_early_data().
+ * \param traffic_keys The address at which to store the 0-RTT traffic key
+ *                     keys. This must be writable but may be uninitialized.
+ *
+ * \returns    \c 0 on success.
+ * \returns    A negative error code on failure.
+ */
 int mbedtls_ssl_tls1_3_generate_early_data_keys(
     mbedtls_ssl_context *ssl, mbedtls_ssl_key_set *traffic_keys );
+
+/**
+ * \brief Compute TLS 1.3 handshake traffic keys.
+ *
+ * \param ssl  The SSL context to operate on. This must be in
+ *             key schedule stage \c Handshake, see
+ *             mbedtls_ssl_tls1_3_key_schedule_stage_handshake().
+ * \param traffic_keys The address at which to store the handshake traffic key
+ *                     keys. This must be writable but may be uninitialized.
+ *
+ * \returns    \c 0 on success.
+ * \returns    A negative error code on failure.
+ */
 int mbedtls_ssl_tls1_3_generate_handshake_keys(
     mbedtls_ssl_context* ssl, mbedtls_ssl_key_set *traffic_keys );
+
+/**
+ * \brief Compute TLS 1.3 application traffic keys.
+ *
+ * \param ssl  The SSL context to operate on. This must be in
+ *             key schedule stage \c Application, see
+ *             mbedtls_ssl_tls1_3_key_schedule_stage_application().
+ * \param traffic_keys The address at which to store the application traffic key
+ *                     keys. This must be writable but may be uninitialized.
+ *
+ * \returns    \c 0 on success.
+ * \returns    A negative error code on failure.
+ */
 int mbedtls_ssl_tls1_3_generate_application_keys(
     mbedtls_ssl_context* ssl, mbedtls_ssl_key_set *traffic_keys );
 
-/*
- * TODO: Document
+/**
+ * \brief Compute TLS 1.3 resumption master secret.
+ *
+ * \param ssl  The SSL context to operate on. This must be in
+ *             key schedule stage \c Application, see
+ *             mbedtls_ssl_tls1_3_key_schedule_stage_application().
+ *
+ * \returns    \c 0 on success.
+ * \returns    A negative error code on failure.
  */
-
 int mbedtls_ssl_tls1_3_generate_resumption_master_secret(
     mbedtls_ssl_context* ssl );
 
+/**
+ * \brief Calculate content of TLS 1.3 Finished message.
+ *
+ * \param ssl  The SSL context to operate on. This must be in
+ *             key schedule stage \c Handshake, see
+ *             mbedtls_ssl_tls1_3_key_schedule_stage_application().
+ * \param dst        The address at which to write the Finished content.
+ * \param dst_len    The size of \p dst in bytes.
+ * \param actual_len The address at which to store the amount of data
+ *                   actually written to \p dst upon success.
+ * \param from       The endpoint the Finished message originates from:
+ *                   - #MBEDTLS_SSL_IS_CLIENT for the Client's Finished message
+ *                   - #MBEDTLS_SSL_IS_SERVER for the Server's Finished message
+ *
+ * \note       Both client and server call this function twice, once to
+ *             generate their own Finished message, and once to verify the
+ *             peer's Finished message.
+
+ * \returns    \c 0 on success.
+ * \returns    A negative error code on failure.
+ */
 int mbedtls_ssl_tls1_3_calc_finished( mbedtls_ssl_context* ssl,
                                       unsigned char* dst,
                                       size_t dst_len,
@@ -468,6 +583,29 @@ int mbedtls_ssl_tls1_3_calc_finished( mbedtls_ssl_context* ssl,
                                       int from );
 
 #if defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
+/**
+ * \brief Calculate a TLS 1.3 PSK binder
+ *
+ * \param ssl  The SSL context. This is used for debugging only and may
+ *             be \c NULL if MBEDTLS_DEBUG_C is disabled.
+ * \param psk         The buffer holding the PSK for which to create a binder.
+ * \param psk_len     The size of \p psk in bytes.
+ * \param md_type     The hash algorithm associated to the PSK \p psk.
+ * \param is_external This indicates whether the PSK \p psk is externally
+ *                    provisioned or a resumption PSK:
+ *                    - \c 1: Externally provisioned PSK
+ *                    - \c 0: Resumption PSK
+ * \param transcript  The handshake transcript up to the point where the
+ *                    PSK binder calculation happens. This must be readable,
+ *                    and its size must be equal to the digest size of
+ *                    the hash algorithm represented by \p md_type.
+ * \param result      The address at which to store the PSK binder on success.
+ *                    This must be writable, and its size must be equal to the
+ *                    digest size of  the hash algorithm represented by \p md_type.
+ *
+ * \returns    \c 0 on success.
+ * \returns    A negative error code on failure.
+ */
 int mbedtls_ssl_tls1_3_create_psk_binder( mbedtls_ssl_context *ssl,
                                unsigned char const *psk, size_t psk_len,
                                const mbedtls_md_type_t md_type,

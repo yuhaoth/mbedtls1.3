@@ -812,12 +812,14 @@ struct mbedtls_ssl_handshake_params
     unsigned char* ptr_to_psk_ext;
 #endif /* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED */
 
-    unsigned char early_secret[MBEDTLS_MD_MAX_SIZE];
-    unsigned char handshake_secret[MBEDTLS_MD_MAX_SIZE];
-    unsigned char master_secret[MBEDTLS_MD_MAX_SIZE];
+    union
+    {
+        unsigned char early    [MBEDTLS_MD_MAX_SIZE];
+        unsigned char handshake[MBEDTLS_MD_MAX_SIZE];
+        unsigned char app      [MBEDTLS_MD_MAX_SIZE];
+    } tls1_3_master_secrets;
 
     mbedtls_ssl_tls1_3_handshake_secrets hs_secrets;
-
 #if defined(MBEDTLS_ZERO_RTT)
     mbedtls_ssl_tls1_3_early_secrets early_secrets;
 

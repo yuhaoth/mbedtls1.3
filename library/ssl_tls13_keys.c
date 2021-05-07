@@ -578,7 +578,7 @@ int mbedtls_ssl_tls1_3_generate_early_data_keys(
     }
 
     ret = mbedtls_ssl_tls1_3_derive_early_secrets( md_type,
-                                   ssl->handshake->early_secret,
+                                   ssl->handshake->tls1_3_master_secrets.early,
                                    transcript, transcript_len,
                                    &ssl->handshake->early_secrets );
     if( ret != 0 )
@@ -656,9 +656,9 @@ int mbedtls_ssl_tls1_3_generate_handshake_keys(
     }
 
     ret = mbedtls_ssl_tls1_3_derive_handshake_secrets( md_type,
-                                         ssl->handshake->handshake_secret,
-                                         transcript, transcript_len,
-                                         &ssl->handshake->hs_secrets );
+                               ssl->handshake->tls1_3_master_secrets.handshake,
+                               transcript, transcript_len,
+                               &ssl->handshake->hs_secrets );
     if( ret != 0 )
     {
         MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_tls1_3_derive_early_secrets", ret );
@@ -778,9 +778,9 @@ int mbedtls_ssl_tls1_3_generate_application_keys(
     /* Compute application secrets from master secret and transcript hash. */
 
     ret = mbedtls_ssl_tls1_3_derive_application_secrets( md_type,
-                                                ssl->handshake->master_secret,
-                                                transcript, transcript_len,
-                                                app_secrets );
+                                   ssl->handshake->tls1_3_master_secrets.app,
+                                   transcript, transcript_len,
+                                   app_secrets );
     if( ret != 0 )
     {
         MBEDTLS_SSL_DEBUG_RET( 1,
@@ -894,9 +894,9 @@ int mbedtls_ssl_tls1_3_generate_resumption_master_secret(
         return( ret );
 
     ret = mbedtls_ssl_tls1_3_derive_resumption_master_secret( md_type,
-                                         ssl->handshake->master_secret,
-                                         transcript, transcript_len,
-                                         &ssl->session_negotiate->app_secrets );
+                              ssl->handshake->tls1_3_master_secrets.app,
+                              transcript, transcript_len,
+                              &ssl->session_negotiate->app_secrets );
     if( ret != 0 )
         return( ret );
 
@@ -986,9 +986,9 @@ int mbedtls_ssl_tls1_3_key_schedule_stage_handshake(
      */
 
     ret = mbedtls_ssl_tls1_3_evolve_secret( md_type,
-                              ssl->handshake->early_secret,
+                              ssl->handshake->tls1_3_master_secrets.early,
                               ephemeral, ephemeral_len,
-                              ssl->handshake->handshake_secret );
+                              ssl->handshake->tls1_3_master_secrets.handshake );
     if( ret != 0 )
     {
         MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_tls1_3_evolve_secret", ret );
@@ -996,7 +996,7 @@ int mbedtls_ssl_tls1_3_key_schedule_stage_handshake(
     }
 
     MBEDTLS_SSL_DEBUG_BUF( 4, "Handshake secret",
-                           ssl->handshake->handshake_secret, md_size );
+            ssl->handshake->tls1_3_master_secrets.handshake, md_size );
 
 #if defined(MBEDTLS_KEY_EXCHANGE_SOME_ECDHE_ENABLED)
     mbedtls_platform_zeroize( ecdhe, sizeof( ecdhe ) );
@@ -1019,9 +1019,9 @@ int mbedtls_ssl_tls1_3_key_schedule_stage_application(
      */
 
     ret = mbedtls_ssl_tls1_3_evolve_secret( md_type,
-                              ssl->handshake->handshake_secret,
-                              NULL, 0,
-                              ssl->handshake->master_secret );
+                    ssl->handshake->tls1_3_master_secrets.handshake,
+                    NULL, 0,
+                    ssl->handshake->tls1_3_master_secrets.app );
     if( ret != 0 )
     {
         MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_tls1_3_evolve_secret", ret );
@@ -1029,7 +1029,7 @@ int mbedtls_ssl_tls1_3_key_schedule_stage_application(
     }
 
     MBEDTLS_SSL_DEBUG_BUF( 4, "Master secret",
-                           ssl->handshake->master_secret, md_size );
+             ssl->handshake->tls1_3_master_secrets.app, md_size );
 
     return( 0 );
 }
@@ -1228,9 +1228,9 @@ int mbedtls_ssl_tls1_3_key_schedule_stage_early_data(
     mbedtls_ssl_get_psk( ssl, &psk, &psk_len );
 
     ret = mbedtls_ssl_tls1_3_evolve_secret( md_type,
-                                            NULL,          /* Old secret */
-                                            psk, psk_len,  /* Input      */
-                                            ssl->handshake->early_secret );
+                              NULL,          /* Old secret */
+                              psk, psk_len,  /* Input      */
+                              ssl->handshake->tls1_3_master_secrets.early );
     if( ret != 0 )
     {
         MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_tls1_3_evolve_secret", ret );
