@@ -2853,7 +2853,7 @@ static int ssl_new_session_ticket_parse( mbedtls_ssl_context* ssl,
                                          size_t buflen )
 {
     int ret;
-    uint16_t ticket_len, ext_len;
+    size_t ticket_len, ext_len;
     unsigned char *ticket;
     const mbedtls_ssl_ciphersuite_t *suite_info;
     size_t used = 0;
@@ -2886,7 +2886,8 @@ static int ssl_new_session_ticket_parse( mbedtls_ssl_context* ssl,
         ( (unsigned) buf[0] << 24 ) | ( (unsigned) buf[1] << 16 ) |
         ( (unsigned) buf[2] << 8  ) | ( (unsigned) buf[3] << 0 );
 
-    MBEDTLS_SSL_DEBUG_MSG( 3, ( "ticket->lifetime: %u", ssl->session->ticket_lifetime ) );
+    MBEDTLS_SSL_DEBUG_MSG( 3, ( "ticket->lifetime: %u",
+                                ssl->session->ticket_lifetime ) );
 
     /* Ticket Age Add */
     ssl->session->ticket_age_add =
@@ -2895,7 +2896,8 @@ static int ssl_new_session_ticket_parse( mbedtls_ssl_context* ssl,
                      ( (unsigned) buf[6] << 8  ) |
                      ( (unsigned) buf[7] << 0  );
 
-    MBEDTLS_SSL_DEBUG_MSG( 3, ( "ticket->ticket_age_add: %u", ssl->session->ticket_age_add ) );
+    MBEDTLS_SSL_DEBUG_MSG( 3, ( "ticket->ticket_age_add: %u",
+                                ssl->session->ticket_age_add ) );
 
     /* Ticket Nonce */
     /* Check if we previously received a ticket already. If we did, then we should
@@ -2930,13 +2932,13 @@ static int ssl_new_session_ticket_parse( mbedtls_ssl_context* ssl,
         memcpy( ssl->session->ticket_nonce, &buf[9], ssl->session->ticket_nonce_len );
 
         MBEDTLS_SSL_DEBUG_BUF( 3, "ticket->nonce:", &buf[9],
-        ssl->session->ticket_nonce_len );
+                               ssl->session->ticket_nonce_len );
 
     }
 
     /* Ticket */
-    ticket_len = ( (unsigned) buf[9 + ssl->session->ticket_nonce_len] << 8 ) |
-                 ( (unsigned) buf[10 + ssl->session->ticket_nonce_len] );
+    ticket_len = ( (size_t) buf[9 + ssl->session->ticket_nonce_len] << 8 ) |
+                 ( (size_t) buf[10 + ssl->session->ticket_nonce_len] );
 
     used += ticket_len;
 
@@ -2949,8 +2951,8 @@ static int ssl_new_session_ticket_parse( mbedtls_ssl_context* ssl,
     MBEDTLS_SSL_DEBUG_MSG( 3, ( "ticket->length: %u", ticket_len ) );
 
     /* Ticket Extension */
-    ext_len = ( (unsigned) buf[ 11 + ssl->session->ticket_nonce_len + ticket_len ] << 8 ) |
-              ( (unsigned) buf[ 12 + ssl->session->ticket_nonce_len + ticket_len ] );
+    ext_len = ( (size_t) buf[ 11 + ssl->session->ticket_nonce_len + ticket_len ] << 8 ) |
+              ( (size_t) buf[ 12 + ssl->session->ticket_nonce_len + ticket_len ] );
 
     used += ext_len;
 
