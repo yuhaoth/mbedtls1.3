@@ -659,9 +659,7 @@ cleanup:
 static int ssl_certificate_verify_coordinate( mbedtls_ssl_context* ssl )
 {
     int have_own_cert = 1;
-#if defined(MBEDTLS_SHA256_C) || defined(MBEDTLS_SHA512_C)
     int ret;
-#endif /* MBEDTLS_SHA256_C || MBEDTLS_SHA512_C */
 
     if( ssl->session_negotiate->key_exchange != MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA )
     {
@@ -673,18 +671,23 @@ static int ssl_certificate_verify_coordinate( mbedtls_ssl_context* ssl )
     MBEDTLS_SSL_DEBUG_MSG( 1, ( "should never happen" ) );
     return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
 #else
-    if( mbedtls_ssl_own_cert( ssl ) == NULL ) have_own_cert = 0;
+    if( mbedtls_ssl_own_cert( ssl ) == NULL )
+        have_own_cert = 0;
 
     if( ssl->conf->endpoint == MBEDTLS_SSL_IS_CLIENT )
     {
-        if( ssl->client_auth == 0 || have_own_cert == 0 || ssl->conf->authmode == MBEDTLS_SSL_VERIFY_NONE )
+        if( ssl->client_auth == 0 ||
+            have_own_cert == 0 ||
+            ssl->conf->authmode == MBEDTLS_SSL_VERIFY_NONE )
         {
             MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= skip write certificate verify" ) );
-            return( 0 );
+            return( SSL_CERTIFICATE_VERIFY_SKIP );
         }
     }
 
-    if( have_own_cert == 0 && ssl->client_auth == 1 && ssl->conf->authmode != MBEDTLS_SSL_VERIFY_NONE )
+    if( have_own_cert == 0 &&
+        ssl->client_auth == 1 &&
+        ssl->conf->authmode != MBEDTLS_SSL_VERIFY_NONE )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "got no certificate" ) );
         return( MBEDTLS_ERR_SSL_PRIVATE_KEY_REQUIRED );
@@ -695,7 +698,8 @@ static int ssl_certificate_verify_coordinate( mbedtls_ssl_context* ssl )
      */
     if( mbedtls_ssl_sig_from_pk( mbedtls_ssl_own_key( ssl ) ) != MBEDTLS_SSL_SIG_ECDSA )
     {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "Certificate Verify: Only ECDSA signature algorithm is currently supported." ) );
+        MBEDTLS_SSL_DEBUG_MSG( 1,
+            ( "Certificate Verify: Only ECDSA signature algorithm is currently supported." ) );
         return( MBEDTLS_ERR_SSL_BAD_HS_CERTIFICATE_VERIFY );
     }
 
