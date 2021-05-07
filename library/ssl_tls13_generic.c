@@ -1123,7 +1123,7 @@ static int ssl_read_certificate_verify_parse( mbedtls_ssl_context* ssl,
 
     signature_scheme = ( buf[0] << 8 ) | buf[1];
 
-    switch ( signature_scheme ) {
+    switch( signature_scheme ) {
         case SIGNATURE_ECDSA_SECP256r1_SHA256:
             md_alg = MBEDTLS_MD_SHA256;
             sig_alg = MBEDTLS_PK_ECDSA;
@@ -1148,7 +1148,8 @@ static int ssl_read_certificate_verify_parse( mbedtls_ssl_context* ssl,
             return( MBEDTLS_ERR_SSL_BAD_HS_CERTIFICATE_VERIFY );
     }
 
-    MBEDTLS_SSL_DEBUG_MSG( 3, ( "Certificate Verify: Signature algorithm ( %04x )", signature_scheme ) );
+    MBEDTLS_SSL_DEBUG_MSG( 3, ( "Certificate Verify: Signature algorithm ( %04x )",
+                                signature_scheme ) );
 
     buflen -= 2;
     buf += 2;
