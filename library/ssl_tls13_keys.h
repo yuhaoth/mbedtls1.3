@@ -330,7 +330,7 @@ int mbedtls_ssl_tls1_3_derive_application_secrets(
  *                          with respect to \p md_type. This must be a readable
  *                          buffer whose length is the digest size of the hash
  *                          algorithm represented by \p md_size.
- * \param transcript_len The length of \p transcript in Bytes.
+ * \param transcript_len    The length of \p transcript in Bytes.
  * \param derived_application_secrets The address of the structure in which to
  *                                    store the resumption master secret.
  *
