@@ -426,7 +426,8 @@ static int ssl_write_end_of_early_data_postprocess( mbedtls_ssl_context* ssl )
 #if defined(MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE)
     if( ssl_write_end_of_early_data_coordinate( ssl ) != SSL_END_OF_EARLY_DATA_WRITE )
     {
-        mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_CLIENT_CCS_AFTER_SERVER_FINISHED ); 
+        mbedtls_ssl_handshake_set_state( ssl, 
+                         MBEDTLS_SSL_CLIENT_CCS_AFTER_SERVER_FINISHED );
         return( 0 );
     }
 #endif /* MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE */ 
