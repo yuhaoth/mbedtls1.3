@@ -2856,7 +2856,7 @@ static int ssl_new_session_ticket_parse( mbedtls_ssl_context* ssl,
     size_t ticket_len, ext_len;
     unsigned char *ticket;
     const mbedtls_ssl_ciphersuite_t *suite_info;
-    size_t used = 0;
+    size_t used = 0, i = 0;
     int hash_length;
 
     /*
@@ -2883,18 +2883,20 @@ static int ssl_new_session_ticket_parse( mbedtls_ssl_context* ssl,
 
     /* Ticket lifetime */
     ssl->session->ticket_lifetime =
-        ( (unsigned) buf[0] << 24 ) | ( (unsigned) buf[1] << 16 ) |
-        ( (unsigned) buf[2] << 8  ) | ( (unsigned) buf[3] << 0 );
+        ( (unsigned) buf[i] << 24 ) | ( (unsigned) buf[i + 1] << 16 ) |
+        ( (unsigned) buf[i + 2] << 8  ) | ( (unsigned) buf[i + 3] << 0 );
+    i += 4;
 
     MBEDTLS_SSL_DEBUG_MSG( 3, ( "ticket->lifetime: %u",
                                 ssl->session->ticket_lifetime ) );
 
     /* Ticket Age Add */
     ssl->session->ticket_age_add =
-                     ( (unsigned) buf[4] << 24 ) |
-                     ( (unsigned) buf[5] << 16 ) |
-                     ( (unsigned) buf[6] << 8  ) |
-                     ( (unsigned) buf[7] << 0  );
+                     ( (unsigned) buf[i] << 24 ) |
+                     ( (unsigned) buf[i + 1] << 16 ) |
+                     ( (unsigned) buf[i + 2] << 8  ) |
+                     ( (unsigned) buf[i + 3] << 0  );
+    i += 4;
 
     MBEDTLS_SSL_DEBUG_MSG( 3, ( "ticket->ticket_age_add: %u",
                                 ssl->session->ticket_age_add ) );
@@ -2910,7 +2912,8 @@ static int ssl_new_session_ticket_parse( mbedtls_ssl_context* ssl,
         ssl->session->ticket_nonce_len = 0;
     }
 
-    ssl->session->ticket_nonce_len = buf[8];
+    ssl->session->ticket_nonce_len = buf[i];
+    i++;
 
     used += ssl->session->ticket_nonce_len;
 
@@ -2929,16 +2932,17 @@ static int ssl_new_session_ticket_parse( mbedtls_ssl_context* ssl,
             return( MBEDTLS_ERR_SSL_ALLOC_FAILED );
         }
 
-        memcpy( ssl->session->ticket_nonce, &buf[9], ssl->session->ticket_nonce_len );
+        memcpy( ssl->session->ticket_nonce, &buf[i], ssl->session->ticket_nonce_len );
 
-        MBEDTLS_SSL_DEBUG_BUF( 3, "ticket->nonce:", &buf[9],
+        MBEDTLS_SSL_DEBUG_BUF( 3, "ticket->nonce:", &buf[i],
                                ssl->session->ticket_nonce_len );
 
     }
+    i += ssl->session->ticket_nonce_len;
 
     /* Ticket */
-    ticket_len = ( (size_t) buf[9 + ssl->session->ticket_nonce_len] << 8 ) |
-                 ( (size_t) buf[10 + ssl->session->ticket_nonce_len] );
+    ticket_len = ( (size_t) buf[i] << 8 ) | ( (size_t) buf[i + 1] );
+    i += 2;
 
     used += ticket_len;
 
@@ -2951,8 +2955,8 @@ static int ssl_new_session_ticket_parse( mbedtls_ssl_context* ssl,
     MBEDTLS_SSL_DEBUG_MSG( 3, ( "ticket->length: %u", ticket_len ) );
 
     /* Ticket Extension */
-    ext_len = ( (size_t) buf[ 11 + ssl->session->ticket_nonce_len + ticket_len ] << 8 ) |
-              ( (size_t) buf[ 12 + ssl->session->ticket_nonce_len + ticket_len ] );
+    ext_len = ( (size_t) buf[ i + ticket_len ] << 8 ) |
+              ( (size_t) buf[ i + ticket_len + 1 ] );
 
     used += ext_len;
 
@@ -2976,16 +2980,16 @@ static int ssl_new_session_ticket_parse( mbedtls_ssl_context* ssl,
         return( MBEDTLS_ERR_SSL_ALLOC_FAILED );
     }
 
-    memcpy( ticket, buf + 11 + ssl->session->ticket_nonce_len, ticket_len );
+    memcpy( ticket, buf + i, ticket_len );
+    i += ticket_len;
     ssl->session->ticket = ticket;
     ssl->session->ticket_len = ticket_len;
 
     MBEDTLS_SSL_DEBUG_MSG( 4, ( "ticket->extension length: %u", ext_len ) );
 
+    i += 2;
     /* We are not storing any extensions at the moment */
-    MBEDTLS_SSL_DEBUG_BUF( 3, "ticket->extension",
-                           &buf[ 13 + ssl->session->ticket_nonce_len + ticket_len ],
-                           ext_len );
+    MBEDTLS_SSL_DEBUG_BUF( 3, "ticket->extension", &buf[i], ext_len );
 
     /* Compute PSK based on received nonce and resumption_master_secret
      * in the following style:
