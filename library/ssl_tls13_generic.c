@@ -521,25 +521,21 @@ static void ssl_create_verify_structure( unsigned char *transcript_hash,
                                         size_t *verify_buffer_len,
                                         int from )
 {
-    /* The length of context_string_[client|server] is
-     * sizeof( "TLS 1.3, xxxxxx CertificateVerify" ) - 1, i.e. 33 bytes.
-     */
-    const unsigned int content_string_len = sizeof( "TLS 1.3, xxxxxx CertificateVerify" ) - 1;
-    const unsigned char context_string_client[] = "TLS 1.3, client CertificateVerify";
-    const unsigned char context_string_server[] = "TLS 1.3, server CertificateVerify";
     size_t i = 64;
 
+    // 64 bytes of octet 32
     memset( verify_buffer, 32, i );
 
     if( from == MBEDTLS_SSL_IS_CLIENT )
     {
-        memcpy( verify_buffer + i, context_string_client, content_string_len );
+        memcpy( verify_buffer + i, MBEDTLS_SSL_TLS1_3_LBL_WITH_LEN( client_cv ) );
+        i += MBEDTLS_SSL_TLS1_3_LBL_LEN( client_cv );
     }
     else
     { /* from == MBEDTLS_SSL_IS_SERVER */
-        memcpy( verify_buffer + i, context_string_server, content_string_len );
+        memcpy( verify_buffer + i, MBEDTLS_SSL_TLS1_3_LBL_WITH_LEN( server_cv ) );
+        i += MBEDTLS_SSL_TLS1_3_LBL_LEN( server_cv );
     }
-    i += content_string_len;
 
     verify_buffer[i++] = 0x0;
     memcpy( verify_buffer + i, transcript_hash, transcript_hash_len );
