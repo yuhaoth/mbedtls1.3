@@ -784,8 +784,10 @@ static int ssl_certificate_verify_write( mbedtls_ssl_context* ssl,
             case 256:
                 md_alg = MBEDTLS_MD_SHA256;
                 sig_alg = SIGNATURE_ECDSA_SECP256r1_SHA256;
+                verify_hash_len = 32;
                 break;
             case 384:
+                verify_hash_len = 48;
                 md_alg =  MBEDTLS_MD_SHA384;
                 sig_alg = SIGNATURE_ECDSA_SECP384r1_SHA384;
                 break;
