@@ -739,6 +739,7 @@ static int ssl_certificate_verify_write( mbedtls_ssl_context* ssl,
     unsigned char verify_hash[ MBEDTLS_MD_MAX_SIZE ];
     size_t verify_hash_len;
     unsigned char *p;
+    const mbedtls_md_info_t *md_info;
 
 #if defined(MBEDTLS_SSL_USE_MPS)
     p = buf;
@@ -826,39 +827,15 @@ static int ssl_certificate_verify_write( mbedtls_ssl_context* ssl,
     *(p++) = (unsigned char)( ( ssl->handshake->signature_scheme_client >> 0 ) & 0xFF );
 
     /* Hash verify buffer with indicated hash function */
-#if defined(MBEDTLS_SHA256_C)
-    if( md_alg == MBEDTLS_MD_SHA256 )
-    {
-        verify_hash_len = 32;
-        if( ( ret = mbedtls_sha256_ret( verify_buffer,
-            verify_buffer_len, verify_hash, 0 /* 0 for SHA-256 instead of SHA-224 */ )  ) != 0 )
-        {
-            MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_sha256_ret", ret );
-            return( MBEDTLS_ERR_SSL_BAD_HS_CERTIFICATE_VERIFY );
-        }
-    }
-    else
-#endif /* MBEDTLS_SHA256_C */
-#if defined(MBEDTLS_SHA512_C)
-    if( md_alg == MBEDTLS_MD_SHA384 )
-    {
-        verify_hash_len = 48;
-        if( ( ret = mbedtls_sha512_ret( verify_buffer,
-                                    verify_buffer_len,
-                                    verify_hash,
-                                    1 ) ) != 0 )
-        {
-            MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_sha512_ret", ret );
-            return( MBEDTLS_ERR_SSL_BAD_HS_CERTIFICATE_VERIFY );
-        }
-    }
-    else
-#endif /* MBEDTLS_SHA512_C */
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "should never happen" ) );
+    md_info = mbedtls_md_info_from_type( md_alg );
+    if( md_info == NULL )
         return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
-    }
 
+    ret = mbedtls_md( md_info, verify_buffer, verify_buffer_len, verify_hash );
+    if( ret != 0 )
+        return( ret );
+
+    verify_hash_len = mbedtls_md_get_size( md_info );
     MBEDTLS_SSL_DEBUG_BUF( 3, "verify hash", verify_hash, verify_hash_len );
 
     if( ( ret = mbedtls_pk_sign( mbedtls_ssl_own_key( ssl ),
