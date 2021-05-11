@@ -527,22 +527,24 @@ static void ssl_create_verify_structure( unsigned char *transcript_hash,
     const unsigned int content_string_len = sizeof( "TLS 1.3, xxxxxx CertificateVerify" ) - 1;
     const unsigned char context_string_client[] = "TLS 1.3, client CertificateVerify";
     const unsigned char context_string_server[] = "TLS 1.3, server CertificateVerify";
+    size_t i = 64;
 
-    memset( verify_buffer, 32, 64 );
+    memset( verify_buffer, 32, i );
 
     if( from == MBEDTLS_SSL_IS_CLIENT )
     {
-        memcpy( verify_buffer + 64, context_string_client, content_string_len );
+        memcpy( verify_buffer + i, context_string_client, content_string_len );
     }
     else
     { /* from == MBEDTLS_SSL_IS_SERVER */
-        memcpy( verify_buffer + 64, context_string_server, content_string_len );
+        memcpy( verify_buffer + i, context_string_server, content_string_len );
     }
+    i += content_string_len;
 
-    verify_buffer[64 + content_string_len] = 0x0;
-    memcpy( verify_buffer + 64 + content_string_len + 1, transcript_hash, transcript_hash_len );
+    verify_buffer[i++] = 0x0;
+    memcpy( verify_buffer + i, transcript_hash, transcript_hash_len );
 
-    *verify_buffer_len = 64 + content_string_len + 1 + transcript_hash_len;
+    *verify_buffer_len = i + transcript_hash_len;
 }
 
 /*
@@ -784,10 +786,8 @@ static int ssl_certificate_verify_write( mbedtls_ssl_context* ssl,
             case 256:
                 md_alg = MBEDTLS_MD_SHA256;
                 sig_alg = SIGNATURE_ECDSA_SECP256r1_SHA256;
-                verify_hash_len = 32;
                 break;
             case 384:
-                verify_hash_len = 48;
                 md_alg =  MBEDTLS_MD_SHA384;
                 sig_alg = SIGNATURE_ECDSA_SECP384r1_SHA384;
                 break;
