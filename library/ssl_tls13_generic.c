@@ -659,7 +659,8 @@ static int ssl_certificate_verify_coordinate( mbedtls_ssl_context* ssl )
     int have_own_cert = 1;
     int ret;
 
-    if( ssl->session_negotiate->key_exchange != MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA )
+    if( ssl->session_negotiate->key_exchange !=
+        MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA )
     {
         MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= skip write certificate verify" ) );
         return( SSL_CERTIFICATE_VERIFY_SKIP );
@@ -694,7 +695,8 @@ static int ssl_certificate_verify_coordinate( mbedtls_ssl_context* ssl )
     /*
      * Check whether the signature scheme corresponds to the key we are using
      */
-    if( mbedtls_ssl_sig_from_pk( mbedtls_ssl_own_key( ssl ) ) != MBEDTLS_SSL_SIG_ECDSA )
+    if( mbedtls_ssl_sig_from_pk( mbedtls_ssl_own_key( ssl ) ) !=
+        MBEDTLS_SSL_SIG_ECDSA )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1,
             ( "Certificate Verify: Only ECDSA signature algorithm is currently supported." ) );
