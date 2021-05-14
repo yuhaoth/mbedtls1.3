@@ -208,6 +208,31 @@ static int ssl_write_early_data_prepare( mbedtls_ssl_context* ssl )
     int ret;
     mbedtls_ssl_key_set traffic_keys;
 
+    unsigned char const *psk_identity;
+    size_t psk_identity_len;
+    unsigned char const *psk;
+    size_t psk_len;
+
+    /* From RFC 8446:
+     * "The PSK used to encrypt the
+     *  early data MUST be the first PSK listed in the client's
+     *  'pre_shared_key' extension."
+     */
+
+    if( mbedtls_ssl_get_psk_to_offer( ssl, &psk, &psk_len,
+                                      &psk_identity, &psk_identity_len ) != 0 )
+    {
+        /* This should never happen: We can only have gone past
+         * ssl_write_early_data_coordinate() if we have offered a PSK. */
+        return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
+    }
+
+    if( ( ret = mbedtls_ssl_set_hs_psk( ssl, psk, psk_len ) ) != 0 )
+    {
+        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_set_hs_psk", ret );
+        return( ret );
+    }
+
     /* Start the TLS 1.3 key schedule: Set the PSK and derive early secret. */
     ret = mbedtls_ssl_tls1_3_key_schedule_stage_early_data( ssl );
     if( ret != 0 )
@@ -318,6 +343,9 @@ static int ssl_write_early_data_coordinate( mbedtls_ssl_context* ssl )
 
 static int ssl_write_early_data_postprocess( mbedtls_ssl_context* ssl )
 {
+    /* Clear PSK we've used for the 0-RTT. */
+    mbedtls_ssl_remove_hs_psk( ssl );
+
     mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_SERVER_HELLO );
     return ( 0 );
 }
@@ -815,12 +843,6 @@ int mbedtls_ssl_write_pre_shared_key_ext( mbedtls_ssl_context *ssl,
     {
         MBEDTLS_SSL_DEBUG_MSG( 3, ( "skip pre_shared_key extensions" ) );
         return( 0 );
-    }
-
-    if( ( ret = mbedtls_ssl_set_hs_psk( ssl, psk, psk_len ) ) != 0 )
-    {
-        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_set_hs_psk", ret );
-        return( ret );
     }
 
     /*
@@ -1950,12 +1972,18 @@ static int ssl_parse_server_psk_identity_ext( mbedtls_ssl_context *ssl,
     int ret = 0;
     size_t selected_identity;
 
+    unsigned char const *psk_identity;
+    size_t psk_identity_len;
+    unsigned char const *psk;
+    size_t psk_len;
+
     /* Check which PSK we've offered.
      *
      * NOTE: Ultimately, we want to offer multiple PSKs, and in this
      *       case, we need to iterate over them here.
      */
-    if( mbedtls_ssl_get_psk_to_offer( ssl, NULL, NULL, NULL, NULL ) != 0 )
+    if( mbedtls_ssl_get_psk_to_offer( ssl, &psk, &psk_len,
+                                      &psk_identity, &psk_identity_len ) != 0 )
     {
         /* If we haven't offered a PSK, the server must not send
          * a PSK identity extension. */
@@ -1986,6 +2014,18 @@ static int ssl_parse_server_psk_identity_ext( mbedtls_ssl_context *ssl,
         }
 
         return( MBEDTLS_ERR_SSL_BAD_HS_SERVER_HELLO );
+    }
+
+    /* Set the chosen PSK
+     *
+     * TODO: We don't have to do this in case we offered 0-RTT and the
+     *       server accepted it, because in this case we've already
+     *       set the handshake PSK. */
+    ret = mbedtls_ssl_set_hs_psk( ssl, psk, psk_len );
+    if( ret != 0 )
+    {
+        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_set_hs_psk", ret );
+        return( ret );
     }
 
     ssl->handshake->extensions_present |= PRE_SHARED_KEY_EXTENSION;
