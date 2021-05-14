@@ -517,7 +517,12 @@ struct mbedtls_ssl_handshake_params
 #if defined(MBEDTLS_DHM_C)
     mbedtls_dhm_context dhm_ctx;                /*!<  DHM key exchange        */
 #endif
-#if defined(MBEDTLS_ECDH_C)
+/* Adding guard for MBEDTLS_ECDSA_C to ensure no compile errors due
+ * to guards also being in ssl_srv.c and ssl_cli.c. There is a gap
+ * in functionality that access to ecdh_ctx structure is needed for
+ * MBEDTLS_ECDSA_C which does not seem correct.
+ */
+#if defined(MBEDTLS_ECDH_C) || defined(MBEDTLS_ECDSA_C)
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
     // For TLS 1.3 we might need to store more than one key exchange payload
     mbedtls_ecdh_context ecdh_ctx[MBEDTLS_SSL_MAX_KEY_SHARES]; /*!<  ECDH key exchange       */
@@ -530,11 +535,11 @@ struct mbedtls_ssl_handshake_params
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
     psa_key_type_t ecdh_psa_type;
     uint16_t ecdh_bits;
-    psa_key_handle_t ecdh_psa_privkey;
+    psa_key_id_t ecdh_psa_privkey;
     unsigned char ecdh_psa_peerkey[MBEDTLS_PSA_MAX_EC_PUBKEY_LENGTH];
     size_t ecdh_psa_peerkey_len;
 #endif /* MBEDTLS_USE_PSA_CRYPTO */
-#endif /* MBEDTLS_ECDH_C */
+#endif /* MBEDTLS_ECDH_C || MBEDTLS_ECDSA_C */
 
 #if defined(MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED)
     mbedtls_ecjpake_context ecjpake_ctx;        /*!< EC J-PAKE key exchange */
@@ -549,7 +554,7 @@ struct mbedtls_ssl_handshake_params
 #endif
 #if defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
-    psa_key_handle_t psk_opaque;        /*!< Opaque PSK from the callback   */
+    psa_key_id_t psk_opaque;            /*!< Opaque PSK from the callback   */
 #endif /* MBEDTLS_USE_PSA_CRYPTO */
     unsigned char *psk;                 /*!<  PSK from the callback         */
     size_t psk_len;                     /*!<  Length of PSK from callback   */
@@ -1385,7 +1390,7 @@ static inline int mbedtls_ssl_tls13_key_exchange_with_psk( mbedtls_ssl_context *
 static inline int mbedtls_ssl_conf_tls13_0rtt_enabled( mbedtls_ssl_context *ssl )
 {
 #if defined(MBEDTLS_ZERO_RTT)
-    if( ssl->conf->early_data == MBEDTLS_SSL_EARLY_DATA_ENABLED )
+    if( ssl->early_data_enabled == MBEDTLS_SSL_EARLY_DATA_ENABLED )
         return( 1 );
 #else
     ((void) ssl);
@@ -1515,6 +1520,50 @@ static inline int mbedtls_ssl_get_psk( const mbedtls_ssl_context *ssl,
     return( 0 );
 }
 
+/* Check if we have any PSK to offer, and if so, return the first. */
+static inline int mbedtls_ssl_get_psk_to_offer( const mbedtls_ssl_context *ssl,
+                     const unsigned char **psk, size_t *psk_len,
+                     const unsigned char **psk_identity, size_t *psk_identity_len )
+{
+    int ptrs_present = 0;
+
+    if( psk != NULL && psk_len != NULL &&
+        psk_identity != NULL && psk_identity_len != NULL )
+    {
+        ptrs_present = 1;
+    }
+
+    /* Check if a ticket has been configuredd. */
+    if( ssl->session_negotiate != NULL         &&
+        ssl->session_negotiate->ticket != NULL )
+    {
+        if( ptrs_present )
+        {
+            *psk = ssl->session_negotiate->key;
+            *psk_len = ssl->session_negotiate->resumption_key_len;
+            *psk_identity = ssl->session_negotiate->ticket;
+            *psk_identity_len = ssl->session_negotiate->ticket_len;
+        }
+        return( 0 );
+    }
+
+    /* Check if an external PSK has been configured. */
+    if( ssl->conf->psk != NULL )
+    {
+        if( ptrs_present )
+        {
+            *psk = ssl->conf->psk;
+            *psk_len = ssl->conf->psk_len;
+            *psk_identity = ssl->conf->psk_identity;
+            *psk_identity_len = ssl->conf->psk_identity_len;
+        }
+        return( 0 );
+    }
+
+    return( 1 );
+}
+
+
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
 /**
  * Get the first defined opaque PSK by order of precedence:
@@ -1523,16 +1572,16 @@ static inline int mbedtls_ssl_get_psk( const mbedtls_ssl_context *ssl,
  * 2. static PSK configured by \c mbedtls_ssl_conf_psk_opaque()
  * Return an opaque PSK
  */
-static inline psa_key_handle_t mbedtls_ssl_get_opaque_psk(
+static inline psa_key_id_t mbedtls_ssl_get_opaque_psk(
     const mbedtls_ssl_context *ssl )
 {
-    if( ssl->handshake->psk_opaque != 0 )
+    if( ! mbedtls_svc_key_id_is_null( ssl->handshake->psk_opaque ) )
         return( ssl->handshake->psk_opaque );
 
-    if( ssl->conf->psk_opaque != 0 )
+    if( ! mbedtls_svc_key_id_is_null( ssl->conf->psk_opaque ) )
         return( ssl->conf->psk_opaque );
 
-    return( 0 );
+    return( MBEDTLS_SVC_KEY_ID_INIT );
 }
 #endif /* MBEDTLS_USE_PSA_CRYPTO */
 
@@ -1555,6 +1604,23 @@ int mbedtls_ssl_check_curve( const mbedtls_ssl_context *ssl, mbedtls_ecp_group_i
 #if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
 int mbedtls_ssl_check_sig_hash( const mbedtls_ssl_context *ssl,
                                 mbedtls_md_type_t md );
+#endif
+
+#if defined(MBEDTLS_SSL_DTLS_SRTP)
+static inline mbedtls_ssl_srtp_profile mbedtls_ssl_check_srtp_profile_value
+                                                    ( const uint16_t srtp_profile_value )
+{
+    switch( srtp_profile_value )
+    {
+        case MBEDTLS_TLS_SRTP_AES128_CM_HMAC_SHA1_80:
+        case MBEDTLS_TLS_SRTP_AES128_CM_HMAC_SHA1_32:
+        case MBEDTLS_TLS_SRTP_NULL_HMAC_SHA1_80:
+        case MBEDTLS_TLS_SRTP_NULL_HMAC_SHA1_32:
+            return srtp_profile_value;
+        default: break;
+    }
+    return( MBEDTLS_TLS_SRTP_UNSET );
+}
 #endif
 
 #if defined(MBEDTLS_X509_CRT_PARSE_C)
@@ -1613,6 +1679,7 @@ void mbedtls_ssl_write_version( int major, int minor, int transport,
 void mbedtls_ssl_read_version( int *major, int *minor, int transport,
                        const unsigned char ver[2] );
 
+void mbedtls_ssl_remove_hs_psk( mbedtls_ssl_context *ssl );
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
 static inline size_t mbedtls_ssl_hdr_len(const mbedtls_ssl_context* ssl)

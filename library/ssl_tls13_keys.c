@@ -1220,16 +1220,17 @@ int mbedtls_ssl_tls1_3_key_schedule_stage_early_data(
     mbedtls_ssl_context *ssl )
 {
     int ret = 0;
+    if( ssl->handshake->ciphersuite_info == NULL )
+    {
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "cipher suite info not found" ) );
+        return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
+    }
     mbedtls_md_type_t const md_type = ssl->handshake->ciphersuite_info->mac;
-
-    unsigned char const *psk;
-    size_t psk_len;
-
-    mbedtls_ssl_get_psk( ssl, &psk, &psk_len );
 
     ret = mbedtls_ssl_tls1_3_evolve_secret( md_type,
                               NULL,          /* Old secret */
-                              psk, psk_len,  /* Input      */
+                              ssl->handshake->psk,
+                              ssl->handshake->psk_len,
                               ssl->handshake->tls1_3_master_secrets.early );
     if( ret != 0 )
     {

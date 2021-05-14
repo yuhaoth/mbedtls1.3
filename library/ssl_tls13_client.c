@@ -208,6 +208,31 @@ static int ssl_write_early_data_prepare( mbedtls_ssl_context* ssl )
     int ret;
     mbedtls_ssl_key_set traffic_keys;
 
+    unsigned char const *psk_identity;
+    size_t psk_identity_len;
+    unsigned char const *psk;
+    size_t psk_len;
+
+    /* From RFC 8446:
+     * "The PSK used to encrypt the
+     *  early data MUST be the first PSK listed in the client's
+     *  'pre_shared_key' extension."
+     */
+
+    if( mbedtls_ssl_get_psk_to_offer( ssl, &psk, &psk_len,
+                                      &psk_identity, &psk_identity_len ) != 0 )
+    {
+        /* This should never happen: We can only have gone past
+         * ssl_write_early_data_coordinate() if we have offered a PSK. */
+        return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
+    }
+
+    if( ( ret = mbedtls_ssl_set_hs_psk( ssl, psk, psk_len ) ) != 0 )
+    {
+        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_set_hs_psk", ret );
+        return( ret );
+    }
+
     /* Start the TLS 1.3 key schedule: Set the PSK and derive early secret. */
     ret = mbedtls_ssl_tls1_3_key_schedule_stage_early_data( ssl );
     if( ret != 0 )
@@ -283,23 +308,23 @@ static int ssl_write_early_data_write( mbedtls_ssl_context* ssl,
     size_t buflen,
     size_t* olen )
 {
-    if ( ssl->conf->early_data_len > buflen )
+    if ( ssl->early_data_len > buflen )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "buffer too small" ) );
         return ( MBEDTLS_ERR_SSL_ALLOC_FAILED );
     }
     else
     {
-        memcpy( buf, ssl->conf->early_data_buf, ssl->conf->early_data_len );
+        memcpy( buf, ssl->early_data_buf, ssl->early_data_len );
 
 #if !defined(MBEDTLS_SSL_USE_MPS)
-        buf[ssl->conf->early_data_len] = MBEDTLS_SSL_MSG_APPLICATION_DATA;
-        *olen = ssl->conf->early_data_len + 1;
+        buf[ssl->early_data_len] = MBEDTLS_SSL_MSG_APPLICATION_DATA;
+        *olen = ssl->early_data_len + 1;
 
         MBEDTLS_SSL_DEBUG_BUF( 3, "Early Data", ssl->out_msg, *olen );
 #else
-        *olen = ssl->conf->early_data_len;
-        MBEDTLS_SSL_DEBUG_BUF( 3, "Early Data", buf, ssl->conf->early_data_len );
+        *olen = ssl->early_data_len;
+        MBEDTLS_SSL_DEBUG_BUF( 3, "Early Data", buf, ssl->early_data_len );
 #endif /* MBEDTLS_SSL_USE_MPS */
     }
 
@@ -318,6 +343,9 @@ static int ssl_write_early_data_coordinate( mbedtls_ssl_context* ssl )
 
 static int ssl_write_early_data_postprocess( mbedtls_ssl_context* ssl )
 {
+    /* Clear PSK we've used for the 0-RTT. */
+    mbedtls_ssl_remove_hs_psk( ssl );
+
     mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_SERVER_HELLO );
     return ( 0 );
 }
@@ -427,11 +455,11 @@ static int ssl_write_end_of_early_data_postprocess( mbedtls_ssl_context* ssl )
 #if defined(MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE)
     if( ssl_write_end_of_early_data_coordinate( ssl ) != SSL_END_OF_EARLY_DATA_WRITE )
     {
-        mbedtls_ssl_handshake_set_state( ssl, 
+        mbedtls_ssl_handshake_set_state( ssl,
                          MBEDTLS_SSL_CLIENT_CCS_AFTER_SERVER_FINISHED );
         return( 0 );
     }
-#endif /* MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE */ 
+#endif /* MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE */
     mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_CLIENT_CERTIFICATE );
     return( 0 );
 }
@@ -787,7 +815,7 @@ int mbedtls_ssl_write_pre_shared_key_ext( mbedtls_ssl_context *ssl,
     const mbedtls_ssl_ciphersuite_t *suite_info;
     const int *ciphersuites;
     int hash_len;
-    unsigned char *psk_identity;
+    unsigned char const *psk_identity;
     size_t psk_identity_len;
     unsigned char const *psk;
     size_t psk_len;
@@ -798,10 +826,23 @@ int mbedtls_ssl_write_pre_shared_key_ext( mbedtls_ssl_context *ssl,
     if( !mbedtls_ssl_conf_tls13_some_psk_enabled( ssl ) )
         return( 0 );
 
-    /* Check whether we have any PSK credentials configured. */
-    if( mbedtls_ssl_get_psk( ssl, (const unsigned char**) &psk, &psk_len ) != 0 )
+    /* Check if we have any PSKs to offer. If so, return the first.
+     *
+     * NOTE: Ultimately, we want to be able to offer multiple PSKs,
+     *       in which case we want to iterate over them here.
+     *
+     * As it stands, however, we only ever offer one, chosen
+     * by the following heuristic:
+     * - If a ticket has been configured, offer the corresponding PSK.
+     * - If no ticket has been configured by an external PSK has been
+     *   configured, offer that.
+     * - Otherwise, skip the PSK extension.
+     */
+
+    if( mbedtls_ssl_get_psk_to_offer( ssl, &psk, &psk_len,
+                                      &psk_identity, &psk_identity_len ) != 0 )
     {
-        MBEDTLS_SSL_DEBUG_MSG( 3, ( "client hello, skip pre_shared_key extensions" ) );
+        MBEDTLS_SSL_DEBUG_MSG( 3, ( "skip pre_shared_key extensions" ) );
         return( 0 );
     }
 
@@ -826,19 +867,6 @@ int mbedtls_ssl_write_pre_shared_key_ext( mbedtls_ssl_context *ssl,
     hash_len = mbedtls_hash_size_for_ciphersuite( suite_info );
     if( hash_len == -1 )
         return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
-
-#if defined(MBEDTLS_SSL_NEW_SESSION_TICKET)
-    if( ssl->handshake->resume == 1 )
-    {
-        psk_identity = ssl->session_negotiate->ticket;
-        psk_identity_len = ssl->session_negotiate->ticket_len;
-    }
-    else
- #endif /* MBEDTLS_SSL_NEW_SESSION_TICKET */
-    {
-        psk_identity = ssl->conf->psk_identity;
-        psk_identity_len = ssl->conf->psk_identity_len;
-    }
 
     size_t const ext_type_bytes           = 2;
     size_t const ext_len_bytes            = 2;
@@ -1945,35 +1973,62 @@ static int ssl_parse_server_psk_identity_ext( mbedtls_ssl_context *ssl,
     int ret = 0;
     size_t selected_identity;
 
-    if( mbedtls_ssl_get_psk( ssl, NULL, NULL ) != 0 )
+    unsigned char const *psk_identity;
+    size_t psk_identity_len;
+    unsigned char const *psk;
+    size_t psk_len;
+
+    /* Check which PSK we've offered.
+     *
+     * NOTE: Ultimately, we want to offer multiple PSKs, and in this
+     *       case, we need to iterate over them here.
+     */
+    if( mbedtls_ssl_get_psk_to_offer( ssl, &psk, &psk_len,
+                                      &psk_identity, &psk_identity_len ) != 0 )
     {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "got no pre-shared key" ) );
-        return( MBEDTLS_ERR_SSL_PRIVATE_KEY_REQUIRED );
+        /* If we haven't offered a PSK, the server must not send
+         * a PSK identity extension. */
+        return( MBEDTLS_ERR_SSL_BAD_HS_SERVER_HELLO );
     }
 
-    if( len != (size_t)2 )
+    if( len != (size_t) 2 )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad psk_identity extension in server hello message" ) );
         return( MBEDTLS_ERR_SSL_BAD_HS_SERVER_HELLO );
     }
 
-    selected_identity = ( buf[0] << 8 ) | buf[1];
+    selected_identity = ( (size_t) buf[0] << 8 ) | (size_t) buf[1];
 
+    /* We have offered only one PSK, so the only valid choice
+     * for the server is PSK index 0.
+     *
+     * This will change once we support multiple PSKs. */
     if( selected_identity > 0 )
     {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "Unknown identity" ) );
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "Server's chosen PSK identity out of range" ) );
 
         if( ( ret = mbedtls_ssl_send_alert_message( ssl,
-                                                    MBEDTLS_SSL_ALERT_LEVEL_FATAL,
-                                                    MBEDTLS_SSL_ALERT_MSG_UNKNOWN_PSK_IDENTITY ) ) != 0 )
+                        MBEDTLS_SSL_ALERT_LEVEL_FATAL,
+                        MBEDTLS_SSL_ALERT_MSG_ILLEGAL_PARAMETER ) ) != 0 )
         {
             return( ret );
         }
 
-        return( MBEDTLS_ERR_SSL_UNKNOWN_IDENTITY );
+        return( MBEDTLS_ERR_SSL_BAD_HS_SERVER_HELLO );
     }
 
-/*	buf += 2; */
+    /* Set the chosen PSK
+     *
+     * TODO: We don't have to do this in case we offered 0-RTT and the
+     *       server accepted it, because in this case we've already
+     *       set the handshake PSK. */
+    ret = mbedtls_ssl_set_hs_psk( ssl, psk, psk_len );
+    if( ret != 0 )
+    {
+        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_set_hs_psk", ret );
+        return( ret );
+    }
+
     ssl->handshake->extensions_present |= PRE_SHARED_KEY_EXTENSION;
     return( 0 );
 }
