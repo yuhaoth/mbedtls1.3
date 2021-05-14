@@ -601,7 +601,6 @@ int mbedtls_ssl_parse_client_psk_identity_ext(
                 /* TBD: Process obfuscated ticket age ( zero for externally configured PSKs?! ) */
                 buf = buf + item_length + 4; /* 4 for obfuscated ticket age */;
 
-                MBEDTLS_SSL_DEBUG_MSG( 1, ( "STATIC PSK" ));
                 mbedtls_ssl_set_hs_psk( ssl, ssl->conf->psk, ssl->conf->psk_len );
                 goto psk_parsing_successful;
 
