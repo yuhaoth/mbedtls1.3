@@ -1520,6 +1520,50 @@ static inline int mbedtls_ssl_get_psk( const mbedtls_ssl_context *ssl,
     return( 0 );
 }
 
+/* Check if we have any PSK to offer, and if so, return the first. */
+static inline int mbedtls_ssl_get_psk_to_offer( const mbedtls_ssl_context *ssl,
+                     const unsigned char **psk, size_t *psk_len,
+                     const unsigned char **psk_identity, size_t *psk_identity_len )
+{
+    int ptrs_present = 0;
+
+    if( psk != NULL && psk_len != NULL &&
+        psk_identity != NULL && psk_identity_len != NULL )
+    {
+        ptrs_present = 1;
+    }
+
+    /* Check if a ticket has been configuredd. */
+    if( ssl->session_negotiate != NULL         &&
+        ssl->session_negotiate->ticket != NULL )
+    {
+        if( ptrs_present )
+        {
+            *psk = ssl->session_negotiate->key;
+            *psk_len = ssl->session_negotiate->resumption_key_len;
+            *psk_identity = ssl->session_negotiate->ticket;
+            *psk_identity_len = ssl->session_negotiate->ticket_len;
+        }
+        return( 0 );
+    }
+
+    /* Check if an external PSK has been configured. */
+    if( ssl->conf->psk != NULL )
+    {
+        if( ptrs_present )
+        {
+            *psk = ssl->conf->psk;
+            *psk_len = ssl->conf->psk_len;
+            *psk_identity = ssl->conf->psk_identity;
+            *psk_identity_len = ssl->conf->psk_identity_len;
+        }
+        return( 0 );
+    }
+
+    return( 1 );
+}
+
+
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
 /**
  * Get the first defined opaque PSK by order of precedence:
@@ -1635,6 +1679,7 @@ void mbedtls_ssl_write_version( int major, int minor, int transport,
 void mbedtls_ssl_read_version( int *major, int *minor, int transport,
                        const unsigned char ver[2] );
 
+void mbedtls_ssl_remove_hs_psk( mbedtls_ssl_context *ssl );
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
 static inline size_t mbedtls_ssl_hdr_len(const mbedtls_ssl_context* ssl)

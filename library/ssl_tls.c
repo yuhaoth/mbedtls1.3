@@ -4871,17 +4871,6 @@ int mbedtls_ssl_set_session( mbedtls_ssl_context *ssl, const mbedtls_ssl_session
         return( ret );
 
     ssl->handshake->resume = 1;
-
-#if defined(MBEDTLS_SSL_NEW_SESSION_TICKET) && defined(MBEDTLS_SSL_CLI_C)
-    if( ssl->conf->endpoint == MBEDTLS_SSL_IS_CLIENT )
-    {
-        mbedtls_ssl_set_hs_psk( ssl, ssl->session_negotiate->key,
-                                     ssl->session_negotiate->resumption_key_len );
-        MBEDTLS_SSL_DEBUG_BUF( 4, "ticket: key", ssl->session_negotiate->key,
-                                     ssl->session_negotiate->resumption_key_len );
-    }
-#endif /* MBEDTLS_SSL_NEW_SESSION_TICKET && MBEDTLS_SSL_CLI_C */
-
     return( 0 );
 }
 #endif /* MBEDTLS_SSL_CLI_C && MBEDTLS_SSL_NEW_SESSION_TICKET */
@@ -5150,7 +5139,7 @@ int mbedtls_ssl_conf_tls13_key_exchange( mbedtls_ssl_config* conf,
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 
 
-static void ssl_remove_psk( mbedtls_ssl_context* ssl )
+void mbedtls_ssl_remove_hs_psk( mbedtls_ssl_context* ssl )
 {
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
     if( ! mbedtls_svc_key_id_is_null( ssl->handshake->psk_opaque ) )
@@ -5165,6 +5154,7 @@ static void ssl_remove_psk( mbedtls_ssl_context* ssl )
                                   ssl->handshake->psk_len );
         mbedtls_free( ssl->handshake->psk );
         ssl->handshake->psk_len = 0;
+        ssl->handshake->psk = NULL;
     }
 }
 
@@ -5177,7 +5167,7 @@ int mbedtls_ssl_set_hs_psk( mbedtls_ssl_context *ssl,
     if( psk_len > MBEDTLS_PSK_MAX_LEN )
         return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
 
-    ssl_remove_psk( ssl );
+    mbedtls_ssl_remove_hs_psk( ssl );
 
     if( ( ssl->handshake->psk = mbedtls_calloc( 1, psk_len ) ) == NULL )
         return( MBEDTLS_ERR_SSL_ALLOC_FAILED );
@@ -5196,7 +5186,7 @@ int mbedtls_ssl_conf_psk_opaque( mbedtls_ssl_config *conf,
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
     /* Clear opaque/raw PSK + PSK Identity, if present. */
-    ssl_conf_remove_psk( conf );
+    mbedtls_ssl_remove_hs_psk( ssl );
 
     /* Check and set opaque PSK */
     if( mbedtls_svc_key_id_is_null( psk ) )
@@ -5219,7 +5209,7 @@ int mbedtls_ssl_set_hs_psk_opaque( mbedtls_ssl_context *ssl,
         ( ssl->handshake == NULL ) )
         return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
 
-    ssl_remove_psk( ssl );
+    mbedtls_ssl_remove_hs_psk( ssl );
     ssl->handshake->psk_opaque = psk;
     return( 0 );
 }
