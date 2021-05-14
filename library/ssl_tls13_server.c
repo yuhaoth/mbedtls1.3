@@ -908,7 +908,6 @@ static int ssl_write_server_pre_shared_key_ext( mbedtls_ssl_context *ssl,
     {
         /* We shouldn't have called this extension writer unless we've
          * chosen to use a PSK. */
-        MBEDTLS_SSL_DEBUG_MSG(1, ( "Shouldn't write PSK extension without having chosen a PSK") );
         return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
     }
 
