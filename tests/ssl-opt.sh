@@ -1658,6 +1658,18 @@ run_test    "TLS 1.3, TLS_AES_128_GCM_SHA256, resumption, OpenSSL server" \
             -c "found pre_shared_key extension"                                  \
             -c "skip parse certificate$"
 
+# Test OpenSSL server with resumption and reject early data
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+requires_config_enabled MBEDTLS_DEBUG_C
+requires_openssl_with_tls1_3
+run_test    "TLS 1.3, TLS_AES_128_GCM_SHA256, reject early data, OpenSSL server" \
+            "$O_SRV" \
+            "$P_CLI  debug_level=5 force_version=tls1_3 server_name=localhost force_ciphersuite=TLS_AES_128_GCM_SHA256 reconnect=1 tickets=1 early_data=1" \
+            0 \
+            -c "=> write early data"                            \
+	    -c "=> mbedtls_ssl_tls1_3_generate_early_data_keys" \
+	    -c "reconnect early data status = 1"
+
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
 requires_config_enabled MBEDTLS_DEBUG_C
 requires_config_enabled MBEDTLS_SSL_ALPN
