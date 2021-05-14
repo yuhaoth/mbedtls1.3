@@ -3439,7 +3439,7 @@ int main( int argc, char *argv[] )
 
 #if defined(MBEDTLS_ZERO_RTT)
     early_data_len = sizeof( early_data_buf )-1;
-    mbedtls_ssl_conf_early_data( &conf, opt.early_data, early_data_buf, early_data_len, early_data_callback );
+    mbedtls_ssl_set_early_data( &ssl, opt.early_data, early_data_buf, early_data_len, early_data_callback );
 #endif /* MBEDTLS_ZERO_RTT */
 
 #if defined(MBEDTLS_SSL_PROTO_DTLS)

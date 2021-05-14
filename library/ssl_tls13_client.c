@@ -283,23 +283,23 @@ static int ssl_write_early_data_write( mbedtls_ssl_context* ssl,
     size_t buflen,
     size_t* olen )
 {
-    if ( ssl->conf->early_data_len > buflen )
+    if ( ssl->early_data_len > buflen )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "buffer too small" ) );
         return ( MBEDTLS_ERR_SSL_ALLOC_FAILED );
     }
     else
     {
-        memcpy( buf, ssl->conf->early_data_buf, ssl->conf->early_data_len );
+        memcpy( buf, ssl->early_data_buf, ssl->early_data_len );
 
 #if !defined(MBEDTLS_SSL_USE_MPS)
-        buf[ssl->conf->early_data_len] = MBEDTLS_SSL_MSG_APPLICATION_DATA;
-        *olen = ssl->conf->early_data_len + 1;
+        buf[ssl->early_data_len] = MBEDTLS_SSL_MSG_APPLICATION_DATA;
+        *olen = ssl->early_data_len + 1;
 
         MBEDTLS_SSL_DEBUG_BUF( 3, "Early Data", ssl->out_msg, *olen );
 #else
-        *olen = ssl->conf->early_data_len;
-        MBEDTLS_SSL_DEBUG_BUF( 3, "Early Data", buf, ssl->conf->early_data_len );
+        *olen = ssl->early_data_len;
+        MBEDTLS_SSL_DEBUG_BUF( 3, "Early Data", buf, ssl->early_data_len );
 #endif /* MBEDTLS_SSL_USE_MPS */
     }
 
@@ -426,11 +426,11 @@ static int ssl_write_end_of_early_data_postprocess( mbedtls_ssl_context* ssl )
 #if defined(MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE)
     if( ssl_write_end_of_early_data_coordinate( ssl ) != SSL_END_OF_EARLY_DATA_WRITE )
     {
-        mbedtls_ssl_handshake_set_state( ssl, 
+        mbedtls_ssl_handshake_set_state( ssl,
                          MBEDTLS_SSL_CLIENT_CCS_AFTER_SERVER_FINISHED );
         return( 0 );
     }
-#endif /* MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE */ 
+#endif /* MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE */
     mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_CLIENT_CERTIFICATE );
     return( 0 );
 }

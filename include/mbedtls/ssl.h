@@ -1380,22 +1380,6 @@ struct mbedtls_ssl_config
                                      *   \c psk is not \c NULL or \c psk_opaque
                                      *   is not \c 0. */
 
-#if defined(MBEDTLS_ZERO_RTT)
-     /*!< Early data indication:
-      *   0  -- MBEDTLS_SSL_EARLY_DATA_DISABLED (for no early data), and
-      *   1  -- MBEDTLS_SSL_EARLY_DATA_ENABLED (for use early data)
-      */
-    int early_data;
-    // Pointer to early data buffer
-    char* early_data_buf;
-    // Length of early data
-    unsigned int early_data_len;
-#if defined(MBEDTLS_SSL_SRV_C)
-    // Callback function for early data processing is only used by the server-side
-    int(*early_data_callback)(mbedtls_ssl_context*, unsigned char*, size_t);
-#endif /* MBEDTLS_SSL_SRV_C */
-#endif /* MBEDTLS_ZERO_RTT */
-
 #endif /* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED */
 
 #if defined(MBEDTLS_SSL_ALPN)
@@ -1753,6 +1737,22 @@ struct mbedtls_ssl_context
                             *   and #MBEDTLS_SSL_CID_DISABLED. */
 #endif /* MBEDTLS_SSL_DTLS_CONNECTION_ID */
 
+#if defined(MBEDTLS_ZERO_RTT)
+     /*!< Early data indication:
+      *   0  -- MBEDTLS_SSL_EARLY_DATA_DISABLED (for no early data), and
+      *   1  -- MBEDTLS_SSL_EARLY_DATA_ENABLED (for use early data)
+      */
+    int early_data_enabled;
+    // Pointer to early data buffer
+    char* early_data_buf;
+    // Length of early data
+    unsigned int early_data_len;
+#if defined(MBEDTLS_SSL_SRV_C)
+    // Callback function for early data processing is only used by the server-side
+    int(*early_data_callback)(mbedtls_ssl_context*, unsigned char*, size_t);
+#endif /* MBEDTLS_SSL_SRV_C */
+#endif /* MBEDTLS_ZERO_RTT */
+
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && \
     defined(MBEDTLS_ZERO_RTT) && defined(MBEDTLS_SSL_CLI_C)
     /*
@@ -1934,7 +1934,7 @@ void mbedtls_ssl_conf_authmode( mbedtls_ssl_config *conf, int authmode );
 * \brief          Set the early_data mode
 *                 Default: disabled on server and client
 *
-* \param conf     SSL configuration
+* \param ssl     SSL context
 * \param early_data can be:
 *
 *  MBEDTLS_SSL_EARLY_DATA_DISABLED:  early data functionality will not be used
@@ -1952,7 +1952,7 @@ void mbedtls_ssl_conf_authmode( mbedtls_ssl_config *conf, int authmode );
 * \param len     Length of early data
 */
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && defined(MBEDTLS_ZERO_RTT)
-void mbedtls_ssl_conf_early_data(mbedtls_ssl_config* conf, int early_data, char* buffer, unsigned int len, int(*early_data_callback)(mbedtls_ssl_context*,
+void mbedtls_ssl_set_early_data(mbedtls_ssl_context* ssl, int early_data, char* buffer, unsigned int len, int(*early_data_callback)(mbedtls_ssl_context*,
     unsigned char*, size_t));
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL && MBEDTLS_ZERO_RTT */
 

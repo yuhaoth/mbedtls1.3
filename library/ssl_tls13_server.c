@@ -704,7 +704,7 @@ int mbedtls_ssl_parse_client_psk_identity_ext(
                     }
 
 #if defined(MBEDTLS_ZERO_RTT)
-                    if( ssl->conf->early_data == MBEDTLS_SSL_EARLY_DATA_ENABLED )
+                    if( ssl->early_data_enabled == MBEDTLS_SSL_EARLY_DATA_ENABLED )
                     {
                         if( diff <= MBEDTLS_SSL_EARLY_DATA_MAX_DELAY )
                         {
@@ -733,7 +733,7 @@ int mbedtls_ssl_parse_client_psk_identity_ext(
                     if( ret == MBEDTLS_ERR_SSL_SESSION_TICKET_EXPIRED )
                     {
 #if defined(MBEDTLS_ZERO_RTT)
-                        if( ssl->conf->early_data ==
+                        if( ssl->early_data_enabled ==
                             MBEDTLS_SSL_EARLY_DATA_ENABLED )
                         {
                             ssl->session_negotiate->process_early_data =
@@ -2016,21 +2016,21 @@ static int ssl_read_early_data_parse( mbedtls_ssl_context* ssl,
                                       size_t buflen )
 {
     /* Check whether we have enough buffer space. */
-    if( buflen <= ssl->conf->early_data_len )
+    if( buflen <= ssl->early_data_len )
     {
         /* TODO: We need to check that we're not receiving more 0-RTT
          * than what the ticket allows. */
 
         /* copy data to staging area */
-        memcpy( ssl->conf->early_data_buf, buf, buflen );
+        memcpy( ssl->early_data_buf, buf, buflen );
         /* execute callback to process application data */
-        ssl->conf->early_data_callback( ssl, (unsigned char*)ssl->conf->early_data_buf,
-                                        buflen );
+        ssl->early_data_callback( ssl, (unsigned char*)ssl->early_data_buf,
+                                  buflen );
     }
     else
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "Buffer too small (recv %d bytes, buffer %d bytes)",
-                                    buflen, ssl->conf->early_data_len ) );
+                                    buflen, ssl->early_data_len ) );
         return ( MBEDTLS_ERR_SSL_ALLOC_FAILED );
     }
 
