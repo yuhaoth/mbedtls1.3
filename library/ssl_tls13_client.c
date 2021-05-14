@@ -786,7 +786,7 @@ int mbedtls_ssl_write_pre_shared_key_ext( mbedtls_ssl_context *ssl,
     const mbedtls_ssl_ciphersuite_t *suite_info;
     const int *ciphersuites;
     int hash_len;
-    unsigned char *psk_identity;
+    unsigned char const *psk_identity;
     size_t psk_identity_len;
     unsigned char const *psk;
     size_t psk_len;
@@ -797,11 +797,30 @@ int mbedtls_ssl_write_pre_shared_key_ext( mbedtls_ssl_context *ssl,
     if( !mbedtls_ssl_conf_tls13_some_psk_enabled( ssl ) )
         return( 0 );
 
-    /* Check whether we have any PSK credentials configured. */
-    if( mbedtls_ssl_get_psk( ssl, (const unsigned char**) &psk, &psk_len ) != 0 )
+    /* Check if we have any PSKs to offer. If so, return the first.
+     *
+     * NOTE: Ultimately, we want to be able to offer multiple PSKs,
+     *       in which case we want to iterate over them here.
+     *
+     * As it stands, however, we only ever offer one, chosen
+     * by the following heuristic:
+     * - If a ticket has been configured, offer the corresponding PSK.
+     * - If no ticket has been configured by an external PSK has been
+     *   configured, offer that.
+     * - Otherwise, skip the PSK extension.
+     */
+
+    if( mbedtls_ssl_get_psk_to_offer( ssl, &psk, &psk_len,
+                                      &psk_identity, &psk_identity_len ) != 0 )
     {
-        MBEDTLS_SSL_DEBUG_MSG( 3, ( "client hello, skip pre_shared_key extensions" ) );
+        MBEDTLS_SSL_DEBUG_MSG( 3, ( "skip pre_shared_key extensions" ) );
         return( 0 );
+    }
+
+    if( ( ret = mbedtls_ssl_set_hs_psk( ssl, psk, psk_len ) ) != 0 )
+    {
+        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_set_hs_psk", ret );
+        return( ret );
     }
 
     /*
@@ -825,19 +844,6 @@ int mbedtls_ssl_write_pre_shared_key_ext( mbedtls_ssl_context *ssl,
     hash_len = mbedtls_hash_size_for_ciphersuite( suite_info );
     if( hash_len == -1 )
         return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
-
-#if defined(MBEDTLS_SSL_NEW_SESSION_TICKET)
-    if( ssl->handshake->resume == 1 )
-    {
-        psk_identity = ssl->session_negotiate->ticket;
-        psk_identity_len = ssl->session_negotiate->ticket_len;
-    }
-    else
- #endif /* MBEDTLS_SSL_NEW_SESSION_TICKET */
-    {
-        psk_identity = ssl->conf->psk_identity;
-        psk_identity_len = ssl->conf->psk_identity_len;
-    }
 
     size_t const ext_type_bytes           = 2;
     size_t const ext_len_bytes            = 2;
@@ -1944,35 +1950,44 @@ static int ssl_parse_server_psk_identity_ext( mbedtls_ssl_context *ssl,
     int ret = 0;
     size_t selected_identity;
 
-    if( mbedtls_ssl_get_psk( ssl, NULL, NULL ) != 0 )
+    /* Check which PSK we've offered.
+     *
+     * NOTE: Ultimately, we want to offer multiple PSKs, and in this
+     *       case, we need to iterate over them here.
+     */
+    if( mbedtls_ssl_get_psk_to_offer( ssl, NULL, NULL, NULL, NULL ) != 0 )
     {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "got no pre-shared key" ) );
-        return( MBEDTLS_ERR_SSL_PRIVATE_KEY_REQUIRED );
+        /* If we haven't offered a PSK, the server must not send
+         * a PSK identity extension. */
+        return( MBEDTLS_ERR_SSL_BAD_HS_SERVER_HELLO );
     }
 
-    if( len != (size_t)2 )
+    if( len != (size_t) 2 )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad psk_identity extension in server hello message" ) );
         return( MBEDTLS_ERR_SSL_BAD_HS_SERVER_HELLO );
     }
 
-    selected_identity = ( buf[0] << 8 ) | buf[1];
+    selected_identity = ( (size_t) buf[0] << 8 ) | (size_t) buf[1];
 
+    /* We have offered only one PSK, so the only valid choice
+     * for the server is PSK index 0.
+     *
+     * This will change once we support multiple PSKs. */
     if( selected_identity > 0 )
     {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "Unknown identity" ) );
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "Server's chosen PSK identity out of range" ) );
 
         if( ( ret = mbedtls_ssl_send_alert_message( ssl,
-                                                    MBEDTLS_SSL_ALERT_LEVEL_FATAL,
-                                                    MBEDTLS_SSL_ALERT_MSG_UNKNOWN_PSK_IDENTITY ) ) != 0 )
+                        MBEDTLS_SSL_ALERT_LEVEL_FATAL,
+                        MBEDTLS_SSL_ALERT_MSG_ILLEGAL_PARAMETER ) ) != 0 )
         {
             return( ret );
         }
 
-        return( MBEDTLS_ERR_SSL_UNKNOWN_IDENTITY );
+        return( MBEDTLS_ERR_SSL_BAD_HS_SERVER_HELLO );
     }
 
-/*	buf += 2; */
     ssl->handshake->extensions_present |= PRE_SHARED_KEY_EXTENSION;
     return( 0 );
 }

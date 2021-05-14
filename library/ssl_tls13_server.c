@@ -600,6 +600,9 @@ int mbedtls_ssl_parse_client_psk_identity_ext(
                 /* skip obfuscated ticket age */
                 /* TBD: Process obfuscated ticket age ( zero for externally configured PSKs?! ) */
                 buf = buf + item_length + 4; /* 4 for obfuscated ticket age */;
+
+                MBEDTLS_SSL_DEBUG_MSG( 1, ( "STATIC PSK" ));
+                mbedtls_ssl_set_hs_psk( ssl, ssl->conf->psk, ssl->conf->psk_len );
                 goto psk_parsing_successful;
 
             }
@@ -825,18 +828,8 @@ psk_parsing_successful:
             return( MBEDTLS_ERR_SSL_BAD_HS_CLIENT_HELLO );
         }
 
-        if( ssl->handshake->resume == 1 )
-        {
-            /* Case 1: We are using the PSK from a ticket */
-            psk = ssl->handshake->psk;
-            psk_len = ssl->handshake->psk_len;
-        }
-        else
-        {
-            /* Case 2: We are using a static PSK, or a dynamic PSK if one is defined */
-            if( ( ret = mbedtls_ssl_get_psk( ssl, &psk, &psk_len ) ) != 0 )
-                return( ret );
-        }
+        psk = ssl->handshake->psk;
+        psk_len = ssl->handshake->psk_len;
 
         ret = mbedtls_ssl_tls1_3_create_psk_binder( ssl,
                  psk, psk_len,
@@ -909,23 +902,18 @@ static int ssl_write_server_pre_shared_key_ext( mbedtls_ssl_context *ssl,
 {
     unsigned char *p = (unsigned char*)buf;
     size_t selected_identity;
-    int ret=0;
 
     *olen = 0;
 
-    /* Are we using any PSK at all? */
-    if( mbedtls_ssl_get_psk( ssl, NULL, NULL ) != 0 )
-        ret = MBEDTLS_ERR_SSL_PRIVATE_KEY_REQUIRED;
-
-    /* Are we using resumption? */
-    if( ssl->handshake->resume == 0 && ret == MBEDTLS_ERR_SSL_PRIVATE_KEY_REQUIRED )
+    if( ssl->handshake->psk == NULL )
     {
-        MBEDTLS_SSL_DEBUG_MSG( 3, ( "No pre-shared-key available." ) );
-        return( MBEDTLS_ERR_SSL_PRIVATE_KEY_REQUIRED );
+        /* We shouldn't have called this extension writer unless we've
+         * chosen to use a PSK. */
+        MBEDTLS_SSL_DEBUG_MSG(1, ( "Shouldn't write PSK extension without having chosen a PSK") );
+        return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
     }
 
     MBEDTLS_SSL_DEBUG_MSG( 3, ( "server hello, adding pre_shared_key extension" ) );
-
 
     if( end < p || ( end - p ) < 6 )
     {
@@ -941,7 +929,8 @@ static int ssl_write_server_pre_shared_key_ext( mbedtls_ssl_context *ssl,
     *p++ = (unsigned char)( ( 2 >> 8 ) & 0xFF );
     *p++ = (unsigned char)( 2 & 0xFF );
 
-    /* retrieve selected_identity */
+    /* NOTE: This will need to be adjusted once we support multiple PSKs
+     *       being offered by the client. */
     selected_identity = 0;
 
     /* Write selected_identity */
@@ -3988,7 +3977,15 @@ static int ssl_server_hello_write( mbedtls_ssl_context* ssl,
             ssl->session_negotiate->key_exchange == MBEDTLS_KEY_EXCHANGE_ECDHE_PSK ||
             ssl->session_negotiate->key_exchange == MBEDTLS_KEY_EXCHANGE_PSK ) )
     {
-        ssl_write_server_pre_shared_key_ext( ssl, buf, end, &cur_ext_len );
+        ret = ssl_write_server_pre_shared_key_ext( ssl, buf, end,
+                                                   &cur_ext_len );
+        if( ret != 0 )
+        {
+            MBEDTLS_SSL_DEBUG_RET( 1, "ssl_write_server_pre_shared_key_ext",
+                                   ret );
+            return( ret );
+        }
+
         total_ext_len += cur_ext_len;
         buf += cur_ext_len;
     }
