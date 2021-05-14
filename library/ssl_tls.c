@@ -4684,6 +4684,12 @@ int mbedtls_ssl_session_reset_int( mbedtls_ssl_context *ssl, int partial )
     ssl_mps_init( ssl );
 #endif /* MBEDTLS_SSL_USE_MPS */
 
+#if defined(MBEDTLS_ZERO_RTT)
+    ssl->early_data_enabled = MBEDTLS_SSL_EARLY_DATA_DISABLED;
+    ssl->early_data_buf = NULL;
+    ssl->early_data_len = 0;
+#endif /* MBEDTLS_ZERO_RTT */
+
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 
     if( ssl->session )

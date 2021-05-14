@@ -4041,7 +4041,7 @@ reconnect:
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && defined(MBEDTLS_ZERO_RTT)
-    mbedtls_ssl_set_early_data( &ssl, opt.early_data, early_data, strlen( early_data ), NULL );
+        mbedtls_ssl_set_early_data( &ssl, opt.early_data, early_data, strlen( early_data ), NULL );
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL && MBEDTLS_ZERO_RTT */
 
 
@@ -4082,7 +4082,8 @@ reconnect:
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && \
     defined(MBEDTLS_ZERO_RTT) && defined(MBEDTLS_SSL_CLI_C)
-    mbedtls_printf( "reconnect early data status = %d\n", mbedtls_ssl_get_early_data_status( &ssl ) );
+        mbedtls_printf( "early data status, reconnect = %d\n",
+                        mbedtls_ssl_get_early_data_status( &ssl ) );
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL && MBEDTLS_ZERO_RTT && MBEDTLS_SSL_CLI_C */
 
         goto send_request;
