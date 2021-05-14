@@ -3064,6 +3064,10 @@ int main( int argc, char *argv[] )
         mbedtls_ssl_set_verify( &ssl, my_verify, NULL );
 #endif /* MBEDTLS_X509_CRT_PARSE_C */
 
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && defined(MBEDTLS_ZERO_RTT)
+    mbedtls_ssl_set_early_data( &ssl, opt.early_data, early_data, strlen( early_data ), NULL );
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL && MBEDTLS_ZERO_RTT */
+
     io_ctx.ssl = &ssl;
     io_ctx.net = &server_fd;
     mbedtls_ssl_set_bio( &ssl, &io_ctx, send_cb, recv_cb,
@@ -3317,6 +3321,11 @@ int main( int argc, char *argv[] )
     }
 #endif /* MBEDTLS_SSL_DTLS_SRTP */
 #endif /* MBEDTLS_SSL_EXPORT_KEYS */
+
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && \
+    defined(MBEDTLS_ZERO_RTT) && defined(MBEDTLS_SSL_CLI_C)
+    mbedtls_printf( "early data status = %d\n", mbedtls_ssl_get_early_data_status( &ssl ) );
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL && MBEDTLS_ZERO_RTT && MBEDTLS_SSL_CLI_C */
 
 #if defined(MBEDTLS_X509_CRT_PARSE_C)
     /*
@@ -4031,10 +4040,6 @@ reconnect:
         }
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && defined(MBEDTLS_ZERO_RTT)
-    mbedtls_ssl_set_early_data( &ssl, opt.early_data, early_data, strlen( early_data ), NULL );
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL && MBEDTLS_ZERO_RTT */
-
         if( ( ret = mbedtls_net_connect( &server_fd,
                         opt.server_addr, opt.server_port,
                         opt.transport == MBEDTLS_SSL_TRANSPORT_STREAM ?
@@ -4069,11 +4074,6 @@ reconnect:
         }
 
         mbedtls_printf( " ok\n" );
-
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && \
-    defined(MBEDTLS_ZERO_RTT) && defined(MBEDTLS_SSL_CLI_C)
-    mbedtls_printf( "early data status = %d\n", mbedtls_ssl_get_early_data_status( &ssl ) );
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL && MBEDTLS_ZERO_RTT && MBEDTLS_SSL_CLI_C */
 
         goto send_request;
     }
