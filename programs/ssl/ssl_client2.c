@@ -4041,7 +4041,8 @@ reconnect:
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && defined(MBEDTLS_ZERO_RTT)
-        mbedtls_ssl_set_early_data( &ssl, opt.early_data, early_data, strlen( early_data ), NULL );
+        mbedtls_ssl_set_early_data( &ssl, opt.early_data, early_data, 
+                                    strlen( early_data ), NULL );
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL && MBEDTLS_ZERO_RTT */
 
 
