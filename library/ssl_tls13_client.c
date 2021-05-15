@@ -442,9 +442,13 @@ static int ssl_write_end_of_early_data_coordinate( mbedtls_ssl_context* ssl )
     ((void) ssl);
 
 #if defined(MBEDTLS_ZERO_RTT)
-    if( ssl->handshake->early_data == MBEDTLS_SSL_EARLY_DATA_ON &&
-        ssl->early_data_status == MBEDTLS_SSL_EARLY_DATA_ACCEPTED )
-        return( SSL_END_OF_EARLY_DATA_WRITE );
+    if( ssl->handshake->early_data == MBEDTLS_SSL_EARLY_DATA_ON )
+    {
+        if( ssl->early_data_status == MBEDTLS_SSL_EARLY_DATA_ACCEPTED )
+            return( SSL_END_OF_EARLY_DATA_WRITE );
+
+        MBEDTLS_SSL_DEBUG_MSG( 4, ( "skip EndOfEarlyData, server rejected" ) );
+    }
 #endif /* MBEDTLS_ZERO_RTT */
 
     return( SSL_END_OF_EARLY_DATA_SKIP );
