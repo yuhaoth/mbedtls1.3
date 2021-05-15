@@ -443,7 +443,19 @@ static int ssl_write_end_of_early_data_coordinate( mbedtls_ssl_context* ssl )
 
 #if defined(MBEDTLS_ZERO_RTT)
     if( ssl->handshake->early_data == MBEDTLS_SSL_EARLY_DATA_ON )
-        return( SSL_END_OF_EARLY_DATA_WRITE );
+    {
+        if( ssl->early_data_status == MBEDTLS_SSL_EARLY_DATA_ACCEPTED )
+            return( SSL_END_OF_EARLY_DATA_WRITE );
+
+        /*
+         * RFC 8446:
+         * "If the server does not send an "early_data"
+         *  extension in EncryptedExtensions, then the client MUST NOT send an
+         *  EndOfEarlyData message."
+         */
+
+        MBEDTLS_SSL_DEBUG_MSG( 4, ( "skip EndOfEarlyData, server rejected" ) );
+    }
 #endif /* MBEDTLS_ZERO_RTT */
 
     return( SSL_END_OF_EARLY_DATA_SKIP );
