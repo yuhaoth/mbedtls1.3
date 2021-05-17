@@ -1104,7 +1104,7 @@ static int ssl_read_certificate_verify_parse( mbedtls_ssl_context* ssl,
     signature_scheme = ( buf[0] << 8 ) | buf[1];
 
     /* We currently only support ECDSA-based signatures */
-    switch ( signature_scheme )
+    switch( signature_scheme )
     {
         case SIGNATURE_ECDSA_SECP256r1_SHA256:
             md_alg = MBEDTLS_MD_SHA256;
@@ -1892,7 +1892,7 @@ static int ssl_read_certificate_parse( mbedtls_ssl_context* ssl,
         ret = mbedtls_x509_crt_parse_der( ssl->session_negotiate->peer_cert,
                                           buf + i, n );
 
-        switch ( ret )
+        switch( ret )
         {
             case 0: /*ok*/
             case MBEDTLS_ERR_X509_UNKNOWN_SIG_ALG + MBEDTLS_ERR_OID_NOT_FOUND:

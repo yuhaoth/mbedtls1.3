@@ -2541,7 +2541,7 @@ static int ssl_certificate_request_parse( mbedtls_ssl_context* ssl,
             return( MBEDTLS_ERR_SSL_BAD_HS_CERTIFICATE_REQUEST );
         }
 
-        switch ( ext_id )
+        switch( ext_id )
         {
 
             case MBEDTLS_TLS_EXT_SIG_ALG:
@@ -2740,7 +2740,7 @@ static int ssl_encrypted_extensions_parse( mbedtls_ssl_context* ssl,
          * the handshake with an "illegal_parameter" alert.
          */
 
-        switch ( ext_id )
+        switch( ext_id )
         {
 
 #if defined(MBEDTLS_SSL_MAX_FRAGMENT_LENGTH)
@@ -3311,7 +3311,7 @@ static int ssl_server_hello_parse( mbedtls_ssl_context* ssl,
             return( MBEDTLS_ERR_SSL_BAD_HS_SERVER_HELLO );
         }
 
-        switch ( ext_id )
+        switch( ext_id )
         {
             case MBEDTLS_TLS_EXT_SUPPORTED_VERSIONS:
                 MBEDTLS_SSL_DEBUG_MSG( 3, ( "found supported_versions extension" ) );
@@ -3690,7 +3690,7 @@ static int ssl_hrr_parse( mbedtls_ssl_context* ssl,
             return( MBEDTLS_ERR_SSL_BAD_HS_HELLO_RETRY_REQUEST );
         }
 
-        switch ( ext_id )
+        switch( ext_id )
         {
 #if defined(MBEDTLS_SSL_COOKIE_C)
             case MBEDTLS_TLS_EXT_COOKIE:
@@ -3900,7 +3900,7 @@ int mbedtls_ssl_handshake_client_step( mbedtls_ssl_context *ssl )
     if( ( ret = mbedtls_ssl_flush_output( ssl ) ) != 0 )
         return( ret );
 
-    switch ( ssl->state )
+    switch( ssl->state )
     {
         case MBEDTLS_SSL_HELLO_REQUEST:
             mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_CLIENT_HELLO );
