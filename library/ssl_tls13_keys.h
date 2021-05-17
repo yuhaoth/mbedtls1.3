@@ -73,12 +73,12 @@ struct mbedtls_ssl_tls1_3_labels_struct
 
 extern const struct mbedtls_ssl_tls1_3_labels_struct mbedtls_ssl_tls1_3_labels;
 
-#define MBEDTLS_SSL_TLS1_3_LBL_WITH_LEN( LABEL )  \
-    mbedtls_ssl_tls1_3_labels.LABEL,              \
-    sizeof(mbedtls_ssl_tls1_3_labels.LABEL)
-
 #define MBEDTLS_SSL_TLS1_3_LBL_LEN( LABEL )  \
     sizeof(mbedtls_ssl_tls1_3_labels.LABEL)
+
+#define MBEDTLS_SSL_TLS1_3_LBL_WITH_LEN( LABEL )  \
+    mbedtls_ssl_tls1_3_labels.LABEL,              \
+    MBEDTLS_SSL_TLS1_3_LBL_LEN( LABEL )
 
 #define MBEDTLS_SSL_TLS1_3_KEY_SCHEDULE_MAX_LABEL_LEN  \
     sizeof( union mbedtls_ssl_tls1_3_labels_union )
@@ -108,6 +108,13 @@ extern const struct mbedtls_ssl_tls1_3_labels_struct mbedtls_ssl_tls1_3_labels;
  *   - 1 byte for the octet 0x0, which servers as a separator,
  *   - 32 or 48 bytes for the Transcript-Hash(Handshake Context, Certificate)
  *     (depending on the size of the transcript_hash)
+ *
+ * This results in a total size of
+ * - 130 bytes for a SHA256-based transcript hash, or
+ *   (64 + 33 + 1 + 32 bytes)
+ * - 146 bytes for a SHA384-based transcript hash.
+ *   (64 + 33 + 1 + 48 bytes)
+ *
  */
 #define MBEDTLS_SSL_VERIFY_STRUCT_MAX_SIZE  ( 64 +                 \
                                               33 +                 \

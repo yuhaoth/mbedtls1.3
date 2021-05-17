@@ -498,22 +498,8 @@ void mbedtls_ssl_set_outbound_transform( mbedtls_ssl_context *ssl,
  * The ssl_create_verify_structure() creates the verify structure.
  * As input, it requires the transcript hash.
  *
- * The structure is computed per TLS 1.3 specification as:
- *   - 64 bytes of octet 32,
- *   - 33 bytes for the context string
- *        (which is either "TLS 1.3, client CertificateVerify"
- *         or "TLS 1.3, server CertificateVerify"),
- *   - 1 byte for the octet 0x0, which servers as a separator,
- *   - 32 or 48 bytes for the Transcript-Hash(Handshake Context, Certificate)
- *     (depending on the size of the transcript_hash)
- *
- * This results in a total size of
- * - 130 bytes for a SHA256-based transcript hash, or
- *   (64 + 33 + 1 + 32 bytes)
- * - 146 bytes for a SHA384-based transcript hash.
- *   (64 + 33 + 1 + 48 bytes)
- *
- * The caller has to ensure that the buffer has this size.
+ * The caller has to ensure that the buffer has size of
+ * MBEDTLS_SSL_VERIFY_STRUCT_MAX_SIZE.
  */
 static void ssl_create_verify_structure( unsigned char *transcript_hash,
                                         size_t transcript_hash_len,
@@ -521,26 +507,26 @@ static void ssl_create_verify_structure( unsigned char *transcript_hash,
                                         size_t *verify_buffer_len,
                                         int from )
 {
-    size_t i = 64;
+    size_t buffer_idx = 64;
 
     // 64 bytes of octet 32
-    memset( verify_buffer, 32, i );
+    memset( verify_buffer, 32, buffer_idx );
 
     if( from == MBEDTLS_SSL_IS_CLIENT )
     {
-        memcpy( verify_buffer + i, MBEDTLS_SSL_TLS1_3_LBL_WITH_LEN( client_cv ) );
-        i += MBEDTLS_SSL_TLS1_3_LBL_LEN( client_cv );
+        memcpy( verify_buffer + buffer_idx, MBEDTLS_SSL_TLS1_3_LBL_WITH_LEN( client_cv ) );
+        buffer_idx += MBEDTLS_SSL_TLS1_3_LBL_LEN( client_cv );
     }
     else
     { /* from == MBEDTLS_SSL_IS_SERVER */
-        memcpy( verify_buffer + i, MBEDTLS_SSL_TLS1_3_LBL_WITH_LEN( server_cv ) );
-        i += MBEDTLS_SSL_TLS1_3_LBL_LEN( server_cv );
+        memcpy( verify_buffer + buffer_idx, MBEDTLS_SSL_TLS1_3_LBL_WITH_LEN( server_cv ) );
+        buffer_idx += MBEDTLS_SSL_TLS1_3_LBL_LEN( server_cv );
     }
 
-    verify_buffer[i++] = 0x0;
-    memcpy( verify_buffer + i, transcript_hash, transcript_hash_len );
+    verify_buffer[buffer_idx++] = 0x0;
+    memcpy( verify_buffer + buffer_idx, transcript_hash, transcript_hash_len );
 
-    *verify_buffer_len = i + transcript_hash_len;
+    *verify_buffer_len = buffer_idx + transcript_hash_len;
 }
 
 /*
@@ -659,8 +645,7 @@ static int ssl_certificate_verify_coordinate( mbedtls_ssl_context* ssl )
     int have_own_cert = 1;
     int ret;
 
-    if( ssl->session_negotiate->key_exchange !=
-        MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA )
+    if( mbedtls_ssl_tls13_key_exchange_with_psk( ssl ) )
     {
         MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= skip write certificate verify" ) );
         return( SSL_CERTIFICATE_VERIFY_SKIP );
@@ -1103,7 +1088,9 @@ static int ssl_read_certificate_verify_parse( mbedtls_ssl_context* ssl,
 
     signature_scheme = ( buf[0] << 8 ) | buf[1];
 
-    switch( signature_scheme ) {
+    /* We currently only support ECDSA-based signatures */
+    switch ( signature_scheme )
+    {
         case SIGNATURE_ECDSA_SECP256r1_SHA256:
             md_alg = MBEDTLS_MD_SHA256;
             sig_alg = MBEDTLS_PK_ECDSA;
