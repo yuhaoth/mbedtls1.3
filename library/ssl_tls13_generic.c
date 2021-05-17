@@ -664,7 +664,7 @@ static int ssl_certificate_verify_coordinate( mbedtls_ssl_context* ssl )
     int ret;
 #endif /* MBEDTLS_SHA256_C || MBEDTLS_SHA512_C */
 
-    if( ssl->session_negotiate->key_exchange != MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA )
+    if( mbedtls_ssl_tls13_key_exchange_with_psk( ssl ) )
     {
         MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= skip write certificate verify" ) );
         return( SSL_CERTIFICATE_VERIFY_SKIP );
