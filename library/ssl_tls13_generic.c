@@ -498,8 +498,8 @@ void mbedtls_ssl_set_outbound_transform( mbedtls_ssl_context *ssl,
  * The ssl_create_verify_structure() creates the verify structure.
  * As input, it requires the transcript hash.
  *
- * The caller has to ensure that the buffer has size of
- * MBEDTLS_SSL_VERIFY_STRUCT_MAX_SIZE.
+ * The caller has to ensure that the buffer has size at least
+ * MBEDTLS_SSL_VERIFY_STRUCT_MAX_SIZE bytes.
  */
 static void ssl_create_verify_structure( unsigned char *transcript_hash,
                                         size_t transcript_hash_len,
@@ -507,26 +507,41 @@ static void ssl_create_verify_structure( unsigned char *transcript_hash,
                                         size_t *verify_buffer_len,
                                         int from )
 {
-    size_t buffer_idx = 64;
+    size_t idx = 0;
 
-    // 64 bytes of octet 32
-    memset( verify_buffer, 32, buffer_idx );
+    /* RFC 8446, Section 4.4.3:
+     *
+     * The digital signature [in the CertificateVerify message] is then
+     * computed over the concatenation of:
+     * -  A string that consists of octet 32 (0x20) repeated 64 times
+     * -  The context string
+     * -  A single 0 byte which serves as the separator
+     * -  The content to be signed
+     */
+
+    uint8_t const verify_padding_val = 0x20;
+    size_t const verify_padding_len = 64;
+
+    memset( verify_buffer + idx, verify_padding_val, verify_padding_len );
+    idx += verify_padding_len;
 
     if( from == MBEDTLS_SSL_IS_CLIENT )
     {
-        memcpy( verify_buffer + buffer_idx, MBEDTLS_SSL_TLS1_3_LBL_WITH_LEN( client_cv ) );
-        buffer_idx += MBEDTLS_SSL_TLS1_3_LBL_LEN( client_cv );
+        memcpy( verify_buffer + idx, MBEDTLS_SSL_TLS1_3_LBL_WITH_LEN( client_cv ) );
+        idx += MBEDTLS_SSL_TLS1_3_LBL_LEN( client_cv );
     }
     else
     { /* from == MBEDTLS_SSL_IS_SERVER */
-        memcpy( verify_buffer + buffer_idx, MBEDTLS_SSL_TLS1_3_LBL_WITH_LEN( server_cv ) );
-        buffer_idx += MBEDTLS_SSL_TLS1_3_LBL_LEN( server_cv );
+        memcpy( verify_buffer + idx, MBEDTLS_SSL_TLS1_3_LBL_WITH_LEN( server_cv ) );
+        idx += MBEDTLS_SSL_TLS1_3_LBL_LEN( server_cv );
     }
 
-    verify_buffer[buffer_idx++] = 0x0;
-    memcpy( verify_buffer + buffer_idx, transcript_hash, transcript_hash_len );
+    verify_buffer[idx++] = 0x0;
 
-    *verify_buffer_len = buffer_idx + transcript_hash_len;
+    memcpy( verify_buffer + idx, transcript_hash, transcript_hash_len );
+    idx += transcript_hash_len;
+
+    *verify_buffer_len = idx;
 }
 
 /*
