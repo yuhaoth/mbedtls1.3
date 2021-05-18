@@ -36,25 +36,27 @@
 /* This requires MBEDTLS_SSL_TLS1_3_LABEL( idx, name, string ) to be defined at
  * the point of use. See e.g. the definition of mbedtls_ssl_tls1_3_labels_union
  * below. */
-#define MBEDTLS_SSL_TLS1_3_LABEL_LIST                               \
-    MBEDTLS_SSL_TLS1_3_LABEL( finished    , "finished"     ) \
-    MBEDTLS_SSL_TLS1_3_LABEL( resumption  , "resumption"   ) \
-    MBEDTLS_SSL_TLS1_3_LABEL( traffic_upd , "traffic upd"  ) \
-    MBEDTLS_SSL_TLS1_3_LABEL( exporter    , "exporter"     ) \
-    MBEDTLS_SSL_TLS1_3_LABEL( key         , "key"          ) \
-    MBEDTLS_SSL_TLS1_3_LABEL( iv          , "iv"           ) \
-    MBEDTLS_SSL_TLS1_3_LABEL( c_hs_traffic, "c hs traffic" ) \
-    MBEDTLS_SSL_TLS1_3_LABEL( c_ap_traffic, "c ap traffic" ) \
-    MBEDTLS_SSL_TLS1_3_LABEL( c_e_traffic , "c e traffic"  ) \
-    MBEDTLS_SSL_TLS1_3_LABEL( s_hs_traffic, "s hs traffic" ) \
-    MBEDTLS_SSL_TLS1_3_LABEL( s_ap_traffic, "s ap traffic" ) \
-    MBEDTLS_SSL_TLS1_3_LABEL( s_e_traffic , "s e traffic"  ) \
-    MBEDTLS_SSL_TLS1_3_LABEL( e_exp_master, "e exp master" ) \
-    MBEDTLS_SSL_TLS1_3_LABEL( res_master  , "res master"   ) \
-    MBEDTLS_SSL_TLS1_3_LABEL( exp_master  , "exp master"   ) \
-    MBEDTLS_SSL_TLS1_3_LABEL( ext_binder  , "ext binder"   ) \
-    MBEDTLS_SSL_TLS1_3_LABEL( res_binder  , "res binder"   ) \
-    MBEDTLS_SSL_TLS1_3_LABEL( derived     , "derived"      )
+#define MBEDTLS_SSL_TLS1_3_LABEL_LIST                                                 \
+    MBEDTLS_SSL_TLS1_3_LABEL( finished    , "finished"                              ) \
+    MBEDTLS_SSL_TLS1_3_LABEL( resumption  , "resumption"                            ) \
+    MBEDTLS_SSL_TLS1_3_LABEL( traffic_upd , "traffic upd"                           ) \
+    MBEDTLS_SSL_TLS1_3_LABEL( exporter    , "exporter"                              ) \
+    MBEDTLS_SSL_TLS1_3_LABEL( key         , "key"                                   ) \
+    MBEDTLS_SSL_TLS1_3_LABEL( iv          , "iv"                                    ) \
+    MBEDTLS_SSL_TLS1_3_LABEL( c_hs_traffic, "c hs traffic"                          ) \
+    MBEDTLS_SSL_TLS1_3_LABEL( c_ap_traffic, "c ap traffic"                          ) \
+    MBEDTLS_SSL_TLS1_3_LABEL( c_e_traffic , "c e traffic"                           ) \
+    MBEDTLS_SSL_TLS1_3_LABEL( s_hs_traffic, "s hs traffic"                          ) \
+    MBEDTLS_SSL_TLS1_3_LABEL( s_ap_traffic, "s ap traffic"                          ) \
+    MBEDTLS_SSL_TLS1_3_LABEL( s_e_traffic , "s e traffic"                           ) \
+    MBEDTLS_SSL_TLS1_3_LABEL( e_exp_master, "e exp master"                          ) \
+    MBEDTLS_SSL_TLS1_3_LABEL( res_master  , "res master"                            ) \
+    MBEDTLS_SSL_TLS1_3_LABEL( exp_master  , "exp master"                            ) \
+    MBEDTLS_SSL_TLS1_3_LABEL( ext_binder  , "ext binder"                            ) \
+    MBEDTLS_SSL_TLS1_3_LABEL( res_binder  , "res binder"                            ) \
+    MBEDTLS_SSL_TLS1_3_LABEL( derived     , "derived"                               ) \
+    MBEDTLS_SSL_TLS1_3_LABEL( client_cv   , "TLS 1.3, client CertificateVerify"     ) \
+    MBEDTLS_SSL_TLS1_3_LABEL( server_cv   , "TLS 1.3, server CertificateVerify"     )
 
 #define MBEDTLS_SSL_TLS1_3_LABEL( name, string )       \
     const unsigned char name    [ sizeof(string) - 1 ];
@@ -71,9 +73,12 @@ struct mbedtls_ssl_tls1_3_labels_struct
 
 extern const struct mbedtls_ssl_tls1_3_labels_struct mbedtls_ssl_tls1_3_labels;
 
+#define MBEDTLS_SSL_TLS1_3_LBL_LEN( LABEL )  \
+    sizeof(mbedtls_ssl_tls1_3_labels.LABEL)
+
 #define MBEDTLS_SSL_TLS1_3_LBL_WITH_LEN( LABEL )  \
     mbedtls_ssl_tls1_3_labels.LABEL,              \
-    sizeof(mbedtls_ssl_tls1_3_labels.LABEL)
+    MBEDTLS_SSL_TLS1_3_LBL_LEN( LABEL )
 
 #define MBEDTLS_SSL_TLS1_3_KEY_SCHEDULE_MAX_LABEL_LEN  \
     sizeof( union mbedtls_ssl_tls1_3_labels_union )
@@ -103,6 +108,13 @@ extern const struct mbedtls_ssl_tls1_3_labels_struct mbedtls_ssl_tls1_3_labels;
  *   - 1 byte for the octet 0x0, which servers as a separator,
  *   - 32 or 48 bytes for the Transcript-Hash(Handshake Context, Certificate)
  *     (depending on the size of the transcript_hash)
+ *
+ * This results in a total size of
+ * - 130 bytes for a SHA256-based transcript hash, or
+ *   (64 + 33 + 1 + 32 bytes)
+ * - 146 bytes for a SHA384-based transcript hash.
+ *   (64 + 33 + 1 + 48 bytes)
+ *
  */
 #define MBEDTLS_SSL_VERIFY_STRUCT_MAX_SIZE  ( 64 +                 \
                                               33 +                 \

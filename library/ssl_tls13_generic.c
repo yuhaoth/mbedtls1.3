@@ -494,56 +494,54 @@ void mbedtls_ssl_set_outbound_transform( mbedtls_ssl_context *ssl,
 }
 #endif /* !MBEDTLS_SSL_USE_MPS */
 
-    /*
-     * The mbedtls_ssl_create_verify_structure() creates the verify structure.
-     * As input, it requires the transcript hash.
-     *
-     * The structure is computed per TLS 1.3 specification as:
-     *   - 64 bytes of octet 32,
-     *   - 33 bytes for the context string
-     *        (which is either "TLS 1.3, client CertificateVerify"
-     *         or "TLS 1.3, server CertificateVerify"),
-     *   - 1 byte for the octet 0x0, which servers as a separator,
-     *   - 32 or 48 bytes for the Transcript-Hash(Handshake Context, Certificate)
-     *     (depending on the size of the transcript_hash)
-     *
-     * This results in a total size of
-     * - 130 bytes for a SHA256-based transcript hash, or
-     *   (64 + 33 + 1 + 32 bytes)
-     * - 146 bytes for a SHA384-based transcript hash.
-     *   (64 + 33 + 1 + 48 bytes)
-     *
-     * The caller has to ensure that the buffer has this size.
-     */
-static void mbedtls_ssl_create_verify_structure(
-                                        unsigned char *transcript_hash,
+/*
+ * The ssl_create_verify_structure() creates the verify structure.
+ * As input, it requires the transcript hash.
+ *
+ * The caller has to ensure that the buffer has size at least
+ * MBEDTLS_SSL_VERIFY_STRUCT_MAX_SIZE bytes.
+ */
+static void ssl_create_verify_structure( unsigned char *transcript_hash,
                                         size_t transcript_hash_len,
                                         unsigned char *verify_buffer,
                                         size_t *verify_buffer_len,
                                         int from )
 {
-    /* The length of context_string_[client|server] is
-     * sizeof( "TLS 1.3, xxxxxx CertificateVerify" ) - 1, i.e. 33 bytes.
-     */
-    const unsigned int content_string_len = sizeof( "TLS 1.3, xxxxxx CertificateVerify" ) - 1;
-    const unsigned char context_string_client[] = "TLS 1.3, client CertificateVerify";
-    const unsigned char context_string_server[] = "TLS 1.3, server CertificateVerify";
+    size_t idx = 0;
 
-    memset( verify_buffer, 32, 64 );
+    /* RFC 8446, Section 4.4.3:
+     *
+     * The digital signature [in the CertificateVerify message] is then
+     * computed over the concatenation of:
+     * -  A string that consists of octet 32 (0x20) repeated 64 times
+     * -  The context string
+     * -  A single 0 byte which serves as the separator
+     * -  The content to be signed
+     */
+
+    uint8_t const verify_padding_val = 0x20;
+    size_t const verify_padding_len = 64;
+
+    memset( verify_buffer + idx, verify_padding_val, verify_padding_len );
+    idx += verify_padding_len;
 
     if( from == MBEDTLS_SSL_IS_CLIENT )
     {
-        memcpy( verify_buffer + 64, context_string_client, content_string_len );
+        memcpy( verify_buffer + idx, MBEDTLS_SSL_TLS1_3_LBL_WITH_LEN( client_cv ) );
+        idx += MBEDTLS_SSL_TLS1_3_LBL_LEN( client_cv );
     }
     else
     { /* from == MBEDTLS_SSL_IS_SERVER */
-        memcpy( verify_buffer + 64, context_string_server, content_string_len );
+        memcpy( verify_buffer + idx, MBEDTLS_SSL_TLS1_3_LBL_WITH_LEN( server_cv ) );
+        idx += MBEDTLS_SSL_TLS1_3_LBL_LEN( server_cv );
     }
 
-    verify_buffer[64 + content_string_len] = 0x0;
-    memcpy( verify_buffer + 64 + content_string_len + 1, transcript_hash, transcript_hash_len );
+    verify_buffer[idx++] = 0x0;
 
-    *verify_buffer_len = 64 + content_string_len + 1 + transcript_hash_len;
+    memcpy( verify_buffer + idx, transcript_hash, transcript_hash_len );
+    idx += transcript_hash_len;
+
+    *verify_buffer_len = idx;
 }
 
 /*
@@ -660,11 +658,9 @@ cleanup:
 static int ssl_certificate_verify_coordinate( mbedtls_ssl_context* ssl )
 {
     int have_own_cert = 1;
-#if defined(MBEDTLS_SHA256_C) || defined(MBEDTLS_SHA512_C)
     int ret;
-#endif /* MBEDTLS_SHA256_C || MBEDTLS_SHA512_C */
 
-    if( ssl->session_negotiate->key_exchange != MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA )
+    if( mbedtls_ssl_tls13_key_exchange_with_psk( ssl ) )
     {
         MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= skip write certificate verify" ) );
         return( SSL_CERTIFICATE_VERIFY_SKIP );
@@ -674,18 +670,23 @@ static int ssl_certificate_verify_coordinate( mbedtls_ssl_context* ssl )
     MBEDTLS_SSL_DEBUG_MSG( 1, ( "should never happen" ) );
     return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
 #else
-    if( mbedtls_ssl_own_cert( ssl ) == NULL ) have_own_cert = 0;
+    if( mbedtls_ssl_own_cert( ssl ) == NULL )
+        have_own_cert = 0;
 
     if( ssl->conf->endpoint == MBEDTLS_SSL_IS_CLIENT )
     {
-        if( ssl->client_auth == 0 || have_own_cert == 0 || ssl->conf->authmode == MBEDTLS_SSL_VERIFY_NONE )
+        if( ssl->client_auth == 0 ||
+            have_own_cert == 0 ||
+            ssl->conf->authmode == MBEDTLS_SSL_VERIFY_NONE )
         {
             MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= skip write certificate verify" ) );
-            return( 0 );
+            return( SSL_CERTIFICATE_VERIFY_SKIP );
         }
     }
 
-    if( have_own_cert == 0 && ssl->client_auth == 1 && ssl->conf->authmode != MBEDTLS_SSL_VERIFY_NONE )
+    if( have_own_cert == 0 &&
+        ssl->client_auth == 1 &&
+        ssl->conf->authmode != MBEDTLS_SSL_VERIFY_NONE )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "got no certificate" ) );
         return( MBEDTLS_ERR_SSL_PRIVATE_KEY_REQUIRED );
@@ -694,9 +695,11 @@ static int ssl_certificate_verify_coordinate( mbedtls_ssl_context* ssl )
     /*
      * Check whether the signature scheme corresponds to the key we are using
      */
-    if( mbedtls_ssl_sig_from_pk( mbedtls_ssl_own_key( ssl ) ) != MBEDTLS_SSL_SIG_ECDSA )
+    if( mbedtls_ssl_sig_from_pk( mbedtls_ssl_own_key( ssl ) ) !=
+        MBEDTLS_SSL_SIG_ECDSA )
     {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "Certificate Verify: Only ECDSA signature algorithm is currently supported." ) );
+        MBEDTLS_SSL_DEBUG_MSG( 1,
+            ( "Certificate Verify: Only ECDSA signature algorithm is currently supported." ) );
         return( MBEDTLS_ERR_SSL_BAD_HS_CERTIFICATE_VERIFY );
     }
 
@@ -736,6 +739,7 @@ static int ssl_certificate_verify_write( mbedtls_ssl_context* ssl,
     unsigned char verify_hash[ MBEDTLS_MD_MAX_SIZE ];
     size_t verify_hash_len;
     unsigned char *p;
+    const mbedtls_md_info_t *md_info;
 
 #if defined(MBEDTLS_SSL_USE_MPS)
     p = buf;
@@ -756,7 +760,7 @@ static int ssl_certificate_verify_write( mbedtls_ssl_context* ssl,
 #endif /* MBEDTLS_SSL_USE_MPS */
 
     /* Create verify structure */
-    mbedtls_ssl_create_verify_structure(
+    ssl_create_verify_structure(
             ssl->handshake->state_local.certificate_verify_out.handshake_hash,
             ssl->handshake->state_local.certificate_verify_out.handshake_hash_len,
             verify_buffer,
@@ -823,39 +827,15 @@ static int ssl_certificate_verify_write( mbedtls_ssl_context* ssl,
     *(p++) = (unsigned char)( ( ssl->handshake->signature_scheme_client >> 0 ) & 0xFF );
 
     /* Hash verify buffer with indicated hash function */
-#if defined(MBEDTLS_SHA256_C)
-    if( md_alg == MBEDTLS_MD_SHA256 )
-    {
-        verify_hash_len = 32;
-        if( ( ret = mbedtls_sha256_ret( verify_buffer,
-            verify_buffer_len, verify_hash, 0 /* 0 for SHA-256 instead of SHA-224 */ )  ) != 0 )
-        {
-            MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_sha256_ret", ret );
-            return( MBEDTLS_ERR_SSL_BAD_HS_CERTIFICATE_VERIFY );
-        }
-    }
-    else
-#endif /* MBEDTLS_SHA256_C */
-#if defined(MBEDTLS_SHA512_C)
-    if( md_alg == MBEDTLS_MD_SHA384 )
-    {
-        verify_hash_len = 48;
-        if( ( ret = mbedtls_sha512_ret( verify_buffer,
-                                    verify_buffer_len,
-                                    verify_hash,
-                                    1 ) ) != 0 )
-        {
-            MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_sha512_ret", ret );
-            return( MBEDTLS_ERR_SSL_BAD_HS_CERTIFICATE_VERIFY );
-        }
-    }
-    else
-#endif /* MBEDTLS_SHA512_C */
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "should never happen" ) );
+    md_info = mbedtls_md_info_from_type( md_alg );
+    if( md_info == NULL )
         return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
-    }
 
+    ret = mbedtls_md( md_info, verify_buffer, verify_buffer_len, verify_hash );
+    if( ret != 0 )
+        return( ret );
+
+    verify_hash_len = mbedtls_md_get_size( md_info );
     MBEDTLS_SSL_DEBUG_BUF( 3, "verify hash", verify_hash, verify_hash_len );
 
     if( ( ret = mbedtls_pk_sign( mbedtls_ssl_own_key( ssl ),
@@ -975,7 +955,7 @@ int mbedtls_ssl_read_certificate_verify_process( mbedtls_ssl_context* ssl )
                                transcript_len );
 
         /* Create verify structure */
-        mbedtls_ssl_create_verify_structure( transcript,
+        ssl_create_verify_structure( transcript,
                                      transcript_len,
                                      verify_buffer,
                                      &verify_buffer_len,
@@ -1088,7 +1068,6 @@ static int ssl_read_certificate_verify_coordinate( mbedtls_ssl_context* ssl )
 
 
 #if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
-
 static int ssl_read_certificate_verify_parse( mbedtls_ssl_context* ssl,
                                               unsigned char const* buf,
                                               size_t buflen,
@@ -1125,7 +1104,8 @@ static int ssl_read_certificate_verify_parse( mbedtls_ssl_context* ssl,
     signature_scheme = ( buf[0] << 8 ) | buf[1];
 
     /* We currently only support ECDSA-based signatures */
-    switch ( signature_scheme ) {
+    switch ( signature_scheme )
+    {
         case SIGNATURE_ECDSA_SECP256r1_SHA256:
             md_alg = MBEDTLS_MD_SHA256;
             sig_alg = MBEDTLS_PK_ECDSA;
@@ -1150,7 +1130,8 @@ static int ssl_read_certificate_verify_parse( mbedtls_ssl_context* ssl,
             return( MBEDTLS_ERR_SSL_BAD_HS_CERTIFICATE_VERIFY );
     }
 
-    MBEDTLS_SSL_DEBUG_MSG( 3, ( "Certificate Verify: Signature algorithm ( %04x )", signature_scheme ) );
+    MBEDTLS_SSL_DEBUG_MSG( 3, ( "Certificate Verify: Signature algorithm ( %04x )",
+                                signature_scheme ) );
 
     buflen -= 2;
     buf += 2;
