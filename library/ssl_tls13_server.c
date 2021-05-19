@@ -2619,7 +2619,7 @@ static int ssl_client_hello_parse( mbedtls_ssl_context* ssl,
             return( MBEDTLS_ERR_SSL_BAD_HS_CLIENT_HELLO );
         }
 
-        switch ( ext_id )
+        switch( ext_id )
         {
 #if defined(MBEDTLS_SSL_SERVER_NAME_INDICATION)
             case MBEDTLS_TLS_EXT_SERVERNAME:
@@ -4284,7 +4284,7 @@ int mbedtls_ssl_handshake_server_step( mbedtls_ssl_context *ssl )
         return( ret );
 #endif /* !MBEDTLS_SSL_USE_MPS */
 
-    switch ( ssl->state )
+    switch( ssl->state )
     {
         /* start state */
         case MBEDTLS_SSL_HELLO_REQUEST:
@@ -4358,7 +4358,8 @@ int mbedtls_ssl_handshake_server_step( mbedtls_ssl_context *ssl )
 
             ret = ssl_client_hello_process( ssl );
 
-            switch ( ret ) {
+            switch( ret )
+            {
                 case 0:
                     mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_SERVER_HELLO );
                     break;
