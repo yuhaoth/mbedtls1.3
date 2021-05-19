@@ -2095,6 +2095,19 @@ int mbedtls_ssl_get_early_data_status( mbedtls_ssl_context *ssl )
 
     return( ssl->early_data_status );
 }
+
+void mbedtls_ssl_set_early_data( mbedtls_ssl_context *ssl,
+                                 char *buffer, unsigned int len )
+{
+    if( ssl != NULL )
+    {
+        if( buffer != NULL && len > 0 )
+        {
+            ssl->early_data_buf = buffer;
+            ssl->early_data_len = len;
+        }
+    }
+}
 #endif /* MBEDTLS_ZERO_RTT */
 
 #if ( defined(MBEDTLS_ECDH_C) || defined(MBEDTLS_ECDSA_C) )

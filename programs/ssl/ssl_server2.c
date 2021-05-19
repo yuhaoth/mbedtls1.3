@@ -2064,8 +2064,7 @@ int main( int argc, char *argv[] )
 #endif
 
 #if defined(MBEDTLS_ZERO_RTT)
-    char early_data_buf[50];
-    unsigned int early_data_len;
+    unsigned int max_early_data;
 #endif
 
 #if defined(MBEDTLS_SSL_DTLS_CONNECTION_ID)
@@ -3537,6 +3536,12 @@ int main( int argc, char *argv[] )
     if( opt.cert_req_ca_list != DFL_CERT_REQ_CA_LIST )
         mbedtls_ssl_conf_cert_req_ca_list( &conf, opt.cert_req_ca_list );
 
+#if defined(MBEDTLS_ZERO_RTT)
+    max_early_data = 50;
+    mbedtls_ssl_conf_early_data( &conf, opt.early_data,
+                                 max_early_data, early_data_callback );
+#endif /* MBEDTLS_ZERO_RTT */
+
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
     if( opt.hs_to_min != DFL_HS_TO_MIN || opt.hs_to_max != DFL_HS_TO_MAX )
         mbedtls_ssl_conf_handshake_timeout( &conf, opt.hs_to_min, opt.hs_to_max );
@@ -4136,13 +4141,6 @@ reset:
     mbedtls_net_free( &client_fd );
 
     mbedtls_ssl_session_reset( &ssl );
-
-
-#if defined(MBEDTLS_ZERO_RTT)
-    early_data_len = sizeof( early_data_buf ) - 1;
-    mbedtls_ssl_set_early_data( &ssl, opt.early_data, early_data_buf,
-                                early_data_len, early_data_callback );
-#endif /* MBEDTLS_ZERO_RTT */
 
     /*
      * 3. Wait until a client connects

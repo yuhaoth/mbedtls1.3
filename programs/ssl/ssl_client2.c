@@ -3029,6 +3029,11 @@ int main( int argc, char *argv[] )
         mbedtls_ssl_conf_fallback( &conf, opt.fallback );
 #endif
 
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && defined(MBEDTLS_ZERO_RTT)
+    mbedtls_ssl_conf_early_data( &conf, opt.early_data, 0, NULL );
+    mbedtls_ssl_set_early_data( &ssl, early_data, strlen( early_data ) );
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL && MBEDTLS_ZERO_RTT */
+
     if( ( ret = mbedtls_ssl_setup( &ssl, &conf ) ) != 0 )
     {
         mbedtls_printf( " failed\n  ! mbedtls_ssl_setup returned -0x%x\n\n",
@@ -3064,9 +3069,6 @@ int main( int argc, char *argv[] )
         mbedtls_ssl_set_verify( &ssl, my_verify, NULL );
 #endif /* MBEDTLS_X509_CRT_PARSE_C */
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && defined(MBEDTLS_ZERO_RTT)
-    mbedtls_ssl_set_early_data( &ssl, opt.early_data, early_data, strlen( early_data ), NULL );
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL && MBEDTLS_ZERO_RTT */
 
     io_ctx.ssl = &ssl;
     io_ctx.net = &server_fd;
@@ -4041,8 +4043,7 @@ reconnect:
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && defined(MBEDTLS_ZERO_RTT)
-        mbedtls_ssl_set_early_data( &ssl, opt.early_data, early_data, 
-                                    strlen( early_data ), NULL );
+        mbedtls_ssl_set_early_data( &ssl, early_data, strlen( early_data ) );
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL && MBEDTLS_ZERO_RTT */
 
 

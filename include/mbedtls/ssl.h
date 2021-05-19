@@ -1424,6 +1424,19 @@ struct mbedtls_ssl_config
                                      *   \c psk is not \c NULL or \c psk_opaque
                                      *   is not \c 0. */
 
+#if defined(MBEDTLS_ZERO_RTT)
+     /*!< Early data indication:
+      *   0  -- MBEDTLS_SSL_EARLY_DATA_DISABLED (for no early data), and
+      *   1  -- MBEDTLS_SSL_EARLY_DATA_ENABLED (for use early data)
+      */
+    int early_data_enabled;
+#if defined(MBEDTLS_SSL_SRV_C)
+    // Max number of bytes of early data acceptable by the server.
+    unsigned int max_early_data;
+    // Callback function for early data processing, only used by the server-side.
+    int(*early_data_callback)(mbedtls_ssl_context*, unsigned char*, size_t);
+#endif /* MBEDTLS_SSL_SRV_C */
+#endif /* MBEDTLS_ZERO_RTT */
 #endif /* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED */
 
 #if defined(MBEDTLS_SSL_ALPN)
@@ -1798,19 +1811,18 @@ struct mbedtls_ssl_context
 #endif /* MBEDTLS_SSL_DTLS_CONNECTION_ID */
 
 #if defined(MBEDTLS_ZERO_RTT)
-     /*!< Early data indication:
-      *   0  -- MBEDTLS_SSL_EARLY_DATA_DISABLED (for no early data), and
-      *   1  -- MBEDTLS_SSL_EARLY_DATA_ENABLED (for use early data)
-      */
-    int early_data_enabled;
-    // Pointer to early data buffer
-    char* early_data_buf;
-    // Length of early data
-    unsigned int early_data_len;
+
 #if defined(MBEDTLS_SSL_SRV_C)
-    // Callback function for early data processing is only used by the server-side
-    int(*early_data_callback)(mbedtls_ssl_context*, unsigned char*, size_t);
+    // Early data buffer allocated by the server.
+    char* early_data_server_buf;
 #endif /* MBEDTLS_SSL_SRV_C */
+
+#if defined(MBEDTLS_SSL_CLI_C)
+    // Pointer to early data buffer to send.
+    char* early_data_buf;
+    // Length of early data to send.
+    unsigned int early_data_len;
+#endif /* MBEDTLS_SSL_CLI_C */
 #endif /* MBEDTLS_ZERO_RTT */
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && \
@@ -2007,13 +2019,17 @@ void mbedtls_ssl_conf_authmode( mbedtls_ssl_config *conf, int authmode );
 *                        lack of replay protection of the early data application
 *                        payloads.
 *
-* \param buffer  Early data to be transmitted
-*
-* \param len     Length of early data
+* \param max_early_data  Max number of bytes allowed for early data (server only).
+* \param early_data_callback Callback function when early data is received.
 */
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && defined(MBEDTLS_ZERO_RTT)
-void mbedtls_ssl_set_early_data(mbedtls_ssl_context* ssl, int early_data, char* buffer, unsigned int len, int(*early_data_callback)(mbedtls_ssl_context*,
-    unsigned char*, size_t));
+void mbedtls_ssl_conf_early_data( mbedtls_ssl_config* conf, int early_data, unsigned int max_early_data,
+                                  int(*early_data_callback)( mbedtls_ssl_context*,
+                                                             unsigned char*, size_t ));
+
+#if defined(MBEDTLS_SSL_CLI_C)
+void mbedtls_ssl_set_early_data(mbedtls_ssl_context* ssl, char* buffer, unsigned int len);
+#endif /* MBEDTLS_SSL_CLI_C */
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL && MBEDTLS_ZERO_RTT */
 
 #if defined(MBEDTLS_X509_CRT_PARSE_C)
