@@ -1981,7 +1981,7 @@ cleanup:
     mbedtls_ssl_set_inbound_transform( ssl, ssl->transform_earlydata );
 
     /* Fetching step */
-    if ( ( ret = mbedtls_ssl_read_record( ssl, 0 ) ) != 0 )
+    if( ( ret = mbedtls_ssl_read_record( ssl, 0 ) ) != 0 )
     {
         MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_read_record", ret );
         return( ret );
