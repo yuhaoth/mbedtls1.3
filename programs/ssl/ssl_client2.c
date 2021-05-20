@@ -3031,7 +3031,7 @@ int main( int argc, char *argv[] )
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && defined(MBEDTLS_ZERO_RTT)
     mbedtls_ssl_conf_early_data( &conf, opt.early_data, 0, NULL );
-    mbedtls_ssl_set_early_data( &ssl, early_data, strlen( early_data ) );
+    mbedtls_ssl_set_early_data( &ssl, (unsigned char*) early_data, strlen( early_data ) );
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL && MBEDTLS_ZERO_RTT */
 
     if( ( ret = mbedtls_ssl_setup( &ssl, &conf ) ) != 0 )
@@ -4043,7 +4043,7 @@ reconnect:
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && defined(MBEDTLS_ZERO_RTT)
-        mbedtls_ssl_set_early_data( &ssl, early_data, strlen( early_data ) );
+        mbedtls_ssl_set_early_data( &ssl, (unsigned char*) early_data, strlen( early_data ) );
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL && MBEDTLS_ZERO_RTT */
 
 

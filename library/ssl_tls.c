@@ -4528,6 +4528,7 @@ int mbedtls_ssl_setup( mbedtls_ssl_context *ssl,
         conf->max_early_data > 0 )
     {
         ssl->early_data_server_buf = mbedtls_calloc( 1, conf->max_early_data );
+        ssl->early_data_server_buf_len = conf->max_early_data;
         if( ssl->early_data_server_buf == NULL )
         {
             MBEDTLS_SSL_DEBUG_MSG( 1, ( "alloc(%d bytes) failed", conf->max_early_data ) );
@@ -4572,6 +4573,7 @@ error:
     if( conf->endpoint == MBEDTLS_SSL_IS_SERVER )
     {
         mbedtls_free( ssl->early_data_server_buf );
+        ssl->early_data_server_buf = NULL;
     }
 #endif
     return( ret );
@@ -4707,20 +4709,10 @@ int mbedtls_ssl_session_reset_int( mbedtls_ssl_context *ssl, int partial )
     ssl_mps_init( ssl );
 #endif /* MBEDTLS_SSL_USE_MPS */
 
-#if defined(MBEDTLS_ZERO_RTT)
-#if defined(MBEDTLS_SSL_SRV_C)
-    if( ssl->early_data_server_buf != NULL &&
-        ssl->conf->max_early_data > 0 )
-    {
-        memset( ssl->early_data_server_buf, 0,  ssl->conf->max_early_data );
-    }
-#endif /* MBEDTLS_SSL_SRV_C */
-
-#if defined(MBEDTLS_SSL_CLI_C)
+#if defined(MBEDTLS_ZERO_RTT) && defined(MBEDTLS_SSL_CLI_C)
     ssl->early_data_buf = NULL;
     ssl->early_data_len = 0;
-#endif /* MBEDTLS_SSL_CLI_C */
-#endif /* MBEDTLS_ZERO_RTT */
+#endif /* MBEDTLS_ZERO_RTT && MBEDTLS_SSL_CLI_C */
 
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 
@@ -8075,6 +8067,8 @@ void mbedtls_ssl_free( mbedtls_ssl_context *ssl )
 
 #if defined(MBEDTLS_ZERO_RTT) && defined(MBEDTLS_SSL_SRV_C)
     if( ssl->early_data_server_buf != NULL )
+        mbedtls_platform_zeroize( ssl->early_data_server_buf,
+                                  ssl->early_data_server_buf_len );
         mbedtls_free( ssl->early_data_server_buf );
 #endif /* MBEDTLS_ZERO_RTT && MBEDTLS_SSL_SRV_C */
 

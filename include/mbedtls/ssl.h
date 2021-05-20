@@ -1431,9 +1431,9 @@ struct mbedtls_ssl_config
       */
     int early_data_enabled;
 #if defined(MBEDTLS_SSL_SRV_C)
-    // Max number of bytes of early data acceptable by the server.
+    /* Max number of bytes of early data acceptable by the server. */
     unsigned int max_early_data;
-    // Callback function for early data processing, only used by the server-side.
+    /* Callback function for early data processing (server only). */
     int(*early_data_callback)(mbedtls_ssl_context*, unsigned char*, size_t);
 #endif /* MBEDTLS_SSL_SRV_C */
 #endif /* MBEDTLS_ZERO_RTT */
@@ -1813,15 +1813,16 @@ struct mbedtls_ssl_context
 #if defined(MBEDTLS_ZERO_RTT)
 
 #if defined(MBEDTLS_SSL_SRV_C)
-    // Early data buffer allocated by the server.
-    char* early_data_server_buf;
+    /* Early data buffer allocated by the server. */
+    unsigned char* early_data_server_buf;
+    size_t early_data_server_buf_len;
 #endif /* MBEDTLS_SSL_SRV_C */
 
 #if defined(MBEDTLS_SSL_CLI_C)
-    // Pointer to early data buffer to send.
-    char* early_data_buf;
-    // Length of early data to send.
-    unsigned int early_data_len;
+    /* Pointer to early data buffer to send. */
+    unsigned char* early_data_buf;
+    /* Length of early data to send. */
+    size_t early_data_len;
 #endif /* MBEDTLS_SSL_CLI_C */
 #endif /* MBEDTLS_ZERO_RTT */
 
@@ -2020,15 +2021,19 @@ void mbedtls_ssl_conf_authmode( mbedtls_ssl_config *conf, int authmode );
 *                        payloads.
 *
 * \param max_early_data  Max number of bytes allowed for early data (server only).
-* \param early_data_callback Callback function when early data is received.
+* \param early_data_callback Callback function when early data is received (server
+                             only).
 */
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && defined(MBEDTLS_ZERO_RTT)
-void mbedtls_ssl_conf_early_data( mbedtls_ssl_config* conf, int early_data, unsigned int max_early_data,
+void mbedtls_ssl_conf_early_data( mbedtls_ssl_config* conf, int early_data,
+                                  unsigned int max_early_data,
                                   int(*early_data_callback)( mbedtls_ssl_context*,
-                                                             unsigned char*, size_t ));
+                                                             unsigned char*,
+                                                             size_t ) );
 
 #if defined(MBEDTLS_SSL_CLI_C)
-void mbedtls_ssl_set_early_data(mbedtls_ssl_context* ssl, char* buffer, unsigned int len);
+int mbedtls_ssl_set_early_data( mbedtls_ssl_context* ssl, unsigned char* buffer,
+                                unsigned int len );
 #endif /* MBEDTLS_SSL_CLI_C */
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL && MBEDTLS_ZERO_RTT */
 
