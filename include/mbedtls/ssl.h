@@ -2022,7 +2022,7 @@ void mbedtls_ssl_conf_authmode( mbedtls_ssl_config *conf, int authmode );
 *
 * \param max_early_data  Max number of bytes allowed for early data (server only).
 * \param early_data_callback Callback function when early data is received (server
-                             only).
+*                            only).
 */
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && defined(MBEDTLS_ZERO_RTT)
 void mbedtls_ssl_conf_early_data( mbedtls_ssl_config* conf, int early_data,
