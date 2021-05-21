@@ -1432,7 +1432,7 @@ struct mbedtls_ssl_config
     int early_data_enabled;
 #if defined(MBEDTLS_SSL_SRV_C)
     /* Max number of bytes of early data acceptable by the server. */
-    unsigned int max_early_data;
+    size_t max_early_data;
     /* Callback function for early data processing (server only). */
     int(*early_data_callback)(mbedtls_ssl_context*, unsigned char*, size_t);
 #endif /* MBEDTLS_SSL_SRV_C */
@@ -2026,14 +2026,14 @@ void mbedtls_ssl_conf_authmode( mbedtls_ssl_config *conf, int authmode );
 */
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && defined(MBEDTLS_ZERO_RTT)
 void mbedtls_ssl_conf_early_data( mbedtls_ssl_config* conf, int early_data,
-                                  unsigned int max_early_data,
+                                  size_t max_early_data,
                                   int(*early_data_callback)( mbedtls_ssl_context*,
                                                              unsigned char*,
                                                              size_t ) );
 
 #if defined(MBEDTLS_SSL_CLI_C)
 int mbedtls_ssl_set_early_data( mbedtls_ssl_context* ssl, unsigned char* buffer,
-                                unsigned int len );
+                                size_t len );
 #endif /* MBEDTLS_SSL_CLI_C */
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL && MBEDTLS_ZERO_RTT */
 

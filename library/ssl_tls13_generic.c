@@ -2741,7 +2741,7 @@ static int ssl_finished_in_postprocess( mbedtls_ssl_context* ssl )
 
 #if defined(MBEDTLS_ZERO_RTT)
 void mbedtls_ssl_conf_early_data( mbedtls_ssl_config* conf, int early_data,
-                                  unsigned int max_early_data,
+                                  size_t max_early_data,
                                   int(*early_data_callback)( mbedtls_ssl_context*,
                                                              unsigned char*,
                                                              size_t ) )

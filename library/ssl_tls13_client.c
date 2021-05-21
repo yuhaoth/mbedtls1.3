@@ -2097,14 +2097,14 @@ int mbedtls_ssl_get_early_data_status( mbedtls_ssl_context *ssl )
 }
 
 int mbedtls_ssl_set_early_data( mbedtls_ssl_context *ssl,
-                                unsigned char *buffer, unsigned int len )
+                                unsigned char *buffer, size_t len )
 {
     if( buffer == NULL || len == 0 )
         return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
 
     ssl->early_data_buf = buffer;
     ssl->early_data_len = len;
-    return 0;
+    return( 0 );
 }
 #endif /* MBEDTLS_ZERO_RTT */
 
