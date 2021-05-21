@@ -1821,7 +1821,7 @@ int ssl_read_early_data_process( mbedtls_ssl_context* ssl );
 #define SSL_EARLY_DATA_SKIP   0
 #define SSL_EARLY_DATA_EXPECT 1
 
-#if defined(MEDTLS_ZERO_RTT)
+#if defined(MBEDTLS_ZERO_RTT)
 #if defined(MBEDTLS_SSL_USE_MPS)
 static int ssl_early_data_fetch( mbedtls_ssl_context* ssl,
                                  mbedtls_mps_reader **reader );
@@ -1830,7 +1830,7 @@ static int ssl_early_data_fetch( mbedtls_ssl_context* ssl,
                                  unsigned char** buf,
                                  size_t* buflen );
 #endif /* MBEDTLS_SSL_USE_MPS */
-#endif /* MEDTLS_ZERO_RTT */
+#endif /* MBEDTLS_ZERO_RTT */
 
 static int ssl_read_early_data_coordinate( mbedtls_ssl_context* ssl );
 
