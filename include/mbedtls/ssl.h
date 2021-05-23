@@ -1426,15 +1426,15 @@ struct mbedtls_ssl_config
 
 #if defined(MBEDTLS_ZERO_RTT)
      /*!< Early data indication:
-      *   0  -- MBEDTLS_SSL_EARLY_DATA_DISABLED (for no early data), and
-      *   1  -- MBEDTLS_SSL_EARLY_DATA_ENABLED (for use early data)
+      *   - MBEDTLS_SSL_EARLY_DATA_DISABLED,
+      *   - MBEDTLS_SSL_EARLY_DATA_ENABLED
       */
     int early_data_enabled;
 #if defined(MBEDTLS_SSL_SRV_C)
     /* Max number of bytes of early data acceptable by the server. */
     size_t max_early_data;
     /* Callback function for early data processing (server only). */
-    int(*early_data_callback)(mbedtls_ssl_context*, unsigned char*, size_t);
+    int(*early_data_callback)(mbedtls_ssl_context*, const unsigned char*, size_t);
 #endif /* MBEDTLS_SSL_SRV_C */
 #endif /* MBEDTLS_ZERO_RTT */
 #endif /* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED */
@@ -1820,7 +1820,7 @@ struct mbedtls_ssl_context
 
 #if defined(MBEDTLS_SSL_CLI_C)
     /* Pointer to early data buffer to send. */
-    unsigned char* early_data_buf;
+    const unsigned char* early_data_buf;
     /* Length of early data to send. */
     size_t early_data_len;
 #endif /* MBEDTLS_SSL_CLI_C */
@@ -2028,11 +2028,11 @@ void mbedtls_ssl_conf_authmode( mbedtls_ssl_config *conf, int authmode );
 void mbedtls_ssl_conf_early_data( mbedtls_ssl_config* conf, int early_data,
                                   size_t max_early_data,
                                   int(*early_data_callback)( mbedtls_ssl_context*,
-                                                             unsigned char*,
+                                                             const unsigned char*,
                                                              size_t ) );
 
 #if defined(MBEDTLS_SSL_CLI_C)
-int mbedtls_ssl_set_early_data( mbedtls_ssl_context* ssl, unsigned char* buffer,
+int mbedtls_ssl_set_early_data( mbedtls_ssl_context* ssl, const unsigned char* buffer,
                                 size_t len );
 #endif /* MBEDTLS_SSL_CLI_C */
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL && MBEDTLS_ZERO_RTT */

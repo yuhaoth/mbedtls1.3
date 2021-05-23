@@ -1573,17 +1573,20 @@ int psk_callback( void *p_info, mbedtls_ssl_context *ssl,
 * Early data callback.
 */
 int early_data_callback( mbedtls_ssl_context *ssl,
-                     unsigned char *buffer, size_t len )
+                         const unsigned char *buffer, size_t len )
 {
     // In this example we don't need access to the SSL structure
     ((void) ssl);
-
+    char *buffer_to_print;
     if( len > 0 && buffer != NULL )
     {
-        buffer[len] = '\0';
-        mbedtls_printf( " %zu bytes early data received: %s\n", len, (char *) buffer ) ;
+        buffer_to_print = mbedtls_calloc( 1, len + 1 );
+        memcpy( buffer_to_print, buffer, len );
+        buffer_to_print[len] = '\0';
+        mbedtls_printf( " %zu bytes early data received: %s\n", len, buffer_to_print );
+        mbedtls_free( buffer_to_print );
     }
-    return(0);
+    return( 0 );
 }
 #endif /* MBEDTLS_ZERO_RTT */
 

@@ -8067,9 +8067,11 @@ void mbedtls_ssl_free( mbedtls_ssl_context *ssl )
 
 #if defined(MBEDTLS_ZERO_RTT) && defined(MBEDTLS_SSL_SRV_C)
     if( ssl->early_data_server_buf != NULL )
+    {
         mbedtls_platform_zeroize( ssl->early_data_server_buf,
                                   ssl->early_data_server_buf_len );
         mbedtls_free( ssl->early_data_server_buf );
+    }
 #endif /* MBEDTLS_ZERO_RTT && MBEDTLS_SSL_SRV_C */
 
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= free" ) );

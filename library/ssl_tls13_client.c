@@ -2097,7 +2097,7 @@ int mbedtls_ssl_get_early_data_status( mbedtls_ssl_context *ssl )
 }
 
 int mbedtls_ssl_set_early_data( mbedtls_ssl_context *ssl,
-                                unsigned char *buffer, size_t len )
+                                const unsigned char *buffer, size_t len )
 {
     if( buffer == NULL || len == 0 )
         return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );

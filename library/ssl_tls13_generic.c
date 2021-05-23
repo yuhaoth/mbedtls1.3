@@ -2743,7 +2743,7 @@ static int ssl_finished_in_postprocess( mbedtls_ssl_context* ssl )
 void mbedtls_ssl_conf_early_data( mbedtls_ssl_config* conf, int early_data,
                                   size_t max_early_data,
                                   int(*early_data_callback)( mbedtls_ssl_context*,
-                                                             unsigned char*,
+                                                             const unsigned char*,
                                                              size_t ) )
 {
 #if !defined(MBEDTLS_SSL_SRV_C)
