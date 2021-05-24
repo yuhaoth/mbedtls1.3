@@ -2017,7 +2017,7 @@ static int ssl_read_early_data_parse( mbedtls_ssl_context* ssl,
     else
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "Buffer too small (recv %d bytes, buffer %d bytes)",
-                                    buflen, ssl->early_data_len ) );
+                                    buflen, ssl->conf->max_early_data ) );
         return ( MBEDTLS_ERR_SSL_ALLOC_FAILED );
     }
 
