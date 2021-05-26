@@ -493,8 +493,10 @@ int main( void )
 
 #if defined(MBEDTLS_ZERO_RTT)
 #define USAGE_EARLY_DATA \
-    "    early_data=%%d        default: 0 (disabled)\n"      \
-    "                        options: 0 (disabled), 1 (enabled)\n"
+    "    early_data=%%d        default: 0 (disabled)\n"             \
+    "                        options: 0     (disabled), "           \
+    "                                 -1    (enabled, unlimited), " \
+    "                                 n > 0 (enabled, max. number of bytes sent as 0-RTT = n)\n"
 #else
 #define USAGE_EARLY_DATA ""
 #endif /* MBEDTLS_ZERO_RTT */
@@ -745,6 +747,7 @@ struct options
     int reproducible;           /* make communication reproducible          */
     unsigned char key_exchange_modes; /* key exchange modes                 */
     int early_data;                   /* support for early data             */
+    int early_data_max;               /* maximum amount of early data       */
     const char *named_groups_string;  /* list of named groups               */
     const char *sig_algs;             /* supported signature algorithms     */
     int query_config_mode;      /* whether to read config                   */
@@ -1573,17 +1576,20 @@ int psk_callback( void *p_info, mbedtls_ssl_context *ssl,
 * Early data callback.
 */
 int early_data_callback( mbedtls_ssl_context *ssl,
-                     unsigned char *buffer, size_t len )
+                         const unsigned char *buffer, size_t len )
 {
     // In this example we don't need access to the SSL structure
     ((void) ssl);
-
+    char *buffer_to_print;
     if( len > 0 && buffer != NULL )
     {
-        buffer[len] = '\0';
-        mbedtls_printf( " %zu bytes early data received: %s\n", len, (char *) buffer ) ;
+        buffer_to_print = mbedtls_calloc( 1, len + 1 );
+        memcpy( buffer_to_print, buffer, len );
+        buffer_to_print[len] = '\0';
+        mbedtls_printf( " %zu bytes early data received: %s\n", len, buffer_to_print );
+        mbedtls_free( buffer_to_print );
     }
-    return(0);
+    return( 0 );
 }
 #endif /* MBEDTLS_ZERO_RTT */
 
@@ -2063,11 +2069,6 @@ int main( int argc, char *argv[] )
     unsigned char alloc_buf[MEMORY_HEAP_SIZE];
 #endif
 
-#if defined(MBEDTLS_ZERO_RTT)
-    char early_data_buf[50];
-    unsigned int early_data_len;
-#endif
-
 #if defined(MBEDTLS_SSL_DTLS_CONNECTION_ID)
     unsigned char cid[MBEDTLS_SSL_CID_IN_LEN_MAX];
     unsigned char cid_renego[MBEDTLS_SSL_CID_IN_LEN_MAX];
@@ -2487,15 +2488,16 @@ int main( int argc, char *argv[] )
 #if defined(MBEDTLS_ZERO_RTT)
         else if( strcmp( p, "early_data" ) == 0 )
         {
-            switch( atoi( q ) )
+            int early_data_val = atoi( q );
+            switch( early_data_val )
             {
                 case 0:
                     opt.early_data = MBEDTLS_SSL_EARLY_DATA_DISABLED;
                     break;
-                case 1:
+                default:
                     opt.early_data = MBEDTLS_SSL_EARLY_DATA_ENABLED;
+                    opt.early_data_max = (size_t) early_data_val;
                     break;
-                default: goto usage;
             }
         }
 #endif /* MBEDTLS_ZERO_RTT */
@@ -3537,6 +3539,12 @@ int main( int argc, char *argv[] )
     if( opt.cert_req_ca_list != DFL_CERT_REQ_CA_LIST )
         mbedtls_ssl_conf_cert_req_ca_list( &conf, opt.cert_req_ca_list );
 
+#if defined(MBEDTLS_ZERO_RTT)
+    mbedtls_ssl_conf_early_data( &conf, opt.early_data,
+                                 opt.early_data_max,
+                                 early_data_callback );
+#endif /* MBEDTLS_ZERO_RTT */
+
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
     if( opt.hs_to_min != DFL_HS_TO_MIN || opt.hs_to_max != DFL_HS_TO_MAX )
         mbedtls_ssl_conf_handshake_timeout( &conf, opt.hs_to_min, opt.hs_to_max );
@@ -4136,13 +4144,6 @@ reset:
     mbedtls_net_free( &client_fd );
 
     mbedtls_ssl_session_reset( &ssl );
-
-
-#if defined(MBEDTLS_ZERO_RTT)
-    early_data_len = sizeof( early_data_buf ) - 1;
-    mbedtls_ssl_set_early_data( &ssl, opt.early_data, early_data_buf,
-                                early_data_len, early_data_callback );
-#endif /* MBEDTLS_ZERO_RTT */
 
     /*
      * 3. Wait until a client connects

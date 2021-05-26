@@ -259,6 +259,9 @@
 /* Maximum size in bytes of list in supported elliptic curve ext., RFC 4492 */
 #define MBEDTLS_SSL_MAX_CURVE_LIST_LEN         65535
 
+/* Maximum amount of early data to buffer on the server. */
+#define MBEDTLS_SSL_MAX_EARLY_DATA             1024
+
 /*
  * Check that we obey the standard's message size bounds
  */
@@ -1390,7 +1393,7 @@ static inline int mbedtls_ssl_tls13_key_exchange_with_psk( mbedtls_ssl_context *
 static inline int mbedtls_ssl_conf_tls13_0rtt_enabled( mbedtls_ssl_context *ssl )
 {
 #if defined(MBEDTLS_ZERO_RTT)
-    if( ssl->early_data_enabled == MBEDTLS_SSL_EARLY_DATA_ENABLED )
+    if( ssl->conf->early_data_enabled == MBEDTLS_SSL_EARLY_DATA_ENABLED )
         return( 1 );
 #else
     ((void) ssl);

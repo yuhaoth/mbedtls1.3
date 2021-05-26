@@ -2740,30 +2740,34 @@ static int ssl_finished_in_postprocess( mbedtls_ssl_context* ssl )
 }
 
 #if defined(MBEDTLS_ZERO_RTT)
-void mbedtls_ssl_set_early_data( mbedtls_ssl_context *ssl, int early_data,
-                                 char *buffer, unsigned int len,
-                                 int(*early_data_callback)( mbedtls_ssl_context *,
-                                                            unsigned char *, size_t ) )
+void mbedtls_ssl_conf_early_data( mbedtls_ssl_config* conf, int early_data,
+                                  size_t max_early_data,
+                                  int(*early_data_callback)( mbedtls_ssl_context*,
+                                                             const unsigned char*,
+                                                             size_t ) )
 {
 #if !defined(MBEDTLS_SSL_SRV_C)
-    ( (void ) early_data_callback );
+    ( ( void ) early_data_callback );
 #endif /* !MBEDTLS_SSL_SRV_C */
+    conf->early_data_enabled = early_data;
 
-    if( ssl != NULL )
-    {
-        ssl->early_data_enabled = early_data;
-        if( buffer != NULL && len >0 && early_data==MBEDTLS_SSL_EARLY_DATA_ENABLED )
-        {
-            ssl->early_data_buf = buffer;
-            ssl->early_data_len = len;
 #if defined(MBEDTLS_SSL_SRV_C)
-            /* Only the server uses the early data callback.
-             * For the client this parameter is not used.
-             */
-            ssl->early_data_callback = early_data_callback;
-#endif /* MBEDTLS_SSL_SRV_C */
-        }
+
+    if( early_data == MBEDTLS_SSL_EARLY_DATA_ENABLED )
+    {
+        if( max_early_data > MBEDTLS_SSL_MAX_EARLY_DATA )
+            max_early_data = MBEDTLS_SSL_MAX_EARLY_DATA;
+
+        conf->max_early_data = max_early_data;
+        conf->early_data_callback = early_data_callback;
+        /* Only the server uses the early data callback.
+         * For the client this parameter is not used. */
     }
+    else
+    {
+        conf->early_data_callback = NULL;
+    }
+#endif
 }
 #endif /* MBEDTLS_ZERO_RTT */
 
@@ -3085,7 +3089,7 @@ int mbedtls_ssl_write_early_data_ext( mbedtls_ssl_context *ssl,
             return( 0 );
 
         if( ssl->conf->key_exchange_modes != MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_KE ||
-            ssl->early_data_enabled == MBEDTLS_SSL_EARLY_DATA_DISABLED )
+            ssl->conf->early_data_enabled == MBEDTLS_SSL_EARLY_DATA_DISABLED )
         {
             MBEDTLS_SSL_DEBUG_MSG( 2, ( "skip write early_data extension" ) );
             ssl->handshake->early_data = MBEDTLS_SSL_EARLY_DATA_OFF;
@@ -3099,7 +3103,7 @@ int mbedtls_ssl_write_early_data_ext( mbedtls_ssl_context *ssl,
     {
         if( !mbedtls_ssl_conf_tls13_some_psk_enabled( ssl ) ||
             mbedtls_ssl_get_psk_to_offer( ssl, NULL, NULL, NULL, NULL ) != 0 ||
-            ssl->early_data_enabled == MBEDTLS_SSL_EARLY_DATA_DISABLED )
+            ssl->conf->early_data_enabled == MBEDTLS_SSL_EARLY_DATA_DISABLED )
         {
             MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= skip write early_data extension" ) );
             ssl->handshake->early_data = MBEDTLS_SSL_EARLY_DATA_OFF;

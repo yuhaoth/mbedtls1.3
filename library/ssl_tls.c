@@ -4521,6 +4521,24 @@ int mbedtls_ssl_setup( mbedtls_ssl_context *ssl,
         goto error;
 #endif /* MBEDTLS_SSL_USE_MPS */
 
+#if defined(MBEDTLS_ZERO_RTT)
+#if defined(MBEDTLS_SSL_SRV_C)
+    if( conf->endpoint == MBEDTLS_SSL_IS_SERVER &&
+        conf->early_data_enabled == MBEDTLS_SSL_EARLY_DATA_ENABLED &&
+        conf->max_early_data > 0 )
+    {
+        ssl->early_data_server_buf = mbedtls_calloc( 1, conf->max_early_data );
+        ssl->early_data_server_buf_len = conf->max_early_data;
+        if( ssl->early_data_server_buf == NULL )
+        {
+            MBEDTLS_SSL_DEBUG_MSG( 1, ( "alloc(%d bytes) failed", conf->max_early_data ) );
+            ret = MBEDTLS_ERR_SSL_ALLOC_FAILED;
+            goto error;
+        }
+    }
+#endif /* MBEDTLS_SSL_SRV_C */
+#endif /* MBEDTLS_ZERO_RTT */
+
     return( 0 );
 
 error:
@@ -4551,6 +4569,13 @@ error:
     ssl->out_msg = NULL;
 #endif /* MBEDTLS_SSL_USE_MPS */
 
+#if defined(MBEDTLS_ZERO_RTT) && defined(MBEDTLS_SSL_SRV_C)
+    if( conf->endpoint == MBEDTLS_SSL_IS_SERVER )
+    {
+        mbedtls_free( ssl->early_data_server_buf );
+        ssl->early_data_server_buf = NULL;
+    }
+#endif
     return( ret );
 }
 
@@ -4684,11 +4709,10 @@ int mbedtls_ssl_session_reset_int( mbedtls_ssl_context *ssl, int partial )
     ssl_mps_init( ssl );
 #endif /* MBEDTLS_SSL_USE_MPS */
 
-#if defined(MBEDTLS_ZERO_RTT)
-    ssl->early_data_enabled = MBEDTLS_SSL_EARLY_DATA_DISABLED;
+#if defined(MBEDTLS_ZERO_RTT) && defined(MBEDTLS_SSL_CLI_C)
     ssl->early_data_buf = NULL;
     ssl->early_data_len = 0;
-#endif /* MBEDTLS_ZERO_RTT */
+#endif /* MBEDTLS_ZERO_RTT && MBEDTLS_SSL_CLI_C */
 
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 
@@ -8040,6 +8064,15 @@ void mbedtls_ssl_free( mbedtls_ssl_context *ssl )
     && defined(MBEDTLS_SSL_SRV_C)
     mbedtls_free( ssl->cli_id );
 #endif
+
+#if defined(MBEDTLS_ZERO_RTT) && defined(MBEDTLS_SSL_SRV_C)
+    if( ssl->early_data_server_buf != NULL )
+    {
+        mbedtls_platform_zeroize( ssl->early_data_server_buf,
+                                  ssl->early_data_server_buf_len );
+        mbedtls_free( ssl->early_data_server_buf );
+    }
+#endif /* MBEDTLS_ZERO_RTT && MBEDTLS_SSL_SRV_C */
 
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= free" ) );
 
