@@ -839,8 +839,7 @@ static int ssl_certificate_verify_write( mbedtls_ssl_context* ssl,
     verify_hash_len = mbedtls_md_get_size( md_info );
     MBEDTLS_SSL_DEBUG_BUF( 3, "verify hash", verify_hash, verify_hash_len );
 
-    if( ( ret = mbedtls_pk_sign( mbedtls_ssl_own_key( ssl ),
-                                 md_alg,
+    if( ( ret = mbedtls_pk_sign( own_key, md_alg,
                                  verify_hash, verify_hash_len,
                                  p + 2, &n,
                                  ssl->conf->f_rng, ssl->conf->p_rng ) ) != 0 )
