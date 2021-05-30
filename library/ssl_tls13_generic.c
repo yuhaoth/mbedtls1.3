@@ -740,6 +740,8 @@ static int ssl_certificate_verify_write( mbedtls_ssl_context* ssl,
     size_t verify_hash_len;
     unsigned char *p;
     const mbedtls_md_info_t *md_info;
+    /* Verify whether we can use signature algorithm */
+    int signature_scheme_client;
 
 #if defined(MBEDTLS_SSL_USE_MPS)
     p = buf;
@@ -801,8 +803,7 @@ static int ssl_certificate_verify_write( mbedtls_ssl_context* ssl,
         return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
     }
 
-    /* Verify whether we can use signature algorithm */
-    ssl->handshake->signature_scheme_client = SIGNATURE_NONE;
+    signature_scheme_client = SIGNATURE_NONE;
 
     if( ssl->handshake->received_signature_schemes_list != NULL )
     {
@@ -811,20 +812,20 @@ static int ssl_certificate_verify_write( mbedtls_ssl_context* ssl,
         {
             if( *sig_scheme == sig_alg )
             {
-                ssl->handshake->signature_scheme_client = *sig_scheme;
+                signature_scheme_client = *sig_scheme;
                 break;
             }
         }
     }
 
-    if( ssl->handshake->signature_scheme_client == SIGNATURE_NONE )
+    if( signature_scheme_client == SIGNATURE_NONE )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "should never happen" ) );
         return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
     }
 
-    *(p++) = (unsigned char)( ( ssl->handshake->signature_scheme_client >> 8 ) & 0xFF );
-    *(p++) = (unsigned char)( ( ssl->handshake->signature_scheme_client >> 0 ) & 0xFF );
+    *(p++) = (unsigned char)( ( signature_scheme_client >> 8 ) & 0xFF );
+    *(p++) = (unsigned char)( ( signature_scheme_client >> 0 ) & 0xFF );
 
     /* Hash verify buffer with indicated hash function */
     md_info = mbedtls_md_info_from_type( md_alg );

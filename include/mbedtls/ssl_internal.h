@@ -496,8 +496,6 @@ struct mbedtls_ssl_handshake_params
      * Handshake specific crypto variables
      */
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
-    int signature_scheme;                        /*!<  Signature scheme  */
-    int signature_scheme_client;  /*!<  Signature scheme to use by client-initiated CertificateVerify */
 #if defined(MBEDTLS_X509_CRT_PARSE_C)
     int *received_signature_schemes_list;              /*!<  Received signature algorithms */
 #endif /* MBEDTLS_X509_CRT_PARSE_C */
