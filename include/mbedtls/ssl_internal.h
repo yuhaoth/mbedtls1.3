@@ -1403,7 +1403,7 @@ static inline int mbedtls_ssl_conf_tls13_0rtt_enabled( mbedtls_ssl_context *ssl 
 }
 
 int mbedtls_ssl_read_certificate_verify_process(mbedtls_ssl_context* ssl);
-int mbedtls_ssl_certificate_verify_process(mbedtls_ssl_context* ssl);
+int mbedtls_ssl_write_certificate_verify_process(mbedtls_ssl_context* ssl);
 
 int mbedtls_ssl_tls13_populate_transform( mbedtls_ssl_transform *transform,
                                           int endpoint,

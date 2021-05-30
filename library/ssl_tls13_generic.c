@@ -555,17 +555,17 @@ static void ssl_create_verify_structure( unsigned char *transcript_hash,
  */
 
 /* Main entry point: orchestrates the other functions. */
-int mbedtls_ssl_certificate_verify_process( mbedtls_ssl_context* ssl );
+int mbedtls_ssl_write_certificate_verify_process( mbedtls_ssl_context* ssl );
 
 /* Coordinate: Check whether a certificate verify message should be sent.
  * Returns a negative value on failure, and otherwise
- * - SSL_CERTIFICATE_VERIFY_SKIP
- * - SSL_CERTIFICATE_VERIFY_SEND
+ * - SSL_WRITE_CERTIFICATE_VERIFY_SKIP
+ * - SSL_WRITE_CERTIFICATE_VERIFY_SEND
  * to indicate if the CertificateVerify message should be sent or not.
  */
-#define SSL_CERTIFICATE_VERIFY_SKIP 0
-#define SSL_CERTIFICATE_VERIFY_SEND 1
-static int ssl_certificate_verify_coordinate( mbedtls_ssl_context* ssl );
+#define SSL_WRITE_CERTIFICATE_VERIFY_SKIP 0
+#define SSL_WRITE_CERTIFICATE_VERIFY_SEND 1
+static int ssl_write_certificate_verify_coordinate( mbedtls_ssl_context* ssl );
 #if defined(MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED)
 static int ssl_certificate_verify_write( mbedtls_ssl_context* ssl,
                                          unsigned char* buf,
@@ -578,15 +578,15 @@ static int ssl_certificate_verify_postprocess( mbedtls_ssl_context* ssl );
  * Implementation
  */
 
-int mbedtls_ssl_certificate_verify_process( mbedtls_ssl_context* ssl )
+int mbedtls_ssl_write_certificate_verify_process( mbedtls_ssl_context* ssl )
 {
     int ret = 0;
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> write certificate verify" ) );
 
     /* Coordination step: Check if we need to send a CertificateVerify */
-    MBEDTLS_SSL_PROC_CHK_NEG( ssl_certificate_verify_coordinate( ssl ) );
+    MBEDTLS_SSL_PROC_CHK_NEG( ssl_write_certificate_verify_coordinate( ssl ) );
 
-    if( ret == SSL_CERTIFICATE_VERIFY_SEND )
+    if( ret == SSL_WRITE_CERTIFICATE_VERIFY_SEND )
     {
 #if defined(MBEDTLS_SSL_USE_MPS)
         mbedtls_mps_handshake_out msg;
@@ -655,7 +655,7 @@ cleanup:
     return( ret );
 }
 
-static int ssl_certificate_verify_coordinate( mbedtls_ssl_context* ssl )
+static int ssl_write_certificate_verify_coordinate( mbedtls_ssl_context* ssl )
 {
     int have_own_cert = 1;
     int ret;
@@ -663,7 +663,7 @@ static int ssl_certificate_verify_coordinate( mbedtls_ssl_context* ssl )
     if( mbedtls_ssl_tls13_key_exchange_with_psk( ssl ) )
     {
         MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= skip write certificate verify" ) );
-        return( SSL_CERTIFICATE_VERIFY_SKIP );
+        return( SSL_WRITE_CERTIFICATE_VERIFY_SKIP );
     }
 
 #if !defined(MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED)
@@ -680,7 +680,7 @@ static int ssl_certificate_verify_coordinate( mbedtls_ssl_context* ssl )
             ssl->conf->authmode == MBEDTLS_SSL_VERIFY_NONE )
         {
             MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= skip write certificate verify" ) );
-            return( SSL_CERTIFICATE_VERIFY_SKIP );
+            return( SSL_WRITE_CERTIFICATE_VERIFY_SKIP );
         }
     }
 
@@ -716,7 +716,7 @@ static int ssl_certificate_verify_coordinate( mbedtls_ssl_context* ssl )
         ssl->handshake->state_local.certificate_verify_out.handshake_hash,
         ssl->handshake->state_local.certificate_verify_out.handshake_hash_len);
 
-    return( SSL_CERTIFICATE_VERIFY_SEND );
+    return( SSL_WRITE_CERTIFICATE_VERIFY_SEND );
 #endif /* MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED */
 }
 

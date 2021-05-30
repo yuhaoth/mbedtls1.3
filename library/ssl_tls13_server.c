@@ -4454,7 +4454,7 @@ int mbedtls_ssl_handshake_server_step( mbedtls_ssl_context *ssl )
             /* ----- WRITE SERVER CERTIFICATE VERIFY ----*/
 
         case MBEDTLS_SSL_CERTIFICATE_VERIFY:
-            ret = mbedtls_ssl_certificate_verify_process( ssl );
+            ret = mbedtls_ssl_write_certificate_verify_process( ssl );
             break;
 
             /* ----- WRITE FINISHED ----*/
