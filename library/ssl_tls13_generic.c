@@ -797,8 +797,8 @@ static int ssl_certificate_verify_write( mbedtls_ssl_context* ssl,
     }
     else
     {
-            MBEDTLS_SSL_DEBUG_MSG( 1, ( "should never happen" ) );
-            return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "should never happen" ) );
+        return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
     }
 
     /* Verify whether we can use signature algorithm */
@@ -819,8 +819,8 @@ static int ssl_certificate_verify_write( mbedtls_ssl_context* ssl,
 
     if( ssl->handshake->signature_scheme_client == SIGNATURE_NONE )
     {
-            MBEDTLS_SSL_DEBUG_MSG( 1, ( "should never happen" ) );
-            return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "should never happen" ) );
+        return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
     }
 
     *(p++) = (unsigned char)( ( ssl->handshake->signature_scheme_client >> 8 ) & 0xFF );
