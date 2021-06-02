@@ -2574,8 +2574,8 @@ static int ssl_certificate_request_parse( mbedtls_ssl_context* ssl,
                 if( ( ret = mbedtls_ssl_parse_signature_algorithms_ext( ssl,
                         ext + 4, (size_t) ext_size ) ) != 0 )
                 {
-                    MBEDTLS_SSL_DEBUG_MSG( 1,
-                        ( "mbedtls_ssl_parse_signature_algorithms_ext" ) );
+                    MBEDTLS_SSL_DEBUG_RET( 1,
+                        "mbedtls_ssl_parse_signature_algorithms_ext", ret );
                     SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_DECODE_ERROR,
                         ret );
                     return( ret );

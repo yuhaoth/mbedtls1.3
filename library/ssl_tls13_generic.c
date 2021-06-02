@@ -410,7 +410,7 @@ int mbedtls_ssl_parse_signature_algorithms_ext( mbedtls_ssl_context *ssl,
     const int *md_cur; /* iterate through configured signature schemes */
     int signature_scheme; /* store received signature algorithm scheme */
     size_t num_supported_hashes = 0;
-    uint32_t i = 0; /* iterate through received_signature_schemes_list */
+    uint32_t common_idx = 0; /* iterate through received_signature_schemes_list */
 
     if( buf_len < 2 )
     {
@@ -444,11 +444,11 @@ int mbedtls_ssl_parse_signature_algorithms_ext( mbedtls_ssl_context *ssl,
     if( ssl->handshake->received_signature_schemes_list == NULL )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1,
-            ( "malloc failed in mbedtls_ssl_parse_signature_algorithms_ext( )" ) );
+            ( "mbedtls_calloc failed in mbedtls_ssl_parse_signature_algorithms_ext( )" ) );
         return( MBEDTLS_ERR_SSL_ALLOC_FAILED );
     }
 
-    for( p = buf + 2; p < end && i < num_supported_hashes; p += 2 )
+    for( p = buf + 2; p < end && common_idx < num_supported_hashes; p += 2 )
     {
         signature_scheme = ( (int) p[0] << 8 ) | ( ( int ) p[1] );
 
@@ -458,13 +458,13 @@ int mbedtls_ssl_parse_signature_algorithms_ext( mbedtls_ssl_context *ssl,
         {
             if( *md_cur == signature_scheme )
             {
-                ssl->handshake->received_signature_schemes_list[i] = signature_scheme;
-                i++;
+                ssl->handshake->received_signature_schemes_list[common_idx] = signature_scheme;
+                common_idx++;
             }
         }
     }
 
-    if( i == 0 )
+    if( common_idx == 0 )
     {
         MBEDTLS_SSL_DEBUG_MSG( 3, ( "no signature algorithm in common" ) );
         mbedtls_free( ssl->handshake->received_signature_schemes_list );
@@ -472,7 +472,7 @@ int mbedtls_ssl_parse_signature_algorithms_ext( mbedtls_ssl_context *ssl,
         return( MBEDTLS_ERR_SSL_NO_USABLE_CIPHERSUITE );
     }
 
-    ssl->handshake->received_signature_schemes_list[i] = SIGNATURE_NONE;
+    ssl->handshake->received_signature_schemes_list[common_idx] = SIGNATURE_NONE;
 
     return( 0 );
 }
