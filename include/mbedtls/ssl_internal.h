@@ -1523,10 +1523,11 @@ static inline int mbedtls_ssl_get_psk( const mbedtls_ssl_context *ssl,
     return( 0 );
 }
 
-/* Check if we have any PSK to offer, and if so, return the first. */
+/* Check if we have any PSK to offer, returns 0 if PSK is available. Assign the
+   psk and ticket if pointers are present.  */
 static inline int mbedtls_ssl_get_psk_to_offer( const mbedtls_ssl_context *ssl,
-                     const unsigned char **psk, size_t *psk_len,
-                     const unsigned char **psk_identity, size_t *psk_identity_len )
+    const unsigned char **psk, size_t *psk_len,
+    const unsigned char **psk_identity, size_t *psk_identity_len )
 {
     int ptrs_present = 0;
 
@@ -1536,7 +1537,7 @@ static inline int mbedtls_ssl_get_psk_to_offer( const mbedtls_ssl_context *ssl,
         ptrs_present = 1;
     }
 
-    /* Check if a ticket has been configuredd. */
+    /* Check if a ticket has been configured. */
     if( ssl->session_negotiate != NULL         &&
         ssl->session_negotiate->ticket != NULL )
     {

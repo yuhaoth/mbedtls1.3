@@ -211,10 +211,10 @@ static int ssl_write_early_data_prepare( mbedtls_ssl_context* ssl )
     int ret;
     mbedtls_ssl_key_set traffic_keys;
 
-    unsigned char const *psk_identity;
-    size_t psk_identity_len;
-    unsigned char const *psk;
+    const unsigned char *psk;
     size_t psk_len;
+    const unsigned char *psk_identity;
+    size_t psk_identity_len;
 
     /* From RFC 8446:
      * "The PSK used to encrypt the
@@ -829,10 +829,10 @@ int mbedtls_ssl_write_pre_shared_key_ext( mbedtls_ssl_context *ssl,
     const mbedtls_ssl_ciphersuite_t *suite_info;
     const int *ciphersuites;
     int hash_len;
-    unsigned char const *psk_identity;
-    size_t psk_identity_len;
-    unsigned char const *psk;
+    const unsigned char *psk;
     size_t psk_len;
+    const unsigned char *psk_identity;
+    size_t psk_identity_len;
 
     *total_ext_len = 0;
     *bytes_written = 0;
@@ -1987,10 +1987,11 @@ static int ssl_parse_server_psk_identity_ext( mbedtls_ssl_context *ssl,
     int ret = 0;
     size_t selected_identity;
 
-    unsigned char const *psk_identity;
-    size_t psk_identity_len;
-    unsigned char const *psk;
+    const unsigned char *psk;
     size_t psk_len;
+    const unsigned char *psk_identity;
+    size_t psk_identity_len;
+
 
     /* Check which PSK we've offered.
      *
