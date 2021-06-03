@@ -268,6 +268,8 @@ static int ssl_write_early_data_prepare( mbedtls_ssl_context* ssl )
                               ssl->session_negotiate->ciphersuite,
                               &traffic_keys,
                               ssl );
+        if( ret != 0 )
+            return( ret );
 
         /* Register transform with MPS. */
         ret = mbedtls_mps_add_key_material( &ssl->mps.l4,
@@ -320,14 +322,14 @@ static int ssl_write_early_data_write( mbedtls_ssl_context* ssl,
     {
         memcpy( buf, ssl->early_data_buf, ssl->early_data_len );
 
-#if !defined(MBEDTLS_SSL_USE_MPS)
+#if defined(MBEDTLS_SSL_USE_MPS)
+        *olen = ssl->early_data_len;
+        MBEDTLS_SSL_DEBUG_BUF( 3, "Early Data", buf, ssl->early_data_len );
+#else
         buf[ssl->early_data_len] = MBEDTLS_SSL_MSG_APPLICATION_DATA;
         *olen = ssl->early_data_len + 1;
 
         MBEDTLS_SSL_DEBUG_BUF( 3, "Early Data", ssl->out_msg, *olen );
-#else
-        *olen = ssl->early_data_len;
-        MBEDTLS_SSL_DEBUG_BUF( 3, "Early Data", buf, ssl->early_data_len );
 #endif /* MBEDTLS_SSL_USE_MPS */
     }
 
