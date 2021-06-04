@@ -2801,7 +2801,7 @@ static int ssl_encrypted_extensions_parse( mbedtls_ssl_context* ssl,
 
 #if defined(MBEDTLS_ZERO_RTT)
             case MBEDTLS_TLS_EXT_EARLY_DATA:
-                MBEDTLS_SSL_DEBUG_MSG(3, ( "found early data extension" ));
+                MBEDTLS_SSL_DEBUG_MSG(3, ( "found early_data extension" ));
 
                 ret = ssl_parse_encrypted_extensions_early_data_ext(
                     ssl, ext + 4, ext_size );
