@@ -1750,9 +1750,11 @@ static int ssl_client_hello_write_partial( mbedtls_ssl_context* ssl,
 
         buflen -= 2;
 
-#if defined(MBEDTLS_ZERO_RTT)
-        /* For ZeroRTT we only add a single ciphersuite. */
-        break;
+#if defined(MBEDTLS_ZERO_RTT) && defined(MBEDTLS_SSL_NEW_SESSION_TICKET)
+        /* For 0-RTT we only add a single ciphersuite. */
+        if( ssl->conf->early_data_enabled == MBEDTLS_SSL_EARLY_DATA_ENABLED &&
+            ssl->handshake->resume != 0 )
+            break;
 #endif /* MBEDTLS_ZERO_RTT */
     }
 
