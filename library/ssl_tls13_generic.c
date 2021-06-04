@@ -3082,6 +3082,20 @@ int mbedtls_ssl_write_early_data_ext( mbedtls_ssl_context *ssl,
 
     *olen = 0;
 
+#if defined(MBEDTLS_SSL_CLI_C)
+    if( ssl->conf->endpoint == MBEDTLS_SSL_IS_CLIENT )
+    {
+        if( !mbedtls_ssl_conf_tls13_some_psk_enabled( ssl ) ||
+            mbedtls_ssl_get_psk_to_offer( ssl, NULL, NULL, NULL, NULL ) != 0 ||
+            ssl->conf->early_data_enabled == MBEDTLS_SSL_EARLY_DATA_DISABLED )
+        {
+            MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= skip write early_data extension" ) );
+            ssl->handshake->early_data = MBEDTLS_SSL_EARLY_DATA_OFF;
+            return( 0 );
+        }
+    }
+#endif /* MBEDTLS_SSL_CLI_C */
+
 #if defined(MBEDTLS_SSL_SRV_C)
     if( ssl->conf->endpoint == MBEDTLS_SSL_IS_SERVER )
     {
@@ -3097,20 +3111,6 @@ int mbedtls_ssl_write_early_data_ext( mbedtls_ssl_context *ssl,
         }
     }
 #endif /* MBEDTLS_SSL_SRV_C */
-
-#if defined(MBEDTLS_SSL_CLI_C)
-    if( ssl->conf->endpoint == MBEDTLS_SSL_IS_CLIENT )
-    {
-        if( !mbedtls_ssl_conf_tls13_some_psk_enabled( ssl ) ||
-            mbedtls_ssl_get_psk_to_offer( ssl, NULL, NULL, NULL, NULL ) != 0 ||
-            ssl->conf->early_data_enabled == MBEDTLS_SSL_EARLY_DATA_DISABLED )
-        {
-            MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= skip write early_data extension" ) );
-            ssl->handshake->early_data = MBEDTLS_SSL_EARLY_DATA_OFF;
-            return( 0 );
-        }
-    }
-#endif /* MBEDTLS_SSL_CLI_C */
 
     if( buflen < 4 )
     {
