@@ -695,7 +695,7 @@ int mbedtls_ssl_parse_client_psk_identity_ext(
                      */
 
                     diff = ( now - ssl->session_negotiate->start ) -
-                        ( obfuscated_ticket_age -ssl->session_negotiate->ticket_age_add );
+                        ( obfuscated_ticket_age - ssl->session_negotiate->ticket_age_add );
 
                     if( diff > MBEDTLS_SSL_TICKET_AGE_TOLERANCE )
                     {
@@ -715,6 +715,9 @@ int mbedtls_ssl_parse_client_psk_identity_ext(
                         }
                         else
                         {
+                            MBEDTLS_SSL_DEBUG_MSG( 3,
+                            ( "0-RTT is disabled ( diff=%d exeeds MBEDTLS_SSL_EARLY_DATA_MAX_DELAY )",
+                              diff ) );
                             ssl->session_negotiate->process_early_data =
                                 MBEDTLS_SSL_EARLY_DATA_DISABLED;
                             ret = MBEDTLS_ERR_SSL_SESSION_TICKET_EXPIRED;
@@ -757,14 +760,7 @@ int mbedtls_ssl_parse_client_psk_identity_ext(
 
     if( ret == MBEDTLS_ERR_SSL_SESSION_TICKET_EXPIRED )
     {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "Neither PSK nor ticket found." ) );
-        if( ( ret = mbedtls_ssl_send_alert_message( ssl,
-                   MBEDTLS_SSL_ALERT_LEVEL_FATAL,
-                   MBEDTLS_SSL_ALERT_MSG_UNKNOWN_PSK_IDENTITY ) ) != 0 )
-        {
-            return( ret );
-        }
-
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "Session ticket expired." ) );
         return( ret );
     }
 
