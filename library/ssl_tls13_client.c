@@ -4211,11 +4211,11 @@ int mbedtls_ssl_handshake_client_step( mbedtls_ssl_context *ssl )
             /* ----- WRITE CLIENT CERTIFICATE VERIFY ----*/
 
         case MBEDTLS_SSL_CLIENT_CERTIFICATE_VERIFY:
-            ret = mbedtls_ssl_certificate_verify_process( ssl );
+            ret = mbedtls_ssl_write_certificate_verify_process( ssl );
 
             if( ret != 0 )
             {
-                MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_certificate_verify_process", ret );
+                MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_write_certificate_verify_process", ret );
                 break;
             }
             break;
