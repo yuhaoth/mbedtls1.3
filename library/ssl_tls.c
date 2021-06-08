@@ -5196,7 +5196,9 @@ int mbedtls_ssl_set_hs_psk( mbedtls_ssl_context *ssl,
 
     if( psk_len > MBEDTLS_PSK_MAX_LEN )
     {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "PSK length has exceeded MBEDTLS_PSK_MAX_LEN" ) );
+        MBEDTLS_SSL_DEBUG_MSG( 1, 
+            ( "PSK length has exceeded MBEDTLS_PSK_MAX_LEN (%u)",
+              (unsigned) MBEDTLS_PSK_MAX_LEN ) );
         return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
     }
 
