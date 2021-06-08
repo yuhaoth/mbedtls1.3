@@ -299,7 +299,7 @@ int mbedtls_ssl_tls1_3_evolve_secret(
                    const unsigned char *input, size_t input_len,
                    unsigned char *secret_new )
 {
-    int ret = 0;
+    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
     size_t hlen, ilen;
     unsigned char tmp_secret[ MBEDTLS_MD_MAX_SIZE ] = { 0 };
     unsigned char tmp_input [ MBEDTLS_SSL_TLS1_3_MAX_IKM_SIZE ] = { 0 };
@@ -342,6 +342,8 @@ int mbedtls_ssl_tls1_3_evolve_secret(
         tmp_secret, hlen,
         tmp_input, ilen,
         secret_new ) );
+
+    ret = 0;
 
  cleanup:
 
