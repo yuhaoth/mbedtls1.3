@@ -314,6 +314,7 @@ int mbedtls_ssl_tls1_3_evolve_secret(
     /* For non-initial runs, call Derive-Secret( ., "derived", "")
      * on the old secret. */
     if( secret_old != NULL )
+    {
         MBEDTLS_SSL_PROC_CHK(
             mbedtls_ssl_tls1_3_derive_secret(
                 hash_alg,
@@ -322,6 +323,7 @@ int mbedtls_ssl_tls1_3_evolve_secret(
                 NULL, 0, /* context */
                 MBEDTLS_SSL_TLS1_3_CONTEXT_UNHASHED,
                 tmp_secret, hlen ) );
+    }
 
     if( input != NULL )
     {
