@@ -1566,6 +1566,20 @@ run_test    "TLS 1.3, TLS_AES_128_CCM_8_SHA256, ext PSK, early data" \
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
 requires_config_enabled MBEDTLS_DEBUG_C
 requires_config_disabled MBEDTLS_RSA_C
+requires_config_enabled MBEDTLS_ZERO_RTT
+run_test    "TLS 1.3, TLS_AES_256_GCM_SHA384, ECDHE-ECDSA, client tries early data without PSK, and falls back to 1-RTT" \
+            "$P_SRV nbio=2 debug_level=4 force_version=tls1_3" \
+            "$P_CLI nbio=2 debug_level=4 force_version=tls1_3 force_ciphersuite=TLS_AES_256_GCM_SHA384 early_data=1" \
+            0 \
+      -s "Protocol is TLSv1.3"                                        \
+      -c "<= skip write early_data extension"                         \
+      -c "Protocol is TLSv1.3"                                        \
+      -c "Ciphersuite is TLS_AES_256_GCM_SHA384"                      \
+      -c "early data status = 0"
+
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_disabled MBEDTLS_RSA_C
 run_test    "TLS 1.3, TLS_AES_128_CCM_8_SHA256, ECDHE-ECDSA, CLI+SRV auth, HRR enforcing cookie" \
             "$P_SRV nbio=2 debug_level=5 force_version=tls1_3 auth_mode=required key_exchange_modes=ecdhe_ecdsa tickets=0 cookies=2" \
             "$P_CLI nbio=2 debug_level=5 force_version=tls1_3 server_name=localhost force_ciphersuite=TLS_AES_128_CCM_8_SHA256 key_exchange_modes=ecdhe_ecdsa" \
