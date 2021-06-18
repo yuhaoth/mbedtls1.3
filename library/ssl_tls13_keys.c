@@ -315,15 +315,14 @@ int mbedtls_ssl_tls1_3_evolve_secret(
      * on the old secret. */
     if( secret_old != NULL )
     {
-        ret = mbedtls_ssl_tls1_3_derive_secret(
-                   hash_alg,
-                   secret_old, hlen,
-                   MBEDTLS_SSL_TLS1_3_LBL_WITH_LEN( derived ),
-                   NULL, 0, /* context */
-                   MBEDTLS_SSL_TLS1_3_CONTEXT_UNHASHED,
-                   tmp_secret, hlen );
-        if( ret != 0 )
-            goto cleanup;
+        MBEDTLS_SSL_PROC_CHK(
+            mbedtls_ssl_tls1_3_derive_secret(
+                hash_alg,
+                secret_old, hlen,
+                MBEDTLS_SSL_TLS1_3_LBL_WITH_LEN( derived ),
+                NULL, 0, /* context */
+                MBEDTLS_SSL_TLS1_3_CONTEXT_UNHASHED,
+                tmp_secret, hlen ) );
     }
 
     if( input != NULL )
@@ -339,12 +338,10 @@ int mbedtls_ssl_tls1_3_evolve_secret(
     /* HKDF-Extract takes a salt and input key material.
      * The salt is the old secret, and the input key material
      * is the input secret (PSK / ECDHE). */
-    ret = mbedtls_hkdf_extract( md,
-                    tmp_secret, hlen,
-                    tmp_input, ilen,
-                    secret_new );
-    if( ret != 0 )
-        goto cleanup;
+    MBEDTLS_SSL_PROC_CHK( mbedtls_hkdf_extract( md,
+        tmp_secret, hlen,
+        tmp_input, ilen,
+        secret_new ) );
 
     ret = 0;
 

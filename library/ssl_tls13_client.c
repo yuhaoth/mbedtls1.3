@@ -211,10 +211,10 @@ static int ssl_write_early_data_prepare( mbedtls_ssl_context* ssl )
     int ret;
     mbedtls_ssl_key_set traffic_keys;
 
-    unsigned char const *psk_identity;
-    size_t psk_identity_len;
-    unsigned char const *psk;
+    const unsigned char *psk;
     size_t psk_len;
+    const unsigned char *psk_identity;
+    size_t psk_identity_len;
 
     /* From RFC 8446:
      * "The PSK used to encrypt the
@@ -268,6 +268,8 @@ static int ssl_write_early_data_prepare( mbedtls_ssl_context* ssl )
                               ssl->session_negotiate->ciphersuite,
                               &traffic_keys,
                               ssl );
+        if( ret != 0 )
+            return( ret );
 
         /* Register transform with MPS. */
         ret = mbedtls_mps_add_key_material( &ssl->mps.l4,
@@ -320,14 +322,14 @@ static int ssl_write_early_data_write( mbedtls_ssl_context* ssl,
     {
         memcpy( buf, ssl->early_data_buf, ssl->early_data_len );
 
-#if !defined(MBEDTLS_SSL_USE_MPS)
+#if defined(MBEDTLS_SSL_USE_MPS)
+        *olen = ssl->early_data_len;
+        MBEDTLS_SSL_DEBUG_BUF( 3, "Early Data", buf, ssl->early_data_len );
+#else
         buf[ssl->early_data_len] = MBEDTLS_SSL_MSG_APPLICATION_DATA;
         *olen = ssl->early_data_len + 1;
 
         MBEDTLS_SSL_DEBUG_BUF( 3, "Early Data", ssl->out_msg, *olen );
-#else
-        *olen = ssl->early_data_len;
-        MBEDTLS_SSL_DEBUG_BUF( 3, "Early Data", buf, ssl->early_data_len );
 #endif /* MBEDTLS_SSL_USE_MPS */
     }
 
@@ -829,10 +831,10 @@ int mbedtls_ssl_write_pre_shared_key_ext( mbedtls_ssl_context *ssl,
     const mbedtls_ssl_ciphersuite_t *suite_info;
     const int *ciphersuites;
     int hash_len;
-    unsigned char const *psk_identity;
-    size_t psk_identity_len;
-    unsigned char const *psk;
+    const unsigned char *psk;
     size_t psk_len;
+    const unsigned char *psk_identity;
+    size_t psk_identity_len;
 
     *total_ext_len = 0;
     *bytes_written = 0;
@@ -1987,10 +1989,11 @@ static int ssl_parse_server_psk_identity_ext( mbedtls_ssl_context *ssl,
     int ret = 0;
     size_t selected_identity;
 
-    unsigned char const *psk_identity;
-    size_t psk_identity_len;
-    unsigned char const *psk;
+    const unsigned char *psk;
     size_t psk_len;
+    const unsigned char *psk_identity;
+    size_t psk_identity_len;
+
 
     /* Check which PSK we've offered.
      *
@@ -2798,7 +2801,7 @@ static int ssl_encrypted_extensions_parse( mbedtls_ssl_context* ssl,
 
 #if defined(MBEDTLS_ZERO_RTT)
             case MBEDTLS_TLS_EXT_EARLY_DATA:
-                MBEDTLS_SSL_DEBUG_MSG(3, ( "found early data extension" ));
+                MBEDTLS_SSL_DEBUG_MSG(3, ( "found early_data extension" ));
 
                 ret = ssl_parse_encrypted_extensions_early_data_ext(
                     ssl, ext + 4, ext_size );
