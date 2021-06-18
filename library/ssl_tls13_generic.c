@@ -396,7 +396,7 @@ int mbedtls_ssl_write_signature_algorithms_ext( mbedtls_ssl_context *ssl,
 
     *olen = 6 + sig_alg_len;
 
-    ssl->handshake->extensions_present |= SIGNATURE_ALGORITHM_EXTENSION;
+    ssl->handshake->extensions_present |= MBEDTLS_SSL_EXT_SIGNATURE_ALGORITHM;
     return( 0 );
 }
 
@@ -3099,7 +3099,7 @@ int mbedtls_ssl_write_early_data_ext( mbedtls_ssl_context *ssl,
 #if defined(MBEDTLS_SSL_SRV_C)
     if( ssl->conf->endpoint == MBEDTLS_SSL_IS_SERVER )
     {
-        if( ( ssl->handshake->extensions_present & EARLY_DATA_EXTENSION ) == 0 )
+        if( ( ssl->handshake->extensions_present & MBEDTLS_SSL_EXT_EARLY_DATA ) == 0 )
             return( 0 );
 
         if( ssl->conf->key_exchange_modes != 
