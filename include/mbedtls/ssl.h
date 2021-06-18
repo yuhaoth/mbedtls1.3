@@ -167,19 +167,19 @@
 #define MBEDTLS_ERR_LAST 0x7F80 /**< This definition points to the last error code to have a correct parsing in error.c */
 
  /* List of extensions used in ssl_internal.h / extensions_present in mbedtls_ssl_handshake_params */
-#define NO_EXTENSION 0
-#define PRE_SHARED_KEY_EXTENSION 1
-#define KEY_SHARE_EXTENSION 2
-#define SIGNATURE_ALGORITHM_EXTENSION 4
-#define SUPPORTED_GROUPS_EXTENSION 8
-#define MAX_FRAGMENT_LENGTH_EXTENSION 16
-#define ALPN_EXTENSION 32
-#define SUPPORTED_VERSION_EXTENSION 64
-#define PSK_KEY_EXCHANGE_MODES_EXTENSION 128
-#define EARLY_DATA_EXTENSION 256
-#define SERVERNAME_EXTENSION 512
-#define COOKIE_EXTENSION 1024
-#define CID_EXTENSION 2048
+#define MBEDTLS_SSL_EXT_NONE                      0
+#define MBEDTLS_SSL_EXT_PRE_SHARED_KEY            1
+#define MBEDTLS_SSL_EXT_KEY_SHARE                 2
+#define MBEDTLS_SSL_EXT_SIGNATURE_ALGORITHM       4
+#define MBEDTLS_SSL_EXT_SUPPORTED_GROUPS          8
+#define MBEDTLS_SSL_EXT_MAX_FRAGMENT_LENGTH       16
+#define MBEDTLS_SSL_EXT_ALPN                      32
+#define MBEDTLS_SSL_EXT_SUPPORTED_VERSION         64
+#define MBEDTLS_SSL_EXT_PSK_KEY_EXCHANGE_MODES    128
+#define MBEDTLS_SSL_EXT_EARLY_DATA                256
+#define MBEDTLS_SSL_EXT_SERVERNAME                512
+#define MBEDTLS_SSL_EXT_COOKIE                    1024
+#define MBEDTLS_SSL_EXT_CID                       2048
 
 
 /*
