@@ -716,8 +716,8 @@ int mbedtls_ssl_parse_client_psk_identity_ext(
                         else
                         {
                             MBEDTLS_SSL_DEBUG_MSG( 3,
-                            ( "0-RTT is disabled ( diff=%d exeeds MBEDTLS_SSL_EARLY_DATA_MAX_DELAY )",
-                              diff ) );
+                            ( "0-RTT is disabled ( diff=%d exceeds "\
+                              "MBEDTLS_SSL_EARLY_DATA_MAX_DELAY )", diff ) );
                             ssl->session_negotiate->process_early_data =
                                 MBEDTLS_SSL_EARLY_DATA_DISABLED;
                             ret = MBEDTLS_ERR_SSL_SESSION_TICKET_EXPIRED;
