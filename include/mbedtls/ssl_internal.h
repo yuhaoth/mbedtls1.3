@@ -496,8 +496,6 @@ struct mbedtls_ssl_handshake_params
      * Handshake specific crypto variables
      */
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
-    int signature_scheme;                        /*!<  Signature scheme  */
-    int signature_scheme_client;  /*!<  Signature scheme to use by client-initiated CertificateVerify */
 #if defined(MBEDTLS_X509_CRT_PARSE_C)
     int *received_signature_schemes_list;              /*!<  Received signature algorithms */
 #endif /* MBEDTLS_X509_CRT_PARSE_C */
@@ -1403,7 +1401,7 @@ static inline int mbedtls_ssl_conf_tls13_0rtt_enabled( mbedtls_ssl_context *ssl 
 }
 
 int mbedtls_ssl_read_certificate_verify_process(mbedtls_ssl_context* ssl);
-int mbedtls_ssl_certificate_verify_process(mbedtls_ssl_context* ssl);
+int mbedtls_ssl_write_certificate_verify_process(mbedtls_ssl_context* ssl);
 
 int mbedtls_ssl_tls13_populate_transform( mbedtls_ssl_transform *transform,
                                           int endpoint,
@@ -1523,10 +1521,11 @@ static inline int mbedtls_ssl_get_psk( const mbedtls_ssl_context *ssl,
     return( 0 );
 }
 
-/* Check if we have any PSK to offer, and if so, return the first. */
+/* Check if we have any PSK to offer, returns 0 if PSK is available. Assign the
+   psk and ticket if pointers are present.  */
 static inline int mbedtls_ssl_get_psk_to_offer( const mbedtls_ssl_context *ssl,
-                     const unsigned char **psk, size_t *psk_len,
-                     const unsigned char **psk_identity, size_t *psk_identity_len )
+    const unsigned char **psk, size_t *psk_len,
+    const unsigned char **psk_identity, size_t *psk_identity_len )
 {
     int ptrs_present = 0;
 
@@ -1536,7 +1535,7 @@ static inline int mbedtls_ssl_get_psk_to_offer( const mbedtls_ssl_context *ssl,
         ptrs_present = 1;
     }
 
-    /* Check if a ticket has been configuredd. */
+    /* Check if a ticket has been configured. */
     if( ssl->session_negotiate != NULL         &&
         ssl->session_negotiate->ticket != NULL )
     {
