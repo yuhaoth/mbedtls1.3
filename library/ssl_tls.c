@@ -4010,10 +4010,6 @@ static void ssl_handshake_params_init( mbedtls_ssl_handshake_params *handshake )
 
     handshake->update_checksum = ssl_update_checksum_start;
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
-    handshake->signature_scheme = SIGNATURE_NONE; // initially set to zero
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
-
 #if defined(MBEDTLS_SSL_PROTO_TLS1_2) && \
     defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
     mbedtls_ssl_sig_hash_set_init( &handshake->hash_algs );
@@ -5196,7 +5192,9 @@ int mbedtls_ssl_set_hs_psk( mbedtls_ssl_context *ssl,
 
     if( psk_len > MBEDTLS_PSK_MAX_LEN )
     {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "PSK length has exceeded MBEDTLS_PSK_MAX_LEN" ) );
+        MBEDTLS_SSL_DEBUG_MSG( 1, 
+            ( "PSK length has exceeded MBEDTLS_PSK_MAX_LEN (%u)",
+              (unsigned) MBEDTLS_PSK_MAX_LEN ) );
         return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
     }
 
