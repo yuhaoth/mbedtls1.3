@@ -1538,7 +1538,7 @@ static inline int mbedtls_ssl_get_psk_to_offer( const mbedtls_ssl_context *ssl,
         if( ptrs_present )
         {
             *psk = ssl->session_negotiate->key;
-            *psk_len = ssl->session_negotiate->resumption_key_len;
+            *psk_len = ssl->session_negotiate->key_len;
             *psk_identity = ssl->session_negotiate->ticket;
             *psk_identity_len = ssl->session_negotiate->ticket_len;
         }
