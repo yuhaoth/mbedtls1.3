@@ -242,14 +242,6 @@ int mbedtls_ssl_session_copy( mbedtls_ssl_session *dst,
     /* Resumption Key */
     memcpy( dst->key, src->key, src->key_len );
 
-    if( src->ticket_nonce != NULL )
-    {
-        dst->ticket_nonce = mbedtls_calloc( 1, src->ticket_nonce_len );
-        if( dst->ticket_nonce == NULL )
-            return( MBEDTLS_ERR_SSL_ALLOC_FAILED );
-
-        memcpy( dst->ticket_nonce, src->ticket_nonce, src->ticket_nonce_len );
-    }
 #endif /* MBEDTLS_SSL_NEW_SESSION_TICKET */
 
     return( 0 );
@@ -4508,7 +4500,6 @@ int mbedtls_ssl_setup( mbedtls_ssl_context *ssl,
     /* Initialize ticket structure */
 #if defined(MBEDTLS_SSL_NEW_SESSION_TICKET) && defined(MBEDTLS_SSL_CLI_C) && defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
     ssl->session_negotiate->ticket = NULL;
-    ssl->session_negotiate->ticket_nonce_len = 0;
 #endif /* ( MBEDTLS_SSL_NEW_SESSION_TICKET && MBEDTLS_SSL_CLI_C && MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 
 #if defined(MBEDTLS_SSL_USE_MPS)
@@ -7299,10 +7290,6 @@ void mbedtls_ssl_session_free( mbedtls_ssl_session *session )
 #if( defined(MBEDTLS_SSL_SESSION_TICKETS) || ( defined(MBEDTLS_SSL_NEW_SESSION_TICKET) && defined(MBEDTLS_SSL_CLI_C) ) )
 
     mbedtls_free( session->ticket );
-
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
-    if( session->ticket_nonce_len > 0 ) mbedtls_free( session->ticket_nonce );
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 
 #endif /* MBEDTLS_SSL_SESSION_TICKETS || ( MBEDTLS_SSL_NEW_SESSION_TICKET && MBEDTLS_SSL_CLI_C ) */
 

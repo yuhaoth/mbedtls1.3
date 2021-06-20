@@ -3924,6 +3924,8 @@ static int ssl_new_session_ticket_parse( mbedtls_ssl_context* ssl,
     const mbedtls_ssl_ciphersuite_t *suite_info;
     size_t used = 0, i = 0;
     int hash_length;
+    size_t ticket_nonce_len;
+    unsigned char ticket_nonce[256];
 
     /*
      * struct {
@@ -3967,21 +3969,10 @@ static int ssl_new_session_ticket_parse( mbedtls_ssl_context* ssl,
     MBEDTLS_SSL_DEBUG_MSG( 3, ( "ticket->ticket_age_add: %u",
                                 ssl->session->ticket_age_add ) );
 
-    /* Ticket Nonce */
-    /* Check if we previously received a ticket already. If we did, then we should
-     * re-use already allocated nonce-space.
-     */
-    if( ssl->session->ticket_nonce != NULL && ssl->session->ticket_nonce_len > 0 )
-    {
-        mbedtls_free( ssl->session->ticket_nonce );
-        ssl->session->ticket_nonce = NULL;
-        ssl->session->ticket_nonce_len = 0;
-    }
-
-    ssl->session->ticket_nonce_len = buf[i];
+    ticket_nonce_len = buf[i];
     i++;
 
-    used += ssl->session->ticket_nonce_len;
+    used += ticket_nonce_len;
 
     if( used > buflen )
     {
@@ -3989,22 +3980,21 @@ static int ssl_new_session_ticket_parse( mbedtls_ssl_context* ssl,
          return( MBEDTLS_ERR_SSL_BAD_HS_NEW_SESSION_TICKET );
     }
 
-    if( ssl->session->ticket_nonce_len > 0 )
+    if( ticket_nonce_len > 0 )
     {
-        if( ( ssl->session->ticket_nonce = mbedtls_calloc( 1,
-            ssl->session->ticket_nonce_len ) ) == NULL )
+        if( ticket_nonce_len > sizeof( ticket_nonce )  )
         {
-            MBEDTLS_SSL_DEBUG_MSG( 1, ( "ticket_nonce alloc failed" ) );
-            return( MBEDTLS_ERR_SSL_ALLOC_FAILED );
+            MBEDTLS_SSL_DEBUG_MSG( 1, ( "ticket_nonce is too small" ) );
+            return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
         }
 
-        memcpy( ssl->session->ticket_nonce, &buf[i], ssl->session->ticket_nonce_len );
+        memcpy( ticket_nonce, &buf[i], ticket_nonce_len );
 
-        MBEDTLS_SSL_DEBUG_BUF( 3, "ticket->nonce:", &buf[i],
-                               ssl->session->ticket_nonce_len );
+        MBEDTLS_SSL_DEBUG_BUF( 3, "nonce:", &buf[i],
+                               ticket_nonce_len );
 
     }
-    i += ssl->session->ticket_nonce_len;
+    i += ticket_nonce_len;
 
     /* Ticket */
     ticket_len = ( (size_t) buf[i] << 8 ) | ( (size_t) buf[i + 1] );
@@ -4090,8 +4080,8 @@ static int ssl_new_session_ticket_parse( mbedtls_ssl_context* ssl,
                     ssl->session->app_secrets.resumption_master_secret,
                     hash_length,
                     MBEDTLS_SSL_TLS1_3_LBL_WITH_LEN( resumption ),
-                    ssl->session->ticket_nonce,
-                    ssl->session->ticket_nonce_len,
+                    ticket_nonce,
+                    ticket_nonce_len,
                     ssl->session->key,
                     hash_length );
 
