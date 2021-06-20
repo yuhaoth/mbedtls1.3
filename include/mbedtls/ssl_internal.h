@@ -262,6 +262,9 @@
 /* Maximum amount of early data to buffer on the server. */
 #define MBEDTLS_SSL_MAX_EARLY_DATA             1024
 
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+#define MBEDTLS_SIGNATURE_SCHEMES_SIZE         20
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 /*
  * Check that we obey the standard's message size bounds
  */
@@ -497,7 +500,7 @@ struct mbedtls_ssl_handshake_params
      */
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
 #if defined(MBEDTLS_X509_CRT_PARSE_C)
-    int *received_signature_schemes_list;              /*!<  Received signature algorithms */
+    int received_signature_schemes_list[MBEDTLS_SIGNATURE_SCHEMES_SIZE];              /*!<  Received signature algorithms */
 #endif /* MBEDTLS_X509_CRT_PARSE_C */
     mbedtls_ecp_curve_info server_preferred_curve; /*!<  Preferred curve requested by server (obtained in HelloRetryRequest  */
 #if defined(MBEDTLS_SSL_CLI_C)
