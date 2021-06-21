@@ -5784,10 +5784,10 @@ const char *mbedtls_ssl_get_version( const mbedtls_ssl_context *ssl )
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
 const char* mbedtls_ssl_get_key_exchange_name( const mbedtls_ssl_context* ssl ) {
 
-    if( ssl == NULL || ssl->session == NULL )
+    if( ssl == NULL || ssl->handshake == NULL )
         return( NULL );
 
-    switch( ssl->session->key_exchange ) {
+    switch( ssl->handshake->key_exchange ) {
 
     case MBEDTLS_KEY_EXCHANGE_PSK:
         return ( "PSK" );
@@ -5812,7 +5812,7 @@ mbedtls_key_exchange_type_t mbedtls_ssl_get_key_exchange( const mbedtls_ssl_cont
     if( ssl == NULL || ssl->session == NULL )
         return( MBEDTLS_KEY_EXCHANGE_NONE );
 
-    return ( ssl->session->key_exchange );
+    return ( ssl->handshake->key_exchange );
 }
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 #if defined(MBEDTLS_SSL_MAX_FRAGMENT_LENGTH)
