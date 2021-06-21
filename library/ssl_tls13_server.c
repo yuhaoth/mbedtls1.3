@@ -3074,9 +3074,16 @@ static int ssl_write_max_fragment_length_ext( mbedtls_ssl_context *ssl,
 {
     unsigned char *p = buf;
 
+    *olen = 0;
+	
+    if( ( ssl->handshake->extensions_present & MAX_FRAGMENT_LENGTH_EXTENSION )
+        == 0 )
+    {
+        return( 0 );
+    }
+
     if( ssl->session_negotiate->mfl_code == MBEDTLS_SSL_MAX_FRAG_LEN_NONE )
     {
-        *olen = 0;
         return( 0 );
     }
 
