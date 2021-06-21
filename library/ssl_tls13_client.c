@@ -1755,7 +1755,8 @@ static int ssl_client_hello_write_partial( mbedtls_ssl_context* ssl,
 
 #if defined(MBEDTLS_SSL_MAX_FRAGMENT_LENGTH)
     if( ( ret = ssl_write_max_fragment_length_ext( ssl, buf,
-                                                   end - buf, &cur_ext_len )  ) != 0 )
+                                                   (size_t)( end - buf ), 
+                                                   &cur_ext_len )  ) != 0 )
     {
         MBEDTLS_SSL_DEBUG_RET( 1, "ssl_write_max_fragment_length_ext", ret );
         return( ret );
