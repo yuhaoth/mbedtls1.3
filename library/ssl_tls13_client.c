@@ -2468,15 +2468,19 @@ static int ssl_certificate_request_parse( mbedtls_ssl_context* ssl,
                                           const unsigned char* buf,
                                           size_t buflen )
 {
-
     int ret;
     const unsigned char* p;
-    unsigned char* ext;
+    const unsigned char* ext;
     size_t ext_len = 0;
-    int context_len = 0;
+    size_t context_len = 0;
 
-    /* TODO: Add bounds checks! Only then remove the next line. */
-    ((void) buflen);
+    if( buflen < 1 )
+    {
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad certificate request message" ) );
+        SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_DECODE_ERROR,
+                              MBEDTLS_ERR_SSL_BAD_HS_CERTIFICATE_REQUEST );
+        return( MBEDTLS_ERR_SSL_BAD_HS_CERTIFICATE_REQUEST );
+    }
 
     /*
      * struct {
@@ -2490,7 +2494,7 @@ static int ssl_certificate_request_parse( mbedtls_ssl_context* ssl,
     /*
      * Parse certificate_request_context
      */
-    context_len = p[0];
+    context_len = (size_t) p[0];
 
     /* skip context_len */
     p++;
@@ -2502,7 +2506,7 @@ static int ssl_certificate_request_parse( mbedtls_ssl_context* ssl,
      *    3 bytes
      */
 
-    if( buflen < (size_t)( 3 + context_len ) )
+    if( buflen < (size_t) ( 3 + context_len ) )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad certificate request message" ) );
         SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_DECODE_ERROR,
@@ -2513,9 +2517,11 @@ static int ssl_certificate_request_parse( mbedtls_ssl_context* ssl,
     /* store context ( if necessary ) */
     if( context_len > 0 )
     {
-        MBEDTLS_SSL_DEBUG_BUF( 3, "Certificate Request Context", p, context_len );
+        MBEDTLS_SSL_DEBUG_BUF( 3, "Certificate Request Context",
+            p, context_len );
 
-        ssl->handshake->certificate_request_context = mbedtls_calloc( context_len, 1 );
+        ssl->handshake->certificate_request_context =
+          mbedtls_calloc( context_len, 1 );
         if( ssl->handshake->certificate_request_context == NULL )
         {
             MBEDTLS_SSL_DEBUG_MSG( 1, ( "buffer too small" ) );
@@ -2530,9 +2536,10 @@ static int ssl_certificate_request_parse( mbedtls_ssl_context* ssl,
     /*
      * Parse extensions
      */
-    ext_len = ( p[0] << 8 ) | ( p[1] );
+    ext_len = ( (size_t) p[0] << 8 ) | ( (size_t) p[1] );
 
-    /* At least one extension needs to be present, namely signature_algorithms ext. */
+    /* At least one extension needs to be present,
+     * namely signature_algorithms ext. */
     if( ext_len < 4 )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad certificate request message" ) );
@@ -2544,11 +2551,11 @@ static int ssl_certificate_request_parse( mbedtls_ssl_context* ssl,
     /* skip total extension length */
     p += 2;
 
-    ext = (unsigned char*) p; /* jump to extensions */
+    ext = p; /* jump to extensions */
     while( ext_len )
     {
-        unsigned int ext_id = ( ( ext[0] << 8 ) | ( ext[1] ) );
-        unsigned int ext_size = ( ( ext[2] << 8 ) | ( ext[3] ) );
+        size_t ext_id = ( ( size_t ) ext[0] << 8 ) | ( ( size_t ) ext[1] );
+        size_t ext_size = ( ( size_t ) ext[2] << 8 ) | ( ( size_t ) ext[3] );
 
         if( ext_size + 4 > ext_len )
         {
@@ -2560,21 +2567,25 @@ static int ssl_certificate_request_parse( mbedtls_ssl_context* ssl,
 
         switch( ext_id )
         {
-
             case MBEDTLS_TLS_EXT_SIG_ALG:
-                MBEDTLS_SSL_DEBUG_MSG( 3, ( "found signature_algorithms extension" ) );
+                MBEDTLS_SSL_DEBUG_MSG( 3,
+                    ( "found signature_algorithms extension" ) );
 
-                if( ( ret = mbedtls_ssl_parse_signature_algorithms_ext( ssl, ext + 4, (size_t)ext_size ) ) != 0 )
+                if( ( ret = mbedtls_ssl_parse_signature_algorithms_ext( ssl,
+                        ext + 4, (size_t) ext_size ) ) != 0 )
                 {
-                    MBEDTLS_SSL_DEBUG_MSG( 1, ( "mbedtls_ssl_parse_signature_algorithms_ext" ) );
-                    SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_DECODE_ERROR, ret );
+                    MBEDTLS_SSL_DEBUG_RET( 1,
+                        "mbedtls_ssl_parse_signature_algorithms_ext", ret );
+                    SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_DECODE_ERROR,
+                        ret );
                     return( ret );
                 }
                 break;
 
             default:
-                MBEDTLS_SSL_DEBUG_MSG( 3, ( "unknown extension found: %d ( ignoring )",
-                                            ext_id ) );
+                MBEDTLS_SSL_DEBUG_MSG( 3,
+                    ( "unknown extension found: %d ( ignoring )", ext_id ) );
+                break;
         }
 
         ext_len -= 4 + ext_size;

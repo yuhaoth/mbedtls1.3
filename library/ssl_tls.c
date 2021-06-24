@@ -7162,12 +7162,6 @@ void mbedtls_ssl_handshake_free( mbedtls_ssl_context *ssl )
     }
 #endif
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
-#if defined(MBEDTLS_X509_CRT_PARSE_C)
-    mbedtls_free( handshake->received_signature_schemes_list );
-#endif /* MBEDTLS_X509_CRT_PARSE_C */
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
-
 #if defined(MBEDTLS_X509_CRT_PARSE_C) && \
     defined(MBEDTLS_SSL_SERVER_NAME_INDICATION)
     /*
