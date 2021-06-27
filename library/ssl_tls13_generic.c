@@ -447,6 +447,8 @@ int mbedtls_ssl_parse_signature_algorithms_ext( mbedtls_ssl_context *ssl,
     if( common_idx == 0 )
     {
         MBEDTLS_SSL_DEBUG_MSG( 3, ( "no signature algorithm in common" ) );
+        SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_HANDSHAKE_FAILURE,
+                              MBEDTLS_ERR_SSL_NO_USABLE_CIPHERSUITE );
         return( MBEDTLS_ERR_SSL_NO_USABLE_CIPHERSUITE );
     }
 
