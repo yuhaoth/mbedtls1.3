@@ -4378,16 +4378,6 @@ const char *mbedtls_ssl_get_ciphersuite( const mbedtls_ssl_context *ssl );
 */
 mbedtls_key_exchange_type_t mbedtls_ssl_get_key_exchange(const mbedtls_ssl_context* ssl);
 
-/**
-* \brief          Return the string identifying the negotiated key exchange mode
-*
-* \param ssl      SSL context
-*
-* \return         string identifying the key exchange mode
-*/
-
-const char* mbedtls_ssl_get_key_exchange_name(const mbedtls_ssl_context* ssl);
-
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 
 /**

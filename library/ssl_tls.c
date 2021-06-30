@@ -5782,31 +5782,6 @@ const char *mbedtls_ssl_get_version( const mbedtls_ssl_context *ssl )
 }
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
-const char* mbedtls_ssl_get_key_exchange_name( const mbedtls_ssl_context* ssl ) {
-
-    if( ssl == NULL || ssl->handshake == NULL )
-        return( NULL );
-
-    switch( ssl->handshake->key_exchange ) {
-
-    case MBEDTLS_KEY_EXCHANGE_PSK:
-        return ( "PSK" );
-        break;
-
-    case MBEDTLS_KEY_EXCHANGE_ECDHE_PSK:
-        return ( "ECDHE-PSK" );
-        break;
-
-    case MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA:
-        return ( "ECDHE-ECDSA" );
-        break;
-
-    default:
-        return ( "Unknown" );
-    }
-
-}
-
 mbedtls_key_exchange_type_t mbedtls_ssl_get_key_exchange( const mbedtls_ssl_context* ssl )
 {
     if( ssl == NULL || ssl->session == NULL )
