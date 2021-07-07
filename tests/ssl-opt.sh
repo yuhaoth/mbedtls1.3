@@ -1499,7 +1499,7 @@ run_test    "TLS 1.3, TLS_AES_256_GCM_SHA384, ext PSK, early data" \
             "$P_SRV nbio=2 debug_level=5 force_version=tls1_3 early_data=-1 key_exchange_modes=psk psk=010203 psk_identity=0a0b0c" \
             "$P_CLI nbio=2 debug_level=5 force_version=tls1_3 force_ciphersuite=TLS_AES_256_GCM_SHA384 key_exchange_modes=psk early_data=1 psk=010203 psk_identity=0a0b0c" \
             0 \
-        -s "found early_data extension"                 \
+	    -s "found early_data extension"                 \
 	    -s "Derive Early Secret with 'ext binder'"      \
 	    -c "client hello, adding early_data extension"  \
             -c "Protocol is TLSv1.3"                        \
@@ -1576,27 +1576,6 @@ run_test    "TLS 1.3, TLS_AES_256_GCM_SHA384, ECDHE-ECDSA, client tries early da
       -c "Protocol is TLSv1.3"                                        \
       -c "Ciphersuite is TLS_AES_256_GCM_SHA384"                      \
       -c "early data status = 0"
-
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
-requires_config_enabled MBEDTLS_DEBUG_C
-requires_config_disabled MBEDTLS_RSA_C
-requires_config_enabled MBEDTLS_ZERO_RTT
-run_test    "TLS 1.3, Multiple cipher suites, early data off" \
-            "$P_SRV nbio=2 debug_level=4 force_version=tls1_3" \
-            "$P_CLI nbio=2 debug_level=4 force_version=tls1_3 early_data=0" \
-            0 \
-        -c "client hello, add ciphersuite: 1302, TLS_AES_256_GCM_SHA384" \
-        -c "client hello, add ciphersuite: 1301, TLS_AES_128_GCM_SHA256"
-
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
-requires_config_enabled MBEDTLS_DEBUG_C
-requires_config_disabled MBEDTLS_RSA_C
-requires_config_enabled MBEDTLS_ZERO_RTT
-run_test    "TLS 1.3, Single cipher suite, ext PSK, early data" \
-            "$P_SRV nbio=2 debug_level=5 force_version=tls1_3 early_data=-1 key_exchange_modes=psk psk=010203 psk_identity=0a0b0c" \
-            "$P_CLI nbio=2 debug_level=5 force_version=tls1_3 key_exchange_modes=psk early_data=1 psk=010203 psk_identity=0a0b0c" \
-            0 \
-        -c "client hello, got 1 ciphersuites"
 
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
 requires_config_enabled MBEDTLS_DEBUG_C
