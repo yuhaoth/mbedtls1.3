@@ -831,7 +831,7 @@ struct mbedtls_ssl_handshake_params
 
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER) 
+#if defined(MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER)
     size_t pmslen;                                          /*!<  premaster length        */
     unsigned char premaster[MBEDTLS_PREMASTER_SIZE];        /*!<  premaster secret        */
 #endif /* defined(MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER) */
@@ -1162,7 +1162,62 @@ void mbedtls_ssl_handshake_wrapup( mbedtls_ssl_context *ssl );
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
 void mbedtls_ssl_handshake_wrapup_tls13( mbedtls_ssl_context *ssl );
+int mbedtls_ssl_handshake_client_step_tls1_3( mbedtls_ssl_context *ssl );
+int mbedtls_ssl_handshake_server_step_tls1_3( mbedtls_ssl_context *ssl );
 #endif
+
+/**
+ * To let TLS1.2 and TLS1.3 work together, we divide the task into two steps.
+ * Below inline functions are required by first step.
+ * 1. Configured as TLS1.2 or TLS1.3. Identify the protocol version based on configuration field.
+ * 2. Configured as TLS1.2 and TLS1.3. Identify the protocal version based on runtime parameter.
+ */
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+static inline int is_configured_as_tls1_3(const mbedtls_ssl_config *conf)
+{
+#if defined(MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER)
+    if(conf->max_major_ver==MBEDTLS_SSL_MAJOR_VERSION_3
+        && conf->min_major_ver == MBEDTLS_SSL_MAJOR_VERSION_3
+        && conf->max_minor_ver == MBEDTLS_SSL_MINOR_VERSION_4
+        && conf->min_minor_ver == MBEDTLS_SSL_MINOR_VERSION_4)
+        return( 1 );
+    return( 0 );
+#else /* defined(MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER) */
+    (( void )conf);
+    return( 1 );
+#endif /* defined(MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER) */
+}
+#endif /* defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) */
+
+#if defined(MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER)
+static inline int is_configured_as_tls1_2_or_earlier(const mbedtls_ssl_config *conf)
+{
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+    if(conf->max_major_ver<=MBEDTLS_SSL_MAX_MAJOR_VERSION
+        && conf->min_major_ver >= MBEDTLS_SSL_MIN_MAJOR_VERSION
+        && conf->max_minor_ver <= MBEDTLS_SSL_MINOR_VERSION_3
+        && conf->min_minor_ver >= MBEDTLS_SSL_MINOR_VERSION_0)
+        return( 1 );
+    return( 0 );
+#else /* defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) */
+    (( void )conf);
+    return( 1 );
+#endif /* defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) */
+}
+#endif /* defined(MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER) */
+
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) \
+    && defined(MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER)
+static inline int is_verion_config_unavailable(const mbedtls_ssl_config *conf)
+{
+    if(is_configured_as_tls1_2_or_earlier(conf))
+        return 0;
+    if(is_configured_as_tls1_3(conf))
+        return 0;
+    return 1;
+}
+#endif /* defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) \
+          && defined(MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER) */
 
 int mbedtls_ssl_handle_pending_alert( mbedtls_ssl_context *ssl );
 
