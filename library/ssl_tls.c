@@ -6914,7 +6914,7 @@ int mbedtls_ssl_handshake( mbedtls_ssl_context *ssl )
     while( ssl->state != MBEDTLS_SSL_HANDSHAKE_OVER )
     {
         ret = mbedtls_ssl_handshake_step( ssl );
-        if( ret != 0 )
+        if( ret != 0 && ret != MBEDTLS_ERR_SSL_WANT_WRITE && ret != MBEDTLS_ERR_SSL_WANT_READ )
         {
 #if defined(MBEDTLS_SSL_USE_MPS)
             mbedtls_mps_blocking_reason_t blocking_reason;
