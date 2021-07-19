@@ -2215,7 +2215,7 @@ int mbedtls_ssl_tls13_populate_transform( mbedtls_ssl_transform *transform,
     return( 0 );
 }
 
-void mbedtls_ssl_handshake_wrapup( mbedtls_ssl_context *ssl )
+void mbedtls_ssl_handshake_wrapup_tls13( mbedtls_ssl_context *ssl )
 {
 
     MBEDTLS_SSL_DEBUG_MSG( 3, ( "=> handshake wrapup" ) );
