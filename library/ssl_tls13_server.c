@@ -2111,7 +2111,7 @@ static int ssl_client_hello_fetch( mbedtls_ssl_context* ssl,
                 return( MBEDTLS_ERR_SSL_DECODE_ERROR );
             }
 
-            MBEDTLS_SSL_DEBUG_MSG( 3, ( "CCS, message len.: %d", msg_len ) );
+            MBEDTLS_SSL_DEBUG_MSG( 3, ( "CCS, message len.: %" MBEDTLS_PRINTF_SIZET , msg_len ) );
 
             if( ( ret = mbedtls_ssl_fetch_input( ssl,
                             mbedtls_ssl_hdr_len( ssl ) + msg_len ) ) != 0 )

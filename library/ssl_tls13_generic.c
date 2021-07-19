@@ -326,7 +326,7 @@ int mbedtls_ssl_write_signature_algorithms_ext( mbedtls_ssl_context *ssl,
 {
     unsigned char *p = buf;
     size_t sig_alg_len = 0;
-    const int *md;
+    const int *sig_alg;
     unsigned char *sig_alg_list = buf + 6;
 
     *olen = 0;
@@ -346,7 +346,7 @@ int mbedtls_ssl_write_signature_algorithms_ext( mbedtls_ssl_context *ssl,
     /*
      * Determine length of the signature scheme list
      */
-    for ( md = ssl->conf->sig_hashes; *md != SIGNATURE_NONE; md++ )
+    for ( sig_alg = ssl->conf->tls13_sig_algs; *sig_alg != SIGNATURE_NONE; sig_alg++ )
     {
         sig_alg_len += 2;
     }
@@ -367,11 +367,11 @@ int mbedtls_ssl_write_signature_algorithms_ext( mbedtls_ssl_context *ssl,
      * Write signature schemes
      */
 
-    for ( md = ssl->conf->sig_hashes; *md != SIGNATURE_NONE; md++ )
+    for ( sig_alg = ssl->conf->tls13_sig_algs; *sig_alg != SIGNATURE_NONE; sig_alg++ )
     {
-        *sig_alg_list++ = (unsigned char)( ( *md >> 8 ) & 0xFF );
-        *sig_alg_list++ = (unsigned char)( ( *md ) & 0xFF );
-        MBEDTLS_SSL_DEBUG_MSG( 3, ( "signature scheme [%x]", *md ) );
+        *sig_alg_list++ = (unsigned char)( ( *sig_alg >> 8 ) & 0xFF );
+        *sig_alg_list++ = (unsigned char)( ( *sig_alg ) & 0xFF );
+        MBEDTLS_SSL_DEBUG_MSG( 3, ( "signature scheme [%x]", *sig_alg ) );
     }
 
     /*
@@ -400,7 +400,7 @@ int mbedtls_ssl_parse_signature_algorithms_ext( mbedtls_ssl_context *ssl,
     size_t sig_alg_list_size; /* size of receive signature algorithms list */
     const unsigned char *p; /* pointer to individual signature algorithm */
     const unsigned char *end = buf + buf_len; /* end of buffer */
-    const int *md_cur; /* iterate through configured signature schemes */
+    const int *sig_alg; /* iterate through configured signature schemes */
     int signature_scheme; /* store received signature algorithm scheme */
     uint32_t common_idx = 0; /* iterate through received_signature_schemes_list */
 
@@ -426,9 +426,9 @@ int mbedtls_ssl_parse_signature_algorithms_ext( mbedtls_ssl_context *ssl,
 
         MBEDTLS_SSL_DEBUG_MSG( 4, ( "received signature algorithm: 0x%x", signature_scheme ) );
 
-        for( md_cur = ssl->conf->sig_hashes; *md_cur != SIGNATURE_NONE; md_cur++ )
+        for( sig_alg = ssl->conf->tls13_sig_algs; *sig_alg != SIGNATURE_NONE; sig_alg++ )
         {
-            if( *md_cur == signature_scheme )
+            if( *sig_alg == signature_scheme )
             {
                 ssl->handshake->received_signature_schemes_list[common_idx] = signature_scheme;
                 common_idx++;
@@ -2739,13 +2739,14 @@ void mbedtls_ssl_conf_early_data( mbedtls_ssl_config* conf, int early_data,
 }
 #endif /* MBEDTLS_ZERO_RTT */
 
-#if defined(MBEDTLS_X509_CRT_PARSE_C)
+#if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
 void mbedtls_ssl_conf_signature_algorithms( mbedtls_ssl_config *conf,
                      const int* sig_algs )
 {
-    conf->sig_hashes = sig_algs;
+    /* TODO: Add available algorithm check */
+    conf->tls13_sig_algs = sig_algs;
 }
-#endif /* MBEDTLS_X509_CRT_PARSE_C */
+#endif /* MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED */
 
 /* Early Data Extension
  *

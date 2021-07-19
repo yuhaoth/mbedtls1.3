@@ -4593,7 +4593,8 @@ void mbedtls_ssl_conf_dhm_min_bitlen( mbedtls_ssl_config *conf,
 }
 #endif /* MBEDTLS_DHM_C && MBEDTLS_SSL_CLI_C */
 
-#if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
+#if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED) \
+    && defined(MBEDTLS_SSL_PROTO_TLS1_2)
 /*
  * Set allowed/preferred hashes for handshake signatures
  */
@@ -4602,7 +4603,8 @@ void mbedtls_ssl_conf_sig_hashes( mbedtls_ssl_config *conf,
 {
     conf->sig_hashes = hashes;
 }
-#endif /* MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED */
+#endif /* MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED \
+          && MBEDTLS_SSL_PROTO_TLS1_2 */
 
 #if defined(MBEDTLS_ECP_C)
 /*
@@ -7284,7 +7286,7 @@ static int ssl_preset_suiteb_hashes[] = {
           MBEDTLS_SSL_PROTO_TLS1_2 */
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && defined(MBEDTLS_ECDSA_C)
-static int ssl_preset_suiteb_signature_algorithms_tls13[] = {
+static int ssl_preset_suiteb_signature_algorithms[] = {
 #if defined(MBEDTLS_SHA256_C) && defined(MBEDTLS_ECP_DP_SECP256R1_ENABLED)
     SIGNATURE_ECDSA_SECP256r1_SHA256,
 #endif /* MBEDTLS_SHA256_C && MBEDTLS_ECP_DP_SECP256R1_ENABLED */
@@ -7415,14 +7417,21 @@ int mbedtls_ssl_config_defaults( mbedtls_ssl_config *conf,
 #endif
 
 #if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
-#if defined(MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER)
-            /* TLS 1.3 re-interprets the signature algorithms
-             * and therefore we cannot include both.
-             */
-        conf->sig_hashes = ssl_preset_suiteb_hashes;
-#else /* defined(MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER) */
-         conf->sig_hashes = ssl_preset_suiteb_signature_algorithms_tls13;
-#endif /* !defined(MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER) */
+
+
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+    /**
+     * TLS 1.3 replaces SignatureAndHashAlgorithm with SignatureScheme.
+     * - rfc8446 section-4.2.3
+     * - rfc5246 section-7.4.1.4.1
+     */
+    conf->tls13_sig_algs = ssl_preset_suiteb_signature_algorithms;
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+
+#if  defined(MBEDTLS_SSL_PROTO_TLS1_2)
+    conf->sig_hashes = ssl_preset_suiteb_hashes;
+#endif /* MBEDTLS_SSL_PROTO_TLS1_2 */
+
 #endif /* MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED */
 
 #if defined(MBEDTLS_ECP_C)
@@ -7460,13 +7469,22 @@ int mbedtls_ssl_config_defaults( mbedtls_ssl_config *conf,
 #endif
 
 #if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
-#if defined(MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER)
-        conf->sig_hashes = ssl_preset_default_hashes;
-#else   /* defined(MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER) */
-        conf->sig_hashes = ssl_preset_suiteb_signature_algorithms_tls13;
-#endif /* !defined(MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER) */
 
-#endif
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+        /**
+         * TLS 1.3 replaces SignatureAndHashAlgorithm with SignatureScheme.
+         * - rfc8446 section-4.2.3
+         * - rfc5246 section-7.4.1.4.1
+         */
+        conf->tls13_sig_algs = ssl_preset_suiteb_signature_algorithms;
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+
+#if defined(MBEDTLS_SSL_PROTO_TLS1_2)
+        conf->sig_hashes = ssl_preset_default_hashes;
+#endif /* MBEDTLS_SSL_PROTO_TLS1_2 */
+
+#endif /* MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED */
+
 #if defined(MBEDTLS_ECP_C)
             conf->curve_list = ssl_preset_default_curves;
 #endif
@@ -7706,7 +7724,8 @@ int mbedtls_ssl_check_curve( const mbedtls_ssl_context *ssl, mbedtls_ecp_group_i
 }
 #endif /* MBEDTLS_ECP_C */
 
-#if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
+#if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED) \
+    && defined(MBEDTLS_SSL_PROTO_TLS1_2)
 /*
  * Check if a hash proposed by the peer is in our list.
  * Return 0 if we're willing to use it, -1 otherwise.
@@ -7715,6 +7734,7 @@ int mbedtls_ssl_check_curve( const mbedtls_ssl_context *ssl, mbedtls_ecp_group_i
  * SIGNATURE_NONE or with MBEDTLS_MD_NONE and both
  * equal 0x0.
  */
+
 int mbedtls_ssl_check_sig_hash( const mbedtls_ssl_context *ssl,
                                 mbedtls_md_type_t md )
 {
@@ -7729,7 +7749,7 @@ int mbedtls_ssl_check_sig_hash( const mbedtls_ssl_context *ssl,
 
     return( -1 );
 }
-#endif /* MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED */
+#endif /* MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED && MBEDTLS_SSL_PROTO_TLS1_2 */
 
 #if defined(MBEDTLS_X509_CRT_PARSE_C)
 int mbedtls_ssl_check_cert_usage( const mbedtls_x509_crt* cert,
