@@ -8217,14 +8217,23 @@ int mbedtls_ssl_config_defaults( mbedtls_ssl_config *conf,
 #endif
 
 #if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
-#if defined(MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER)
-            /* TLS 1.3 re-interprets the signature algorithms
-             * and therefore we cannot include both.
-             */
+
+#if defined(MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER) && defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+    if(conf->max_minor_ver==MBEDTLS_SSL_MINOR_VERSION_4 
+        && conf->min_minor_ver == MBEDTLS_SSL_MINOR_VERSION_4)
+        /* TLS 1.3 re-interprets the signature algorithms
+         * and therefore we cannot include both.
+         */
+        conf->sig_hashes = ssl_preset_suiteb_signature_algorithms_tls13;
+    else
         conf->sig_hashes = ssl_preset_suiteb_hashes;
-#else /* defined(MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER) */
-         conf->sig_hashes = ssl_preset_suiteb_signature_algorithms_tls13;
+
+#elif  defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+    conf->sig_hashes = ssl_preset_suiteb_signature_algorithms_tls13;
+#elif  defined(MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER)
+    conf->sig_hashes = ssl_preset_suiteb_hashes;
 #endif /* !defined(MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER) */
+
 #endif /* MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED */
 
 #if defined(MBEDTLS_ECP_C)
@@ -8274,13 +8283,21 @@ int mbedtls_ssl_config_defaults( mbedtls_ssl_config *conf,
 #endif
 
 #if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
-#if defined(MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER)
-        conf->sig_hashes = ssl_preset_default_hashes;
-#else   /* defined(MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER) */
+
+#if defined(MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER) && defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+        if(conf->max_minor_ver==MBEDTLS_SSL_MINOR_VERSION_4 
+            && conf->min_minor_ver == MBEDTLS_SSL_MINOR_VERSION_4)
+            conf->sig_hashes = ssl_preset_suiteb_signature_algorithms_tls13;
+        else
+            conf->sig_hashes = ssl_preset_default_hashes;
+#elif defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
         conf->sig_hashes = ssl_preset_suiteb_signature_algorithms_tls13;
-#endif /* !defined(MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER) */
+#elif defined(MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER)
+        conf->sig_hashes = ssl_preset_default_hashes;
+#endif /* defined(MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER) */
 
 #endif
+
 #if defined(MBEDTLS_ECP_C)
             conf->curve_list = mbedtls_ecp_grp_id_list();
 #endif
