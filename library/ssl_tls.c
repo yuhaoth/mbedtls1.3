@@ -6407,9 +6407,6 @@ static int ssl_session_load( mbedtls_ssl_session *session,
     const unsigned char *p = buf;
     const unsigned char * const end = buf + len;
     int minor_ver = 0;
-#if defined(MBEDTLS_HAVE_TIME) && defined(MBEDTLS_SSL_SESSION_TICKETS)
-    uint64_t start;
-#endif /* MBEDTLS_HAVE_TIME && MBEDTLS_SSL_SESSION_TICKETS */
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER)
 #if defined(MBEDTLS_X509_CRT_PARSE_C)
@@ -6448,7 +6445,7 @@ static int ssl_session_load( mbedtls_ssl_session *session,
         if( 8 > (size_t)( end - p ) )
             return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
 
-        session->start =
+        session->start = (mbedtls_time_t)(
                 ( (uint64_t) p[0] << 56 ) |
                 ( (uint64_t) p[1] << 48 ) |
                 ( (uint64_t) p[2] << 40 ) |
@@ -6456,7 +6453,7 @@ static int ssl_session_load( mbedtls_ssl_session *session,
                 ( (uint64_t) p[4] << 24 ) |
                 ( (uint64_t) p[5] << 16 ) |
                 ( (uint64_t) p[6] <<  8 ) |
-                ( (uint64_t) p[7]       );
+                ( (uint64_t) p[7]       ));
         p += 8;
 #endif /* MBEDTLS_HAVE_TIME */
 
@@ -6549,17 +6546,17 @@ static int ssl_session_load( mbedtls_ssl_session *session,
         if( 8 > (size_t)( end - p ) )
             return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
 
-        start = ( (uint64_t) p[0] << 56 ) |
+        session->start = (mbedtls_time_t)(
+                ( (uint64_t) p[0] << 56 ) |
                 ( (uint64_t) p[1] << 48 ) |
                 ( (uint64_t) p[2] << 40 ) |
                 ( (uint64_t) p[3] << 32 ) |
                 ( (uint64_t) p[4] << 24 ) |
                 ( (uint64_t) p[5] << 16 ) |
                 ( (uint64_t) p[6] <<  8 ) |
-                ( (uint64_t) p[7]       );
+                ( (uint64_t) p[7]       ));
         p += 8;
 
-        session->start = (time_t) start;
 #endif /* MBEDTLS_HAVE_TIME */
 
         /*
