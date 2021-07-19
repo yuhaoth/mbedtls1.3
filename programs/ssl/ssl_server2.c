@@ -3781,9 +3781,10 @@ int main( int argc, char *argv[] )
                 mbedtls_printf( " failed\n  ! mbedtls_ssl_cookie_setup returned %d\n\n", ret );
                 goto exit;
             }
-
+#if defined(MBEDTLS_SSL_DTLS_HELLO_VERIFY)
             mbedtls_ssl_conf_dtls_cookies( &conf, mbedtls_ssl_cookie_write, mbedtls_ssl_cookie_check,
                                        &cookie_ctx );
+#endif /* defined(MBEDTLS_SSL_DTLS_HELLO_VERIFY) */
         }
         else
 #endif /* MBEDTLS_SSL_COOKIE_C */
