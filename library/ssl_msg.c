@@ -6486,27 +6486,6 @@ int mbedtls_ssl_close_notify( mbedtls_ssl_context *ssl )
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_2)
 
-void mbedtls_ssl_transform_free( mbedtls_ssl_transform *transform )
-{
-    if( transform == NULL )
-        return;
-
-#if defined(MBEDTLS_ZLIB_SUPPORT)
-    deflateEnd( &transform->ctx_deflate );
-    inflateEnd( &transform->ctx_inflate );
-#endif
-
-    mbedtls_cipher_free( &transform->cipher_ctx_enc );
-    mbedtls_cipher_free( &transform->cipher_ctx_dec );
-
-#if defined(MBEDTLS_SSL_SOME_MODES_USE_MAC)
-    mbedtls_md_free( &transform->md_ctx_enc );
-    mbedtls_md_free( &transform->md_ctx_dec );
-#endif
-
-    mbedtls_platform_zeroize( transform, sizeof( mbedtls_ssl_transform ) );
-}
-
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
 
 void mbedtls_ssl_buffering_free( mbedtls_ssl_context *ssl )
@@ -6602,6 +6581,27 @@ void mbedtls_ssl_read_version( int *major, int *minor, int transport,
         *major = ver[0];
         *minor = ver[1];
     }
+}
+
+void mbedtls_ssl_transform_free( mbedtls_ssl_transform *transform )
+{
+    if( transform == NULL )
+        return;
+
+#if defined(MBEDTLS_ZLIB_SUPPORT)
+    deflateEnd( &transform->ctx_deflate );
+    inflateEnd( &transform->ctx_inflate );
+#endif
+
+    mbedtls_cipher_free( &transform->cipher_ctx_enc );
+    mbedtls_cipher_free( &transform->cipher_ctx_dec );
+
+#if defined(MBEDTLS_SSL_SOME_MODES_USE_MAC)
+    mbedtls_md_free( &transform->md_ctx_enc );
+    mbedtls_md_free( &transform->md_ctx_dec );
+#endif
+
+    mbedtls_platform_zeroize( transform, sizeof( mbedtls_ssl_transform ) );
 }
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
