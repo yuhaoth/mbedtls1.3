@@ -5858,6 +5858,12 @@ static int ssl_handle_hs_message_post_handshake_tls12( mbedtls_ssl_context *ssl 
      * - For server-side, expect CLIENT_HELLO.
      * - Fail (TLS) or silently drop record (DTLS) in other cases.
      */
+#if defined(MBEDTLS_SSL_RENEGOTIATION) \
+    || defined(MBEDTLS_SSL_PROTO_TLS1) \
+    || defined(MBEDTLS_SSL_PROTO_TLS1_1) \
+    || defined(MBEDTLS_SSL_PROTO_TLS1_2)
+    int ret;
+#endif /* defined(MBEDTLS_SSL_RENEGOTIATION) */
 
 #if defined(MBEDTLS_SSL_CLI_C)
     if( ssl->conf->endpoint == MBEDTLS_SSL_IS_CLIENT &&

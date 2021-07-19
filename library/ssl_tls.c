@@ -6429,7 +6429,8 @@ static int ssl_session_load( mbedtls_ssl_session *session,
     const unsigned char *p = buf;
     const unsigned char * const end = buf + len;
     int minor_ver = 0;
-#if defined(MBEDTLS_HAVE_TIME) && defined(MBEDTLS_SSL_SESSION_TICKETS)
+#if defined(MBEDTLS_HAVE_TIME)  \
+    && defined(MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER)
     uint64_t start;
 #endif /* MBEDTLS_HAVE_TIME && MBEDTLS_SSL_SESSION_TICKETS */
 
