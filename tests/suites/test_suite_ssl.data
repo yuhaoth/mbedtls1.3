@@ -651,15 +651,19 @@ SSL SET_HOSTNAME memory leak: call ssl_set_hostname twice
 ssl_set_hostname_twice:"server0":"server1"
 
 SSL session serialization: Wrong major version
+depends_on:!MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
 ssl_session_serialize_version_check:1:0:0:0
 
 SSL session serialization: Wrong minor version
+depends_on:!MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
 ssl_session_serialize_version_check:0:1:0:0
 
 SSL session serialization: Wrong patch version
+depends_on:!MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
 ssl_session_serialize_version_check:0:0:1:0
 
 SSL session serialization: Wrong config
+depends_on:!MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
 ssl_session_serialize_version_check:0:0:0:1
 
 Record crypt, AES-128-CBC, 1.2, SHA-384
