@@ -1575,10 +1575,16 @@ struct mbedtls_ssl_context
     mbedtls_ssl_transform *transform_in;        /*!<  current transform params (in)   */
     mbedtls_ssl_transform *transform_out;       /*!<  current transform params (in)   */
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER)
+#if defined(MBEDTLS_SSL_PROTO_SSL3)   ||                              \
+    defined(MBEDTLS_SSL_PROTO_TLS1)   ||                              \
+    defined(MBEDTLS_SSL_PROTO_TLS1_1) ||                              \
+    defined(MBEDTLS_SSL_PROTO_TLS1_2)
     mbedtls_ssl_transform *transform;           /*!<  negotiated transform params     */
     mbedtls_ssl_transform *transform_negotiate; /*!<  transform params in negotiation */
-#endif /* MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER */
+#endif /* defined(MBEDTLS_SSL_PROTO_SSL3)   ||                              \
+    defined(MBEDTLS_SSL_PROTO_TLS1)   ||                              \
+    defined(MBEDTLS_SSL_PROTO_TLS1_1) ||                              \
+    defined(MBEDTLS_SSL_PROTO_TLS1_2) */
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
     mbedtls_ssl_transform *transform_handshake;
