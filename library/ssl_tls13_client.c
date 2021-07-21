@@ -2405,8 +2405,8 @@ static int ssl_certificate_request_coordinate( mbedtls_ssl_context* ssl )
 {
     int ret;
 
-    if( ssl->session_negotiate->key_exchange == MBEDTLS_KEY_EXCHANGE_PSK ||
-        ssl->session_negotiate->key_exchange == MBEDTLS_KEY_EXCHANGE_ECDHE_PSK )
+    if( ssl->handshake->key_exchange == MBEDTLS_KEY_EXCHANGE_PSK ||
+        ssl->handshake->key_exchange == MBEDTLS_KEY_EXCHANGE_ECDHE_PSK )
     {
         MBEDTLS_SSL_DEBUG_MSG( 3, ( "<= skip parse certificate request" ) );
         return( SSL_CERTIFICATE_REQUEST_SKIP );
