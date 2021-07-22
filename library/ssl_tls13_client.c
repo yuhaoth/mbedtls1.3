@@ -3929,15 +3929,28 @@ static int ssl_new_session_ticket_early_data_ext_parse( mbedtls_ssl_context* ssl
                                                         const unsigned char* buf,
                                                         size_t ext_size )
 {
+    /* From RFC 8446:
+     *
+     * struct {
+     *         select (Handshake.msg_type) {
+     *            case new_session_ticket:   uint32 max_early_data_size;
+     *            case client_hello:         Empty;
+     *            case encrypted_extensions: Empty;
+     *        };
+     *    } EarlyDataIndication;
+     */
+
     if( ext_size == 4 && ssl->session != NULL )
     {
-	    ssl->session->max_early_data_size =
+        ssl->session->max_early_data_size =
             ( (uint32_t) buf[0] << 24 ) | ( (uint32_t) buf[1] << 16 ) |
             ( (uint32_t) buf[2] << 8  ) | ( (uint32_t) buf[3] );
-        MBEDTLS_SSL_DEBUG_MSG( 3, ( "ticket->max_early_data_size: %u", ssl->session->max_early_data_size ) );
+        MBEDTLS_SSL_DEBUG_MSG( 3, ( "ticket->max_early_data_size: %u",
+                                    ssl->session->max_early_data_size ) );
         ssl->session->ticket_flags |= allow_early_data;
         return( 0 );
     }
+
     return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
 }
 
@@ -3946,31 +3959,45 @@ static int ssl_new_session_ticket_extensions_parse( mbedtls_ssl_context* ssl,
                                                     size_t buf_remain )
 {
     int ret;
+    unsigned int ext_id;
+    size_t ext_size;
+
     while( buf_remain != 0 )
     {
         if( buf_remain < 4 )
         {
+            /* TODO: Replace with DECODE_ERROR once we have merged 3.0 */
             return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
         }
 
-        unsigned int ext_id = ( ( buf[0] << 8 ) | ( buf[1] ) );
-        size_t ext_size = ( ( buf[2] << 8 ) | ( buf[3] ) );
-        if( ext_size > buf_remain - 4 )
+        ext_id   = ( ( (unsigned) buf[0] << 8 ) | ( (unsigned) buf[1] ) );
+        ext_size = ( ( (size_t)   buf[2] << 8 ) | ( (size_t)   buf[3] ) );
+
+        buf        += 4;
+        buf_remain -= 4;
+
+        if( ext_size > buf_remain )
         {
+            /* TODO: Replace with DECODE_ERROR once we have merged 3.0 */
             return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
         }
 
         if( ext_id == MBEDTLS_TLS_EXT_EARLY_DATA )
         {
-            if( ( ret = ssl_new_session_ticket_early_data_ext_parse( ssl, &buf[4], ext_size ) ) != 0 )
+            ret = ssl_new_session_ticket_early_data_ext_parse( ssl, buf,
+                                                               ext_size );
+            if( ret != 0 )
             {
                 MBEDTLS_SSL_DEBUG_RET( 1, "ssl_new_session_ticket_early_data_ext_parse", ret );
                 return( ret );
             }
         }
-        buf += 4 + ext_size;
-        buf_remain -= 4 + ext_size;
+        /* Ignore other extensions */
+
+        buf        += ext_size;
+        buf_remain -= ext_size;
     }
+
     return( 0 );
 }
 
