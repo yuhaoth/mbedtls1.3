@@ -3925,6 +3925,82 @@ static int ssl_new_session_ticket_fetch( mbedtls_ssl_context* ssl,
 }
 #endif /* MBEDTLS_SSL_USE_MPS */
 
+static int ssl_new_session_ticket_early_data_ext_parse( mbedtls_ssl_context* ssl,
+                                                        const unsigned char* buf,
+                                                        size_t ext_size )
+{
+    /* From RFC 8446:
+     *
+     * struct {
+     *         select (Handshake.msg_type) {
+     *            case new_session_ticket:   uint32 max_early_data_size;
+     *            case client_hello:         Empty;
+     *            case encrypted_extensions: Empty;
+     *        };
+     *    } EarlyDataIndication;
+     */
+
+    if( ext_size == 4 && ssl->session != NULL )
+    {
+        ssl->session->max_early_data_size =
+            ( (uint32_t) buf[0] << 24 ) | ( (uint32_t) buf[1] << 16 ) |
+            ( (uint32_t) buf[2] << 8  ) | ( (uint32_t) buf[3] );
+        MBEDTLS_SSL_DEBUG_MSG( 3, ( "ticket->max_early_data_size: %u",
+                                    ssl->session->max_early_data_size ) );
+        ssl->session->ticket_flags |= allow_early_data;
+        return( 0 );
+    }
+
+    return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
+}
+
+static int ssl_new_session_ticket_extensions_parse( mbedtls_ssl_context* ssl,
+                                                    const unsigned char* buf,
+                                                    size_t buf_remain )
+{
+    int ret;
+    unsigned int ext_id;
+    size_t ext_size;
+
+    while( buf_remain != 0 )
+    {
+        if( buf_remain < 4 )
+        {
+            /* TODO: Replace with DECODE_ERROR once we have merged 3.0 */
+            return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
+        }
+
+        ext_id   = ( ( (unsigned) buf[0] << 8 ) | ( (unsigned) buf[1] ) );
+        ext_size = ( ( (size_t)   buf[2] << 8 ) | ( (size_t)   buf[3] ) );
+
+        buf        += 4;
+        buf_remain -= 4;
+
+        if( ext_size > buf_remain )
+        {
+            /* TODO: Replace with DECODE_ERROR once we have merged 3.0 */
+            return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
+        }
+
+        if( ext_id == MBEDTLS_TLS_EXT_EARLY_DATA )
+        {
+            ret = ssl_new_session_ticket_early_data_ext_parse( ssl, buf,
+                                                               ext_size );
+            if( ret != 0 )
+            {
+                MBEDTLS_SSL_DEBUG_RET( 1, "ssl_new_session_ticket_early_data_ext_parse", ret );
+                return( ret );
+            }
+        }
+        /* Ignore other extensions */
+
+        buf        += ext_size;
+        buf_remain -= ext_size;
+    }
+
+    return( 0 );
+}
+
 static int ssl_new_session_ticket_parse( mbedtls_ssl_context* ssl,
                                          unsigned char* buf,
                                          size_t buflen )
@@ -4021,18 +4097,6 @@ static int ssl_new_session_ticket_parse( mbedtls_ssl_context* ssl,
 
     MBEDTLS_SSL_DEBUG_MSG( 3, ( "ticket->length: %u", ticket_len ) );
 
-    /* Ticket Extension */
-    ext_len = ( (size_t) buf[ i + ticket_len ] << 8 ) |
-              ( (size_t) buf[ i + ticket_len + 1 ] );
-
-    used += ext_len;
-
-    if( used != buflen )
-    {
-         MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad new session ticket message" ) );
-         return( MBEDTLS_ERR_SSL_BAD_HS_NEW_SESSION_TICKET );
-    }
-
     /* Check if we previously received a ticket already. */
     if( ssl->session->ticket != NULL || ssl->session->ticket_len > 0 )
     {
@@ -4052,11 +4116,27 @@ static int ssl_new_session_ticket_parse( mbedtls_ssl_context* ssl,
     ssl->session->ticket = ticket;
     ssl->session->ticket_len = ticket_len;
 
-    MBEDTLS_SSL_DEBUG_MSG( 4, ( "ticket->extension length: %u", ext_len ) );
-
+    /* Ticket Extension */
+    ext_len = ( (size_t) buf[ i + 0 ] << 8 ) |
+              ( (size_t) buf[ i + 1 ] );
     i += 2;
-    /* We are not storing any extensions at the moment */
+
+    used += ext_len;
+    if( used != buflen )
+    {
+         MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad new session ticket message" ) );
+         return( MBEDTLS_ERR_SSL_BAD_HS_NEW_SESSION_TICKET );
+    }
+
     MBEDTLS_SSL_DEBUG_BUF( 3, "ticket->extension", &buf[i], ext_len );
+
+    ret = ssl_new_session_ticket_extensions_parse( ssl, &buf[i], ext_len );
+    if( ret != 0 )
+    {
+        MBEDTLS_SSL_DEBUG_RET( 1, "ssl_new_session_ticket_extensions_parse", ret );
+        return( ret );
+    }
+    i += ext_len;
 
     /* Compute PSK based on received nonce and resumption_master_secret
      * in the following style:
