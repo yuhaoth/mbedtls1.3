@@ -3985,7 +3985,7 @@ static int ssl_new_session_ticket_parse( mbedtls_ssl_context* ssl,
         if( ticket_nonce_len > sizeof( ticket_nonce )  )
         {
             MBEDTLS_SSL_DEBUG_MSG( 1, ( "ticket_nonce is too small" ) );
-            return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
+            return( MBEDTLS_ERR_SSL_FEATURE_UNAVAILABLE );
         }
 
         memcpy( ticket_nonce, &buf[i], ticket_nonce_len );
