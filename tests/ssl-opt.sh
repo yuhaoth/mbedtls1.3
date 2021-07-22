@@ -1610,8 +1610,7 @@ run_test    "TLS 1.3, TLS_AES_128_CCM_SHA256 with ECDHE-ECDSA, SRV auth, HRR enf
             -c "received HelloRetryRequest message"     \
             -c "Protocol is TLSv1.3"                    \
             -c "Ciphersuite is TLS_AES_128_CCM_SHA256"  \
-            -c "Verifying peer X.509 certificate... ok" \
-            -c "Key Exchange Mode is ECDHE-ECDSA"
+            -c "Verifying peer X.509 certificate... ok"
 
 # test early data status - not sent
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
