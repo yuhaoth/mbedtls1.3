@@ -288,11 +288,11 @@ extern "C" {
  * Supported ciphersuites (Official IANA names) for TLS / DTLS 1.3
  */
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
-#define TLS_AES_128_GCM_SHA256                                0x1301
-#define TLS_AES_256_GCM_SHA384                                0x1302
-#define TLS_CHACHA20_POLY1305_SHA256                          0x1303
-#define TLS_AES_128_CCM_SHA256                                0x1304
-#define TLS_AES_128_CCM_8_SHA256                              0x1305
+#define MBEDTLS_TLS1_3_AES_128_GCM_256                                   0x1301
+#define MBEDTLS_TLS1_3_AES_256_GCM_SHA384                                0x1302
+#define MBEDTLS_TLS1_3_CHACHA20_POLY1305_SHA256                          0x1303
+#define MBEDTLS_TLS1_3_AES_128_CCM_SHA256                                0x1304
+#define MBEDTLS_TLS1_3_AES_128_CCM_8_SHA256                              0x1305
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 
 /* Key Exchange Types in TLS 1.3
