@@ -1699,6 +1699,15 @@ run_test    "TLS 1.3, ALPN" \
             -c "Application Layer Protocol is 1234" \
             -s "Application Layer Protocol is 1234"
 
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+requires_config_disabled MBEDTLS_RSA_C
+run_test    "TLS 1.3, TLS_AES_128_CCM_SHA256, ECDHE-ECDSA, mismatched sig_algs" \
+            "$P_SRV nbio=2 debug_level=4 force_version=tls1_3  key_exchange_modes=ecdhe_ecdsa sig_algs=ecdsa_secp384r1_sha384" \
+            "$P_CLI nbio=2 debug_level=4 force_version=tls1_3 server_name=localhost force_ciphersuite=TLS_AES_128_CCM_SHA256 key_exchange_modes=ecdhe_ecdsa sig_algs=ecdsa_secp256r1_sha256" \
+            1 \
+            -s "found signature_algorithms extension" \
+            -c "got an alert message, type: \\[2:40]"
+
 #
 # TLS 1.2 specific tests
 #
