@@ -1141,7 +1141,7 @@ typedef struct
     mbedtls_net_context *net;
 } io_ctx_t;
 
-#if defined(MBEDTLS_SSL_RECORD_CHECKING) && !defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+#if defined(MBEDTLS_SSL_RECORD_CHECKING) && defined(MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER)
 static int ssl_check_record( mbedtls_ssl_context const *ssl,
                              unsigned char const *buf, size_t len )
 {
@@ -1202,7 +1202,7 @@ static int ssl_check_record( mbedtls_ssl_context const *ssl,
 
     return( 0 );
 }
-#endif /* MBEDTLS_SSL_RECORD_CHECKING && !MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+#endif /* MBEDTLS_SSL_RECORD_CHECKING && defined(MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER) */
 
 static int recv_cb( void *ctx, unsigned char *buf, size_t len )
 {
@@ -1223,10 +1223,10 @@ static int recv_cb( void *ctx, unsigned char *buf, size_t len )
         /* Here's the place to do any datagram/record checking
          * in between receiving the packet from the underlying
          * transport and passing it on to the TLS stack. */
-#if defined(MBEDTLS_SSL_RECORD_CHECKING) && !defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+#if defined(MBEDTLS_SSL_RECORD_CHECKING) && defined(MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER)
         if( ssl_check_record( io_ctx->ssl, buf, recv_len ) != 0 )
             return( -1 );
-#endif /* MBEDTLS_SSL_RECORD_CHECKING && !MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+#endif /* MBEDTLS_SSL_RECORD_CHECKING && defined(MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER) */
     }
 
     return( (int) recv_len );
@@ -1249,10 +1249,10 @@ static int recv_timeout_cb( void *ctx, unsigned char *buf, size_t len,
         /* Here's the place to do any datagram/record checking
          * in between receiving the packet from the underlying
          * transport and passing it on to the TLS stack. */
-#if defined(MBEDTLS_SSL_RECORD_CHECKING) && !defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+#if defined(MBEDTLS_SSL_RECORD_CHECKING) && defined(MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER)
         if( ssl_check_record( io_ctx->ssl, buf, recv_len ) != 0 )
             return( -1 );
-#endif /* MBEDTLS_SSL_RECORD_CHECKING && !MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+#endif /* MBEDTLS_SSL_RECORD_CHECKING && defined(MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER) */
     }
 
     return( (int) recv_len );
@@ -1607,7 +1607,7 @@ void term_handler( int sig )
 }
 #endif
 
-#if !defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+#if defined(MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER)
 #if defined(MBEDTLS_X509_CRT_PARSE_C)
 static int ssl_sig_hashes_for_test[] = {
 #if defined(MBEDTLS_SHA512_C)
@@ -1625,7 +1625,7 @@ static int ssl_sig_hashes_for_test[] = {
     MBEDTLS_MD_NONE
 };
 #endif /* MBEDTLS_X509_CRT_PARSE_C */
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+#endif /* defined(MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER) */
 
 /** Return true if \p ret is a status code indicating that there is an
  * operation in progress on an SSL connection, and false if it indicates
@@ -3527,9 +3527,9 @@ int main( int argc, char *argv[] )
         mbedtls_ssl_conf_cert_profile( &conf, &crt_profile_for_test );
 
         /* TODO: Check if/why this guard is needed. */
-#if !defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+#if defined(MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER)
         mbedtls_ssl_conf_sig_hashes( &conf, ssl_sig_hashes_for_test );
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+#endif /* defined(MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER) */
     }
 #endif /* MBEDTLS_X509_CRT_PARSE_C */
 
