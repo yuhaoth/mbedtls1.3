@@ -1365,11 +1365,11 @@ for VERIFY in $VERIFIES; do
                     if [ `minor_ver "$MODE"` -ge 4 ]
                     then
                         M_CIPHERS="$M_CIPHERS               \
-                            TLS1-3-AES-128_GCM-SHA256          \
-                            TLS1-3-AES-256_GCM-SHA384          \
-                            TLS1-3-AES-128_CCM-SHA256          \
-                            TLS1-3-AES-128_CCM-8-SHA256        \
-                            TLS1-3-CHACHA20_POLY1305-SHA256    \
+                            TLS1-3-AES-128-GCM-SHA256          \
+                            TLS1-3-AES-256-GCM-SHA384          \
+                            TLS1-3-AES-128-CCM-SHA256          \
+                            TLS1-3-AES-128-CCM-8-SHA256        \
+                            TLS1-3-CHACHA20-POLY1305-SHA256    \
                             "
                         O_CIPHERS="$O_CIPHERS               \
                             TLS_AES_128_GCM_SHA256          \
@@ -1409,11 +1409,11 @@ for VERIFY in $VERIFIES; do
                     if [ `minor_ver "$MODE"` -ge 4 ]
                     then
                         M_CIPHERS="$M_CIPHERS                  \
-                            TLS1-3-AES-128_GCM-SHA256          \
-                            TLS1-3-AES-256_GCM-SHA384          \
-                            TLS1-3-AES-128_CCM-SHA256          \
-                            TLS1-3-AES-128_CCM-8-SHA256        \
-                            TLS1-3-CHACHA20_POLY1305-SHA256    \
+                            TLS1-3-AES-128-GCM-SHA256          \
+                            TLS1-3-AES-256-GCM-SHA384          \
+                            TLS1-3-AES-128-CCM-SHA256          \
+                            TLS1-3-AES-128-CCM-8-SHA256        \
+                            TLS1-3-CHACHA20-POLY1305-SHA256    \
                             "
                         G_CIPHERS="$G_CIPHERS                \
                             +AES-128-GCM:+SHA256             \

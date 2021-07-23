@@ -8081,7 +8081,7 @@ static int ssl_preset_suiteb_ciphersuites[] = {
           MBEDTLS_SSL_PROTO_TLS1_2 */
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
 #if defined(MBEDTLS_SHA256_C)
-    MBEDTLS_TLS1_3_AES_128_GCM_256,
+    MBEDTLS_TLS1_3_AES_128_GCM_SHA256,
 #endif /* MBEDTLS_SHA256_C */
 #if defined(MBEDTLS_SHA512_C)
     MBEDTLS_TLS1_3_AES_256_GCM_SHA384,
