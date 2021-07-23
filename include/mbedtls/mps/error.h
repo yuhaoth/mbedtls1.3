@@ -64,6 +64,8 @@
 /*! The underlying transport does not have enough incoming data available
  *  to perform the requested read operation. */
 #define MBEDTLS_ERR_MPS_WANT_READ             MBEDTLS_MPS_MAKE_ERROR( 0x10 )
+/*! The underlying transport has been closed. */
+#define MBEDTLS_ERR_MPS_CONN_EOF              MBEDTLS_MPS_MAKE_ERROR( 0x70 )
 /*! The underlying transport is unavailable perform the send operation. */
 #define MBEDTLS_ERR_MPS_WANT_WRITE            MBEDTLS_MPS_MAKE_ERROR( 0x11 )
 #define MBEDTLS_ERR_MPS_BAD_TRANSFORM         MBEDTLS_MPS_MAKE_ERROR( 0x12 )
@@ -230,6 +232,10 @@
             ( MBEDTLS_MPS_ERROR_FLAGS_EXTERNAL |                        \
               MBEDTLS_MPS_ERROR_FLAGS_FATAL ),                          \
             MBEDTLS_ERR_MPS_TOO_MANY_EPOCHS ) )                         \
+    MBEDTLS_MPS_ERROR_INFO_WRAP(                                        \
+        MBEDTLS_MPS_MAKE_ERROR_INFO(                                    \
+            ( MBEDTLS_MPS_ERROR_FLAGS_EXTERNAL ),                       \
+            MBEDTLS_ERR_MPS_CONN_EOF ) )                                \
     MBEDTLS_MPS_ERROR_INFO_WRAP(                                        \
         MBEDTLS_MPS_MAKE_ERROR_INFO(                                    \
             ( MBEDTLS_MPS_ERROR_FLAGS_EXTERNAL ),                       \

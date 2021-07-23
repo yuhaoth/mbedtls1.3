@@ -270,6 +270,8 @@ int l1_fetch_stream( mps_l1_stream_read *p,
     {
         MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_COMMENT, "attempt to receive %u", (unsigned) data_need );
         ret = recv( recv_ctx, read_ptr, data_need );
+        if( ret == 0 )
+            ret = MBEDTLS_ERR_MPS_CONN_EOF;
         if( ret < 0 )
             break;
         MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_COMMENT, "got %u", (unsigned) ret );
