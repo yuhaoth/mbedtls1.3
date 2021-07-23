@@ -6797,6 +6797,8 @@ int mbedtls_ssl_mps_remap_error( int ret )
         ret = MBEDTLS_ERR_SSL_WANT_READ;
     if( ret == MBEDTLS_ERR_MPS_WANT_WRITE )
         ret = MBEDTLS_ERR_SSL_WANT_WRITE;
+    if( ret == MBEDTLS_ERR_MPS_CONN_EOF )
+        ret = MBEDTLS_ERR_SSL_CONN_EOF;
     if( ret == MBEDTLS_ERR_MPS_RETRY )
         ret = MBEDTLS_ERR_SSL_WANT_READ;
 
