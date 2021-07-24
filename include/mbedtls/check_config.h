@@ -987,11 +987,6 @@
 #error "MBEDTLS_PSK_MAX_LEN needs to be set to 48 bytes"
 #endif
 
-#if !defined(MBEDTLS_SSL_MAX_KEY_SHARES) && defined(MBEDTLS_ECDH_C) && defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
-#define MBEDTLS_SSL_MAX_KEY_SHARES 1
-#endif
-
-
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && !defined(MBEDTLS_HKDF_C)
 #error "MBEDTLS_HKDF_C is required for TLS 1_3 to work. "
 #endif

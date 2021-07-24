@@ -4012,13 +4012,7 @@ static void ssl_handshake_params_init( mbedtls_ssl_handshake_params *handshake )
     mbedtls_dhm_init( &handshake->dhm_ctx );
 #endif
 #if defined(MBEDTLS_ECDH_C)
-
-#if defined(MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER)
     mbedtls_ecdh_init( &handshake->ecdh_ctx );
-#else
-    for ( int i = 0; i < MBEDTLS_SSL_MAX_KEY_SHARES; i++ )
-        mbedtls_ecdh_init( &handshake->ecdh_ctx[i] );
-#endif /* defined(MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER) */
 #endif
 #if defined(MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED)
     mbedtls_ecjpake_init( &handshake->ecjpake_ctx );
@@ -7098,14 +7092,7 @@ void mbedtls_ssl_handshake_free( mbedtls_ssl_context *ssl )
     mbedtls_dhm_free( &handshake->dhm_ctx );
 #endif
 #if defined(MBEDTLS_ECDH_C)
-
-#if defined(MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER)
     mbedtls_ecdh_free( &handshake->ecdh_ctx );
-#else /* defined(MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER) */
-    for ( int i = 0; i < MBEDTLS_SSL_MAX_KEY_SHARES; i++ )
-        mbedtls_ecdh_free( &handshake->ecdh_ctx[i] );
-#endif /* !defined(MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER) */
-
 #endif
 #if defined(MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED)
     mbedtls_ecjpake_free( &handshake->ecjpake_ctx );

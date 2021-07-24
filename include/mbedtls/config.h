@@ -1794,24 +1794,6 @@
 #define MBEDTLS_SSL_EARLY_DATA_MAX_DELAY 10000
 
 /**
-*  \def MBEDTLS_SSL_MAX_KEY_SHARES
-*
-* Defines the maximum number of key share entires in a
-* key share extension advertised as part of the ClientHello.
-*
-* The impact of increasing the number of key shares is that
-* a client needs to store more ECDHE key pairs and the
-* transmission size of the ClientHello is increased as well.
-* On the positive side this allows more rapid session
-* establishment in case there is no prior knowledge between
-* the client and the server about the supported algorithms
-* and curves.
-*
-*/
-
-#define MBEDTLS_SSL_MAX_KEY_SHARES 1
-
-/**
 * \def MBEDTLS_ZERO_RTT
 *
 * Allows to add functionality for TLS/DTLS 1.3 Zero-RTT.

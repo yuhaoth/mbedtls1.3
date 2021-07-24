@@ -172,7 +172,7 @@ static int ssl_write_key_shares_ext(
     MBEDTLS_SSL_DEBUG_MSG( 3, ( "server hello, adding key share extension" ) );
 
     /* Fetching the agreed curve. */
-    info = mbedtls_ecp_curve_info_from_grp_id( ssl->handshake->ecdh_ctx[ssl->handshake->ecdh_ctx_selected].grp.id );
+    info = mbedtls_ecp_curve_info_from_grp_id( ssl->handshake->ecdh_ctx.grp.id );
 
     if( info == NULL )
     {
@@ -181,13 +181,13 @@ static int ssl_write_key_shares_ext(
     }
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "ECDHE curve: %s", info->name ) );
 
-    if( ( ret = mbedtls_ecp_group_load( &ssl->handshake->ecdh_ctx[ssl->handshake->ecdh_ctx_selected].grp, info->grp_id ) ) != 0 )
+    if( ( ret = mbedtls_ecp_group_load( &ssl->handshake->ecdh_ctx.grp, info->grp_id ) ) != 0 )
     {
         MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ecp_group_load", ret );
         return( ret );
     }
 
-    if( ( ret = mbedtls_ecdh_make_tls_13_params( &ssl->handshake->ecdh_ctx[ssl->handshake->ecdh_ctx_selected], &len,
+    if( ( ret = mbedtls_ecdh_make_tls_13_params( &ssl->handshake->ecdh_ctx, &len,
                                         p, end-buf,
                                         ssl->conf->f_rng, ssl->conf->p_rng ) ) != 0 )
     {
@@ -197,7 +197,7 @@ static int ssl_write_key_shares_ext(
 
     p += len;
 
-    MBEDTLS_SSL_DEBUG_ECP( 3, "ECDHE: Q ", &ssl->handshake->ecdh_ctx[ssl->handshake->ecdh_ctx_selected].Q );
+    MBEDTLS_SSL_DEBUG_ECP( 3, "ECDHE: Q ", &ssl->handshake->ecdh_ctx.Q );
 
     /* Write extension header */
     *header++ = (unsigned char)( ( MBEDTLS_TLS_EXT_KEY_SHARES >> 8 ) & 0xFF );
@@ -221,7 +221,7 @@ static int check_ecdh_params( const mbedtls_ssl_context *ssl )
 {
     const mbedtls_ecp_curve_info *curve_info;
 
-    curve_info = mbedtls_ecp_curve_info_from_grp_id( ssl->handshake->ecdh_ctx[ssl->handshake->ecdh_ctx_selected].grp.id );
+    curve_info = mbedtls_ecp_curve_info_from_grp_id( ssl->handshake->ecdh_ctx.grp.id );
     if( curve_info == NULL )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "should never happen" ) );
@@ -231,14 +231,14 @@ static int check_ecdh_params( const mbedtls_ssl_context *ssl )
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "ECDH curve: %s", curve_info->name ) );
 
 #if defined(MBEDTLS_ECP_C)
-    if( mbedtls_ssl_check_curve( ssl, ssl->handshake->ecdh_ctx[ssl->handshake->ecdh_ctx_selected].grp.id ) != 0 )
+    if( mbedtls_ssl_check_curve( ssl, ssl->handshake->ecdh_ctx.grp.id ) != 0 )
 #else
 	if( ssl->handshake->ecdh_ctx.grp.nbits < 163 ||
             ssl->handshake->ecdh_ctx.grp.nbits > 521 )
 #endif /* MBEDTLS_ECP_C */
             return( -1 );
 
-    MBEDTLS_SSL_DEBUG_ECP( 3, "ECDH: Qp", &ssl->handshake->ecdh_ctx[ssl->handshake->ecdh_ctx_selected].Qp );
+    MBEDTLS_SSL_DEBUG_ECP( 3, "ECDH: Qp", &ssl->handshake->ecdh_ctx.Qp );
 
     return( 0 );
 }
@@ -386,7 +386,7 @@ static int ssl_parse_key_shares_ext(
     while( extensions_available )
     {
         ret = mbedtls_ecdh_read_tls_13_params(
-            &ssl->handshake->ecdh_ctx[ssl->handshake->ecdh_ctx_selected],
+            &ssl->handshake->ecdh_ctx,
             (const unsigned char **) &start, end );
 
         if( ret != 0 )
@@ -405,7 +405,7 @@ static int ssl_parse_key_shares_ext(
         {
             /* Currently we only support a single key share */
             /* Hence, we do not need a loop */
-            if( ssl->handshake->ecdh_ctx[ssl->handshake->ecdh_ctx_selected].grp.id == *gid )
+            if( ssl->handshake->ecdh_ctx.grp.id == *gid )
             {
                 match_found = 1;
 

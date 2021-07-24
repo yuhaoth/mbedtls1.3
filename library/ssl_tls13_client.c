@@ -63,7 +63,7 @@ static int check_ecdh_params( const mbedtls_ssl_context *ssl )
 {
     const mbedtls_ecp_curve_info *curve_info;
 
-    curve_info = mbedtls_ecp_curve_info_from_grp_id( ssl->handshake->ecdh_ctx[ssl->handshake->ecdh_ctx_selected].grp.id );
+    curve_info = mbedtls_ecp_curve_info_from_grp_id( ssl->handshake->ecdh_ctx.grp.id );
     if( curve_info == NULL )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "should never happen" ) );
@@ -73,14 +73,14 @@ static int check_ecdh_params( const mbedtls_ssl_context *ssl )
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "ECDH curve: %s", curve_info->name ) );
 
 #if defined(MBEDTLS_ECP_C)
-    if( mbedtls_ssl_check_curve( ssl, ssl->handshake->ecdh_ctx[ssl->handshake->ecdh_ctx_selected].grp.id ) != 0 )
+    if( mbedtls_ssl_check_curve( ssl, ssl->handshake->ecdh_ctx.grp.id ) != 0 )
 #else
     if( ssl->handshake->ecdh_ctx.grp.nbits < 163 ||
             ssl->handshake->ecdh_ctx.grp.nbits > 521 )
 #endif
             return( -1 );
 
-    MBEDTLS_SSL_DEBUG_ECP( 3, "ECDH: Qp", &ssl->handshake->ecdh_ctx[ssl->handshake->ecdh_ctx_selected].Qp );
+    MBEDTLS_SSL_DEBUG_ECP( 3, "ECDH: Qp", &ssl->handshake->ecdh_ctx.Qp );
 
     return( 0 );
 }
@@ -1243,7 +1243,6 @@ static int ssl_write_key_shares_ext( mbedtls_ssl_context *ssl,
     unsigned char *header = buf; /* Pointer where the header has to go. */
     size_t len;
     int ret;
-    int nr;
     /*const int *ciphersuites; */
 
     /* TODO: Add bounds checks! Only then remove the next line. */
@@ -1294,62 +1293,53 @@ static int ssl_write_key_shares_ext( mbedtls_ssl_context *ssl,
      MBEDTLS_SSL_DEBUG_MSG( 3, ( "Ciphersuites require a key length of max %d bits", max_size ) );
     */
 
-    /* The key_shares_curve_list provides us information about what we are expected to
-     * send, either based on the info provided by the app or by info offered by the server
-     * using the HRR.
-     */
-    nr = 0;
-
-    for ( grp_id = ssl->handshake->key_shares_curve_list; *grp_id != MBEDTLS_ECP_DP_NONE; grp_id++ ) {
-
-        info = mbedtls_ecp_curve_info_from_grp_id( *grp_id );
-
-        /* Check whether the key share matches the selected ciphersuite
-         * in terms of key length.
-         *
-         * Hence, AES-128 should go with a group bit size of 192 and 224 bits.
-         *
-         * TBD: Do we need this check?
-
-         switch ( max_size ) {
-         case 128: if( info->bit_size != 256 && info->bit_size!=192 && info->bit_size!= 224 ) continue;
-         break;
-         case 384: if( info->bit_size != 384 ) continue;
-         break;
-         }
-        */
-
-        MBEDTLS_SSL_DEBUG_MSG( 2, ( "ECDHE curve: %s", info->name ) );
-
-        if( ( ret = mbedtls_ecp_group_load( &ssl->handshake->ecdh_ctx[nr].grp, info->grp_id ) ) != 0 )
-        {
-            MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ecp_group_load", ret );
-            return( ret );
-        }
-
-        if( ( ret = mbedtls_ecdh_make_tls_13_params( &ssl->handshake->ecdh_ctx[nr], &len,
-                                              p+2, end - (p+2),
-                                              ssl->conf->f_rng, ssl->conf->p_rng ) ) != 0 )
-        {
-            MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ecdh_make_tls_13_params", ret );
-            return( ret );
-        }
-
-        /* Write length of the key_exchange entry */
-        *p++ = (unsigned char)( ( ( len ) >> 8 ) & 0xFF );
-        *p++ = (unsigned char)( ( ( len ) ) & 0xFF );
-
-        p += len;
-        *olen += len + 2;
-        MBEDTLS_SSL_DEBUG_ECP( 3, "ECDHE: Q ", &ssl->handshake->ecdh_ctx[nr].Q );
-
-        nr++;
-        if( nr == MBEDTLS_SSL_MAX_KEY_SHARES )
-        {
-            MBEDTLS_SSL_DEBUG_MSG( 4, ( "Reached maximum number of KeyShareEntries: %d", nr ) );
-            break;
-        }
+    grp_id = ssl->handshake->key_shares_curve_list;
+    if (*grp_id == MBEDTLS_ECP_DP_NONE )
+    {
+        MBEDTLS_SSL_DEBUG_MSG( 4, ("Curve list is empty." ) );
+        return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
     }
+
+    info = mbedtls_ecp_curve_info_from_grp_id( *grp_id );
+
+    /* Check whether the key share matches the selected ciphersuite
+        * in terms of key length.
+        *
+        * Hence, AES-128 should go with a group bit size of 192 and 224 bits.
+        *
+        * TBD: Do we need this check?
+
+        switch ( max_size ) {
+        case 128: if( info->bit_size != 256 && info->bit_size!=192 && info->bit_size!= 224 ) continue;
+        break;
+        case 384: if( info->bit_size != 384 ) continue;
+        break;
+        }
+    */
+
+    MBEDTLS_SSL_DEBUG_MSG( 2, ( "ECDHE curve: %s", info->name ) );
+
+    if( ( ret = mbedtls_ecp_group_load( &ssl->handshake->ecdh_ctx.grp, info->grp_id ) ) != 0 )
+    {
+        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ecp_group_load", ret );
+        return( ret );
+    }
+
+    if( ( ret = mbedtls_ecdh_make_tls_13_params( &ssl->handshake->ecdh_ctx, &len,
+                                            p+2, end - (p+2),
+                                            ssl->conf->f_rng, ssl->conf->p_rng ) ) != 0 )
+    {
+        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ecdh_make_tls_13_params", ret );
+        return( ret );
+    }
+
+    /* Write length of the key_exchange entry */
+    *p++ = (unsigned char)( ( ( len ) >> 8 ) & 0xFF );
+    *p++ = (unsigned char)( ( ( len ) ) & 0xFF );
+
+    p += len;
+    *olen += len + 2;
+    MBEDTLS_SSL_DEBUG_ECP( 3, "ECDHE: Q ", &ssl->handshake->ecdh_ctx.Q );
 
     /* Write extension header */
     *header++ = (unsigned char)( ( MBEDTLS_TLS_EXT_KEY_SHARES >> 8 ) & 0xFF );
@@ -2188,12 +2178,7 @@ static int ssl_parse_key_shares_ext( mbedtls_ssl_context *ssl,
         return( MBEDTLS_ERR_SSL_BAD_HS_SERVER_HELLO );
     }
 
-    /* We store the server-selected key share at a given place
-     * in our array of ECDH parameters.
-     */
-    ssl->handshake->ecdh_ctx_selected = i;
-
-    if( ( ret = mbedtls_ecdh_read_tls_13_params( &ssl->handshake->ecdh_ctx[i],
+    if( ( ret = mbedtls_ecdh_read_tls_13_params( &ssl->handshake->ecdh_ctx,
                                           ( const unsigned char ** )&start, end ) ) != 0 )
     {
         MBEDTLS_SSL_DEBUG_RET( 1, ( "mbedtls_ecdh_read_tls_13_params" ), ret );
@@ -4273,7 +4258,7 @@ int mbedtls_ssl_handshake_client_step( mbedtls_ssl_context *ssl )
             {
                 /* We need to allocate one additional key share for the delimiter. */
                 ssl->handshake->key_shares_curve_list =
-                    mbedtls_calloc( 1, sizeof( mbedtls_ecp_group_id* ) * ( MBEDTLS_SSL_MAX_KEY_SHARES+1 ) );
+                    mbedtls_calloc( 1, sizeof( mbedtls_ecp_group_id* ) * 2 );
                 if( ssl->conf->key_shares_curve_list == NULL )
                 {
                     MBEDTLS_SSL_DEBUG_MSG( 1, ( "should never happen" ) );
@@ -4281,10 +4266,10 @@ int mbedtls_ssl_handshake_client_step( mbedtls_ssl_context *ssl )
                 }
                 memcpy( ssl->handshake->key_shares_curve_list,
                         ssl->conf->key_shares_curve_list,
-                        sizeof( mbedtls_ecp_group_id ) * MBEDTLS_SSL_MAX_KEY_SHARES );
+                        sizeof( mbedtls_ecp_group_id ) );
 
                 /* We need to put a delimiter to the end of the key shares curve list */
-                ssl->handshake->key_shares_curve_list[MBEDTLS_SSL_MAX_KEY_SHARES] = MBEDTLS_ECP_DP_NONE;
+                ssl->handshake->key_shares_curve_list[1] = MBEDTLS_ECP_DP_NONE;
             }
 #endif /* MBEDTLS_ECP_C */
 
