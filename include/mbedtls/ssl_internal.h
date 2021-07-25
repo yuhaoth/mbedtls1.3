@@ -529,15 +529,7 @@ struct mbedtls_ssl_handshake_params
  * MBEDTLS_ECDSA_C which does not seem correct.
  */
 #if defined(MBEDTLS_ECDH_C) || defined(MBEDTLS_ECDSA_C)
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
-    // For TLS 1.3 we might need to store more than one key exchange payload
-    mbedtls_ecdh_context ecdh_ctx[MBEDTLS_SSL_MAX_KEY_SHARES]; /*!<  ECDH key exchange       */
-    int ecdh_ctx_selected; /*!< Selected ECDHE context */
-    int ecdh_ctx_max; /* !< Maximum number of used structures */
-#else
     mbedtls_ecdh_context ecdh_ctx;              /*!<  ECDH key exchange       */
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
-
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
     psa_key_type_t ecdh_psa_type;
     uint16_t ecdh_bits;

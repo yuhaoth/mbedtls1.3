@@ -933,7 +933,7 @@ static int ssl_tls1_3_complete_ephemeral_secret( mbedtls_ssl_context *ssl,
     {
 
         ret = mbedtls_ecdh_calc_secret(
-                   &ssl->handshake->ecdh_ctx[ssl->handshake->ecdh_ctx_selected],
+                   &ssl->handshake->ecdh_ctx,
                    actual_len, secret, secret_len,
                    ssl->conf->f_rng, ssl->conf->p_rng );
 
