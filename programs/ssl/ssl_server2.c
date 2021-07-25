@@ -798,7 +798,7 @@ static int eap_tls_key_derivation ( void *p_expkey,
           MBEDTLS_SSL_PROTO_TLS1_2 */
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
-static int nss_keylog_export( void *p_expsecret,
+static int nss_keylog_export_tls13( void *p_expsecret,
                               const unsigned char client_random[32],
                               mbedtls_ssl_tls1_3_secret_type type,
                               const unsigned char *secret,
@@ -884,7 +884,10 @@ exit:
                               sizeof( nss_keylog_line ) );
     return( ret );
 }
-#else
+#endif /* defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) */
+
+#if defined(MBEDTLS_SSL_PROTO_TLS1) || defined(MBEDTLS_SSL_PROTO_TLS1_1) || \
+    defined(MBEDTLS_SSL_PROTO_TLS1_2)
 static int nss_keylog_export( void *p_expkey,
                               const unsigned char *ms,
                               const unsigned char *kb,
@@ -960,7 +963,8 @@ exit:
                               sizeof( nss_keylog_line ) );
     return( ret );
 }
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+#endif /*   defined(MBEDTLS_SSL_PROTO_TLS1) || defined(MBEDTLS_SSL_PROTO_TLS1_1) || \
+            defined(MBEDTLS_SSL_PROTO_TLS1_2) */
 
 #if defined( MBEDTLS_SSL_DTLS_SRTP )
 /* Supported SRTP mode needs a maximum of :
@@ -3651,7 +3655,7 @@ int main( int argc, char *argv[] )
     {
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
         mbedtls_ssl_conf_export_secrets_cb( &conf,
-                                            nss_keylog_export,
+                                            nss_keylog_export_tls13,
                                             NULL );
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 
