@@ -2797,7 +2797,7 @@ void mbedtls_ssl_recv_flight_completed( mbedtls_ssl_context *ssl )
  */
 void mbedtls_ssl_send_flight_completed( mbedtls_ssl_context *ssl )
 {
-    ssl_reset_retransmit_timeout( ssl );
+    mbedtls_ssl_reset_retransmit_timeout( ssl );
     mbedtls_ssl_set_timer( ssl, ssl->handshake->retransmit_timeout );
 
     if( ssl->in_msgtype == MBEDTLS_SSL_MSG_HANDSHAKE &&
