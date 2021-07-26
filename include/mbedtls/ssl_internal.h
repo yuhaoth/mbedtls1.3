@@ -833,13 +833,12 @@ struct mbedtls_ssl_handshake_params
     int early_data;
 #endif /* MBEDTLS_ZERO_RTT */
 
-#else
-    size_t pmslen;                      /*!<  premaster length        */
-
-    unsigned char premaster[MBEDTLS_PREMASTER_SIZE];
-    /*!<  premaster secret        */
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 
+#if defined(MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER) 
+    size_t pmslen;                                          /*!<  premaster length        */
+    unsigned char premaster[MBEDTLS_PREMASTER_SIZE];        /*!<  premaster secret        */
+#endif /* defined(MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER) */
 
     int resume;                         /*!<  session resume indicator*/
     int max_major_ver;                  /*!< max. major version client*/
