@@ -1231,48 +1231,6 @@ int mps_l3_pause_handshake( mps_l3 *l3 )
 }
 #endif /* MBEDTLS_MPS_PROTO_TLS */
 
-/* TODO: Will we need this at some point? */
-/* Abort the writing of a handshake message. */
-int UNUSED mps_l3_write_abort_handshake( mps_l3 *l3 )
-{
-    int res;
-    mbedtls_mps_size_t committed;
-    mbedtls_mps_l2* const l2 = mbedtls_mps_l3_get_l2( l3 );
-    MBEDTLS_MPS_TRACE_INIT( "mps_l3_write_abort_handshake" );
-
-    MBEDTLS_MPS_STATE_VALIDATE_RAW(
-        l3->io.out.state    == MBEDTLS_MPS_MSG_HS &&
-        l3->io.out.hs.state == MPS_L3_HS_ACTIVE,
-        "mps_l3_write_abort_handshake() called in unexpected state" );
-
-    /* Remove reference to raw writer from writer. */
-    res = mbedtls_writer_detach( &l3->io.out.hs.wr_ext,
-                                 &committed,
-                                 NULL );
-    if( res != 0 )
-        MBEDTLS_MPS_TRACE_RETURN( res );
-
-    /* Reset extended writer. */
-    mbedtls_writer_free_ext( &l3->io.out.hs.wr_ext );
-
-    MBEDTLS_MPS_ASSERT_RAW( committed == 0,
-       "Attempt to abort HS msg parts of which have already been committed." );
-
-    /* Remove reference to the raw writer borrowed from Layer 2
-     * before calling mps_l2_write_done(), which invalidates it. */
-    l3->io.out.raw_out = NULL;
-
-    /* Signal to Layer 2 that we've finished acquiring and
-     * writing to the outgoing data buffers. */
-    res = mps_l2_write_done( l2 );
-    if( res != 0 )
-        MBEDTLS_MPS_TRACE_RETURN( res );
-
-    l3->io.out.hs.state = MPS_L3_HS_NONE;
-    l3->io.out.state    = MBEDTLS_MPS_MSG_NONE;
-    MBEDTLS_MPS_TRACE_RETURN( 0 );
-}
-
 int mps_l3_dispatch( mps_l3 *l3 )
 {
     int res;
