@@ -106,6 +106,43 @@ int UNUSED mps_l3_read_check( mps_l3 *l3 )
     return( l3->io.in.state );
 }
 
+/* Handles incomplete messages / message headers.
+ * In DTLS, this is fatal. In TLS, we need to wait for more data. */
+MBEDTLS_MPS_STATIC int l3_incomplete_header( mps_l3 *l3 )
+{
+    int ret;
+    mbedtls_mps_transport_type const mode =
+        mbedtls_mps_l3_conf_get_mode( &l3->conf );
+    mbedtls_mps_l2* const l2 = mbedtls_mps_l3_get_l2( l3 );
+
+#if defined(MBEDTLS_MPS_PROTO_TLS)
+    if( MBEDTLS_MPS_IS_TLS( mode ) )
+    {
+        MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_COMMENT,
+              "Incomplete message header -- wait for more data" );
+
+        ret = mps_l2_read_done( l2 );
+        if( ret != 0 )
+            MBEDTLS_MPS_TRACE_RETURN( ret );
+
+        /* We could return WANT_READ here, because _currently_ no records are
+         * buffered by Layer 2, hence progress depends on the availability of
+         * the underlying transport. However, this would need to be reconsidered
+         * and potentially adapted with any change to Layer 2, so returning
+         * MBEDTLS_ERR_MPS_RETRY here is safer. */
+        MBEDTLS_MPS_TRACE_RETURN( MBEDTLS_ERR_MPS_RETRY );
+    }
+#endif /* MBEDTLS_MPS_PROTO_TLS */
+#if defined(MBEDTLS_MPS_PROTO_DTLS)
+    MBEDTLS_MPS_ELSE_IF_DTLS( mode )
+    {
+        MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_ERROR,
+                           "Incomplete message in DTLS -- abort" );
+        MBEDTLS_MPS_TRACE_RETURN( MBEDTLS_ERR_MPS_INVALID_CONTENT );
+    }
+#endif /* MBEDTLS_MPS_PROTO_DTLS */
+}
+
 /* Attempt to receive an incoming message from Layer 2. */
 int mps_l3_read( mps_l3 *l3 )
 {
@@ -168,59 +205,26 @@ int mps_l3_read( mps_l3 *l3 )
     MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_COMMENT, "* Type:  %u", (unsigned) in.type );
     switch( in.type )
     {
-        /* 3.1 */
-
+        /* Application data */
         case MBEDTLS_MPS_MSG_APP:
             MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_COMMENT, "-> Application data" );
             break;
 
+        /* Alert data */
         case MBEDTLS_MPS_MSG_ALERT:
             MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_COMMENT, "-> Alert message" );
 
-            /* Attempt to fetch alert.
-             *
-             * - In TLS, this might fail because the alert
-             *   spans a record boundary. In this case,
-             *   we need to await more data from subsequent
-             *   records before we can parse the alert.
-             *   This is transparently handled by Layer 2.
-             *
-             * - For DTLS, an incomplete alert message
-             *   is treated as a fatal error.
-             */
             ret = l3_parse_alert( in.rd, &l3->io.in.alert );
-            if( ret == MBEDTLS_ERR_MPS_READER_OUT_OF_DATA )
-            {
-#if defined(MBEDTLS_MPS_PROTO_DTLS)
-                if( MBEDTLS_MPS_IS_DTLS( mode ) )
-                {
-                    MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_ERROR, "Incomplete alert message found -- abort" );
-                    MBEDTLS_MPS_TRACE_RETURN( MBEDTLS_ERR_MPS_INVALID_CONTENT );
-                }
-#endif /* MBEDTLS_MPS_PROTO_DTLS */
+            if( ret == 0 )
+                break; /* All good */
 
-#if defined(MBEDTLS_MPS_PROTO_TLS)
-                if( MBEDTLS_MPS_IS_TLS( mode ) )
-                {
-                    MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_COMMENT, "Not enough data available in record to read alert message" );
-                    ret = mps_l2_read_done( l2 );
-                    if( ret != 0 )
-                        MBEDTLS_MPS_TRACE_RETURN( ret );
-
-                    /* No records are buffered by Layer 2, so progress depends
-                     * on the availability of the underlying transport. We could
-                     * hence return MBEDTLS_ERR_MPS_WANT_READ here. However, this would
-                     * need to be re-evaluated with any change on Layer 2, so
-                     * it's safer to return MBEDTLS_ERR_MPS_RETRY. */
-                    MBEDTLS_MPS_TRACE_RETURN( MBEDTLS_ERR_MPS_RETRY );
-                }
-#endif /* MBEDTLS_MPS_PROTO_TLS */
-            }
-            else if( ret != 0 )
+            if( ret != MBEDTLS_ERR_MPS_READER_OUT_OF_DATA )
                 MBEDTLS_MPS_TRACE_RETURN( ret );
 
-            break;
+            /* Incomplete alert */
+            MBEDTLS_MPS_TRACE_RETURN( l3_incomplete_header( l3 ) );
 
+        /* CCS data */
         case MBEDTLS_MPS_MSG_CCS:
             MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_COMMENT, "-> CCS message" );
 
@@ -238,147 +242,60 @@ int mps_l3_read( mps_l3 *l3 )
             /* DTLS-1.3-TODO: Implement */
             MBEDTLS_MPS_TRACE_RETURN( MBEDTLS_ERR_MPS_INVALID_CONTENT );
 
-        /* 3.2 */
-
+        /* Handshake data */
         case MBEDTLS_MPS_MSG_HS:
             MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_COMMENT, "-> Handshake message" );
 
-            /*
-             * General workings of handshake reading:
-             *
-             * Like for other content types, Layer 2 provides raw access to
-             * records of the handshake content type through readers. When
-             * handshake messages are implicitly fragmented across multiple
-             * records in TLS, some additional structure outside the scope
-             * of Layer 2 has to be allocated to keep track of how much of
-             * the current handshake message has already been read. This
-             * information can be used to guard against unreasonable read-
-             * requests (beyond the bounds of the handshake message),
-             * as well as to check whether handshake messages have been
-             * entirely processed when they are closed via l3_read_consume.
-             *
-             * This additional information of total handshake message size
-             * as well as global read state is kept within an 'extended'
-             * reader object: When initialized, the extended reader is given
-             * global message bounds. When Layer 2 provides a reader for
-             * handshake contents, this reader is 'bound' to the extended
-             * reader, and the extended reader forwards all subsequent read-
-             * requests to that reader, while at the same time keeping track
-             * of and updating the global reading state.
-             *
-             * When the reading of a message needs to be paused because the
-             * message spans multiple records, the 'raw' Layer 2 reader is
-             * 'detached' from the extended reader, but the extended reader
-             * itself is kept, and can be bound to another Layer 2 handshake
-             * reader once the next message fragment arrives.
-             *
-             */
-
             /* Check if a handshake message is currently being paused. */
-            switch( l3->io.in.hs.state )
+            if( l3->io.in.hs.state == MPS_L3_HS_NONE )
             {
-                /* 3.2.1 */
-                case MPS_L3_HS_NONE:
-                    MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_COMMENT, "No handshake message is currently processed" );
+                MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_COMMENT, "No handshake message is currently processed" );
 
-                    /* Attempt to fetch and parse handshake header.
-                     *
-                     * - In TLS, this might fail because the handshake
-                     *   header spans a record boundary. In this case,
-                     *   we need to await more data from subsequent
-                     *   records before we can parse the handshake header.
-                     *   This is transparently handled by Layer 2.
-                     *
-                     * - For DTLS, an incomplete handshake header
-                     *   is treated as a fatal error.
-                     */
-                    ret = l3_parse_hs_header(
-                        mbedtls_mps_l3_conf_get_mode( &l3->conf ), in.rd,
-                        &l3->io.in.hs );
-                    if( ret == MBEDTLS_ERR_MPS_READER_OUT_OF_DATA )
-                    {
-#if defined(MBEDTLS_MPS_PROTO_DTLS)
-                        if( MBEDTLS_MPS_IS_DTLS( mode ) )
-                        {
-                            MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_ERROR, "Incomplete handshake header found -- abort" );
-                            MBEDTLS_MPS_TRACE_RETURN( MBEDTLS_ERR_MPS_INVALID_CONTENT );
-                        }
-#endif /* MBEDTLS_MPS_PROTO_DTLS */
+                /* Attempt to fetch and parse handshake header.
+                 * May fail in TLS because of fragmentation. */
 
+                ret = l3_parse_hs_header( mode, in.rd, &l3->io.in.hs );
+                if( ret == MBEDTLS_ERR_MPS_READER_OUT_OF_DATA )
+                {
+                    /* Incomplete handshake header. */
+                    MBEDTLS_MPS_TRACE_RETURN( l3_incomplete_header( l3 ) );
+                }
+                else if( ret != 0 )
+                    MBEDTLS_MPS_TRACE_RETURN( ret );
+
+                /* Setup the extended reader keeping track of the
+                 * global message bounds. */
+                MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_COMMENT,
+                                   "Setup extended reader for handshake message" );
+
+                /* TODO: Think about storing the frag_len in len for DTLS
+                 *       to avoid this distinction. */
 #if defined(MBEDTLS_MPS_PROTO_TLS)
-                        if( MBEDTLS_MPS_IS_TLS( mode ) )
-                        {
-                            MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_COMMENT, "Incomplete handshake header in current record -- wait for more data." );
-
-                            ret = mps_l2_read_done( l2 );
-                            if( ret != 0 )
-                                MBEDTLS_MPS_TRACE_RETURN( ret );
-
-                            /* We could return WANT_READ here, because
-                             * _currently_ no records are buffered by Layer 2,
-                             * hence progress depends on the availability of the
-                             * underlying transport.
-                             * However, this would need to be reconsidered and
-                             * potentially adapted with any change to Layer 2,
-                             * so returning MBEDTLS_ERR_MPS_RETRY
-                             * is safer. */
-                            MBEDTLS_MPS_TRACE_RETURN( MBEDTLS_ERR_MPS_RETRY );
-                        }
-#endif /* MBEDTLS_MPS_PROTO_TLS */
-                    }
-                    else if( ret != 0 )
-                        MBEDTLS_MPS_TRACE_RETURN( ret );
-
-                    /* Setup the extended reader keeping track of the
-                     * global message bounds. */
-                    MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_COMMENT, "Setup extended reader for handshake message" );
-
-                    /* TODO: Think about storing the frag_len in len for DTLS
-                     *       to avoid this distinction. */
-#if defined(MBEDTLS_MPS_PROTO_TLS)
-                    if( MBEDTLS_MPS_IS_TLS( mode ) )
-                    {
-                        mbedtls_mps_reader_init_ext( &l3->io.in.hs.rd_ext,
+                if( MBEDTLS_MPS_IS_TLS( mode ) )
+                {
+                    mbedtls_mps_reader_init_ext( &l3->io.in.hs.rd_ext,
                                                  l3->io.in.hs.len );
-                    }
+                }
 #endif /* MBEDTLS_MPS_PROTO_TLS */
 #if defined(MBEDTLS_MPS_PROTO_DTLS)
-                    if( MBEDTLS_MPS_IS_DTLS( mode ) )
-                    {
-                        mbedtls_mps_reader_init_ext( &l3->io.in.hs.rd_ext,
+                MBEDTLS_MPS_ELSE_IF_DTLS( mode )
+                {
+                    mbedtls_mps_reader_init_ext( &l3->io.in.hs.rd_ext,
                                                  l3->io.in.hs.frag_len );
-                    }
+                }
 #endif /* MBEDTLS_MPS_PROTO_DTLS */
-
-                    break;
-
-                /* 3.2.2 */
-                case MPS_L3_HS_PAUSED:
-                    MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_COMMENT, "A handshake message currently paused" );
-#if defined(MBEDTLS_MPS_ENABLE_ASSERTIONS)
-                    if( l3->io.in.hs.epoch != in.epoch )
-                    {
-                        /* This should never happen, as we don't allow switching
-                         * the incoming epoch while pausing the reading of a
-                         * handshake message. But double-check nonetheless. */
-                        MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_ERROR, "ASSERTION FAILURE!" );
-                        MBEDTLS_MPS_TRACE_RETURN( MBEDTLS_ERR_MPS_INTERNAL_ERROR );
-                    }
-#endif /* MBEDTLS_MPS_ENABLE_ASSERTIONS */
-                    break;
-
-
-                case MPS_L3_HS_ACTIVE:
-                default:
-#if defined(MBEDTLS_MPS_ENABLE_ASSERTIONS)
-                    /* Should never happen -- if a handshake message
-                     * is active, then this must be reflected in the
-                     * state variable l3->io.in.state. */
-                    MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_ERROR, "ASSERTION FAILURE!" );
-                    MBEDTLS_MPS_TRACE_RETURN( MBEDTLS_ERR_MPS_INTERNAL_ERROR );
-#else
-                    break;
-#endif /* MBEDTLS_MPS_ENABLE_ASSERTIONS */
+            }
+            else
+            {
+                /* We should reach this only for paused HS messages in TLS. */
+                MBEDTLS_MPS_ASSERT_RAW( MBEDTLS_MPS_IS_TLS( mode ), "" );
+                MBEDTLS_MPS_ASSERT_RAW( l3->io.in.hs.state == MPS_L3_HS_PAUSED,
+                                        "Invalid Layer 3 handshake state" );
+                /* This should never happen, as we don't allow switching
+                 * the incoming epoch while pausing the reading of a
+                 * handshake message. But double-check nonetheless. */
+                MBEDTLS_MPS_ASSERT_RAW( l3->io.in.hs.epoch == in.epoch,
+                                        "Unexpected epoch" );
             }
 
             /* Bind the raw reader (supplying record contents) to the
@@ -391,16 +308,11 @@ int mps_l3_read( mps_l3 *l3 )
              * that we know that everything went well. */
             l3->io.in.hs.epoch = in.epoch;
             l3->io.in.hs.state = MPS_L3_HS_ACTIVE;
-
             break;
 
-#if defined(MBEDTLS_MPS_ENABLE_ASSERTIONS)
         default:
-            /* Should never happen because we configured L2
-             * to only accept the above types. */
-            MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_ERROR, "ASSERTION FAILURE!" );
-            MBEDTLS_MPS_TRACE_RETURN( MBEDTLS_ERR_MPS_INTERNAL_ERROR );
-#endif /* MBEDTLS_MPS_ENABLE_ASSERTIONS */
+            MBEDTLS_MPS_ASSERT_RAW( 0, "Invalid record content type" );
+            break;
     }
 
     l3->io.in.raw_in = in.rd;
@@ -537,13 +449,10 @@ MBEDTLS_MPS_STATIC int l3_parse_hs_header( uint8_t mode, mbedtls_mps_reader *rd,
     if( MBEDTLS_MPS_IS_TLS( mode ) )
         return( l3_parse_hs_header_tls( rd, in ) );
 #endif /* MBEDTLS_MPS_PROTO_TLS */
-
 #if defined(MBEDTLS_MPS_PROTO_DTLS)
-    if( MBEDTLS_MPS_IS_DTLS( mode ) )
+    MBEDTLS_MPS_ELSE_IF_DTLS( mode )
         return( l3_parse_hs_header_dtls( rd, in ) );
 #endif /* MBEDTLS_MPS_PROTO_TLS */
-
-    return( MBEDTLS_ERR_MPS_INTERNAL_ERROR );
 }
 
 #if defined(MBEDTLS_MPS_PROTO_TLS)
