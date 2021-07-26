@@ -118,7 +118,7 @@ MBEDTLS_MPS_STATIC int l3_incomplete_header( mps_l3 *l3 )
 #if defined(MBEDTLS_MPS_PROTO_TLS)
     if( MBEDTLS_MPS_IS_TLS( mode ) )
     {
-        MBEDTLS_MPS_TRACE_COMMENT( 
+        MBEDTLS_MPS_TRACE_COMMENT(
               "Incomplete message header -- wait for more data" );
 
         ret = mps_l2_read_done( l2 );
@@ -142,6 +142,16 @@ MBEDTLS_MPS_STATIC int l3_incomplete_header( mps_l3 *l3 )
     }
 #endif /* MBEDTLS_MPS_PROTO_DTLS */
 }
+
+#define L3_DEBUG_IN_STATE( l3 )                                                     \
+    do                                                                              \
+    {                                                                               \
+        MBEDTLS_MPS_TRACE_COMMENT( "New state" );                                   \
+        MBEDTLS_MPS_TRACE_COMMENT( "* External state:  %u",                         \
+               (unsigned) l3->io.in.state );                                        \
+        MBEDTLS_MPS_TRACE_COMMENT( "* Handshake state: %u",                         \
+               (unsigned) l3->io.in.hs.state );                                     \
+    } while( 0 )
 
 /* Attempt to receive an incoming message from Layer 2. */
 int mps_l3_read( mps_l3 *l3 )
@@ -265,7 +275,7 @@ int mps_l3_read( mps_l3 *l3 )
 
                 /* Setup the extended reader keeping track of the
                  * global message bounds. */
-                MBEDTLS_MPS_TRACE_COMMENT( 
+                MBEDTLS_MPS_TRACE_COMMENT(
                                    "Setup extended reader for handshake message" );
 
                 /* TODO: Think about storing the frag_len in len for DTLS
@@ -319,12 +329,7 @@ int mps_l3_read( mps_l3 *l3 )
     l3->io.in.epoch  = in.epoch;
     l3->io.in.state  = in.type;
 
-    MBEDTLS_MPS_TRACE_COMMENT(  "New state" );
-    MBEDTLS_MPS_TRACE_COMMENT(  "* External state:  %u",
-           (unsigned) l3->io.in.state );
-    MBEDTLS_MPS_TRACE_COMMENT(  "* Handshake state: %u",
-           (unsigned) l3->io.in.hs.state );
-
+    L3_DEBUG_IN_STATE( l3 );
     MBEDTLS_MPS_TRACE_RETURN( l3->io.in.state );
 }
 
@@ -521,6 +526,17 @@ MBEDTLS_MPS_STATIC int l3_parse_hs_header_tls( mbedtls_mps_reader *rd,
 #endif /* MBEDTLS_MPS_PROTO_TLS */
 
 #if defined(MBEDTLS_MPS_PROTO_DTLS)
+#define L3_DEBUG_DTLS_HEADER( hdr )                                                      \
+    do                                                                                   \
+    {                                                                                    \
+        MBEDTLS_MPS_TRACE_COMMENT( "DTLS handshake header" );                            \
+        MBEDTLS_MPS_TRACE_COMMENT( "* Type:        %u", (unsigned) (hdr)->type        ); \
+        MBEDTLS_MPS_TRACE_COMMENT( "* Length:      %u", (unsigned) (hdr)->len         ); \
+        MBEDTLS_MPS_TRACE_COMMENT( "* Sequence Nr: %u", (unsigned) (hdr)->seq_nr      ); \
+        MBEDTLS_MPS_TRACE_COMMENT( "* Frag Offset: %u", (unsigned) (hdr)->frag_offset ); \
+        MBEDTLS_MPS_TRACE_COMMENT( "* Frag Length: %u", (unsigned) (hdr)->frag_len    ); \
+    } while( 0 )
+
 MBEDTLS_MPS_STATIC int l3_parse_hs_header_dtls( mbedtls_mps_reader *rd,
                                     mps_l3_hs_in_internal *in )
 {
@@ -588,13 +604,7 @@ MBEDTLS_MPS_STATIC int l3_parse_hs_header_dtls( mbedtls_mps_reader *rd,
         MBEDTLS_MPS_TRACE_RETURN( MBEDTLS_ERR_MPS_INVALID_CONTENT );
     }
 
-    MBEDTLS_MPS_TRACE_COMMENT(  "Parsed DTLS handshake header" );
-    MBEDTLS_MPS_TRACE_COMMENT(  "* Type:        %u", (unsigned) in->type        );
-    MBEDTLS_MPS_TRACE_COMMENT(  "* Length:      %u", (unsigned) in->len         );
-    MBEDTLS_MPS_TRACE_COMMENT(  "* Sequence Nr: %u", (unsigned) in->seq_nr      );
-    MBEDTLS_MPS_TRACE_COMMENT(  "* Frag Offset: %u", (unsigned) in->frag_offset );
-    MBEDTLS_MPS_TRACE_COMMENT(  "* Frag Length: %u", (unsigned) in->frag_len    );
-
+    L3_DEBUG_DTLS_HEADER(in);
     MBEDTLS_MPS_TRACE_RETURN( 0 );
 }
 #endif /* MBEDTLS_MPS_PROTO_DTLS */
@@ -1317,45 +1327,33 @@ MBEDTLS_MPS_STATIC int l3_write_hs_header_tls( mps_l3_hs_out_internal *hs )
     mbedtls_mps_size_t const tls_hs_type_offset   = 0;
     mbedtls_mps_size_t const tls_hs_length_offset = 1;
 
-    /*
+    MBEDTLS_MPS_ASSERT_RAW( buf != NULL, "Invalid buffer" );
+    MBEDTLS_MPS_ASSERT_RAW( hs->hdr_len == tls_hs_hdr_len, "Invalid header" );
 
-      From RFC 5246 (TLS 1.2):
-
-      enum {
-          ..., (255)
-      } HandshakeType;
-
-      struct {
-          HandshakeType msg_type;
-          uint24 length;
-          select (HandshakeType) {
-              case hello_request:       HelloRequest;
-              case client_hello:        ClientHello;
-              case server_hello:        ServerHello;
-              case certificate:         Certificate;
-              case server_key_exchange: ServerKeyExchange;
-              case certificate_request: CertificateRequest;
-              case server_hello_done:   ServerHelloDone;
-              case certificate_verify:  CertificateVerify;
-              case client_key_exchange: ClientKeyExchange;
-              case finished:            Finished;
-          } body;
-      } Handshake;
-
-    */
+    /* From RFC 5246 (TLS 1.2):
+     * enum {
+     *     ..., (255)
+     * } HandshakeType;
+     * struct {
+     *     HandshakeType msg_type;
+     *     uint24 length;
+     *     select (HandshakeType) {
+     *         case hello_request:       HelloRequest;
+     *         case client_hello:        ClientHello;
+     *         case server_hello:        ServerHello;
+     *         case certificate:         Certificate;
+     *         case server_key_exchange: ServerKeyExchange;
+     *         case certificate_request: CertificateRequest;
+     *         case server_hello_done:   ServerHelloDone;
+     *         case certificate_verify:  CertificateVerify;
+     *         case client_key_exchange: ClientKeyExchange;
+     *         case finished:            Finished;
+     *     } body;
+     * } Handshake;
+     */
 
     MBEDTLS_MPS_TRACE_INIT( "l3_write_hs_hdr_tls, type %u, len %u",
            (unsigned) hs->type, (unsigned) hs->len );
-
-#if defined(MBEDTLS_MPS_ENABLE_ASSERTIONS)
-    if( buf == NULL || hs->hdr_len != tls_hs_hdr_len )
-    {
-        MBEDTLS_MPS_TRACE_ERROR( "ASSERTION FAILURE!" );
-        MBEDTLS_MPS_TRACE_RETURN( MBEDTLS_ERR_MPS_INTERNAL_ERROR );
-    }
-#else
-    ((void) tls_hs_hdr_len);
-#endif /* MBEDTLS_MPS_ENABLE_ASSERTIONS */
 
     MPS_WRITE_UINT8_BE ( &hs->type, buf + tls_hs_type_offset   );
     MPS_WRITE_UINT24_BE( &hs->len,  buf + tls_hs_length_offset );
@@ -1404,18 +1402,8 @@ MBEDTLS_MPS_STATIC int l3_write_hs_header_dtls( mps_l3_hs_out_internal *hs )
      *
      */
 
-    MBEDTLS_MPS_TRACE_INIT( "l3_write_hs_hdr_tls, type %u, len %u",
-           (unsigned) hs->type, (unsigned) hs->len );
-
-#if defined(MBEDTLS_MPS_ENABLE_ASSERTIONS)
-    if( buf == NULL || hs->hdr_len != dtls_hs_hdr_len )
-    {
-        MBEDTLS_MPS_TRACE_ERROR( "ASSERTION FAILURE!" );
-        MBEDTLS_MPS_TRACE_RETURN( MBEDTLS_ERR_MPS_INTERNAL_ERROR );
-    }
-#else
-    ((void) dtls_hs_hdr_len);
-#endif /* MBEDTLS_MPS_ENABLE_ASSERTIONS */
+    MBEDTLS_MPS_ASSERT_RAW( buf != NULL, "Invalid buffer" );
+    MBEDTLS_MPS_ASSERT_RAW( hs->hdr_len == dtls_hs_hdr_len, "Invalid header" );
 
     MPS_WRITE_UINT8_BE ( &hs->type,        buf + dtls_hs_type_offset     );
     MPS_WRITE_UINT24_BE( &hs->len,         buf + dtls_hs_len_offset      );
@@ -1423,13 +1411,7 @@ MBEDTLS_MPS_STATIC int l3_write_hs_header_dtls( mps_l3_hs_out_internal *hs )
     MPS_WRITE_UINT24_BE( &hs->frag_offset, buf + dtls_hs_frag_off_offset );
     MPS_WRITE_UINT24_BE( &hs->frag_len,    buf + dtls_hs_frag_len_offset );
 
-    MBEDTLS_MPS_TRACE_COMMENT(  "Wrote DTLS handshake header" );
-    MBEDTLS_MPS_TRACE_COMMENT(  "* Type:        %u", (unsigned) hs->type        );
-    MBEDTLS_MPS_TRACE_COMMENT(  "* Length:      %u", (unsigned) hs->len         );
-    MBEDTLS_MPS_TRACE_COMMENT(  "* Sequence Nr: %u", (unsigned) hs->seq_nr      );
-    MBEDTLS_MPS_TRACE_COMMENT(  "* Frag Offset: %u", (unsigned) hs->frag_offset );
-    MBEDTLS_MPS_TRACE_COMMENT(  "* Frag Length: %u", (unsigned) hs->frag_len    );
-
+    L3_DEBUG_DTLS_HEADER(hs);
     MBEDTLS_MPS_TRACE_RETURN( 0 );
 }
 #endif /* MBEDTLS_MPS_PROTO_DTLS */
