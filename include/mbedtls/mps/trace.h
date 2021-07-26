@@ -171,4 +171,9 @@ void mbedtls_mps_trace_print_msg( int id, int line, const char *format, ... );
 
 #endif /* MBEDTLS_MPS_TRACE */
 
+#define MBEDTLS_MPS_TRACE_COMMENT(...) \
+    MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_COMMENT, __VA_ARGS__ )
+#define MBEDTLS_MPS_TRACE_ERROR(...) \
+    MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_ERROR, __VA_ARGS__ )
+
 #endif /* MBEDTLS_MPS_TRACE_H */
