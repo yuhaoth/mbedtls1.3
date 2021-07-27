@@ -2514,6 +2514,17 @@ MBEDTLS_MPS_STATIC int mps_bitmask_check( unsigned char *mask, size_t len )
     return( 0 );
 }
 
+#define L4_DEBUG_DTLS_HEADER( hdr )                                                      \
+    do                                                                                   \
+    {                                                                                    \
+        MBEDTLS_MPS_TRACE_COMMENT( "DTLS handshake header" );                            \
+        MBEDTLS_MPS_TRACE_COMMENT( "* Type:        %u", (unsigned) (hdr)->type        ); \
+        MBEDTLS_MPS_TRACE_COMMENT( "* Length:      %u", (unsigned) (hdr)->len         ); \
+        MBEDTLS_MPS_TRACE_COMMENT( "* Seq nr:      %u", (unsigned) (hdr)->seq_nr      ); \
+        MBEDTLS_MPS_TRACE_COMMENT( "* Frag Offset: %u", (unsigned) (hdr)->frag_offset ); \
+        MBEDTLS_MPS_TRACE_COMMENT( "* Frag Length: %u", (unsigned) (hdr)->frag_len    ); \
+    } while( 0 )
+
 MBEDTLS_MPS_STATIC int mps_reassembly_feed( mbedtls_mps *mps,
                                 mps_l3_handshake_in *hs )
 {
@@ -2524,13 +2535,8 @@ MBEDTLS_MPS_STATIC int mps_reassembly_feed( mbedtls_mps *mps,
     mps_l3* const l3 = mbedtls_mps_l4_get_l3( mps );
 
     MBEDTLS_MPS_TRACE_INIT( "mps_reassembly_feed" );
-    MBEDTLS_MPS_TRACE_COMMENT( "* Sequence number: %u", (unsigned) hs->seq_nr      );
-    MBEDTLS_MPS_TRACE_COMMENT( "* Type:            %u", (unsigned) hs->type        );
-    MBEDTLS_MPS_TRACE_COMMENT( "* Total length:    %u", (unsigned) hs->len         );
-    MBEDTLS_MPS_TRACE_COMMENT( "* Fragment offset: %u", (unsigned) hs->frag_offset );
-    MBEDTLS_MPS_TRACE_COMMENT( "* Fragment length: %u", (unsigned) hs->frag_len    );
-    MBEDTLS_MPS_TRACE_COMMENT( "Sequence number of next HS message: %u",
-           (unsigned) mps->dtls.seq_nr );
+    MBEDTLS_MPS_TRACE_COMMENT( "Next seq nr: %u", (unsigned) mps->dtls.seq_nr );
+    L4_DEBUG_DTLS_HEADER(hs);
 
     MBEDTLS_MPS_ASSERT(
         MBEDTLS_MPS_FLIGHT_STATE_EITHER_OR( mps_get_hs_state( mps ),
