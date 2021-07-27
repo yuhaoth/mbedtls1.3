@@ -2525,6 +2525,10 @@ MBEDTLS_MPS_STATIC int mps_bitmask_check( unsigned char *mask, size_t len )
         MBEDTLS_MPS_TRACE_COMMENT( "* Frag Length: %u", (unsigned) (hdr)->frag_len    ); \
     } while( 0 )
 
+#define MPS_ASSERT_FLIGHT_STATE_2( a, b )                                                    \
+    MBEDTLS_MPS_ASSERT( MBEDTLS_MPS_FLIGHT_STATE_EITHER_OR( mps_get_hs_state( mps ), a, b ), \
+                        "Unexpected flight state" )
+
 MBEDTLS_MPS_STATIC int mps_reassembly_feed( mbedtls_mps *mps,
                                 mps_l3_handshake_in *hs )
 {
@@ -2534,14 +2538,11 @@ MBEDTLS_MPS_STATIC int mps_reassembly_feed( mbedtls_mps *mps,
     mbedtls_mps_msg_reassembly * reassembly;
     mps_l3* const l3 = mbedtls_mps_l4_get_l3( mps );
 
+    MPS_ASSERT_FLIGHT_STATE_2( MBEDTLS_MPS_FLIGHT_RECVINIT, MBEDTLS_MPS_FLIGHT_RECEIVE );
+
     MBEDTLS_MPS_TRACE_INIT( "mps_reassembly_feed" );
     MBEDTLS_MPS_TRACE_COMMENT( "Next seq nr: %u", (unsigned) mps->dtls.seq_nr );
     L4_DEBUG_DTLS_HEADER(hs);
-
-    MBEDTLS_MPS_ASSERT(
-        MBEDTLS_MPS_FLIGHT_STATE_EITHER_OR( mps_get_hs_state( mps ),
-                  MBEDTLS_MPS_FLIGHT_RECVINIT, MBEDTLS_MPS_FLIGHT_RECEIVE ),
-        "Can't use reassembly module outside of RECEIVE and RECVINIT state." );
 
     seq_nr = hs->seq_nr;
     seq_nr_offset = seq_nr - mps->dtls.seq_nr;
@@ -2737,15 +2738,12 @@ MBEDTLS_MPS_STATIC int mps_reassembly_init( mbedtls_mps *mps )
 }
 
 MBEDTLS_MPS_STATIC int mps_reassembly_get_seq( mbedtls_mps *mps,
-                                   uint8_t *seq_nr )
+                                               uint8_t *seq_nr )
 {
     int ret = 0;
     MBEDTLS_MPS_TRACE_INIT( "mps_reassembly_get_seq" );
-
-    MBEDTLS_MPS_ASSERT( MBEDTLS_MPS_FLIGHT_STATE_EITHER_OR(
-            mps_get_hs_state( mps ),
-            MBEDTLS_MPS_FLIGHT_RECVINIT, MBEDTLS_MPS_FLIGHT_RECEIVE ),
-        "Can't use reassembly module outside of RECEIVE and RECVINIT state." );
+    MPS_ASSERT_FLIGHT_STATE_2( MBEDTLS_MPS_FLIGHT_RECVINIT,
+                               MBEDTLS_MPS_FLIGHT_RECEIVE );
 
     *seq_nr = mps->dtls.seq_nr;
 
@@ -2760,8 +2758,7 @@ MBEDTLS_MPS_STATIC int mps_reassembly_check_and_load( mbedtls_mps *mps )
     int ret = 0;
     MBEDTLS_MPS_TRACE_INIT( "mps_reassembly_check_and_load" );
 
-    if( ! MBEDTLS_MPS_FLIGHT_STATE_EITHER_OR(
-            mps_get_hs_state( mps ),
+    if( ! MBEDTLS_MPS_FLIGHT_STATE_EITHER_OR( mps_get_hs_state( mps ),
             MBEDTLS_MPS_FLIGHT_RECVINIT, MBEDTLS_MPS_FLIGHT_RECEIVE ) )
     {
         MPS_CHK( MBEDTLS_ERR_MPS_REASSEMBLY_FEED_NEED_MORE );
@@ -2803,10 +2800,7 @@ MBEDTLS_MPS_STATIC int mps_reassembly_read( mbedtls_mps *mps,
     mbedtls_mps_msg_reassembly * reassembly = &in->reassembly[0];
     MBEDTLS_MPS_TRACE_INIT( "mps_reassembly_read" );
 
-    MBEDTLS_MPS_ASSERT( MBEDTLS_MPS_FLIGHT_STATE_EITHER_OR(
-            mps_get_hs_state( mps ),
-            MBEDTLS_MPS_FLIGHT_RECVINIT, MBEDTLS_MPS_FLIGHT_RECEIVE ),
-        "Can't use reassembly module outside of RECEIVE and RECVINIT state." );
+    MPS_ASSERT_FLIGHT_STATE_2( MBEDTLS_MPS_FLIGHT_RECVINIT, MBEDTLS_MPS_FLIGHT_RECEIVE );
 
     hs->length = reassembly->length;
     hs->type   = reassembly->type;
@@ -2847,10 +2841,7 @@ MBEDTLS_MPS_STATIC int mps_reassembly_done( mbedtls_mps *mps )
     mps_l3* const l3 = mbedtls_mps_l4_get_l3( mps );
     MBEDTLS_MPS_TRACE_INIT( "mps_reassembly_done" );
 
-    MBEDTLS_MPS_ASSERT( MBEDTLS_MPS_FLIGHT_STATE_EITHER_OR(
-            mps_get_hs_state( mps ),
-            MBEDTLS_MPS_FLIGHT_RECVINIT, MBEDTLS_MPS_FLIGHT_RECEIVE ),
-        "Can't use reassembly module outside of RECEIVE and RECVINIT state." );
+    MPS_ASSERT_FLIGHT_STATE_2( MBEDTLS_MPS_FLIGHT_RECVINIT, MBEDTLS_MPS_FLIGHT_RECEIVE );
 
     if( reassembly->status == MBEDTLS_MPS_REASSEMBLY_WINDOW )
     {
@@ -2893,10 +2884,7 @@ MBEDTLS_MPS_STATIC int mps_reassembly_next_msg_complete( mbedtls_mps *mps )
     mbedtls_mps_msg_reassembly * const reassembly = &in->reassembly[0];
     MBEDTLS_MPS_TRACE_INIT( "mps_reassembly_next_msg_complete" );
 
-    MBEDTLS_MPS_ASSERT( MBEDTLS_MPS_FLIGHT_STATE_EITHER_OR(
-            mps_get_hs_state( mps ),
-            MBEDTLS_MPS_FLIGHT_RECVINIT, MBEDTLS_MPS_FLIGHT_RECEIVE ),
-        "Can't use reassembly module outside of RECEIVE and RECVINIT state." );
+    MPS_ASSERT_FLIGHT_STATE_2( MBEDTLS_MPS_FLIGHT_RECVINIT, MBEDTLS_MPS_FLIGHT_RECEIVE );
 
     if( reassembly->status == MBEDTLS_MPS_REASSEMBLY_WINDOW &&
         reassembly->data.window.bitmask == NULL )
@@ -2923,10 +2911,7 @@ MBEDTLS_MPS_STATIC int mps_reassembly_pause( mbedtls_mps *mps )
     ((void) mps);
     MBEDTLS_MPS_TRACE_INIT( "mps_reassembly_pause" );
 
-    MBEDTLS_MPS_ASSERT( MBEDTLS_MPS_FLIGHT_STATE_EITHER_OR(
-            mps_get_hs_state( mps ),
-            MBEDTLS_MPS_FLIGHT_RECVINIT, MBEDTLS_MPS_FLIGHT_RECEIVE ),
-        "Can't use reassembly module outside of RECEIVE and RECVINIT state." );
+    MPS_ASSERT_FLIGHT_STATE_2( MBEDTLS_MPS_FLIGHT_RECVINIT, MBEDTLS_MPS_FLIGHT_RECEIVE );
 
     ret = MBEDTLS_ERR_MPS_OPERATION_UNSUPPORTED;
 
@@ -2940,10 +2925,7 @@ MBEDTLS_MPS_STATIC int mps_reassembly_forget( mbedtls_mps *mps )
     mbedtls_mps_reassembly * const in = &mps->dtls.io.in.incoming;
     MBEDTLS_MPS_TRACE_INIT( "mps_reassembly_forget" );
 
-    MBEDTLS_MPS_ASSERT( MBEDTLS_MPS_FLIGHT_STATE_EITHER_OR(
-            mps_get_hs_state( mps ),
-            MBEDTLS_MPS_FLIGHT_RECVINIT, MBEDTLS_MPS_FLIGHT_RECEIVE ),
-        "Can't use reassembly module outside of RECEIVE and RECVINIT state." );
+    MPS_ASSERT_FLIGHT_STATE_2( MBEDTLS_MPS_FLIGHT_RECVINIT, MBEDTLS_MPS_FLIGHT_RECEIVE );
 
     /* Check that there are no more buffered messages.
      * This catches the situation where the peer sends
