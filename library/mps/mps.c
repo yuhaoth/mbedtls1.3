@@ -1973,22 +1973,16 @@ int mbedtls_mps_dispatch( mbedtls_mps *mps )
             if( flags == MBEDTLS_MPS_FLIGHT_END )
             {
                 MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_COMMENT,
-                       "Message finishes the flight, "
-                       "move from SEND to AWAIT state." );
-                MPS_CHK( mps_handshake_state_transition(
-                             mps,
-                             MBEDTLS_MPS_FLIGHT_SEND,
-                             MBEDTLS_MPS_FLIGHT_AWAIT ) );
+                      "Message finishes the flight, move from SEND to AWAIT." );
+                MPS_CHK( mps_handshake_state_transition( mps,
+                             MBEDTLS_MPS_FLIGHT_SEND, MBEDTLS_MPS_FLIGHT_AWAIT ) );
             }
             else
             {
                 MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_COMMENT,
-                       "Message finishes the flight-exchange, "
-                       "move from SEND to FINALIZE state." );
-                MPS_CHK( mps_handshake_state_transition(
-                             mps,
-                             MBEDTLS_MPS_FLIGHT_SEND,
-                             MBEDTLS_MPS_FLIGHT_FINALIZE ) );
+                   "Message finishes exchange, move from SEND to FINALIZE." );
+                MPS_CHK( mps_handshake_state_transition( mps,
+                             MBEDTLS_MPS_FLIGHT_SEND, MBEDTLS_MPS_FLIGHT_FINALIZE ) );
             }
 
             MPS_CHK( mps_retransmission_timer_update( mps ) );
@@ -2055,8 +2049,7 @@ int mbedtls_mps_set_incoming_keys( mbedtls_mps *mps,
 
     if( mps->in_epoch == id )
     {
-        MBEDTLS_MPS_TRACE_COMMENT( "Epoch %u is already the current incoming epoch",
-               (unsigned) id );
+        MBEDTLS_MPS_TRACE_COMMENT( "Epoch %u already the incoming epoch", (unsigned) id );
         MBEDTLS_MPS_TRACE_RETURN( 0 );
     }
 
@@ -2064,15 +2057,13 @@ int mbedtls_mps_set_incoming_keys( mbedtls_mps *mps,
     if( mps->in_epoch != MBEDTLS_MPS_EPOCH_NONE )
     {
         MPS_CHK( mps_l3_epoch_usage( l3, mps->in_epoch,
-                                     MPS_EPOCH_USAGE_READ(
-                                         MPS_READ_ACTIVE ), 0 ) );
+                        MPS_EPOCH_USAGE_READ( MPS_READ_ACTIVE ), 0 ) );
     }
 
     if( id != MBEDTLS_MPS_EPOCH_NONE )
     {
         MPS_CHK( mps_l3_epoch_usage( l3, id, 0,
-                                     MPS_EPOCH_USAGE_READ(
-                                         MPS_READ_ACTIVE ) ) );
+                        MPS_EPOCH_USAGE_READ( MPS_READ_ACTIVE ) ) );
     }
 
     mps->in_epoch = id;
@@ -2091,8 +2082,7 @@ int mbedtls_mps_set_outgoing_keys( mbedtls_mps *mps,
 
     if( mps->out_epoch == id )
     {
-        MBEDTLS_MPS_TRACE_COMMENT( "Epoch %u is already the current incoming epoch",
-               (unsigned) id );
+        MBEDTLS_MPS_TRACE_COMMENT( "Epoch %u is already the incoming epoch", (unsigned) id );
         MBEDTLS_MPS_TRACE_RETURN( 0 );
     }
 
@@ -2100,15 +2090,13 @@ int mbedtls_mps_set_outgoing_keys( mbedtls_mps *mps,
     if( mps->out_epoch != MBEDTLS_MPS_EPOCH_NONE )
     {
         MPS_CHK( mps_l3_epoch_usage( l3, mps->out_epoch,
-                                     MPS_EPOCH_USAGE_WRITE(
-                                         MPS_WRITE_ACTIVE ), 0 ) );
+                  MPS_EPOCH_USAGE_WRITE( MPS_WRITE_ACTIVE ), 0 ) );
     }
 
     if( id != MBEDTLS_MPS_EPOCH_NONE )
     {
         MPS_CHK( mps_l3_epoch_usage( l3, id, 0,
-                                     MPS_EPOCH_USAGE_WRITE(
-                                         MPS_WRITE_ACTIVE ) ) );
+                  MPS_EPOCH_USAGE_WRITE( MPS_WRITE_ACTIVE ) ) );
     }
 
     mps->out_epoch = id;
@@ -2242,10 +2230,8 @@ MBEDTLS_MPS_STATIC int mps_retransmission_timer_check( mbedtls_mps *mps )
             case MBEDTLS_MPS_FLIGHT_FINALIZE:
                 /* TODO: Extract to function, share code
                  * with mbedtls_mps_write_handshake(). */
-                MPS_CHK( mps_handshake_state_transition(
-                             mps,
-                             MBEDTLS_MPS_FLIGHT_FINALIZE,
-                             MBEDTLS_MPS_FLIGHT_DONE ) );
+                MPS_CHK( mps_handshake_state_transition( mps,
+                      MBEDTLS_MPS_FLIGHT_FINALIZE, MBEDTLS_MPS_FLIGHT_DONE ) );
                 break;
 
             default:
@@ -3333,15 +3319,13 @@ int mbedtls_mps_retransmission_handle_incoming_fragment( mbedtls_mps *mps )
         if( mps_get_hs_state( mps ) == MBEDTLS_MPS_FLIGHT_AWAIT )
         {
             MPS_CHK( mps_handshake_state_transition( mps,
-                                                 MBEDTLS_MPS_FLIGHT_AWAIT,
-                                                 MBEDTLS_MPS_FLIGHT_RECEIVE ) );
+                        MBEDTLS_MPS_FLIGHT_AWAIT, MBEDTLS_MPS_FLIGHT_RECEIVE ) );
         }
         else /* if( mps_get_hs_state( mps )
                       == MBEDTLS_MPS_FLIGHT_FINALIZE ) */
         {
             MPS_CHK( mps_handshake_state_transition( mps,
-                                                 MBEDTLS_MPS_FLIGHT_FINALIZE,
-                                                 MBEDTLS_MPS_FLIGHT_DONE ) );
+                        MBEDTLS_MPS_FLIGHT_FINALIZE, MBEDTLS_MPS_FLIGHT_DONE ) );
         }
     }
 
@@ -3410,8 +3394,7 @@ int mbedtls_mps_retransmission_handle_incoming_fragment( mbedtls_mps *mps )
          */
         mps->dtls.seq_nr = seq_nr;
         MPS_CHK( mps_handshake_state_transition( mps,
-                                               MBEDTLS_MPS_FLIGHT_DONE,
-                                               MBEDTLS_MPS_FLIGHT_RECVINIT ) );
+                    MBEDTLS_MPS_FLIGHT_DONE, MBEDTLS_MPS_FLIGHT_RECVINIT ) );
     }
 
     /* 2. Feed the handshake fragment into the reassembly module.
@@ -4004,12 +3987,9 @@ MBEDTLS_MPS_STATIC int mps_out_flight_msg_done( mbedtls_mps *mps )
     mbedtls_mps_retransmission_handle *hdl;
     MBEDTLS_MPS_TRACE_INIT( "mps_out_flight_msg_done" );
 
+    /* Add epoch usage for retransmission */
     MPS_CHK( mps_l3_epoch_usage( l3, mps->out_epoch,
-                                 /* No removal of usage flags. */
-                                 0,
-                                 /* Add usage flag for retransmission. */
-                                 MPS_EPOCH_USAGE_WRITE(
-                                     MPS_WRITE_RETRANSMISSION ) ) );
+              0, MPS_EPOCH_USAGE_WRITE( MPS_WRITE_RETRANSMISSION ) ) );
 
     cur_flight_len = mps->dtls.outgoing.flight_len;
     MBEDTLS_MPS_ASSERT( cur_flight_len > 0,
