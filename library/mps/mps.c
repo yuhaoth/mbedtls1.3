@@ -2606,6 +2606,9 @@ MBEDTLS_MPS_STATIC int mps_reassembly_feed( mbedtls_mps *mps,
             unsigned char *buf;
             MBEDTLS_MPS_TRACE_COMMENT( "Feed handshake message into reassembler." );
 
+            /* TODO: If we have received a full fragment, we don't need to
+             *       allocate the bitmask here. */
+
             /* For proper fragments of the next expected message,
              * or for any fragments (even full ones) belonging
              * to future messages, use a reassembly window. */
