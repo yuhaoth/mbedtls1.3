@@ -8924,8 +8924,7 @@ exit:
 static void ssl_update_checksum_start( mbedtls_ssl_context* ssl,
                                        const unsigned char* buf, size_t len )
 {
-    if( ssl->minor_ver==MBEDTLS_SSL_MINOR_VERSION_4
-        && ssl->major_ver == MBEDTLS_SSL_MAJOR_VERSION_3)
+    if( ssl->minor_ver==MBEDTLS_SSL_MINOR_VERSION_4 )
         ssl_update_checksum_start_tls13( ssl, buf, len );
     else
         ssl_update_checksum_start_tls12( ssl, buf, len );
@@ -8934,8 +8933,7 @@ static void ssl_update_checksum_start( mbedtls_ssl_context* ssl,
 static void ssl_update_checksum_sha384( mbedtls_ssl_context* ssl,
                                        const unsigned char* buf, size_t len )
 {
-    if( ssl->minor_ver==MBEDTLS_SSL_MINOR_VERSION_4
-        && ssl->major_ver == MBEDTLS_SSL_MAJOR_VERSION_3)
+    if( ssl->minor_ver==MBEDTLS_SSL_MINOR_VERSION_4 )
         ssl_update_checksum_sha384_tls13( ssl, buf, len );
     else
         ssl_update_checksum_sha384_tls12( ssl, buf, len );
@@ -8944,8 +8942,7 @@ static void ssl_update_checksum_sha384( mbedtls_ssl_context* ssl,
 static void ssl_update_checksum_sha256( mbedtls_ssl_context* ssl,
                                         const unsigned char* buf, size_t len )
 {
-    if( ssl->minor_ver==MBEDTLS_SSL_MINOR_VERSION_4
-        && ssl->major_ver == MBEDTLS_SSL_MAJOR_VERSION_3)
+    if( ssl->minor_ver==MBEDTLS_SSL_MINOR_VERSION_4 )
         ssl_update_checksum_sha256_tls13( ssl, buf, len );
     else
         ssl_update_checksum_sha256_tls12( ssl, buf, len );
