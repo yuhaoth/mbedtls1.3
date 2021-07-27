@@ -2826,12 +2826,7 @@ MBEDTLS_MPS_STATIC int mps_reassembly_read( mbedtls_mps *mps,
     }
     else
     {
-        /* We should never call this function unless we know
-         * that a message is ready. */
-        MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_COMMENT,
-               "Should never call mps_reassembly_read unless it is "
-               "known that a message is ready." );
-        MPS_CHK( MBEDTLS_ERR_MPS_INTERNAL_ERROR );
+        MBEDTLS_MPS_ASSERT( 0, "Invalid call to mps_reassembly_read()" );
     }
 
     MPS_INTERNAL_FAILURE_HANDLER
