@@ -2586,11 +2586,9 @@ MBEDTLS_MPS_STATIC int mps_reassembly_feed( mbedtls_mps *mps,
         reassembly->length = hs->len;
         reassembly->type   = hs->type;
 
-        /* If we have actually received the entire message, and it
-         * is the one we expect next, don't use reassembly but forward
-         * the reader from Layer 3. */
-        complete_msg = ( hs->frag_offset == 0 ) &&
-                       ( hs->frag_len    == hs->len );
+        /* If we receive the next expected HS message in a single fragment, bypass
+         * reassembly and forward reader from Layer 3. */
+        complete_msg = ( hs->frag_offset == 0 ) && ( hs->frag_len == hs->len );
         if( seq_nr_offset == 0 && complete_msg )
         {
             MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_COMMENT,
