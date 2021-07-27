@@ -6351,7 +6351,6 @@ exit:
 /* BEGIN_CASE depends_on:TEST_SUITE_MPS_L3 */
 void mbedtls_mps_l3_basic_handshake(
           int mode,
-          int aborted_before,
           int real_transforms,
           int length_known,
           int multiple_fetch,
@@ -6410,79 +6409,6 @@ void mbedtls_mps_l3_basic_handshake(
     TEST_ASSERT( mps_l3_epoch_add( &srv_l3, dummy_s, &srv_epoch ) == 0 );
     TEST_ASSERT( mps_l3_epoch_usage( &srv_l3, srv_epoch,
                                      0, MPS_EPOCH_USAGE_READ( 0 ) ) == 0 );
-
-    /*
-     * Client: Start but abort writing handshake message, if requested
-     */
-
-    if( aborted_before != 0)
-    {
-        hs_out.epoch = 0;
-        hs_out.type = 12;
-
-        if( mode == MBEDTLS_MPS_MODE_STREAM )
-        {
-            if( length_known == 0 )
-            {
-                hs_out.frag_offset = 0;
-                hs_out.frag_len    = 10;
-                hs_out.len         = 20;
-            }
-            else
-            {
-                hs_out.frag_offset = 0;
-                hs_out.frag_len    = MBEDTLS_MPS_SIZE_UNKNOWN;
-                hs_out.len         = MBEDTLS_MPS_SIZE_UNKNOWN;
-            }
-        }
-        else
-        {
-            if( length_known == 2 )
-            {
-                hs_out.frag_offset = 10;
-                hs_out.frag_len    = 20;
-                hs_out.len         = 40;
-            }
-            else if( length_known == 1 )
-            {
-                hs_out.frag_offset = 10;
-                hs_out.frag_len    = MBEDTLS_MPS_SIZE_UNKNOWN;
-                hs_out.len         = 40;
-            }
-            else
-            {
-                hs_out.frag_offset = 0;
-                hs_out.frag_len    = MBEDTLS_MPS_SIZE_UNKNOWN;
-                hs_out.len         = MBEDTLS_MPS_SIZE_UNKNOWN;
-            }
-        }
-
-        TEST_ASSERT( mps_l3_write_handshake( &cli_l3,
-                                             &hs_out ) == 0 );
-
-        if( aborted_before == 1 )
-        {
-            TEST_ASSERT( mbedtls_writer_get_ext( hs_out.wr_ext, 10,
-                                                 &tmp, NULL ) == 0 );
-
-            TEST_ASSERT( mps_l3_write_abort_handshake( &cli_l3 ) == 0 );
-        }
-        else if( aborted_before == 2 )
-        {
-            TEST_ASSERT( mbedtls_writer_get_ext( hs_out.wr_ext, 10,
-                                                 &tmp, NULL ) == 0 );
-            TEST_ASSERT( mbedtls_writer_commit_ext( hs_out.wr_ext ) == 0 );
-
-#if defined(MBEDTLS_MPS_ENABLE_ASSERTIONS)
-            /* We shouldn't be allowed to abort once we have
-             * committed something. */
-            TEST_ASSERT( mps_l3_write_abort_handshake( &cli_l3 ) ==
-                         MBEDTLS_ERR_MPS_INTERNAL_ERROR );
-#endif /* MBEDTLS_MPS_ENABLE_ASSERTIONS */
-
-            goto exit;
-        }
-    }
 
     /*
      * Client: Write handshake message to server

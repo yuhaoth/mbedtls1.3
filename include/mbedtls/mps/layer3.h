@@ -783,21 +783,6 @@ MBEDTLS_MPS_INTERNAL_API int mps_l3_pause_handshake( mps_l3 *l3 );
 #endif /* MBEDTLS_MPS_PROTO_TLS */
 
 /**
- * \brief           Abort the writing of an outgoing handshake message.
- *
- *                  After the writing of a handshake message has commenced
- *                  through a successful call to mps_l3_write_handshake(),
- *                  this function can be used to abort the write, as long
- *                  as no data has been committed.
- *
- * \param l3        The pointer to Layer 3 context.
- *
- * \return          0 on success, a negative error code on failure.
- *
- */
-MBEDTLS_MPS_INTERNAL_API int mps_l3_write_abort_handshake( mps_l3 *l3 );
-
-/**
  * \brief         Conclude the writing of the current outgoing message.
  *
  *                This function must be called after the user has requested
