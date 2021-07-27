@@ -679,15 +679,11 @@ struct mbedtls_ssl_handshake_params
 #endif
 #endif /* MBEDTLS_SSL_PROTO_TLS1_2 || MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
-    void (*update_checksum)(mbedtls_ssl_context*, const unsigned char*, size_t);
-    int (*calc_verify)(mbedtls_ssl_context*, unsigned char*, int);
-    int(*calc_finished)(mbedtls_ssl_context*, unsigned char*, int);
-#else
     void (*update_checksum)(mbedtls_ssl_context *, const unsigned char *, size_t);
+#if defined(MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER)
     void (*calc_verify)(const mbedtls_ssl_context *, unsigned char *, size_t *);
     void (*calc_finished)(mbedtls_ssl_context *, unsigned char *, int);
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+#endif /* defined(MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER) */
 
     mbedtls_ssl_tls_prf_cb *tls_prf;
 

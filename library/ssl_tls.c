@@ -3133,8 +3133,8 @@ void mbedtls_ssl_reset_checksum( mbedtls_ssl_context *ssl )
 #endif /* defined(MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER) */
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
-static void ssl_update_checksum_start( mbedtls_ssl_context *ssl,
-                                       const unsigned char *buf, size_t len )
+static void ssl_update_checksum_start_tls13( mbedtls_ssl_context *ssl,
+                                             const unsigned char *buf, size_t len )
 {
 #if defined(MBEDTLS_SSL_DEBUG_HANDSHAKE_HASHES)
 #if defined(MBEDTLS_SHA256_C)
@@ -3208,8 +3208,8 @@ void mbedtls_ssl_transform_free( mbedtls_ssl_transform* transform )
 }
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER)
-static void ssl_update_checksum_start( mbedtls_ssl_context* ssl,
-                                       const unsigned char* buf, size_t len )
+static void ssl_update_checksum_start_tls12( mbedtls_ssl_context* ssl,
+                                             const unsigned char* buf, size_t len )
 {
 #if defined(MBEDTLS_SSL_PROTO_SSL3) || defined(MBEDTLS_SSL_PROTO_TLS1) || \
     defined(MBEDTLS_SSL_PROTO_TLS1_1)
@@ -3246,7 +3246,7 @@ static void ssl_update_checksum_md5sha1( mbedtls_ssl_context *ssl,
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_2)
 #if defined(MBEDTLS_SHA256_C)
-static void ssl_update_checksum_sha256( mbedtls_ssl_context *ssl,
+static void ssl_update_checksum_sha256_tls12( mbedtls_ssl_context *ssl,
                                         const unsigned char *buf, size_t len )
 {
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
@@ -3258,7 +3258,7 @@ static void ssl_update_checksum_sha256( mbedtls_ssl_context *ssl,
 #endif
 
 #if defined(MBEDTLS_SHA512_C)
-static void ssl_update_checksum_sha384( mbedtls_ssl_context *ssl,
+static void ssl_update_checksum_sha384_tls12( mbedtls_ssl_context *ssl,
                                         const unsigned char *buf, size_t len )
 {
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
@@ -3274,7 +3274,7 @@ static void ssl_update_checksum_sha384( mbedtls_ssl_context *ssl,
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
 
 #if defined(MBEDTLS_SHA256_C)
-static void ssl_update_checksum_sha256( mbedtls_ssl_context* ssl,
+static void ssl_update_checksum_sha256_tls13( mbedtls_ssl_context* ssl,
     const unsigned char* buf, size_t len )
 {
     int ret = 0;
@@ -3319,7 +3319,7 @@ exit:;
 #endif /* MBEDTLS_SHA256_C */
 
 #if defined(MBEDTLS_SHA512_C)
-static void ssl_update_checksum_sha384( mbedtls_ssl_context* ssl,
+static void ssl_update_checksum_sha384_tls13( mbedtls_ssl_context* ssl,
     const unsigned char* buf, size_t len )
 {
     int ret = 0;
@@ -5178,7 +5178,7 @@ int mbedtls_ssl_set_hs_psk( mbedtls_ssl_context *ssl,
 
     if( psk_len > MBEDTLS_PSK_MAX_LEN )
     {
-        MBEDTLS_SSL_DEBUG_MSG( 1, 
+        MBEDTLS_SSL_DEBUG_MSG( 1,
             ( "PSK length has exceeded MBEDTLS_PSK_MAX_LEN (%u)",
               (unsigned) MBEDTLS_PSK_MAX_LEN ) );
         return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
@@ -8920,4 +8920,73 @@ exit:
 #endif /* MBEDTLS_SSL_PROTO_TLS1 || MBEDTLS_SSL_PROTO_TLS1_1 || \
           MBEDTLS_SSL_PROTO_TLS1_2 */
 
+#if defined(MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER) && defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+static void ssl_update_checksum_start( mbedtls_ssl_context* ssl,
+                                       const unsigned char* buf, size_t len )
+{
+    if( ssl->minor_ver==MBEDTLS_SSL_MINOR_VERSION_4 )
+        ssl_update_checksum_start_tls13( ssl, buf, len );
+    else
+        ssl_update_checksum_start_tls12( ssl, buf, len );
+}
+
+static void ssl_update_checksum_sha384( mbedtls_ssl_context* ssl,
+                                       const unsigned char* buf, size_t len )
+{
+    if( ssl->minor_ver==MBEDTLS_SSL_MINOR_VERSION_4 )
+        ssl_update_checksum_sha384_tls13( ssl, buf, len );
+    else
+        ssl_update_checksum_sha384_tls12( ssl, buf, len );
+}
+
+static void ssl_update_checksum_sha256( mbedtls_ssl_context* ssl,
+                                        const unsigned char* buf, size_t len )
+{
+    if( ssl->minor_ver==MBEDTLS_SSL_MINOR_VERSION_4 )
+        ssl_update_checksum_sha256_tls13( ssl, buf, len );
+    else
+        ssl_update_checksum_sha256_tls12( ssl, buf, len );
+}
+
+#elif defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+static void ssl_update_checksum_start( mbedtls_ssl_context* ssl,
+                                       const unsigned char* buf, size_t len )
+{
+    ssl_update_checksum_start_tls13( ssl, buf, len );
+}
+
+static void ssl_update_checksum_sha384( mbedtls_ssl_context* ssl,
+                                        const unsigned char* buf, size_t len )
+{
+    ssl_update_checksum_sha384_tls13( ssl, buf, len );
+}
+
+static void ssl_update_checksum_sha256( mbedtls_ssl_context* ssl,
+                                        const unsigned char* buf, size_t len )
+{
+    ssl_update_checksum_sha256_tls13( ssl, buf, len );
+}
+
+#elif defined(MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER)
+static void ssl_update_checksum_start( mbedtls_ssl_context* ssl,
+                                       const unsigned char* buf, size_t len )
+{
+    ssl_update_checksum_start_tls12( ssl, buf, len );
+}
+
+static void ssl_update_checksum_sha384( mbedtls_ssl_context* ssl,
+                                       const unsigned char* buf, size_t len )
+{
+    ssl_update_checksum_sha384_tls12( ssl, buf, len );
+}
+
+static void ssl_update_checksum_sha256( mbedtls_ssl_context* ssl,
+                                       const unsigned char* buf, size_t len )
+{
+    ssl_update_checksum_sha256_tls12( ssl, buf, len );
+}
+
+
+#endif /* defined(MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER) \
+          && defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) */
 #endif /* MBEDTLS_SSL_TLS_C */
