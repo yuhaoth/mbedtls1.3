@@ -1068,12 +1068,6 @@ int mbedtls_mps_read( mbedtls_mps *mps )
             MPS_CHK( mps_l3_read_ccs( l3, &ccs_l3 ) );
             MPS_CHK( mps_l3_read_consume( l3 ) );
 
-#if defined(MBEDTLS_MPS_PROTO_TLS)
-            MBEDTLS_MPS_IF_TLS( mode )
-            {
-                /* TLS */
-            }
-#endif /* MBEDTLS_MPS_PROTO_TLS */
 #if defined(MBEDTLS_MPS_PROTO_DTLS)
             if( MBEDTLS_MPS_IS_DTLS( mode ) &&
                 ccs_l3.epoch != mps->in_epoch )
@@ -2546,10 +2540,9 @@ MBEDTLS_MPS_STATIC int mps_reassembly_feed( mbedtls_mps *mps,
     seq_nr = hs->seq_nr;
     seq_nr_offset = seq_nr - mps->dtls.seq_nr;
 
-    /* Check if the sequence number belongs to the window
-     * of messages that we're currently buffering - in particular,
-     * if buffering is disabled, this checks if the fragment
-     * belongs to the next handshake message. */
+    /* Check if the sequence number belongs to the window of messages that we're
+     * currently buffering - in particular, if buffering is disabled, check if
+     * the fragment belongs to the next handshake message. */
     if( seq_nr < mps->dtls.seq_nr ||
         seq_nr_offset >= 1 + MBEDTLS_MPS_FUTURE_MESSAGE_BUFFERS )
     {
