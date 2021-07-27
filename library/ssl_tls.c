@@ -3185,28 +3185,6 @@ static void ssl_update_checksum_start_tls13( mbedtls_ssl_context *ssl,
 }
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 
-
-void mbedtls_ssl_transform_free( mbedtls_ssl_transform* transform )
-{
-    if( transform == NULL )
-        return;
-
-#if defined(MBEDTLS_ZLIB_SUPPORT)
-    deflateEnd( &transform->ctx_deflate );
-    inflateEnd( &transform->ctx_inflate );
-#endif
-
-    mbedtls_cipher_free( &transform->cipher_ctx_enc );
-    mbedtls_cipher_free( &transform->cipher_ctx_dec );
-
-#if defined(MBEDTLS_SSL_SOME_MODES_USE_MAC)
-    mbedtls_md_free( &transform->md_ctx_enc );
-    mbedtls_md_free( &transform->md_ctx_dec );
-#endif
-
-    mbedtls_platform_zeroize( transform, sizeof(mbedtls_ssl_transform) );
-}
-
 #if defined(MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER)
 static void ssl_update_checksum_start_tls12( mbedtls_ssl_context* ssl,
                                              const unsigned char* buf, size_t len )
