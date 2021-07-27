@@ -2795,7 +2795,7 @@ static int ssl_parse_certificate_verify( mbedtls_ssl_context *ssl,
 #endif /* MBEDTLS_ECP_C */
 
     if( mbedtls_ssl_check_cert_usage( chain,
-                                      ciphersuite_info,
+                                      ciphersuite_info->key_exchange,
                                       ! ssl->conf->endpoint,
                                       &ssl->session_negotiate->verify_result ) != 0 )
     {
@@ -8560,17 +8560,10 @@ int mbedtls_ssl_check_sig_hash( const mbedtls_ssl_context *ssl,
 #endif /* MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED */
 
 #if defined(MBEDTLS_X509_CRT_PARSE_C)
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
 int mbedtls_ssl_check_cert_usage( const mbedtls_x509_crt* cert,
     const mbedtls_key_exchange_type_t key_exchange,
     int cert_endpoint,
     uint32_t* flags )
-#else
-int mbedtls_ssl_check_cert_usage( const mbedtls_x509_crt* cert,
-    const mbedtls_ssl_ciphersuite_t* ciphersuite,
-    int cert_endpoint,
-    uint32_t* flags )
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 {
     int ret = 0;
 #if defined(MBEDTLS_X509_CHECK_KEY_USAGE)
@@ -8592,11 +8585,7 @@ int mbedtls_ssl_check_cert_usage( const mbedtls_x509_crt* cert,
     if( cert_endpoint == MBEDTLS_SSL_IS_SERVER )
     {
         /* Server part of the key exchange */
-#if defined(MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER)
-        switch( ciphersuite->key_exchange )
-#else   /* defined(MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER) */
         switch( key_exchange )
-#endif /* !defined(MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER) */
         {
             case MBEDTLS_KEY_EXCHANGE_RSA:
             case MBEDTLS_KEY_EXCHANGE_RSA_PSK:
