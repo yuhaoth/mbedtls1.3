@@ -966,6 +966,12 @@ int mps_l3_write_handshake( mps_l3 *l3, mps_l3_handshake_out *out )
         else if( res != 0 )
             MBEDTLS_MPS_TRACE_RETURN( res );
 
+        /* Commit the header already now, even though it's not yet written.
+         * We only commit to writing it at some point. */
+        res = mbedtls_writer_commit( l3->io.out.raw_out );
+        if( res != 0 )
+            MBEDTLS_MPS_TRACE_RETURN( 0 );
+
         MBEDTLS_MPS_TRACE_COMMENT(  "Setup extended writer for handshake message" );
 
         /* TODO: Think about storing the frag_len in len for DTLS
@@ -1086,7 +1092,6 @@ int mps_l3_write_ccs( mps_l3 *l3, mps_l3_ccs_out *ccs )
 int mps_l3_pause_handshake( mps_l3 *l3 )
 {
     int res;
-    mbedtls_mps_size_t uncommitted;
     mbedtls_mps_l2* const l2 = mbedtls_mps_l3_get_l2( l3 );
     MBEDTLS_MPS_TRACE_INIT( "mps_l3_pause_handshake" );
 
@@ -1103,23 +1108,12 @@ int mps_l3_pause_handshake( mps_l3 *l3 )
 
     /* Remove reference to raw writer from writer. */
     res = mbedtls_writer_detach( &l3->io.out.hs.wr_ext,
-                                 NULL,
-                                 &uncommitted );
+                                 NULL, NULL );
     if( res != 0 )
         MBEDTLS_MPS_TRACE_RETURN( res );
 
     MBEDTLS_MPS_TRACE_COMMENT( "Write handshake header" );
     res = l3_check_write_hs_hdr( l3 );
-    if( res != 0 )
-        MBEDTLS_MPS_TRACE_RETURN( res );
-
-    /* We must perform this commit even if commits
-     * are passed through, because it might happen
-     * that the user pauses the writing before
-     * any data has been committed. In this case,
-     * we must make sure to commit the handshake header. */
-    res = mbedtls_writer_commit_partial( l3->io.out.raw_out,
-                                         uncommitted );
     if( res != 0 )
         MBEDTLS_MPS_TRACE_RETURN( res );
 
@@ -1144,7 +1138,6 @@ int mps_l3_dispatch( mps_l3 *l3 )
 {
     int res;
     mbedtls_mps_size_t committed;
-    mbedtls_mps_size_t uncommitted;
     mbedtls_mps_l2* const l2 = mbedtls_mps_l3_get_l2( l3 );
     mbedtls_mps_transport_type const mode =
         mbedtls_mps_l3_conf_get_mode( &l3->conf );
@@ -1172,8 +1165,7 @@ int mps_l3_dispatch( mps_l3 *l3 )
             }
 
             res = mbedtls_writer_detach( &l3->io.out.hs.wr_ext,
-                                         &committed,
-                                         &uncommitted );
+                                         &committed, NULL );
             if( res != 0 )
                 MBEDTLS_MPS_TRACE_RETURN( res );
 
@@ -1203,10 +1195,6 @@ int mps_l3_dispatch( mps_l3 *l3 )
 
             MBEDTLS_MPS_TRACE_COMMENT( "Write handshake header" );
             res = l3_check_write_hs_hdr( l3 );
-            if( res != 0 )
-                MBEDTLS_MPS_TRACE_RETURN( res );
-
-            res = mbedtls_writer_commit_partial( l3->io.out.raw_out, uncommitted );
             if( res != 0 )
                 MBEDTLS_MPS_TRACE_RETURN( res );
 
