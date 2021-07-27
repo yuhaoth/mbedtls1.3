@@ -369,6 +369,8 @@ struct mps_l3_hs_out_internal
     /*! The size of the header buffer. */
     mbedtls_mps_stored_size_t hdr_len;
 
+    mbedtls_mps_stored_size_t hdr_offset;
+
     /*! The extended writer providing buffers to which the message
      *  contents can be written, and keeping track of message bounds. */
 

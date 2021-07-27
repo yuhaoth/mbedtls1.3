@@ -972,6 +972,9 @@ int mps_l3_write_handshake( mps_l3 *l3, mps_l3_handshake_out *out )
         if( res != 0 )
             MBEDTLS_MPS_TRACE_RETURN( 0 );
 
+        /* Remember commit position so we can calculate the message length later. */
+        l3->io.out.hs.hdr_offset = l3->io.out.raw_out->committed;
+
         MBEDTLS_MPS_TRACE_COMMENT(  "Setup extended writer for handshake message" );
 
         /* TODO: Think about storing the frag_len in len for DTLS
@@ -1165,12 +1168,16 @@ int mps_l3_dispatch( mps_l3 *l3 )
             }
 
             res = mbedtls_writer_detach( &l3->io.out.hs.wr_ext,
-                                         &committed, NULL );
+                                         NULL, NULL );
             if( res != 0 )
                 MBEDTLS_MPS_TRACE_RETURN( res );
 
             /* Reset extended writer. */
             mbedtls_writer_free_ext( &l3->io.out.hs.wr_ext );
+
+            /* Calculate size of handshake message (fragment) */
+            committed = l3->io.out.raw_out->committed -
+                        l3->io.out.hs.hdr_offset;
 
 #if defined(MBEDTLS_MPS_PROTO_TLS)
             if( MBEDTLS_MPS_IS_TLS( mode ) )
@@ -1182,10 +1189,6 @@ int mps_l3_dispatch( mps_l3 *l3 )
 #if defined(MBEDTLS_MPS_PROTO_DTLS)
             MBEDTLS_MPS_ELSE_IF_DTLS( mode )
             {
-                /* It has been checked in mps_l3_write_handshake()
-                 * that if the total length of the handshake message
-                 * is unknown, then the fragment length is unknown, too,
-                 * and the fragment offset is 0. */
                 if( l3->io.out.hs.len == MBEDTLS_MPS_SIZE_UNKNOWN )
                     l3->io.out.hs.len = committed;
                 if( l3->io.out.hs.frag_len == MBEDTLS_MPS_SIZE_UNKNOWN )
