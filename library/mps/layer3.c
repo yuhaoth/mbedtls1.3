@@ -130,7 +130,7 @@ MBEDTLS_MPS_STATIC int l3_incomplete_header( mps_l3 *l3 )
          * the underlying transport. However, this would need to be reconsidered
          * and potentially adapted with any change to Layer 2, so returning
          * MBEDTLS_ERR_MPS_RETRY here is safer. */
-        MBEDTLS_MPS_TRACE_RETURN( MBEDTLS_ERR_MPS_RETRY );
+        return( MBEDTLS_ERR_MPS_RETRY );
     }
 #endif /* MBEDTLS_MPS_PROTO_TLS */
 #if defined(MBEDTLS_MPS_PROTO_DTLS)
@@ -138,7 +138,7 @@ MBEDTLS_MPS_STATIC int l3_incomplete_header( mps_l3 *l3 )
     {
         MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_ERROR,
                            "Incomplete message in DTLS -- abort" );
-        MBEDTLS_MPS_TRACE_RETURN( MBEDTLS_ERR_MPS_INVALID_CONTENT );
+        return( MBEDTLS_ERR_MPS_INVALID_CONTENT );
     }
 #endif /* MBEDTLS_MPS_PROTO_DTLS */
 }
@@ -793,17 +793,19 @@ MBEDTLS_MPS_STATIC int l3_check_write_hs_hdr_tls( mps_l3 *l3 )
     int res;
     mps_l3_hs_out_internal *hs = &l3->io.out.hs;
 
-    if( hs->hdr != NULL &&
-        hs->len != MBEDTLS_MPS_SIZE_UNKNOWN )
-    {
-        res = l3_write_hs_header_tls( hs );
-        if( res != 0 )
-            return( res );
+    /* Skip HS header on continuations */
+    if( hs->hdr == NULL )
+        return( 0 );
 
-        hs->hdr     = NULL;
-        hs->hdr_len = 0;
-    }
+    MBEDTLS_MPS_ASSERT_RAW( hs->len != MBEDTLS_MPS_SIZE_UNKNOWN,
+                            "HS message length unknown" );
 
+    res = l3_write_hs_header_tls( hs );
+    if( res != 0 )
+        return( res );
+
+    hs->hdr     = NULL;
+    hs->hdr_len = 0;
     return( 0 );
 }
 #endif /* MBEDTLS_MPS_PROTO_TLS */
@@ -813,19 +815,17 @@ MBEDTLS_MPS_STATIC int l3_check_write_hs_hdr_dtls( mps_l3 *l3 )
 {
     int res;
     mps_l3_hs_out_internal *hs = &l3->io.out.hs;
+    MBEDTLS_MPS_ASSERT_RAW( hs->hdr      != NULL                     &&
+                            hs->len      != MBEDTLS_MPS_SIZE_UNKNOWN &&
+                            hs->frag_len != MBEDTLS_MPS_SIZE_UNKNOWN,
+                            "Incomplete HS header data" );
 
-    if( hs->hdr      != NULL &&
-        hs->len      != MBEDTLS_MPS_SIZE_UNKNOWN &&
-        hs->frag_len != MBEDTLS_MPS_SIZE_UNKNOWN )
-    {
-        res = l3_write_hs_header_dtls( hs );
-        if( res != 0 )
-            return( res );
+    res = l3_write_hs_header_dtls( hs );
+    if( res != 0 )
+        return( res );
 
-        hs->hdr     = NULL;
-        hs->hdr_len = 0;
-    }
-
+    hs->hdr     = NULL;
+    hs->hdr_len = 0;
     return( 0 );
 }
 #endif /* MBEDTLS_MPS_PROTO_DTLS */
@@ -834,18 +834,14 @@ MBEDTLS_MPS_STATIC int l3_check_write_hs_hdr( mps_l3 *l3 )
 {
     mbedtls_mps_transport_type const mode =
         mbedtls_mps_l3_conf_get_mode( &l3->conf );
-
 #if defined(MBEDTLS_MPS_PROTO_TLS)
     if( MBEDTLS_MPS_IS_TLS( mode ) )
         return( l3_check_write_hs_hdr_tls( l3 ) );
 #endif /* MBEDTLS_MPS_PROTO_TLS */
-
 #if defined(MBEDTLS_MPS_PROTO_DTLS)
-    if( MBEDTLS_MPS_IS_DTLS( mode ) )
+    MBEDTLS_MPS_ELSE_IF_DTLS( mode )
         return( l3_check_write_hs_hdr_dtls( l3 ) );
 #endif /* MBEDTLS_MPS_PROTO_DTLS */
-
-    return( MBEDTLS_ERR_MPS_INTERNAL_ERROR );
 }
 
 int mps_l3_write_handshake( mps_l3 *l3, mps_l3_handshake_out *out )
@@ -893,8 +889,13 @@ int mps_l3_write_handshake( mps_l3 *l3, mps_l3_handshake_out *out )
         l3->io.out.hs.epoch = out->epoch;
         l3->io.out.hs.len   = out->len;
         l3->io.out.hs.type  = out->type;
+
+#if defined(MBEDTLS_MPS_PROTO_TLS)
+        if( MBEDTLS_MPS_IS_TLS( mode ) )
+            l3->io.out.hs.hdr_len = MPS_TLS_HS_HDR_SIZE;
+#endif /* MBEDTLS_MPS_PROTO_TLS */
 #if defined(MBEDTLS_MPS_PROTO_DTLS)
-        if( MBEDTLS_MPS_IS_DTLS( mode ) )
+        MBEDTLS_MPS_ELSE_IF_DTLS( mode )
         {
             l3->io.out.hs.seq_nr      = out->seq_nr;
             l3->io.out.hs.frag_len    = out->frag_len;
@@ -936,11 +937,8 @@ int mps_l3_write_handshake( mps_l3 *l3, mps_l3_handshake_out *out )
             l3->io.out.hs.hdr_len = MPS_DTLS_HS_HDR_SIZE;
         }
 #endif /* MBEDTLS_MPS_PROTO_DTLS */
-#if defined(MBEDTLS_MPS_PROTO_TLS)
-        if( MBEDTLS_MPS_IS_TLS( mode ) )
-            l3->io.out.hs.hdr_len = MPS_TLS_HS_HDR_SIZE;
-#endif /* MBEDTLS_MPS_PROTO_TLS */
 
+        MBEDTLS_MPS_TRACE_COMMENT( "Acquire buffer for HS header" );
         res = mbedtls_writer_get( l3->io.out.raw_out,
                                   l3->io.out.hs.hdr_len,
                                   &l3->io.out.hs.hdr, NULL );
@@ -967,19 +965,6 @@ int mps_l3_write_handshake( mps_l3 *l3, mps_l3_handshake_out *out )
         }
         else if( res != 0 )
             MBEDTLS_MPS_TRACE_RETURN( res );
-
-        /* Write the handshake header if we have
-         * complete knowledge about the lengths. */
-        res = l3_check_write_hs_hdr( l3 );
-        if( res != 0 )
-            MBEDTLS_MPS_TRACE_RETURN( res );
-
-        /* Note: Even if we do not know the total handshake length in
-         *       advance, we do not yet commit the handshake header.
-         *       The reason is that it might happen that the user finds
-         *       that there's not enough space available to make any
-         *       progress, and in this case we should abort the write
-         *       instead of writing an empty handshake fragment. */
 
         MBEDTLS_MPS_TRACE_COMMENT(  "Setup extended writer for handshake message" );
 
@@ -1123,6 +1108,11 @@ int mps_l3_pause_handshake( mps_l3 *l3 )
     if( res != 0 )
         MBEDTLS_MPS_TRACE_RETURN( res );
 
+    MBEDTLS_MPS_TRACE_COMMENT( "Write handshake header" );
+    res = l3_check_write_hs_hdr( l3 );
+    if( res != 0 )
+        MBEDTLS_MPS_TRACE_RETURN( res );
+
     /* We must perform this commit even if commits
      * are passed through, because it might happen
      * that the user pauses the writing before
@@ -1198,7 +1188,7 @@ int mps_l3_dispatch( mps_l3 *l3 )
             }
 #endif /* MBEDTLS_MPS_PROTO_TLS */
 #if defined(MBEDTLS_MPS_PROTO_DTLS)
-            if( MBEDTLS_MPS_IS_DTLS( mode ) )
+            MBEDTLS_MPS_ELSE_IF_DTLS( mode )
             {
                 /* It has been checked in mps_l3_write_handshake()
                  * that if the total length of the handshake message
@@ -1211,16 +1201,12 @@ int mps_l3_dispatch( mps_l3 *l3 )
             }
 #endif /* MBEDTLS_MPS_PROTO_DTLS */
 
-            /* We didn't know the handshake message length
-             * in advance and hence couldn't write the header
-             * during mps_l3_write_handshake().
-             * Write the header now. */
+            MBEDTLS_MPS_TRACE_COMMENT( "Write handshake header" );
             res = l3_check_write_hs_hdr( l3 );
             if( res != 0 )
                 MBEDTLS_MPS_TRACE_RETURN( res );
 
-            res = mbedtls_writer_commit_partial( l3->io.out.raw_out,
-                                                 uncommitted );
+            res = mbedtls_writer_commit_partial( l3->io.out.raw_out, uncommitted );
             if( res != 0 )
                 MBEDTLS_MPS_TRACE_RETURN( res );
 
