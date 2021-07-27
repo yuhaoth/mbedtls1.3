@@ -805,10 +805,7 @@ MBEDTLS_MPS_STATIC int mps_handle_pending_alert( mbedtls_mps *mps )
         *alert.type  = mps->blocking_info.alert;
     }
     else
-    {
-        /* Should never happen. */
-        MPS_CHK( MBEDTLS_ERR_MPS_INTERNAL_ERROR );
-    }
+        MBEDTLS_MPS_ASSERT( 0, "" );
 
     MPS_CHK( mps_l3_dispatch( l3 ) );
 
@@ -1225,7 +1222,7 @@ int mbedtls_mps_read( mbedtls_mps *mps )
         }
 
         default:
-            MPS_CHK( MBEDTLS_ERR_MPS_INTERNAL_ERROR );
+            MBEDTLS_MPS_ASSERT( 0, "" );
             break;
     }
 
@@ -1886,8 +1883,8 @@ int mbedtls_mps_write_pause( mbedtls_mps *mps )
     if( MBEDTLS_MPS_IS_DTLS( mode ) )
     {
         /* DTLS */
-        if( mps->dtls.io.out.hs.state != MBEDTLS_MPS_HS_ACTIVE )
-            MPS_CHK( MBEDTLS_ERR_MPS_INTERNAL_ERROR );
+        MBEDTLS_MPS_ASSERT( mps->dtls.io.out.hs.state == MBEDTLS_MPS_HS_ACTIVE,
+                            "Corrupted HS state" );
 
         /* Check that the handshake message is not yet fully written. */
         if( mbedtls_writer_check_done( &mps->dtls.io.out.hs.wr_ext ) == 0 )
@@ -2572,13 +2569,8 @@ MBEDTLS_MPS_STATIC int mps_reassembly_feed( mbedtls_mps *mps,
     /* Check if the message has already been initialized. */
     reassembly = &in->reassembly[ seq_nr_offset ];
 
-    if( reassembly->status == MBEDTLS_MPS_REASSEMBLY_NO_FRAGMENTATION )
-    {
-        MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_ERROR,
-               "Attempt to feed a fragment for a message that "
-               "has previously been fully received." );
-        MPS_CHK( MBEDTLS_ERR_MPS_INTERNAL_ERROR );
-    }
+    MBEDTLS_MPS_ASSERT( reassembly->status != MBEDTLS_MPS_REASSEMBLY_NO_FRAGMENTATION,
+                        "Invalid call to mps_reassembly_feed()" );
 
     if( reassembly->status == MBEDTLS_MPS_REASSEMBLY_NONE )
     {
@@ -2932,10 +2924,7 @@ MBEDTLS_MPS_STATIC int mps_reassembly_forget( mbedtls_mps *mps )
      * more messages than expected. */
 #if MBEDTLS_MPS_FUTURE_MESSAGE_BUFFERS > 0
     for( idx = 0; idx < MBEDTLS_MPS_FUTURE_MESSAGE_BUFFERS; idx++ )
-    {
-        if( in->reassembly[idx].status != MBEDTLS_MPS_REASSEMBLY_NONE )
-            MPS_CHK( MBEDTLS_ERR_MPS_INTERNAL_ERROR );
-    }
+        MBEDTLS_MPS_ASSERT( in->reassembly[idx].status == MBEDTLS_MPS_REASSEMBLY_NONE, "" );
 #else
     ((void) idx);
     ((void) in);
