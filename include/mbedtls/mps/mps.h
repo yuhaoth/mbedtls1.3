@@ -74,32 +74,22 @@ typedef struct mbedtls_mps_app_out mbedtls_mps_app_out;
 #define MBEDTLS_MPS_RETRANSMISSION_CALLBACK_PAUSE   1
 
 /*! The type of reassembly/buffering states handshake messages.
- *
- *  Possible values are:
  *  - #MPS_REASSEMBLY_NONE
  *    Reassembly hasn't started.
  *  - #MPS_REASSEMBLY_NO_FRAGMENTATION
- *    The message has been received in a single fragment
- *    and no reassembly was necessary; a reader is available
- *    which gives access to the contents.
+ *    The message has been received in a single fragment and no reassembly was
+ *    necessary; a reader is available which gives access to the contents.
  *  - #MPS_REASSEMBLY_WINDOW
- *    Some fragments of the message have been received
- *    and reassembly is in progress.
+ *    Some fragments have been received and reassembly is in progress.
+ * The state #MPS_REASSEMBLY_NO_FRAGMENTATION is only possible for the next
+ * message, as for future messages we need to make a copy of the L3 data anyway.
  *
- * The state #MPS_REASSEMBLY_NO_FRAGMENTATION is only
- * possible for the next message, as for future messages
- * we need to make a copy of the Layer 3 data anyway.
- *
- * NOTE: There are more alternatives, for example
- *       one could always wait until a new fragment
- *       comes in which continues the initial part
- *       of the message that has already been received;
- *       this way, no additional buffers would be needed
- *       (if the parsing routines make use of pausing).
- *       However, this seems to be suitable only for very
- *       reliable networks, or in DTLS-1.3 where a more
- *       elaborate acknowledgement scheme is available.
- *
+ * NOTE: There are more alternatives, for example one could always wait until a
+ *       new fragment comes in which continues the initial part of the message
+ *       that has already been received; this way, no additional buffers would
+ *       be needed (if the parsing routines make use of pausing). However, this
+ *       seems to be suitable only for very reliable networks, or in DTLS-1.3
+ *       where a more elaborate acknowledgement scheme is available.
  */
 typedef uint8_t mbedtls_mps_msg_reassembly_state;
 #define MBEDTLS_MPS_REASSEMBLY_NONE             \
