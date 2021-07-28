@@ -92,36 +92,28 @@ typedef enum mps_l3_hs_state
 } mps_l3_hs_state;
 
 /**
- * \brief    This structure represents handles to
- *           outgoing handshake messages.
+ * \brief    This structure represents handles to outgoing handshake messages.
  *
- *           It is used in the following way:
- *           When the user wants to prepare an outgoing
- *           handshake message, he creates an instance
- *           of this structure and sets fields indicating
- *           the intended epoch, handshake type, and
- *           handshake message length. The user then calls
- *           mps_l3_write_handshake() which, on success,
- *           sets the \c wr_ext within this struct to point
- *           to a valid writer that can be used to provide
- *           the actual message contents.
+ *           It is used in the following way: When users want to prepare
+ *           an outgoing handshake message, they create an instance of this
+ *           structure and set fields indicating the intended epoch,
+ *           handshake type, and handshake message length. They then call
+ *           mps_l3_write_handshake() which, on success, sets the \c wr
+ *           within this struct to point to a valid writer that can be used
+ *           to provide the actual message contents.
  *
- *           When the writing is done, the user calls
- *           mps_l3_dispatch() to prepare the message for
- *           delivery; if the writing cannot be completed
- *           because the provided writer does not provide
- *           enough space for outgoing data, the write can
- *           be paused via mps_l3_pause_handshake(), and
- *           subsequently be continued via another call to
- *           mps_l3_write_handshake() which must use the
- *           the same epoch, handshake type and length
- *           parameters as the initial one.
+ *           When the writing is done, users call mps_l3_dispatch() to prepare
+ *           the message for delivery; if the writing cannot be completed
+ *           because the provided writer does not provide enough space for
+ *           outgoing data, the write can be paused via mps_l3_pause_handshake()
+ *           and subsequently be continued via another call to
+ *           mps_l3_write_handshake() which must use the the same epoch,
+ *           handshake type and length parameters as the initial one.
  *
- *           The handshake message length must be known
- *           in advance if pausing is needed for the message.
- *           If pausing is not needed, the length field can
- *           be set to #MBEDTLS_MPS_SIZE_UNKNOWN and will be
- *           be determined automatically on closing.
+ *           The handshake message length must be known in advance if pausing
+ *           is needed for the message. If pausing is not needed, the length
+ *           field can be set to #MBEDTLS_MPS_SIZE_UNKNOWN and will be be
+ *           determined automatically on closing.
  */
 struct mps_l3_handshake_out
 {
@@ -152,11 +144,11 @@ struct mps_l3_handshake_out
       *  beginning of the handshake message.*/
     mbedtls_mps_stored_size_t frag_offset;
 
-    /*! The extended writer providing buffers to which the message
+    /*! The writer providing buffers to which the message
      *  contents can be written, and keeping track of message bounds.
      *  This must be \c NULL when the user calls mps_l3_write_handshake(), which
-     *  will modify it to point to a valid extended writer on success. */
-    mbedtls_writer_ext *wr_ext;
+     *  will modify it to point to a valid writer on success. */
+    mbedtls_writer *wr;
 };
 
 /**
@@ -205,9 +197,8 @@ struct mps_l3_handshake_in
     /*! The handshake sequence number.*/
     mbedtls_mps_stored_hs_seq_nr_t seq_nr;
 
-    /*!< The extended reader giving access to the message contents, and
-     *   keeping track of message bounds. */
-    mbedtls_mps_reader_ext *rd_ext;
+    /*!< The reader giving access to the message contents. */
+    mbedtls_mps_reader *rd;
 };
 
 /**
@@ -338,10 +329,6 @@ struct mps_l3_hs_in_internal
 
     /*!< The handshake sequence number. */
     mbedtls_mps_stored_hs_seq_nr_t seq_nr;
-
-    mbedtls_mps_reader_ext rd_ext;  /*!< The extended reader giving access to
-                                 *   the message contents, but also keeping
-                                 *   track of message bounds.                */
 };
 
 struct mps_l3_hs_out_internal
@@ -370,15 +357,6 @@ struct mps_l3_hs_out_internal
     mbedtls_mps_stored_size_t hdr_len;
 
     mbedtls_mps_stored_size_t hdr_offset;
-
-    /*! The extended writer providing buffers to which the message
-     *  contents can be written, and keeping track of message bounds. */
-
-    /* OPTIMIZATION:
-     * Consider removing the extended writer from Layer 3 and
-     * performing bounds checks for handshake messages at Layer 4.
-     * See the corresponding comment in mps.h. */
-    mbedtls_writer_ext wr_ext;
 
     /* DTLS-specific fields. */
 

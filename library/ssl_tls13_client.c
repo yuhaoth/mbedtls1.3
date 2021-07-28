@@ -1349,8 +1349,8 @@ static int ssl_client_hello_process( mbedtls_ssl_context* ssl )
                                                        &msg, NULL, NULL ) );
 
     /* Request write-buffer */
-    MBEDTLS_SSL_PROC_CHK( mbedtls_writer_get_ext( msg.handle, MBEDTLS_MPS_SIZE_MAX,
-                                                  &buf, &buf_len ) );
+    MBEDTLS_SSL_PROC_CHK( mbedtls_writer_get( msg.handle, MBEDTLS_MPS_SIZE_MAX,
+                                              &buf, &buf_len ) );
 
     MBEDTLS_SSL_PROC_CHK( ssl_client_hello_write_partial( ssl, buf, buf_len,
                                                   &len_without_binders,
@@ -1378,8 +1378,8 @@ static int ssl_client_hello_process( mbedtls_ssl_context* ssl )
 #endif /* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED */
 
     /* Commit message */
-    MBEDTLS_SSL_PROC_CHK( mbedtls_writer_commit_partial_ext( msg.handle,
-                                                             buf_len - msg_len ) );
+    MBEDTLS_SSL_PROC_CHK( mbedtls_writer_commit_partial( msg.handle,
+                                                         buf_len - msg_len ) );
 
     MBEDTLS_SSL_PROC_CHK( mbedtls_mps_dispatch( &ssl->mps.l4 ) );
 
@@ -2873,7 +2873,7 @@ static int ssl_server_hello_process( mbedtls_ssl_context* ssl )
         mbedtls_ssl_add_hs_msg_to_checksum( ssl, MBEDTLS_SSL_HS_SERVER_HELLO,
                                             buf, buflen );
 
-        MBEDTLS_SSL_PROC_CHK( mbedtls_mps_reader_commit_ext( msg.handle ) );
+        MBEDTLS_SSL_PROC_CHK( mbedtls_mps_reader_commit( msg.handle ) );
         MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read_consume( &ssl->mps.l4  ) );
 #endif /* MBEDTLS_SSL_USE_MPS */
 
@@ -2884,7 +2884,7 @@ static int ssl_server_hello_process( mbedtls_ssl_context* ssl )
         MBEDTLS_SSL_PROC_CHK( ssl_hrr_parse( ssl, buf, buflen ) );
 
 #if defined(MBEDTLS_SSL_USE_MPS)
-        MBEDTLS_SSL_PROC_CHK( mbedtls_mps_reader_commit_ext( msg.handle ) );
+        MBEDTLS_SSL_PROC_CHK( mbedtls_mps_reader_commit( msg.handle ) );
         MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read_consume( &ssl->mps.l4  ) );
 #endif /* MBEDTLS_SSL_USE_MPS */
 
@@ -2960,7 +2960,7 @@ static int ssl_server_hello_coordinate( mbedtls_ssl_context* ssl,
     if( msg->type != MBEDTLS_SSL_HS_SERVER_HELLO )
         return( MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE );
 
-    ret = mbedtls_mps_reader_get_ext( msg->handle,
+    ret = mbedtls_mps_reader_get( msg->handle,
                                   msg->length,
                                   &peak,
                                   NULL );

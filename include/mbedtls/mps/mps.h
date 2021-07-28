@@ -433,7 +433,7 @@ typedef void mbedtls_mps_write_cb_ctx_t;
  *              that was used to write the message in the first place.
  */
 typedef int (*mbedtls_mps_write_cb_t)( mbedtls_mps_write_cb_ctx_t const *ctx,
-                                       mbedtls_writer_ext *writer );
+                                       mbedtls_writer *writer );
 
 /*! Enumeration of states of ::mbedtls_mps_handshake_out_internal. */
 typedef uint8_t mbedtls_mps_hs_state;
@@ -445,13 +445,14 @@ typedef uint8_t mbedtls_mps_hs_state;
     writing-mode. */
 #define MBEDTLS_MPS_HS_ACTIVE ( (mbedtls_mps_hs_state) 1 )
 /*! This state indicates an initialized structure representing
- *  an outgoing handshake message whose user-facing writer is in
- *  providing mode. That's the case if the message is not yet
- *  completely written and another message buffer is needed to
- *  hold the next chunk of message contents; or it might be that
- *  the message has been entirely written, but parts or all of its
- *  content are still buffered and need to be dispatched. */
-#define MBEDTLS_MPS_HS_PAUSED ( (mbedtls_mps_hs_state) 2 )
+ *  an outgoing handshake message has been completely written
+ *  by the user, but which still needs to be dispatched to
+ *  Layer 3. */
+#define MBEDTLS_MPS_HS_QUEUED ( (mbedtls_mps_hs_state) 2 )
+/*! This state indicates an initialized structure representing
+ *  an outgoing handshake message which has not yet been fully
+ *  written by the user */
+#define MBEDTLS_MPS_HS_PAUSED ( (mbedtls_mps_hs_state) 3 )
 
 /*
  * \brief Internal structure representing an outgoing handshake message.
@@ -542,8 +543,8 @@ struct mbedtls_mps_handshake_out_internal
      * we'd safe a pointer to a raw writer here (which, however,
      * might be removed due to the previous optimization
      * opportunity). */
-    mbedtls_writer_ext *wr_ext_l3;  /*!< The writer obtained from Layer 3 to
-                                     *   write the next handshake fragment.*/
+    mbedtls_writer *wr_l3;  /*!< The writer obtained from Layer 3 to
+                             *   write the next handshake fragment.*/
 
     /*
      * User-facing writers
@@ -554,9 +555,7 @@ struct mbedtls_mps_handshake_out_internal
      * and one should be able to avoid duplicating them here. */
     mbedtls_mps_stored_size_t queue_len;
     unsigned char            *queue;
-    mbedtls_writer         wr;
-    mbedtls_writer_ext wr_ext; /*!< The write-handle to the handshake message
-                                *   content that's passed to the user.        */
+    mbedtls_writer            wr;
 
 };
 
@@ -1043,8 +1042,7 @@ struct mbedtls_mps
                      *
                      *  TODO: Document in which states this is valid.
                      */
-                    mbedtls_mps_reader         rd;
-                    mbedtls_mps_reader_ext rd_ext;
+                    mbedtls_mps_reader rd;
 
                     /*! The array of structures representing future and/or
                      *  partially received handshake messages. */
@@ -1089,7 +1087,7 @@ struct mbedtls_mps
                             /*! The extended reader owned by Layer 3 giving rise to the
                              *  contents of the handshake message. This is valid if and
                              *  only if \c status is #MPS_REASSEMBLY_NO_FRAGMENTATION */
-                            mbedtls_mps_reader_ext *rd_ext_l3;
+                            mbedtls_mps_reader *rd_l3;
 
                             /*! The reassembly buffer holding the partially received
                              *  handshake message. This is valid if and only if
@@ -1290,7 +1288,7 @@ typedef struct
 {
     uint8_t   type;             /*!< Type of handshake message           */
     size_t  length;             /*!< Length of entire handshake message  */
-    mbedtls_mps_reader_ext *handle; /*!< Reader to retrieve message contents */
+    mbedtls_mps_reader *handle; /*!< Reader to retrieve message contents */
 
     uint8_t add[8];             /*!< Opaque, additional data to be used for
                                  *   checksum calculations. */
@@ -1405,7 +1403,7 @@ int mbedtls_mps_read_set_flags( mbedtls_mps *mps, mbedtls_mps_msg_flags flags );
  * \brief          Pause the reading of an incoming handshake message.
  *
  *                 When a handshake message has been received, the user of the
- *                 MPS can query its contents through mbedtls_mps_reader_get_ext(),
+ *                 MPS can query its contents through mbedtls_mps_reader_get(),
  *                 using the reader returned from mbedtls_mps_read_handshake().
  *                 If the handshake message is only partially available - for
  *                 example, because it was fragments on the TLS record layer -
@@ -1535,7 +1533,7 @@ struct mbedtls_mps_handshake_out
     *  calling mbedtls_mps_write_handshake(). */
     mbedtls_mps_stored_opt_size_t length;
 
-    mbedtls_writer_ext *handle; /*!< Write-handle to handshake message content.
+    mbedtls_writer *handle;     /*!< Write-handle to handshake message content.
                                  *
                                  *   This field is set by the MPS implementation
                                  *   of mbedtls_mps_write_handshake(). Any
