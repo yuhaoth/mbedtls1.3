@@ -117,17 +117,6 @@ typedef enum mps_l3_hs_state
  */
 struct mps_l3_handshake_out
 {
-    /*! The epoch to use to protect the handshake message.
-     *  This must be set by the user before calling mps_l3_write_handshake(). */
-    mbedtls_mps_stored_epoch_id epoch;
-
-    /*! The handshake message type. This must be set by
-     *  the user before calling mps_l3_write_handshake().*/
-    mbedtls_mps_stored_hs_type type;
-
-    /*! The handshake sequence number. */
-    mbedtls_mps_stored_hs_seq_nr_t seq_nr;
-
     /*! The total length of the handshake message (regardless of fragmentation),
      *  or #MBEDTLS_MPS_SIZE_UNKNOWN if the length will be determined at
      *  write-time. In this case, pausing is not possible for the handshake
@@ -136,6 +125,18 @@ struct mps_l3_handshake_out
      *  before calling mps_l3_write_handshake(). */
     mbedtls_mps_stored_opt_size_t len;
 
+    /*! The epoch to use to protect the handshake message.
+     *  This must be set by the user before calling mps_l3_write_handshake(). */
+    mbedtls_mps_stored_epoch_id epoch;
+
+    /*! The handshake message type. This must be set by
+     *  the user before calling mps_l3_write_handshake().*/
+    mbedtls_mps_stored_hs_type type;
+
+#if defined(MBEDTLS_MPS_PROTO_DTLS)
+    /*! The handshake sequence number. */
+    mbedtls_mps_stored_hs_seq_nr_t seq_nr;
+
     /*! The length of the current handshake fragment, or
      *  #MBEDTLS_MPS_SIZE_UNKNOWN if the will be determined at write-time. */
     mbedtls_mps_stored_opt_size_t frag_len;
@@ -143,6 +144,7 @@ struct mps_l3_handshake_out
      /*! The offset of the current fragment from the
       *  beginning of the handshake message.*/
     mbedtls_mps_stored_size_t frag_offset;
+#endif /* MBEDTLS_MPS_PROTO_DTLS */
 
     /*! The writer providing buffers to which the message
      *  contents can be written, and keeping track of message bounds.
