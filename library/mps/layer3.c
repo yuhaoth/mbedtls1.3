@@ -913,13 +913,37 @@ int mps_l3_pause_handshake( mps_l3 *l3 )
 }
 #endif /* MBEDTLS_MPS_PROTO_TLS */
 
+MBEDTLS_MPS_STATIC void l3_autocomplete_hs_length( mps_l3 *l3 )
+{
+    mbedtls_mps_transport_type const mode =
+        mbedtls_mps_l3_conf_get_mode( &l3->conf );
+
+    /* Calculate size of handshake message (fragment) */
+    mbedtls_mps_size_t committed = l3->io.out.raw_out->committed -
+                                   l3->io.out.hs.hdr_offset;
+
+#if defined(MBEDTLS_MPS_PROTO_TLS)
+    MBEDTLS_MPS_IF_TLS( mode )
+    {
+        if( l3->io.out.hs.len == MBEDTLS_MPS_SIZE_UNKNOWN )
+            l3->io.out.hs.len = committed;
+    }
+#endif /* MBEDTLS_MPS_PROTO_TLS */
+#if defined(MBEDTLS_MPS_PROTO_DTLS)
+    MBEDTLS_MPS_ELSE_IF_DTLS( mode )
+    {
+        if( l3->io.out.hs.len == MBEDTLS_MPS_SIZE_UNKNOWN )
+            l3->io.out.hs.len = committed;
+        if( l3->io.out.hs.frag_len == MBEDTLS_MPS_SIZE_UNKNOWN )
+            l3->io.out.hs.frag_len = committed;
+    }
+#endif /* MBEDTLS_MPS_PROTO_TLS */
+}
+
 int mps_l3_dispatch( mps_l3 *l3 )
 {
     int res;
-    mbedtls_mps_size_t committed;
     mbedtls_mps_l2* const l2 = mbedtls_mps_l3_get_l2( l3 );
-    mbedtls_mps_transport_type const mode =
-        mbedtls_mps_l3_conf_get_mode( &l3->conf );
     MBEDTLS_MPS_TRACE_INIT( "mps_l3_dispatch" );
 
     switch( l3->io.out.state )
@@ -928,19 +952,8 @@ int mps_l3_dispatch( mps_l3 *l3 )
             MBEDTLS_MPS_TRACE_COMMENT( "Dispatch handshake message" );
             MBEDTLS_MPS_ASSERT_RAW( l3->io.out.hs.state == MPS_L3_HS_ACTIVE, "" );
 
-            /* Calculate size of handshake message (fragment) */
-            committed = l3->io.out.raw_out->committed -
-                        l3->io.out.hs.hdr_offset;
-            if( l3->io.out.hs.len == MBEDTLS_MPS_SIZE_UNKNOWN )
-                l3->io.out.hs.len = committed;
-
-#if defined(MBEDTLS_MPS_PROTO_DTLS)
-            if( MBEDTLS_MPS_IS_DTLS( mode ) &&
-                l3->io.out.hs.frag_len == MBEDTLS_MPS_SIZE_UNKNOWN )
-            {
-                l3->io.out.hs.frag_len = committed;
-            }
-#endif /* MBEDTLS_MPS_PROTO_TLS */
+            /* Fill-in length values that user left unspecified */
+            l3_autocomplete_hs_length( l3 );
 
             MBEDTLS_MPS_TRACE_COMMENT( "Write handshake header" );
             res = l3_check_write_hs_hdr( l3 );
