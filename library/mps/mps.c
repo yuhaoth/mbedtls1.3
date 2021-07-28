@@ -217,19 +217,11 @@ MBEDTLS_MPS_STATIC int mps_clear_pending( mbedtls_mps *mps,
  *    retransmission; in this case, the backup buffer functions as the
  *    queue, so that the user writing the message directly writes it
  *    it into the backup buffer, avoiding an unnecessary copy.
- *
- *  - #MPS_DTLS_FRAG_OUT_START_FROM_QUEUE
- *    This type is used if an entire message is already present
- *    in a contiguous buffer and solely needs to be dispatched
- *    to Layer 3, without any prior interaction with the user.
- *    In this case, \c queue specifies the message contents.
- *    This type is used for retransmission of messages via raw backups.
  */
 
 typedef uint8_t mps_dtls_outgoing_hs_msg_mode;
 #define MPS_DTLS_FRAG_OUT_START_USE_L3     ( (mps_dtls_outgoing_hs_msg_mode) 0 )
 #define MPS_DTLS_FRAG_OUT_START_QUEUE_ONLY ( (mps_dtls_outgoing_hs_msg_mode) 1 )
-#define MPS_DTLS_FRAG_OUT_START_FROM_QUEUE ( (mps_dtls_outgoing_hs_msg_mode) 2 )
 
 /*
  * The API between outgoing fragmentation and the rest of the MPS code.
@@ -251,8 +243,6 @@ typedef uint8_t mps_dtls_outgoing_hs_msg_mode;
  *    handshake message structure is in state #MBEDTLS_MPS_HS_PAUSED.
  *  - If \p mode is #MPS_DTLS_FRAG_OUT_START_QUEUE_ONLY, the outgoing
  *    handshake message structure is in state #MBEDTLS_MPS_HS_ACTIVE.
- *  - If \p mode is #MPS_DTLS_FRAG_OUT_START_FROM_QUEUE, the outgoing
- *    handshake message structure is in state #MBEDTLS_MPS_HS_PAUSED.
  */
 MBEDTLS_MPS_STATIC int mps_dtls_frag_out_start(
                                     mbedtls_mps_handshake_out_internal *hs,
