@@ -290,8 +290,10 @@ typedef uint8_t mbedtls_mps_epoch_offset_t;
 
 #else /* MBEDTLS_MPS_ENABLE_ASSERTIONS */
 
-#define MBEDTLS_MPS_ASSERT( cond, string )     do {} while( 0 )
-#define MBEDTLS_MPS_ASSERT_RAW( cond, string ) do {} while( 0 )
+#define MBEDTLS_MPS_ASSERT( cond, string )              \
+    do { int val = (cond); ((void) val); } while( 0 )
+#define MBEDTLS_MPS_ASSERT_RAW( cond, string )          \
+    do { int val = (cond); ((void) val); } while( 0 )
 
 #endif /* MBEDTLS_MPS_ENABLE_ASSERTIONS */
 

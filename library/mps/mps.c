@@ -3010,7 +3010,6 @@ MBEDTLS_MPS_STATIC int mps_request_resend( mbedtls_mps *mps )
                                      MPS_RETRANSMIT_ONLY_EMPTY_FRAGMENTS ) );
 }
 
-#if defined(MBEDTLS_MPS_ENABLE_TRACE)
 static inline const char * mps_flight_state_to_string(
     mbedtls_mps_flight_state_t state )
 {
@@ -3034,7 +3033,6 @@ static inline const char * mps_flight_state_to_string(
             return( "UNKNOWN" );
     }
 }
-#endif /* MBEDTLS_MPS_ENABLE_TRACE */
 
 MBEDTLS_MPS_INLINE
 /* Perform a retransmisison state machine transition and
