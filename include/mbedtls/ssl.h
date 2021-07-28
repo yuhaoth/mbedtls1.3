@@ -1137,9 +1137,6 @@ struct mbedtls_ssl_session
     mbedtls_time_t start;       /*!< starting time      */
 #endif /* MBEDTLS_HAVE_TIME */
     int ciphersuite;            /*!< chosen ciphersuite */
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
-    const mbedtls_ssl_ciphersuite_t* ciphersuite_info;
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
     int compression;            /*!< chosen compression */
     size_t id_len;              /*!< session id length  */
     unsigned char id[32];       /*!< session identifier */
