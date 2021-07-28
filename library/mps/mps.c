@@ -280,7 +280,8 @@ MBEDTLS_MPS_STATIC int mps_dtls_frag_out_unpause( mbedtls_mps *mps,
  *  mps_dtls_frag_out_dispatch() dispatches the next
  *  fragment to Layer 3.
  */
-MBEDTLS_MPS_STATIC int mps_dtls_frag_out_close( mbedtls_mps *mps );
+MBEDTLS_MPS_STATIC int mps_dtls_frag_out_close( mbedtls_mps *mps,
+                                                mbedtls_mps_hs_state new_state );
 MBEDTLS_MPS_STATIC int mps_dtls_frag_out_dispatch( mbedtls_mps *mps );
 
 /* TODO: Document */
@@ -1879,8 +1880,7 @@ int mbedtls_mps_write_pause( mbedtls_mps *mps )
                             "Corrupted HS state" );
 
         /* Dispatch the current fragment. */
-        MPS_CHK( mps_dtls_frag_out_close( mps ) );
-        mps->dtls.io.out.hs.state  = MBEDTLS_MPS_HS_PAUSED;
+        MPS_CHK( mps_dtls_frag_out_close( mps, MBEDTLS_MPS_HS_PAUSED ) );
         MPS_CHK( mps_dtls_frag_out_dispatch( mps ) );
     }
 #endif /* MBEDTLS_MPS_PROTO_DTLS */
@@ -1937,8 +1937,7 @@ int mbedtls_mps_dispatch( mbedtls_mps *mps )
                 "Unexpected handshake state" );
 
             /* Wrapup and dispatch the message. */
-            MPS_CHK( mps_dtls_frag_out_close( mps ) );
-            mps->dtls.io.out.hs.state  = MBEDTLS_MPS_HS_QUEUED;
+            MPS_CHK( mps_dtls_frag_out_close( mps, MBEDTLS_MPS_HS_QUEUED ) );
             MPS_CHK( mps_dtls_frag_out_dispatch( mps ) );
 
             /* Update outgoing flight state. */
@@ -3613,8 +3612,7 @@ MBEDTLS_MPS_STATIC int mbedtls_mps_retransmission_handle_resend( mbedtls_mps *mp
                                          NULL ) );
             MPS_CHK( mbedtls_writer_commit( &hs->wr ) );
 
-            MPS_CHK( mps_dtls_frag_out_close( mps ) );
-            mps->dtls.io.out.hs.state  = MBEDTLS_MPS_HS_QUEUED;
+            MPS_CHK( mps_dtls_frag_out_close( mps, MBEDTLS_MPS_HS_QUEUED ) );
             MPS_CHK( mps_dtls_frag_out_dispatch( mps ) );
             break;
         }
@@ -3657,11 +3655,9 @@ MBEDTLS_MPS_STATIC int mbedtls_mps_retransmission_handle_resend( mbedtls_mps *mp
             else
                 MPS_CHK( ret );
 
-            MPS_CHK( mps_dtls_frag_out_close( mps ) );
-            if( cb_unfinished == 1 )
-                mps->dtls.io.out.hs.state = MBEDTLS_MPS_HS_PAUSED;
-            else
-                mps->dtls.io.out.hs.state = MBEDTLS_MPS_HS_QUEUED;
+            MPS_CHK( mps_dtls_frag_out_close( mps, cb_unfinished == 1 ?
+                                                      MBEDTLS_MPS_HS_PAUSED :
+                                                      MBEDTLS_MPS_HS_QUEUED ) );
             MPS_CHK( mps_dtls_frag_out_dispatch( mps ) );
 
             if( cb_unfinished == 1 )
@@ -3783,7 +3779,7 @@ MBEDTLS_MPS_STATIC int mps_dtls_frag_out_bind( mbedtls_mps *mps )
     if( hs->state == MBEDTLS_MPS_HS_QUEUED )
     {
         MBEDTLS_MPS_TRACE_COMMENT( "Handshake message fully written." );
-        MPS_CHK( mps_dtls_frag_out_close( mps ) );
+        MPS_CHK( mps_dtls_frag_out_close( mps, MBEDTLS_MPS_HS_QUEUED ) );
         MPS_CHK( mps_dtls_frag_out_dispatch( mps ) );
 
         mbedtls_writer_free( &mps->dtls.io.out.hs.wr );
@@ -3800,7 +3796,8 @@ MBEDTLS_MPS_STATIC int mps_dtls_frag_out_bind( mbedtls_mps *mps )
     MPS_INTERNAL_FAILURE_HANDLER
 }
 
-MBEDTLS_MPS_STATIC int mps_dtls_frag_out_close( mbedtls_mps *mps )
+MBEDTLS_MPS_STATIC int mps_dtls_frag_out_close( mbedtls_mps *mps,
+                                                mbedtls_mps_hs_state new_state )
 {
     int ret;
     mbedtls_mps_size_t frag_len, bytes_queued, remaining;
@@ -3834,10 +3831,8 @@ MBEDTLS_MPS_STATIC int mps_dtls_frag_out_close( mbedtls_mps *mps )
     }
     else
     {
-        /* This is an internal error and not a usage error,
-         * because it is checked in mbedtls_mps_dispatch()
-         * that the extended writer is done, i.e. has written
-         * the entire message. */
+        /* TODO: Check whether this is still an assertion even after
+         *       removal of the extended writer. */
         MBEDTLS_MPS_ASSERT( frag_len == 0, "Invalid fragment length" );
         MBEDTLS_MPS_ASSERT( metadata->len == MBEDTLS_MPS_SIZE_UNKNOWN ||
                             (unsigned) metadata->len == bytes_queued,
@@ -3848,6 +3843,7 @@ MBEDTLS_MPS_STATIC int mps_dtls_frag_out_close( mbedtls_mps *mps )
         metadata->len = bytes_queued;
     }
 
+    mps->dtls.io.out.hs.state = new_state;
     MPS_INTERNAL_FAILURE_HANDLER
 }
 
@@ -3904,7 +3900,7 @@ MBEDTLS_MPS_STATIC int mps_dtls_frag_out_start( mbedtls_mps_handshake_out_intern
     {
         hs->state = MBEDTLS_MPS_HS_PAUSED;
     }
-    else /* if( mode == MPS_DTLS_FRAG_OUT_START_QUEUE_ONLY ) */
+    else /* MPS_DTLS_FRAG_OUT_START_QUEUE_ONLY */
     {
         /* Feed an empty buffer to serve write requests from the queue only. */
         MPS_CHK( mbedtls_writer_feed( &hs->wr, NULL, 0 ) );
