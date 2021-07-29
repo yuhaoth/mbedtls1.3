@@ -299,11 +299,11 @@ MBEDTLS_MPS_ALWAYS_INLINE int mps_handshake_state_transition(
 MBEDTLS_MPS_ALWAYS_INLINE mbedtls_mps_flight_state_t
 mps_get_hs_state( mbedtls_mps *mps )
 {
-    /* NOTE: To save RAM, and likely also some code on Thumb, it should
-     *       be considered to allocate the retransmission state machine
-     *       only when a handshake is active -- in this case, this
-     *       function should check whether it's present first, and
-     *       return MBEDTLS_MPS_FLIGHT_DONE if not. */
+    /* NOTE: To save RAM, and likely also some code on Thumb due to limited
+     *       immediate address offsets, it should be considered to allocate
+     *       the retransmission state machine only when a handshake is active --
+     *       in this case, this function should check whether it's present first
+     *       and return MBEDTLS_MPS_FLIGHT_DONE if not. */
     return( mps->dtls.state );
 }
 
@@ -1515,7 +1515,7 @@ int mbedtls_mps_write_handshake( mbedtls_mps *mps,
     MPS_CHK( mps_prepare_write( mps, MPS_PAUSED_HS_ALLOWED ) );
 
 #if defined(MBEDTLS_MPS_PROTO_TLS)
-    if( MBEDTLS_MPS_IS_TLS( mode ) )
+    MBEDTLS_MPS_IF_TLS( mode )
     {
         /* TLS
          * Write a handshake message on Layer 3 and forward the writer. */
@@ -1554,9 +1554,8 @@ int mbedtls_mps_write_handshake( mbedtls_mps *mps,
         hs_new->addlen = 0;
     }
 #endif /* MBEDTLS_MPS_PROTO_TLS */
-
 #if defined(MBEDTLS_MPS_PROTO_DTLS)
-    if( MBEDTLS_MPS_IS_DTLS( mode ) )
+    MBEDTLS_MPS_ELSE_IF_DTLS( mode )
     {
         /* DTLS */
         mbedtls_mps_handshake_out_internal * const hs = &mps->dtls.io.out.hs;
@@ -1623,12 +1622,11 @@ int mbedtls_mps_write_handshake( mbedtls_mps *mps,
                 metadata->type != hs_new->type )
             {
                 MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_ERROR,
-                       "Inconsistent parameters on continuation "
-                       "of handshake write." );
+                     "Inconsistent parameters on hs message continuation." );
                 MPS_CHK( MBEDTLS_ERR_MPS_INVALID_ARGS );
             }
         }
-        else if( hs->state == MBEDTLS_MPS_HS_NONE )
+        else /* hs->state == MBEDTLS_MPS_HS_NONE */
         {
             mbedtls_mps_retransmission_handle *handle;
             unsigned char *queue;
@@ -1686,8 +1684,7 @@ int mbedtls_mps_write_handshake( mbedtls_mps *mps,
              *       we set the actual length later. */
             handle->metadata.len    = hs_new->length;
 
-            /* Distinguish between messages retransmitted by backup
-             * and those retransmitted by a callback.                  */
+            /* Distinguish between retransmission via raw backup vs. callback. */
             if( cb == NULL )
             {
                 /* Retransmission via raw backup. */
@@ -1697,26 +1694,14 @@ int mbedtls_mps_write_handshake( mbedtls_mps *mps,
                 MBEDTLS_MPS_TRACE_COMMENT( "Retransmission via raw backup" );
                 handle->handle_type = MBEDTLS_MPS_RETRANSMISSION_HANDLE_HS_RAW;
 
-                /* Infer length for backup buffer. */
+                /* Allocate backup buffer to write message to. */
+
                 if( handle->metadata.len != MBEDTLS_MPS_SIZE_UNKNOWN )
-                {
-                    MBEDTLS_MPS_TRACE_COMMENT( "Total handshake length known: %u",
-                           (unsigned) hs_new->length );
-
-                    MBEDTLS_MPS_ASSERT(
-                        handle->metadata.len <= MBEDTLS_MPS_MAX_HS_LENGTH,
-                        "Bad handshake length" );
-
                     backup_len = handle->metadata.len;
-                }
                 else
-                {
-                    MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_COMMENT,
-                           "Total handshake length unknown, "
-                           "puse backup buffer of maximum size %u",
-                           (unsigned) MBEDTLS_MPS_MAX_HS_LENGTH );
                     backup_len = MBEDTLS_MPS_MAX_HS_LENGTH;
-                }
+                MBEDTLS_MPS_ASSERT( backup_len <= MBEDTLS_MPS_MAX_HS_LENGTH,
+                                    "Bad handshake length" );
 
                 /* TODO: Switch to allocator interface. */
                 backup_buf = mbedtls_calloc( 1, backup_len );
@@ -1739,16 +1724,11 @@ int mbedtls_mps_write_handshake( mbedtls_mps *mps,
                 handle->handle_type =
                     MBEDTLS_MPS_RETRANSMISSION_HANDLE_HS_CALLBACK;
 
-                /* For now, demand that the total length is known.
-                 * To support unknown length for messages using a
-                 * retransmission callbacks, we need a way to set the
-                 * total message length at Layer 3 after we have started
-                 * a handshake write (shouldn't be difficult). */
+                /* For now, demand that the total length is known. */
                 if( handle->metadata.len == MBEDTLS_MPS_SIZE_UNKNOWN )
                 {
                     MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_ERROR,
-                           "Handshake messages with retransmission callback "
-                           "and unknown size not supported." );
+                          "Retransmission via callback requires known length" );
                     MPS_CHK( MBEDTLS_ERR_MPS_OPERATION_UNSUPPORTED );
                 }
 
@@ -1761,14 +1741,10 @@ int mbedtls_mps_write_handshake( mbedtls_mps *mps,
             }
 
             /* Setup the structure representing the new handshake message.
-             * Note that this does not interface with Layer 3, and every
-             * error is fatal. */
+             * This does not interface with Layer 3. Every error is fatal. */
             MPS_CHK( mps_dtls_frag_out_start( hs, queue, queue_len,
-                                              &handle->metadata,
-                                              write_mode ) );
-
-            /* This may interface with Layer 3 and potentially return
-             * MBEDTLS_MBEDTLS_ERR_MPS_WANT_WRITE. */
+                                     &handle->metadata, write_mode ) );
+            /* This can interface with L3 and return WANT_WRITE. */
             MPS_CHK( mps_dtls_frag_out_unpause( mps, MPS_PAUSED_HS_ALLOWED ) );
         }
 
