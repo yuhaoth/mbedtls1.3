@@ -528,6 +528,7 @@ static void build_mock_transforms( mbedtls_mps_transform_wrap_t *ptr0,
     ptr1->mock.pad     = pad;
 }
 
+#if !defined(TEST_SUITE_MPS_NO_SSL)
 static void write_version( int major, int minor, int transport,
                            unsigned char ver[2] )
 {
@@ -571,6 +572,7 @@ static void read_version( int *major, int *minor, int transport,
         *minor = ver[1];
     }
 }
+#endif /* #if !defined(TEST_SUITE_MPS_NO_SSL) */
 
 #define CHK( x )                                \
     do                                          \
