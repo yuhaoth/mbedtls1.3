@@ -720,6 +720,10 @@
 #error "MBEDTLS_SSL_DTLS_HELLO_VERIFY  defined, but not all prerequisites"
 #endif
 
+#if defined(MBEDTLS_SSL_DTLS_HELLO_VERIFY) && !defined(MBEDTLS_SSL_SRV_C)
+#error "MBEDTLS_SSL_DTLS_HELLO_VERIFY  defined, but not all prerequisites"
+#endif
+
 #if defined(MBEDTLS_SSL_DTLS_CLIENT_PORT_REUSE) && \
     !defined(MBEDTLS_SSL_DTLS_HELLO_VERIFY)
 #error "MBEDTLS_SSL_DTLS_CLIENT_PORT_REUSE  defined, but not all prerequisites"

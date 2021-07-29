@@ -244,8 +244,10 @@ int main( void )
         goto exit;
     }
 
+#if defined(MBEDTLS_SSL_DTLS_HELLO_VERIFY)
     mbedtls_ssl_conf_dtls_cookies( &conf, mbedtls_ssl_cookie_write, mbedtls_ssl_cookie_check,
                                &cookie_ctx );
+#endif
 
     if( ( ret = mbedtls_ssl_setup( &ssl, &conf ) ) != 0 )
     {
