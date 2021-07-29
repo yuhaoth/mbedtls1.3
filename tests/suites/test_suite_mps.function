@@ -18,6 +18,10 @@
 
 #include "../include/mbedtls/timing.h"
 
+#include <stdlib.h>
+
+#include "mps_reader.h"
+
 /*
  * Compile-time configuration for test suite.
  */

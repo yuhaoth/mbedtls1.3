@@ -67,18 +67,17 @@ else
 fi
 
 # default values for options
-MODES="tls1 tls1_1 tls1_2 dtls1 dtls1_2"
+MODES="tls1_2 dtls1_2"
 VERIFIES="NO YES"
 TYPES="ECDSA RSA PSK"
 FILTER=""
 # exclude:
 # - NULL: excluded from our default config
-# - RC4, single-DES: requires legacy OpenSSL/GnuTLS versions
 #   avoid plain DES but keep 3DES-EDE-CBC (mbedTLS), DES-CBC3 (OpenSSL)
-# - ARIA: not in default config.h + requires OpenSSL >= 1.1.1
+# - ARIA: not in default mbedtls_config.h + requires OpenSSL >= 1.1.1
 # - ChachaPoly: requires OpenSSL >= 1.1.0
 # - 3DES: not in default config
-EXCLUDE='NULL\|DES\|RC4\|ARCFOUR\|ARIA\|CHACHA20-POLY1305'
+EXCLUDE='NULL\|DES\|ARIA\|CHACHA20-POLY1305'
 VERBOSE=""
 MEMCHECK=0
 PEERS="OpenSSL$PEER_GNUTLS mbedTLS"
@@ -156,22 +155,13 @@ log() {
 # is_dtls <mode>
 is_dtls()
 {
-    test "$1" = "dtls1" -o "$1" = "dtls1_2"
+    test "$1" = "dtls1_2"
 }
 
 # minor_ver <mode>
 minor_ver()
 {
     case "$1" in
-        ssl3)
-            echo 0
-            ;;
-        tls1)
-            echo 1
-            ;;
-        tls1_1|dtls1)
-            echo 2
-            ;;
         tls1_2|dtls1_2)
             echo 3
             ;;
@@ -190,11 +180,7 @@ filter()
   LIST="$1"
   NEW_LIST=""
 
-  if is_dtls "$MODE"; then
-      EXCLMODE="$EXCLUDE"'\|RC4\|ARCFOUR'
-  else
-      EXCLMODE="$EXCLUDE"
-  fi
+  EXCLMODE="$EXCLUDE"
 
   if [ `minor_ver "$MODE"` -ge 4 ]
   then
@@ -270,21 +256,18 @@ add_common_ciphersuites()
             then
                 M_CIPHERS="$M_CIPHERS                       \
                     TLS-ECDHE-ECDSA-WITH-NULL-SHA           \
-                    TLS-ECDHE-ECDSA-WITH-RC4-128-SHA        \
                     TLS-ECDHE-ECDSA-WITH-3DES-EDE-CBC-SHA   \
                     TLS-ECDHE-ECDSA-WITH-AES-128-CBC-SHA    \
                     TLS-ECDHE-ECDSA-WITH-AES-256-CBC-SHA    \
                     "
                 G_CIPHERS="$G_CIPHERS                       \
                     +ECDHE-ECDSA:+NULL:+SHA1                \
-                    +ECDHE-ECDSA:+ARCFOUR-128:+SHA1         \
                     +ECDHE-ECDSA:+3DES-CBC:+SHA1            \
                     +ECDHE-ECDSA:+AES-128-CBC:+SHA1         \
                     +ECDHE-ECDSA:+AES-256-CBC:+SHA1         \
                     "
                 O_CIPHERS="$O_CIPHERS               \
                     ECDHE-ECDSA-NULL-SHA            \
-                    ECDHE-ECDSA-RC4-SHA             \
                     ECDHE-ECDSA-DES-CBC3-SHA        \
                     ECDHE-ECDSA-AES128-SHA          \
                     ECDHE-ECDSA-AES256-SHA          \
@@ -310,7 +293,7 @@ add_common_ciphersuites()
                     ECDHE-ECDSA-AES128-GCM-SHA256   \
                     ECDHE-ECDSA-AES256-GCM-SHA384   \
                     "
-            fi         
+            fi
             ;;
 
         "RSA")
@@ -325,8 +308,6 @@ add_common_ciphersuites()
                 TLS-RSA-WITH-AES-128-CBC-SHA            \
                 TLS-RSA-WITH-CAMELLIA-128-CBC-SHA       \
                 TLS-RSA-WITH-3DES-EDE-CBC-SHA           \
-                TLS-RSA-WITH-RC4-128-SHA                \
-                TLS-RSA-WITH-RC4-128-MD5                \
                 TLS-RSA-WITH-NULL-MD5                   \
                 TLS-RSA-WITH-NULL-SHA                   \
                 "
@@ -341,8 +322,6 @@ add_common_ciphersuites()
                 +RSA:+AES-128-CBC:+SHA1                 \
                 +RSA:+CAMELLIA-128-CBC:+SHA1            \
                 +RSA:+3DES-CBC:+SHA1                    \
-                +RSA:+ARCFOUR-128:+SHA1                 \
-                +RSA:+ARCFOUR-128:+MD5                  \
                 +RSA:+NULL:+MD5                         \
                 +RSA:+NULL:+SHA1                        \
                 "
@@ -357,8 +336,6 @@ add_common_ciphersuites()
                 AES128-SHA                      \
                 CAMELLIA128-SHA                 \
                 DES-CBC3-SHA                    \
-                RC4-SHA                         \
-                RC4-MD5                         \
                 NULL-MD5                        \
                 NULL-SHA                        \
                 "
@@ -368,21 +345,18 @@ add_common_ciphersuites()
                     TLS-ECDHE-RSA-WITH-AES-128-CBC-SHA      \
                     TLS-ECDHE-RSA-WITH-AES-256-CBC-SHA      \
                     TLS-ECDHE-RSA-WITH-3DES-EDE-CBC-SHA     \
-                    TLS-ECDHE-RSA-WITH-RC4-128-SHA          \
                     TLS-ECDHE-RSA-WITH-NULL-SHA             \
                     "
                 G_CIPHERS="$G_CIPHERS                       \
                     +ECDHE-RSA:+AES-128-CBC:+SHA1           \
                     +ECDHE-RSA:+AES-256-CBC:+SHA1           \
                     +ECDHE-RSA:+3DES-CBC:+SHA1              \
-                    +ECDHE-RSA:+ARCFOUR-128:+SHA1           \
                     +ECDHE-RSA:+NULL:+SHA1                  \
                     "
                 O_CIPHERS="$O_CIPHERS               \
                     ECDHE-RSA-AES256-SHA            \
                     ECDHE-RSA-AES128-SHA            \
                     ECDHE-RSA-DES-CBC3-SHA          \
-                    ECDHE-RSA-RC4-SHA               \
                     ECDHE-RSA-NULL-SHA              \
                     "
             fi
@@ -436,19 +410,16 @@ add_common_ciphersuites()
 
         "PSK")
             M_CIPHERS="$M_CIPHERS                       \
-                TLS-PSK-WITH-RC4-128-SHA                \
                 TLS-PSK-WITH-3DES-EDE-CBC-SHA           \
                 TLS-PSK-WITH-AES-128-CBC-SHA            \
                 TLS-PSK-WITH-AES-256-CBC-SHA            \
                 "
             G_CIPHERS="$G_CIPHERS                       \
-                +PSK:+ARCFOUR-128:+SHA1                 \
                 +PSK:+3DES-CBC:+SHA1                    \
                 +PSK:+AES-128-CBC:+SHA1                 \
                 +PSK:+AES-256-CBC:+SHA1                 \
                 "
             O_CIPHERS="$O_CIPHERS               \
-                PSK-RC4-SHA                     \
                 PSK-3DES-EDE-CBC-SHA            \
                 PSK-AES128-CBC-SHA              \
                 PSK-AES256-CBC-SHA              \
@@ -476,14 +447,12 @@ add_openssl_ciphersuites()
             then
                 M_CIPHERS="$M_CIPHERS                       \
                     TLS-ECDH-ECDSA-WITH-NULL-SHA            \
-                    TLS-ECDH-ECDSA-WITH-RC4-128-SHA         \
                     TLS-ECDH-ECDSA-WITH-3DES-EDE-CBC-SHA    \
                     TLS-ECDH-ECDSA-WITH-AES-128-CBC-SHA     \
                     TLS-ECDH-ECDSA-WITH-AES-256-CBC-SHA     \
                     "
                 O_CIPHERS="$O_CIPHERS               \
                     ECDH-ECDSA-NULL-SHA             \
-                    ECDH-ECDSA-RC4-SHA              \
                     ECDH-ECDSA-DES-CBC3-SHA         \
                     ECDH-ECDSA-AES128-SHA           \
                     ECDH-ECDSA-AES256-SHA           \
@@ -509,7 +478,7 @@ add_openssl_ciphersuites()
                     ECDHE-ECDSA-ARIA128-GCM-SHA256  \
                     ECDHE-ECDSA-CHACHA20-POLY1305   \
                     "
-            fi      
+            fi
             ;;
 
         "RSA")
@@ -669,13 +638,11 @@ add_gnutls_ciphersuites()
                 TLS-DHE-PSK-WITH-3DES-EDE-CBC-SHA               \
                 TLS-DHE-PSK-WITH-AES-128-CBC-SHA                \
                 TLS-DHE-PSK-WITH-AES-256-CBC-SHA                \
-                TLS-DHE-PSK-WITH-RC4-128-SHA                    \
                 "
             G_CIPHERS="$G_CIPHERS                               \
                 +DHE-PSK:+3DES-CBC:+SHA1                        \
                 +DHE-PSK:+AES-128-CBC:+SHA1                     \
                 +DHE-PSK:+AES-256-CBC:+SHA1                     \
-                +DHE-PSK:+ARCFOUR-128:+SHA1                     \
                 "
             if [ `minor_ver "$MODE"` -gt 0 ]
             then
@@ -683,21 +650,17 @@ add_gnutls_ciphersuites()
                     TLS-ECDHE-PSK-WITH-AES-256-CBC-SHA          \
                     TLS-ECDHE-PSK-WITH-AES-128-CBC-SHA          \
                     TLS-ECDHE-PSK-WITH-3DES-EDE-CBC-SHA         \
-                    TLS-ECDHE-PSK-WITH-RC4-128-SHA              \
                     TLS-RSA-PSK-WITH-3DES-EDE-CBC-SHA           \
                     TLS-RSA-PSK-WITH-AES-256-CBC-SHA            \
                     TLS-RSA-PSK-WITH-AES-128-CBC-SHA            \
-                    TLS-RSA-PSK-WITH-RC4-128-SHA                \
                     "
                 G_CIPHERS="$G_CIPHERS                           \
                     +ECDHE-PSK:+3DES-CBC:+SHA1                  \
                     +ECDHE-PSK:+AES-128-CBC:+SHA1               \
                     +ECDHE-PSK:+AES-256-CBC:+SHA1               \
-                    +ECDHE-PSK:+ARCFOUR-128:+SHA1               \
                     +RSA-PSK:+3DES-CBC:+SHA1                    \
                     +RSA-PSK:+AES-256-CBC:+SHA1                 \
                     +RSA-PSK:+AES-128-CBC:+SHA1                 \
-                    +RSA-PSK:+ARCFOUR-128:+SHA1                 \
                     "
             fi
             if [ `minor_ver "$MODE"` -ge 3 ]
@@ -880,24 +843,11 @@ setup_arguments()
 {
     G_MODE=""
     case "$MODE" in
-        "ssl3")
-            G_PRIO_MODE="+VERS-SSL3.0"
-            ;;
-        "tls1")
-            G_PRIO_MODE="+VERS-TLS1.0"
-            ;;
-        "tls1_1")
-            G_PRIO_MODE="+VERS-TLS1.1"
-            ;;
         "tls1_2")
             G_PRIO_MODE="+VERS-TLS1.2"
             ;;
         "tls1_3")
             G_PRIO_MODE="+VERS-TLS1.3"
-            ;;            
-        "dtls1")
-            G_PRIO_MODE="+VERS-DTLS1.0"
-            G_MODE="-u"
             ;;
         "dtls1_2")
             G_PRIO_MODE="+VERS-DTLS1.2"
@@ -920,11 +870,11 @@ setup_arguments()
         O_SERVER_ARGS="-accept $PORT -ciphersuites TLS_AES_128_GCM_SHA256:TLS_AES_256_GCM_SHA384:TLS_CHACHA20_POLY1305_SHA256:TLS_AES_128_CCM_SHA256:TLS_AES_128_CCM_8_SHA256 --$MODE"
         M_SERVER_ARGS="server_port=$PORT server_addr=0.0.0.0 force_version=$MODE"
         G_SERVER_PRIO="NONE:${G_PRIO_CCM}+SHA256:+SHA384:+COMP-NULL:+GROUP-SECP256R1:+GROUP-SECP384R1:+CTYPE-ALL:+ECDHE-ECDSA:+CIPHER-ALL:+MAC-ALL:-SHA1:-AES-128-CBC:+SIGN-ECDSA-SECP384R1-SHA384:+SIGN-ECDSA-SECP256R1-SHA256:+ECDHE-ECDSA:${G_PRIO_MODE}"
-    else 
+    else
+        M_SERVER_ARGS="server_port=$PORT server_addr=0.0.0.0 force_version=$MODE"
         O_SERVER_ARGS="-accept $PORT -cipher NULL,ALL -$MODE"
-        M_SERVER_ARGS="server_port=$PORT server_addr=0.0.0.0 force_version=$MODE arc4=1"
-        G_SERVER_PRIO="NORMAL:${G_PRIO_CCM}+ARCFOUR-128:+NULL:+MD5:+PSK:+DHE-PSK:+ECDHE-PSK:+SHA256:+SHA384:+RSA-PSK:-VERS-TLS-ALL:$G_PRIO_MODE"
-    fi    
+        G_SERVER_PRIO="NORMAL:${G_PRIO_CCM}+NULL:+MD5:+PSK:+DHE-PSK:+ECDHE-PSK:+SHA256:+SHA384:+RSA-PSK:-VERS-TLS-ALL:$G_PRIO_MODE"
+    fi
 
     G_SERVER_ARGS="-p $PORT --http $G_MODE"
 
@@ -1159,7 +1109,7 @@ run_client() {
                 CLIENT_CMD="$OPENSSL_CMD s_client $O_CLIENT_ARGS -ciphersuites $2"
             else
                 CLIENT_CMD="$OPENSSL_CMD s_client $O_CLIENT_ARGS -cipher $2"
-            fi        
+            fi
             log "$CLIENT_CMD"
             echo "$CLIENT_CMD" > $CLI_OUT
             printf 'GET HTTP/1.0\r\n\r\n' | $CLIENT_CMD >> $CLI_OUT 2>&1 &
@@ -1187,12 +1137,12 @@ run_client() {
 
             if [ `minor_ver "$MODE"` -ge 4 ]
             then
-                G_CLIENT_PRIO="NONE:${2}:+GROUP-SECP256R1:+GROUP-SECP384R1:+CTYPE-ALL:+ECDHE-ECDSA:+CIPHER-ALL:+MAC-ALL:-SHA1:-AES-128-CBC:+SIGN-ECDSA-SECP256R1-SHA256:+SIGN-ECDSA-SECP384R1-SHA384:+ECDHE-ECDSA:${G_PRIO_MODE}" 
-                CLIENT_CMD="$GNUTLS_CLI $G_CLIENT_ARGS --priority $G_CLIENT_PRIO $G_HOST"            
-            else 
-                CLIENT_CMD="$GNUTLS_CLI $G_CLIENT_ARGS --priority $G_PRIO_MODE:$2 $G_HOST"        
-            fi     
-            
+                G_CLIENT_PRIO="NONE:${2}:+GROUP-SECP256R1:+GROUP-SECP384R1:+CTYPE-ALL:+ECDHE-ECDSA:+CIPHER-ALL:+MAC-ALL:-SHA1:-AES-128-CBC:+SIGN-ECDSA-SECP256R1-SHA256:+SIGN-ECDSA-SECP384R1-SHA384:+ECDHE-ECDSA:${G_PRIO_MODE}"
+                CLIENT_CMD="$GNUTLS_CLI $G_CLIENT_ARGS --priority $G_CLIENT_PRIO $G_HOST"
+            else
+                CLIENT_CMD="$GNUTLS_CLI $G_CLIENT_ARGS --priority $G_PRIO_MODE:$2 $G_HOST"
+            fi
+
             log "$CLIENT_CMD"
             echo "$CLIENT_CMD" > $CLI_OUT
             printf 'GET HTTP/1.0\r\n\r\n' | $CLIENT_CMD >> $CLI_OUT 2>&1 &
@@ -1378,10 +1328,10 @@ for VERIFY in $VERIFIES; do
                             TLS_AES_128_CCM_8_SHA256        \
                             TLS_CHACHA20_POLY1305_SHA256    \
                             "
-                    else 
+                    else
                             add_common_ciphersuites
                             add_openssl_ciphersuites
-                    fi                                
+                    fi
                     filter_ciphersuites
 
                     if [ "X" != "X$M_CIPHERS" ]; then
@@ -1422,7 +1372,7 @@ for VERIFY in $VERIFIES; do
                             +AES-128-CCM-8:+SHA256           \
                             +CHACHA20-POLY1305:+SHA256       \
                             "
-                    else 
+                    else
                             add_common_ciphersuites
                             add_gnutls_ciphersuites
                     fi
@@ -1465,12 +1415,12 @@ for VERIFY in $VERIFIES; do
                             TLS_AES_128_CCM_8_SHA256        \
                             TLS_CHACHA20_POLY1305_SHA256    \
                             "
-                    else 
+                    else
                             add_common_ciphersuites
                             add_openssl_ciphersuites
                             add_gnutls_ciphersuites
                             add_mbedtls_ciphersuites
-                    fi                                
+                    fi
                     filter_ciphersuites
 
                     if [ "X" != "X$M_CIPHERS" ]; then
