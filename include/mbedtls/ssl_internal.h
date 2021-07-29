@@ -1649,17 +1649,10 @@ static inline mbedtls_x509_crt *mbedtls_ssl_own_cert( mbedtls_ssl_context *ssl )
  * Return 0 if everything is OK, -1 if not.
  */
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
 int mbedtls_ssl_check_cert_usage(const mbedtls_x509_crt* cert,
     const mbedtls_key_exchange_type_t key_exchange,
     int cert_endpoint,
     uint32_t* flags);
-#else
-int mbedtls_ssl_check_cert_usage( const mbedtls_x509_crt *cert,
-                          const mbedtls_ssl_ciphersuite_t *ciphersuite,
-                          int cert_endpoint,
-                          uint32_t *flags );
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 
 #endif /* MBEDTLS_X509_CRT_PARSE_C */
 
