@@ -686,7 +686,7 @@ static int eap_tls_key_derivation ( void *p_expkey,
           MBEDTLS_SSL_PROTO_TLS1_2 */
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
-static int nss_keylog_export( void *p_expsecret,
+static int nss_keylog_export_tls13( void *p_expsecret,
                               const unsigned char client_random[32],
                               mbedtls_ssl_tls1_3_secret_type type,
                               const unsigned char *secret,
@@ -2850,7 +2850,7 @@ int main( int argc, char *argv[] )
     {
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
         mbedtls_ssl_conf_export_secrets_cb( &conf,
-                                            nss_keylog_export,
+                                            nss_keylog_export_tls13,
                                             NULL );
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 
