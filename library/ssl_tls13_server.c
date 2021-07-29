@@ -1405,16 +1405,16 @@ static int ssl_write_new_session_ticket_process( mbedtls_ssl_context *ssl )
                                                            &msg, NULL, NULL ) );
 
         /* Request write-buffer */
-        MBEDTLS_SSL_PROC_CHK( mbedtls_writer_get_ext( msg.handle,
-                                                      MBEDTLS_MPS_SIZE_MAX,
-                                                      &buf, &buf_len ) );
+        MBEDTLS_SSL_PROC_CHK( mbedtls_writer_get( msg.handle,
+                                                  MBEDTLS_MPS_SIZE_MAX,
+                                                  &buf, &buf_len ) );
 
         MBEDTLS_SSL_PROC_CHK( ssl_write_new_session_ticket_write(
                                   ssl, buf, buf_len, &msg_len ) );
 
         /* Commit message */
-        MBEDTLS_SSL_PROC_CHK( mbedtls_writer_commit_partial_ext( msg.handle,
-                                                         buf_len - msg_len ) );
+        MBEDTLS_SSL_PROC_CHK( mbedtls_writer_commit_partial( msg.handle,
+                                                             buf_len - msg_len ) );
 
         MBEDTLS_SSL_PROC_CHK( mbedtls_mps_dispatch( &ssl->mps.l4 ) );
 
@@ -3192,8 +3192,8 @@ static int ssl_encrypted_extensions_process( mbedtls_ssl_context* ssl )
                                                        &msg, NULL, NULL ) );
 
     /* Request write-buffer */
-    MBEDTLS_SSL_PROC_CHK( mbedtls_writer_get_ext( msg.handle, MBEDTLS_MPS_SIZE_MAX,
-                                                  &buf, &buf_len ) );
+    MBEDTLS_SSL_PROC_CHK( mbedtls_writer_get( msg.handle, MBEDTLS_MPS_SIZE_MAX,
+                                              &buf, &buf_len ) );
 
     MBEDTLS_SSL_PROC_CHK( ssl_encrypted_extensions_write(
                               ssl, buf, buf_len, &msg_len ) );
@@ -3202,8 +3202,8 @@ static int ssl_encrypted_extensions_process( mbedtls_ssl_context* ssl )
                                         buf, msg_len );
 
     /* Commit message */
-    MBEDTLS_SSL_PROC_CHK( mbedtls_writer_commit_partial_ext( msg.handle,
-                                                             buf_len - msg_len ) );
+    MBEDTLS_SSL_PROC_CHK( mbedtls_writer_commit_partial( msg.handle,
+                                                         buf_len - msg_len ) );
 
     MBEDTLS_SSL_PROC_CHK( mbedtls_mps_dispatch( &ssl->mps.l4 ) );
 
@@ -3461,8 +3461,8 @@ static int ssl_write_hello_retry_request_process( mbedtls_ssl_context *ssl )
                                                        &msg, NULL, NULL ) );
 
     /* Request write-buffer */
-    MBEDTLS_SSL_PROC_CHK( mbedtls_writer_get_ext( msg.handle, MBEDTLS_MPS_SIZE_MAX,
-                                                  &buf, &buf_len ) );
+    MBEDTLS_SSL_PROC_CHK( mbedtls_writer_get( msg.handle, MBEDTLS_MPS_SIZE_MAX,
+                                              &buf, &buf_len ) );
 
     MBEDTLS_SSL_PROC_CHK( ssl_write_hello_retry_request_write(
                               ssl, buf, buf_len, &msg_len ) );
@@ -3471,8 +3471,8 @@ static int ssl_write_hello_retry_request_process( mbedtls_ssl_context *ssl )
                                         buf, msg_len );
 
     /* Commit message */
-    MBEDTLS_SSL_PROC_CHK( mbedtls_writer_commit_partial_ext( msg.handle,
-                                                             buf_len - msg_len ) );
+    MBEDTLS_SSL_PROC_CHK( mbedtls_writer_commit_partial( msg.handle,
+                                                         buf_len - msg_len ) );
 
     MBEDTLS_SSL_PROC_CHK( mbedtls_mps_dispatch( &ssl->mps.l4 ) );
 
@@ -3793,8 +3793,8 @@ static int ssl_server_hello_process( mbedtls_ssl_context* ssl ) {
                                                        &msg, NULL, NULL ) );
 
     /* Request write-buffer */
-    MBEDTLS_SSL_PROC_CHK( mbedtls_writer_get_ext( msg.handle, MBEDTLS_MPS_SIZE_MAX,
-                                                  &buf, &buf_len ) );
+    MBEDTLS_SSL_PROC_CHK( mbedtls_writer_get( msg.handle, MBEDTLS_MPS_SIZE_MAX,
+                                              &buf, &buf_len ) );
 
     MBEDTLS_SSL_PROC_CHK( ssl_server_hello_write( ssl, buf, buf_len,
                                                   &msg_len ) );
@@ -3803,8 +3803,8 @@ static int ssl_server_hello_process( mbedtls_ssl_context* ssl ) {
                                         buf, msg_len );
 
     /* Commit message */
-    MBEDTLS_SSL_PROC_CHK( mbedtls_writer_commit_partial_ext( msg.handle,
-                                                             buf_len - msg_len ) );
+    MBEDTLS_SSL_PROC_CHK( mbedtls_writer_commit_partial( msg.handle,
+                                                         buf_len - msg_len ) );
 
     MBEDTLS_SSL_PROC_CHK( mbedtls_mps_dispatch( &ssl->mps.l4 ) );
 
@@ -4099,7 +4099,7 @@ static int ssl_certificate_request_process( mbedtls_ssl_context* ssl )
                                                            &msg, NULL, NULL ) );
 
         /* Request write-buffer */
-        MBEDTLS_SSL_PROC_CHK( mbedtls_writer_get_ext( msg.handle, MBEDTLS_MPS_SIZE_MAX,
+        MBEDTLS_SSL_PROC_CHK( mbedtls_writer_get( msg.handle, MBEDTLS_MPS_SIZE_MAX,
                                                       &buf, &buf_len ) );
 
         MBEDTLS_SSL_PROC_CHK( ssl_certificate_request_write(
@@ -4109,8 +4109,8 @@ static int ssl_certificate_request_process( mbedtls_ssl_context* ssl )
                                             buf, msg_len );
 
         /* Commit message */
-        MBEDTLS_SSL_PROC_CHK( mbedtls_writer_commit_partial_ext( msg.handle,
-                                                                 buf_len - msg_len ) );
+        MBEDTLS_SSL_PROC_CHK( mbedtls_writer_commit_partial( msg.handle,
+                                                             buf_len - msg_len ) );
 
         MBEDTLS_SSL_PROC_CHK( mbedtls_mps_dispatch( &ssl->mps.l4 ) );
 

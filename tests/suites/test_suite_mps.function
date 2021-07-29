@@ -1169,7 +1169,7 @@ typedef struct
 } dummy_cb_ctx;
 
 int mps_l4_dummy_callback( mbedtls_mps_write_cb_ctx_t const *ctx,
-                           mbedtls_writer_ext *writer )
+                           mbedtls_writer *writer )
 {
     int ret;
     dummy_cb_ctx *dummy_ctx = ( (dummy_cb_ctx*) ctx );
@@ -1185,8 +1185,8 @@ int mps_l4_dummy_callback( mbedtls_mps_write_cb_ctx_t const *ctx,
     if( bytes_in_chunk > dummy_ctx->max_bytes_per_chunk )
         bytes_in_chunk = dummy_ctx->max_bytes_per_chunk;
 
-    ret = mbedtls_writer_get_ext( writer, bytes_in_chunk,
-                                  &chunk, NULL );
+    ret = mbedtls_writer_get( writer, bytes_in_chunk,
+                              &chunk, NULL );
     if( ret == MBEDTLS_ERR_WRITER_OUT_OF_DATA )
         return( MBEDTLS_MPS_RETRANSMISSION_CALLBACK_PAUSE );
     else if( ret != 0 )
@@ -1198,7 +1198,7 @@ int mps_l4_dummy_callback( mbedtls_mps_write_cb_ctx_t const *ctx,
             ( dummy_ctx->bytes_written + idx );
     }
 
-    ret = mbedtls_writer_commit_ext( writer );
+    ret = mbedtls_writer_commit( writer );
     if( ret != 0 )
         return( ret );
 
@@ -6459,21 +6459,21 @@ void mbedtls_mps_l3_basic_handshake(
 
     if( multiple_fetch )
     {
-        TEST_ASSERT( mbedtls_writer_get_ext( hs_out.wr_ext, 10, &tmp, NULL ) == 0 );
+        TEST_ASSERT( mbedtls_writer_get( hs_out.wr, 10, &tmp, NULL ) == 0 );
         for( size_t idx=0; idx<10; idx++ )
             tmp[idx] = (unsigned char) idx;
 
         if( intermediate_commit )
-            TEST_ASSERT( mbedtls_writer_commit_ext( hs_out.wr_ext )  == 0 );
+            TEST_ASSERT( mbedtls_writer_commit( hs_out.wr )  == 0 );
 
-        TEST_ASSERT( mbedtls_writer_get_ext( hs_out.wr_ext, 10 + additional_fetch,
+        TEST_ASSERT( mbedtls_writer_get( hs_out.wr, 10 + additional_fetch,
                                              &tmp, NULL ) == 0 );
         for( size_t idx=0; idx< 10 + additional_fetch ; idx++ )
             tmp[idx] = (unsigned char) ( 10 + idx );
     }
     else
     {
-        TEST_ASSERT( mbedtls_writer_get_ext( hs_out.wr_ext,
+        TEST_ASSERT( mbedtls_writer_get( hs_out.wr,
                                              20 + additional_fetch,
                                              &tmp, NULL ) == 0 );
         for( size_t idx=0; idx<20 + additional_fetch; idx++ )
@@ -6483,12 +6483,12 @@ void mbedtls_mps_l3_basic_handshake(
     if( !partial_commit )
     {
         /* Commit and update state */
-        TEST_ASSERT( mbedtls_writer_commit_ext( hs_out.wr_ext ) == 0 );
+        TEST_ASSERT( mbedtls_writer_commit( hs_out.wr ) == 0 );
     }
     else
     {
         /* Commit and update state */
-        TEST_ASSERT( mbedtls_writer_commit_partial_ext( hs_out.wr_ext,
+        TEST_ASSERT( mbedtls_writer_commit_partial( hs_out.wr,
                                                     additional_fetch ) == 0 );
     }
 
@@ -6527,14 +6527,14 @@ void mbedtls_mps_l3_basic_handshake(
     }
 
     /* Fetch next chunk of incoming data */
-    TEST_ASSERT( mbedtls_mps_reader_get_ext( hs_in.rd_ext, 20, &tmp, NULL ) == 0 );
+    TEST_ASSERT( mbedtls_mps_reader_get( hs_in.rd, 20, &tmp, NULL ) == 0 );
 
     /* Process incoming data */
     for( size_t idx=0; idx<10; idx++ )
         TEST_ASSERT( tmp[idx] == (unsigned char) idx );
 
     /* Commit last incoming chunk and update state */
-    TEST_ASSERT( mbedtls_mps_reader_commit_ext( hs_in.rd_ext ) == 0 );
+    TEST_ASSERT( mbedtls_mps_reader_commit( hs_in.rd ) == 0 );
 
     /* Signal that message has been processed. */
     TEST_ASSERT( mps_l3_read_consume( &srv_l3 ) == 0 );
@@ -6866,7 +6866,7 @@ fallback:
                 case 1:
 
                     /* Ask for outbuffer to write next chunk of data */
-                    res = mbedtls_writer_get_ext( hs_out.wr_ext, 4, &tmp, NULL );
+                    res = mbedtls_writer_get( hs_out.wr, 4, &tmp, NULL );
                     TEST_ASSERT( res == 0 ||
                                  res == MBEDTLS_ERR_WRITER_OUT_OF_DATA );
                     if( res == MBEDTLS_ERR_WRITER_OUT_OF_DATA )
@@ -6880,15 +6880,9 @@ fallback:
                         tmp[idx] = (unsigned char)( msgs_remaining + idx );
 
                     /* Commit and update state */
-                    TEST_ASSERT( mbedtls_writer_commit_ext(
-                                     hs_out.wr_ext ) == 0 );
+                    TEST_ASSERT( mbedtls_writer_commit(
+                                     hs_out.wr ) == 0 );
                     send_state = 2;
-
-                    /* Attempt to finish the writing -- should give an error
-                     * because we have initially specified how much we intend
-                     * to write. */
-                    TEST_ASSERT( mps_l3_dispatch( &cli_l3 ) ==
-                                 MBEDTLS_ERR_MPS_UNFINISHED_HS_MSG );
 
                     goto fallback;
                     break;
@@ -6896,7 +6890,7 @@ fallback:
                 case 2:
 
                     /* Ask for outbuffer to write next chunk of data */
-                    res = mbedtls_writer_get_ext( hs_out.wr_ext, 4,
+                    res = mbedtls_writer_get( hs_out.wr, 4,
                                                   &tmp, NULL );
                     TEST_ASSERT( res == 0 ||
                                  res == MBEDTLS_ERR_WRITER_OUT_OF_DATA );
@@ -6911,8 +6905,8 @@ fallback:
                         tmp[idx] = (unsigned char)( 4 + msgs_remaining + idx );
 
                     /* Commit and update state */
-                    TEST_ASSERT( mbedtls_writer_commit_ext(
-                                     hs_out.wr_ext ) == 0 );
+                    TEST_ASSERT( mbedtls_writer_commit(
+                                     hs_out.wr ) == 0 );
                     send_state = 3;
 
                     goto fallback;
@@ -6994,7 +6988,7 @@ repeat:
                 case 0:
 
                     /* Fetch next chunk of incoming data */
-                    res = mbedtls_mps_reader_get_ext( hs_in.rd_ext, 4, &tmp, NULL );
+                    res = mbedtls_mps_reader_get( hs_in.rd, 4, &tmp, NULL );
                     TEST_ASSERT( res == 0 ||
                                  res == MBEDTLS_ERR_MPS_READER_OUT_OF_DATA );
                     if( res == MBEDTLS_ERR_MPS_READER_OUT_OF_DATA )
@@ -7009,14 +7003,9 @@ repeat:
                                      (uint8_t)( msgs_remaining + idx ) );
 
                     /* Commit last incoming chunk and update state */
-                    TEST_ASSERT( mbedtls_mps_reader_commit_ext(
-                                     hs_in.rd_ext ) == 0 );
+                    TEST_ASSERT( mbedtls_mps_reader_commit(
+                                     hs_in.rd ) == 0 );
                     recv_state = 1;
-
-                    /* Attempt to finish the reading -- should give an error because
-                     * we know how large the message is in total.. */
-                    TEST_ASSERT( mps_l3_read_consume( &srv_l3 ) ==
-                                 MBEDTLS_ERR_MPS_UNFINISHED_HS_MSG );
 
                     goto repeat;
                     break;
@@ -7024,7 +7013,7 @@ repeat:
                 case 1:
 
                     /* Fetch next chunk of incoming data */
-                    res = mbedtls_mps_reader_get_ext( hs_in.rd_ext, 4,
+                    res = mbedtls_mps_reader_get( hs_in.rd, 4,
                                                   &tmp, NULL );
                     TEST_ASSERT( res == 0 ||
                                  res == MBEDTLS_ERR_MPS_READER_OUT_OF_DATA );
@@ -7040,8 +7029,8 @@ repeat:
                                      (uint8_t) ( 4 + msgs_remaining + idx ) );
 
                     /* Commit last incoming chunk and update state */
-                    TEST_ASSERT( mbedtls_mps_reader_commit_ext(
-                                     hs_in.rd_ext ) == 0 );
+                    TEST_ASSERT( mbedtls_mps_reader_commit(
+                                     hs_in.rd ) == 0 );
                     recv_state = 2;
 
                     goto repeat;
@@ -7553,7 +7542,7 @@ send_start:
                 case 0:
 
                     /* Ask for outbuffer to write next chunk of data */
-                    res = mbedtls_writer_get_ext( hs_out.wr_ext,
+                    res = mbedtls_writer_get( hs_out.wr,
                                                   4,
                                                   &tmp, NULL );
                     TEST_ASSERT( res == 0 ||
@@ -7569,15 +7558,9 @@ send_start:
                         tmp[idx] = (unsigned char)( msgs_remaining + idx );
 
                     /* Commit and update state */
-                    TEST_ASSERT( mbedtls_writer_commit_ext(
-                                     hs_out.wr_ext ) == 0 );
+                    TEST_ASSERT( mbedtls_writer_commit(
+                                     hs_out.wr ) == 0 );
                     send_state = 1;
-
-                    /* Attempt to finish the writing -- should give an error
-                     * because we have initially specified how much we intend
-                     * to write. */
-                    TEST_ASSERT( mps_l3_dispatch( &cli_l3 ) ==
-                                 MBEDTLS_ERR_MPS_UNFINISHED_HS_MSG );
 
                     goto send_start;
                     break;
@@ -7585,7 +7568,7 @@ send_start:
                 case 1:
 
                     /* Ask for outbuffer to write next chunk of data */
-                    res = mbedtls_writer_get_ext( hs_out.wr_ext, 4,
+                    res = mbedtls_writer_get( hs_out.wr, 4,
                                                   &tmp, NULL );
                     TEST_ASSERT( res == 0 ||
                                  res == MBEDTLS_ERR_WRITER_OUT_OF_DATA );
@@ -7600,8 +7583,8 @@ send_start:
                         tmp[idx] = (unsigned char)( 4 + msgs_remaining + idx );
 
                     /* Commit and update state */
-                    TEST_ASSERT( mbedtls_writer_commit_ext(
-                                     hs_out.wr_ext ) == 0 );
+                    TEST_ASSERT( mbedtls_writer_commit(
+                                     hs_out.wr ) == 0 );
                     send_state = 2;
 
                     goto send_start;
@@ -7736,7 +7719,7 @@ recv_start:
                 case 0:
 
                     /* Fetch next chunk of incoming data */
-                    res = mbedtls_mps_reader_get_ext( hs_in.rd_ext, 3,
+                    res = mbedtls_mps_reader_get( hs_in.rd, 3,
                                                   &tmp, NULL );
                     TEST_ASSERT( res == 0 ||
                                  res == MBEDTLS_ERR_MPS_READER_OUT_OF_DATA );
@@ -7752,14 +7735,9 @@ recv_start:
                                      (uint8_t)( msgs_remaining + idx ) );
 
                     /* Commit last incoming chunk and update state */
-                    TEST_ASSERT( mbedtls_mps_reader_commit_ext(
-                                     hs_in.rd_ext ) == 0 );
+                    TEST_ASSERT( mbedtls_mps_reader_commit(
+                                     hs_in.rd ) == 0 );
                     recv_state = 1;
-
-                    /* Attempt to finish the reading -- should give an error because
-                     * we know how large the message is in total.. */
-                    TEST_ASSERT( mps_l3_read_consume( &srv_l3 ) ==
-                                 MBEDTLS_ERR_MPS_UNFINISHED_HS_MSG );
 
                     goto recv_start;
                     break;
@@ -7767,7 +7745,7 @@ recv_start:
                 case 1:
 
                     /* Fetch next chunk of incoming data */
-                    res = mbedtls_mps_reader_get_ext( hs_in.rd_ext, 5,
+                    res = mbedtls_mps_reader_get( hs_in.rd, 5,
                                                   &tmp, NULL );
                     TEST_ASSERT( res == 0 ||
                                  res == MBEDTLS_ERR_MPS_READER_OUT_OF_DATA );
@@ -7783,8 +7761,8 @@ recv_start:
                                      (uint8_t) ( 3 + msgs_remaining + idx ) );
 
                     /* Commit last incoming chunk and update state */
-                    TEST_ASSERT( mbedtls_mps_reader_commit_ext(
-                                     hs_in.rd_ext ) == 0 );
+                    TEST_ASSERT( mbedtls_mps_reader_commit(
+                                     hs_in.rd ) == 0 );
                     recv_state = 2;
 
                     goto recv_start;
@@ -8127,14 +8105,14 @@ void mbedtls_mps_l3_random( int allocator_buffer_sz,
                     ret = mps_l3_read_handshake( endpoint[self], &hs_in );
                     TEST_ASSERT( ret == 0 );
 
-                    ret = mbedtls_mps_reader_get_ext( hs_in.rd_ext ,
+                    ret = mbedtls_mps_reader_get( hs_in.rd ,
                                                   data_requested, &buf,
                                                   &data_obtained );
                     TEST_ASSERT( ret == 0 );
                     TEST_ASSERT( memcmp( buf, chunk->data.hs.buf +
                                          chunk->data.hs.read_progress,
                                          data_obtained ) == 0 );
-                    TEST_ASSERT( mbedtls_mps_reader_commit_ext( hs_in.rd_ext ) == 0 );
+                    TEST_ASSERT( mbedtls_mps_reader_commit( hs_in.rd ) == 0 );
 
                     chunk->data.hs.read_progress += data_obtained;
 
@@ -8336,7 +8314,7 @@ void mbedtls_mps_l3_random( int allocator_buffer_sz,
                     data_remaining = chunk->data.hs.len - chunk->data.hs.send_progress;
                     data_requested = data_remaining;
 
-                    ret = mbedtls_writer_get_ext( hs_out.wr_ext, data_requested,
+                    ret = mbedtls_writer_get( hs_out.wr, data_requested,
                                                   &buf, &data_obtained );
                     TEST_ASSERT( ret == 0 );
 
@@ -8345,7 +8323,7 @@ void mbedtls_mps_l3_random( int allocator_buffer_sz,
                             data_obtained );
                     chunk->data.hs.send_progress += data_obtained;
 
-                    ret = mbedtls_writer_commit_ext( hs_out.wr_ext );
+                    ret = mbedtls_writer_commit( hs_out.wr );
                     TEST_ASSERT( ret == 0 );
 
                     if( chunk->data.hs.send_progress == chunk->data.hs.len )
@@ -8577,15 +8555,15 @@ void mbedtls_mps_l4_basic_handshake(
 
     if( multiple_fetch )
     {
-        TEST_ASSERT( mbedtls_writer_get_ext( hs_out.handle, 10,
+        TEST_ASSERT( mbedtls_writer_get( hs_out.handle, 10,
                                              &tmp, NULL ) == 0 );
         for( size_t idx=0; idx<10; idx++ )
             tmp[idx] = (unsigned char) idx;
 
         if( intermediate_commit )
-            TEST_ASSERT( mbedtls_writer_commit_ext( hs_out.handle )  == 0 );
+            TEST_ASSERT( mbedtls_writer_commit( hs_out.handle )  == 0 );
 
-        TEST_ASSERT( mbedtls_writer_get_ext( hs_out.handle,
+        TEST_ASSERT( mbedtls_writer_get( hs_out.handle,
                                              10 + additional_fetch,
                                              &tmp, NULL ) == 0 );
         for( size_t idx=0; idx< 10 + additional_fetch ; idx++ )
@@ -8593,7 +8571,7 @@ void mbedtls_mps_l4_basic_handshake(
     }
     else
     {
-        TEST_ASSERT( mbedtls_writer_get_ext( hs_out.handle,
+        TEST_ASSERT( mbedtls_writer_get( hs_out.handle,
                                              20 + additional_fetch,
                                              &tmp, NULL ) == 0 );
         for( size_t idx=0; idx<20 + additional_fetch; idx++ )
@@ -8603,12 +8581,12 @@ void mbedtls_mps_l4_basic_handshake(
     if( !partial_commit )
     {
         /* Commit and update state */
-        TEST_ASSERT( mbedtls_writer_commit_ext( hs_out.handle ) == 0 );
+        TEST_ASSERT( mbedtls_writer_commit( hs_out.handle ) == 0 );
     }
     else
     {
         /* Commit and update state */
-        TEST_ASSERT( mbedtls_writer_commit_partial_ext( hs_out.handle,
+        TEST_ASSERT( mbedtls_writer_commit_partial( hs_out.handle,
                                                     additional_fetch ) == 0 );
     }
 
@@ -8627,14 +8605,14 @@ void mbedtls_mps_l4_basic_handshake(
     TEST_ASSERT( hs_in.length == 20 );
 
     /* Fetch next chunk of incoming data */
-    TEST_ASSERT( mbedtls_mps_reader_get_ext( hs_in.handle, 20, &tmp, NULL ) == 0 );
+    TEST_ASSERT( mbedtls_mps_reader_get( hs_in.handle, 20, &tmp, NULL ) == 0 );
 
     /* Process incoming data */
     for( size_t idx=0; idx<10; idx++ )
         TEST_ASSERT( tmp[idx] == (unsigned char) idx );
 
     /* Commit last incoming chunk and update state */
-    TEST_ASSERT( mbedtls_mps_reader_commit_ext( hs_in.handle ) == 0 );
+    TEST_ASSERT( mbedtls_mps_reader_commit( hs_in.handle ) == 0 );
 
     /* Signal that message has been processed. */
     TEST_ASSERT( mbedtls_mps_read_consume( &srv_l4 ) == 0 );
@@ -8978,11 +8956,11 @@ void mbedtls_mps_l4_hs_inconsistent_continuation( int variant )
 
     TEST_ASSERT( mps_l3_write_handshake( &cli_l3, &hs_out_cli ) == 0 );
 
-    TEST_ASSERT( mbedtls_writer_get_ext( hs_out_cli.wr_ext,
+    TEST_ASSERT( mbedtls_writer_get( hs_out_cli.wr,
                                          hs_out_cli.frag_len,
                                          &tmp, NULL ) == 0 );
     memset( tmp, 42, hs_out_cli.frag_len );
-    TEST_ASSERT( mbedtls_writer_commit_ext( hs_out_cli.wr_ext ) == 0 );
+    TEST_ASSERT( mbedtls_writer_commit( hs_out_cli.wr ) == 0 );
     TEST_ASSERT( mps_l3_dispatch( &cli_l3 ) == 0 );
     TEST_ASSERT( mps_l3_flush( &cli_l3 ) == 0 );
 
@@ -8994,9 +8972,9 @@ void mbedtls_mps_l4_hs_inconsistent_continuation( int variant )
     TEST_ASSERT( mbedtls_mps_read_handshake( &srv_l4, &hs_in_srv ) == 0 );
     TEST_ASSERT( mbedtls_mps_read_set_flags( &srv_l4,
                                  MBEDTLS_MPS_FLIGHT_END ) == 0 );
-    TEST_ASSERT( mbedtls_mps_reader_get_ext( hs_in_srv.handle, 10,
+    TEST_ASSERT( mbedtls_mps_reader_get( hs_in_srv.handle, 10,
                                          &tmp, NULL ) == 0 );
-    TEST_ASSERT( mbedtls_mps_reader_commit_ext( hs_in_srv.handle ) == 0 );
+    TEST_ASSERT( mbedtls_mps_reader_commit( hs_in_srv.handle ) == 0 );
     TEST_ASSERT( mbedtls_mps_read_consume( &srv_l4 ) == 0 );
 
     hs_out_srv.type = 0;
@@ -9006,11 +8984,11 @@ void mbedtls_mps_l4_hs_inconsistent_continuation( int variant )
     TEST_ASSERT( mbedtls_mps_write_set_flags( &srv_l4,
                              MBEDTLS_MPS_FLIGHT_END ) == 0 );
 
-    TEST_ASSERT( mbedtls_writer_get_ext( hs_out_srv.handle,
+    TEST_ASSERT( mbedtls_writer_get( hs_out_srv.handle,
                                          hs_out_srv.length,
                                          &tmp, NULL ) == 0 );
     memset( tmp, 0, hs_out_srv.length );
-    TEST_ASSERT( mbedtls_writer_commit_ext( hs_out_srv.handle ) == 0 );
+    TEST_ASSERT( mbedtls_writer_commit( hs_out_srv.handle ) == 0 );
     TEST_ASSERT( mbedtls_mps_dispatch( &srv_l4 ) == 0 );
 
     /* Switch incoming epoch on the server.
@@ -9046,11 +9024,11 @@ void mbedtls_mps_l4_hs_inconsistent_continuation( int variant )
 
     TEST_ASSERT( mps_l3_write_handshake( &cli_l3, &hs_out_cli ) == 0 );
 
-    TEST_ASSERT( mbedtls_writer_get_ext( hs_out_cli.wr_ext,
+    TEST_ASSERT( mbedtls_writer_get( hs_out_cli.wr,
                                          hs_out_cli.frag_len,
                                          &tmp, NULL ) == 0 );
     memset( tmp, 42, hs_out_cli.frag_len );
-    TEST_ASSERT( mbedtls_writer_commit_ext( hs_out_cli.wr_ext ) == 0 );
+    TEST_ASSERT( mbedtls_writer_commit( hs_out_cli.wr ) == 0 );
     TEST_ASSERT( mps_l3_dispatch( &cli_l3 ) == 0 );
 
     if( variant == 4 )
@@ -9064,11 +9042,11 @@ void mbedtls_mps_l4_hs_inconsistent_continuation( int variant )
 
         hs_out_cli.epoch = cli_epoch[0];
         TEST_ASSERT( mps_l3_write_handshake( &cli_l3, &hs_out_cli ) == 0 );
-        TEST_ASSERT( mbedtls_writer_get_ext( hs_out_cli.wr_ext,
+        TEST_ASSERT( mbedtls_writer_get( hs_out_cli.wr,
                                              hs_out_cli.frag_len,
                                              &tmp, NULL ) == 0 );
         memset( tmp, 42, hs_out_cli.frag_len );
-        TEST_ASSERT( mbedtls_writer_commit_ext( hs_out_cli.wr_ext ) == 0 );
+        TEST_ASSERT( mbedtls_writer_commit( hs_out_cli.wr ) == 0 );
         TEST_ASSERT( mps_l3_dispatch( &cli_l3 ) == 0 );
     }
 
@@ -9100,11 +9078,11 @@ void mbedtls_mps_l4_hs_inconsistent_continuation( int variant )
 
         TEST_ASSERT( mps_l3_write_handshake( &cli_l3, &hs_out_cli ) == 0 );
 
-        TEST_ASSERT( mbedtls_writer_get_ext( hs_out_cli.wr_ext,
+        TEST_ASSERT( mbedtls_writer_get( hs_out_cli.wr,
                                              hs_out_cli.frag_len,
                                              &tmp, NULL ) == 0 );
         memset( tmp, 42, hs_out_cli.frag_len );
-        TEST_ASSERT( mbedtls_writer_commit_ext( hs_out_cli.wr_ext ) == 0 );
+        TEST_ASSERT( mbedtls_writer_commit( hs_out_cli.wr ) == 0 );
 
         TEST_ASSERT( mps_l3_dispatch( &cli_l3 ) == 0 );
     }
@@ -9126,9 +9104,9 @@ void mbedtls_mps_l4_hs_inconsistent_continuation( int variant )
     {
         TEST_ASSERT( mbedtls_mps_read( &srv_l4 ) == MBEDTLS_MPS_MSG_HS );
         TEST_ASSERT( mbedtls_mps_read_handshake( &srv_l4, &hs_in_srv ) == 0 );
-        TEST_ASSERT( mbedtls_mps_reader_get_ext( hs_in_srv.handle, 20,
+        TEST_ASSERT( mbedtls_mps_reader_get( hs_in_srv.handle, 20,
                                              &tmp, NULL ) == 0 );
-        TEST_ASSERT( mbedtls_mps_reader_commit_ext( hs_in_srv.handle ) == 0 );
+        TEST_ASSERT( mbedtls_mps_reader_commit( hs_in_srv.handle ) == 0 );
         TEST_ASSERT( mbedtls_mps_read_consume( &srv_l4 ) == 0 );
 
         TEST_ASSERT( mbedtls_mps_set_incoming_keys( &srv_l4, srv_epoch[1] ) == 0 );
@@ -9220,14 +9198,14 @@ void mbedtls_mps_l4_disruption( int mode,
                                      MBEDTLS_MPS_FLIGHT_FINISHED ) == 0 );
     }
 
-    TEST_ASSERT( mbedtls_writer_get_ext( hs_out.handle,
+    TEST_ASSERT( mbedtls_writer_get( hs_out.handle,
                                          20,
                                          &tmp, NULL ) == 0 );
     for( size_t idx=0; idx<20; idx++ )
         tmp[idx] = (unsigned char) idx;
 
     /* Commit and update state */
-    TEST_ASSERT( mbedtls_writer_commit_ext( hs_out.handle ) == 0 );
+    TEST_ASSERT( mbedtls_writer_commit( hs_out.handle ) == 0 );
 
     /* Dispatch handshake message */
     TEST_ASSERT( mbedtls_mps_dispatch( &cli_l4 ) == 0 );
@@ -9268,14 +9246,14 @@ void mbedtls_mps_l4_disruption( int mode,
     TEST_ASSERT( hs_in.length == 20 );
 
     /* Fetch next chunk of incoming data */
-    TEST_ASSERT( mbedtls_mps_reader_get_ext( hs_in.handle, 20, &tmp, NULL ) == 0 );
+    TEST_ASSERT( mbedtls_mps_reader_get( hs_in.handle, 20, &tmp, NULL ) == 0 );
 
     /* Process incoming data */
     for( size_t idx=0; idx<10; idx++ )
         TEST_ASSERT( tmp[idx] == (unsigned char) idx );
 
     /* Commit last incoming chunk and update state */
-    TEST_ASSERT( mbedtls_mps_reader_commit_ext( hs_in.handle ) == 0 );
+    TEST_ASSERT( mbedtls_mps_reader_commit( hs_in.handle ) == 0 );
 
     /* An orderly shutdown cannot happen in the middle of a handshake. */
     TEST_ASSERT( mbedtls_mps_read_set_flags( &srv_l4,
@@ -9310,14 +9288,14 @@ void mbedtls_mps_l4_disruption( int mode,
         TEST_ASSERT( mbedtls_mps_write_handshake( &srv_l4, &hs_out,
                                                   NULL, NULL ) == 0 );
 
-        TEST_ASSERT( mbedtls_writer_get_ext( hs_out.handle,
+        TEST_ASSERT( mbedtls_writer_get( hs_out.handle,
                                              20,
                                              &tmp, NULL ) == 0 );
         for( size_t idx=0; idx<20; idx++ )
             tmp[idx] = (unsigned char) idx;
 
         /* Commit and update state */
-        TEST_ASSERT( mbedtls_writer_commit_ext( hs_out.handle ) == 0 );
+        TEST_ASSERT( mbedtls_writer_commit( hs_out.handle ) == 0 );
 
         /* Dispatch handshake message */
         TEST_ASSERT( mbedtls_mps_dispatch( &srv_l4 ) == 0 );
@@ -9338,14 +9316,14 @@ void mbedtls_mps_l4_disruption( int mode,
         TEST_ASSERT( hs_in.length == 20 );
 
         /* Fetch next chunk of incoming data */
-        TEST_ASSERT( mbedtls_mps_reader_get_ext( hs_in.handle, 20, &tmp, NULL ) == 0 );
+        TEST_ASSERT( mbedtls_mps_reader_get( hs_in.handle, 20, &tmp, NULL ) == 0 );
 
         /* Process incoming data */
         for( size_t idx=0; idx<10; idx++ )
             TEST_ASSERT( tmp[idx] == (unsigned char) idx );
 
         /* Commit last incoming chunk and update state */
-        TEST_ASSERT( mbedtls_mps_reader_commit_ext( hs_in.handle ) == 0 );
+        TEST_ASSERT( mbedtls_mps_reader_commit( hs_in.handle ) == 0 );
 
         /* An orderly shutdown cannot happen in the middle of a handshake. */
         TEST_ASSERT( mbedtls_mps_read_set_flags( &cli_l4,
@@ -9452,13 +9430,13 @@ void mbedtls_mps_l4_dtls_fragmentation( int allocator_buffer_sz,
                                                       NULL ) == 0 );
         }
 
-        TEST_ASSERT( mbedtls_writer_get_ext( hs_out.handle, hs_len + iteration,
+        TEST_ASSERT( mbedtls_writer_get( hs_out.handle, hs_len + iteration,
                                              &tmp, NULL ) == 0 );
         for( size_t idx=0; idx<(unsigned) ( hs_len + iteration ); idx++ )
             tmp[idx] = (unsigned char) idx;
 
         /* Commit and update state */
-        TEST_ASSERT( mbedtls_writer_commit_ext( hs_out.handle ) == 0 );
+        TEST_ASSERT( mbedtls_writer_commit( hs_out.handle ) == 0 );
 
         /* Dispatch handshake message */
         TEST_ASSERT( mbedtls_mps_dispatch( &cli_l4 ) == 0 );
@@ -9485,14 +9463,14 @@ void mbedtls_mps_l4_dtls_fragmentation( int allocator_buffer_sz,
             TEST_ASSERT( hs_in.len         == ( hs_len + iteration) );
             TEST_ASSERT( hs_in.seq_nr      == iteration             );
 
-            TEST_ASSERT( mbedtls_mps_reader_get_ext( hs_in.rd_ext ,
+            TEST_ASSERT( mbedtls_mps_reader_get( hs_in.rd,
                                                  hs_in.frag_len,
                                                  &tmp, NULL ) == 0 );
             for( size_t idx=0; idx<(unsigned) hs_in.frag_len; idx++ )
                 TEST_ASSERT( tmp[idx] == (unsigned char)( hs_offset + idx ) );
 
             /* Commit last incoming chunk and update state */
-            TEST_ASSERT( mbedtls_mps_reader_commit_ext( hs_in.rd_ext ) == 0 );
+            TEST_ASSERT( mbedtls_mps_reader_commit( hs_in.rd ) == 0 );
 
             /* Signal that message fragment has been processed. */
             TEST_ASSERT( mps_l3_read_consume( &srv_l3 ) == 0 );
@@ -9597,13 +9575,13 @@ void mbedtls_mps_l4_dtls_reassembly( int allocator_buffer_sz,
             if( ret != 0 )
                 continue;
 
-            TEST_ASSERT( mbedtls_writer_get_ext( hs_out.handle,
+            TEST_ASSERT( mbedtls_writer_get( hs_out.handle,
                                                  hs_len, &tmp, NULL ) == 0 );
 
             for( size_t idx=0; idx<(unsigned) ( hs_len ); idx++ )
                 tmp[idx] = (unsigned char) idx;
 
-            TEST_ASSERT( mbedtls_writer_commit_ext( hs_out.handle ) == 0 );
+            TEST_ASSERT( mbedtls_writer_commit( hs_out.handle ) == 0 );
 
             /* Dispatch handshake message */
             TEST_ASSERT( mbedtls_mps_dispatch( &cli_l4 ) == 0 );
@@ -9640,13 +9618,13 @@ void mbedtls_mps_l4_dtls_reassembly( int allocator_buffer_sz,
             }
             else
             {
-                TEST_ASSERT( mbedtls_writer_get_ext( hs_out.handle,
+                TEST_ASSERT( mbedtls_writer_get( hs_out.handle,
                                                      hs_len, &tmp, NULL ) == 0 );
 
                 for( size_t idx=0; idx<(unsigned) ( hs_len ); idx++ )
                     tmp[idx] = (unsigned char) idx;
 
-                TEST_ASSERT( mbedtls_writer_commit_ext( hs_out.handle ) == 0 );
+                TEST_ASSERT( mbedtls_writer_commit( hs_out.handle ) == 0 );
 
                 /* Dispatch handshake message */
                 TEST_ASSERT( mbedtls_mps_dispatch( &cli_l4 ) == 0 );
@@ -9701,11 +9679,11 @@ void mbedtls_mps_l4_dtls_reassembly( int allocator_buffer_sz,
         TEST_ASSERT( hs_in.length == hs_len    );
         TEST_ASSERT( hs_in.type   == iteration );
 
-        TEST_ASSERT( mbedtls_mps_reader_get_ext( hs_in.handle, hs_in.length,
+        TEST_ASSERT( mbedtls_mps_reader_get( hs_in.handle, hs_in.length,
                                              &tmp, NULL ) == 0 );
         for( size_t idx=0; idx<(unsigned) ( hs_len ); idx++ )
             TEST_ASSERT( tmp[idx] == (unsigned char) idx );
-        TEST_ASSERT( mbedtls_mps_reader_commit_ext( hs_in.handle ) == 0 );
+        TEST_ASSERT( mbedtls_mps_reader_commit( hs_in.handle ) == 0 );
         TEST_ASSERT( mbedtls_mps_read_consume( &srv_l4 ) == 0 );
 
     }
@@ -10033,13 +10011,13 @@ void mbedtls_mps_l4_flight_exchange( int mode,
 
             if( retransmission_callback == 0 )
             {
-                TEST_ASSERT( mbedtls_writer_get_ext( hs_out.handle, hs_len + iteration,
+                TEST_ASSERT( mbedtls_writer_get( hs_out.handle, hs_len + iteration,
                                                      &tmp, NULL ) == 0 );
                 for( size_t idx=0; idx<(unsigned) ( hs_len + iteration ); idx++ )
                     tmp[idx] = (unsigned char) idx;
 
                 /* Commit and update state */
-                TEST_ASSERT( mbedtls_writer_commit_ext( hs_out.handle ) == 0 );
+                TEST_ASSERT( mbedtls_writer_commit( hs_out.handle ) == 0 );
 
                 /* Dispatch handshake message */
                 TEST_ASSERT( mbedtls_mps_dispatch( sender ) == 0 );
@@ -10271,7 +10249,7 @@ void mbedtls_mps_l4_flight_exchange( int mode,
             TEST_ASSERT( hs_in.length == hs_len + iteration );
             TEST_ASSERT( hs_in.type   == iteration );
 
-            ret = mbedtls_mps_reader_get_ext( hs_in.handle, hs_in.length,
+            ret = mbedtls_mps_reader_get( hs_in.handle, hs_in.length,
                                           &tmp, NULL );
             if( ret == MBEDTLS_ERR_MPS_READER_OUT_OF_DATA )
             {
@@ -10282,7 +10260,7 @@ void mbedtls_mps_l4_flight_exchange( int mode,
 
             for( size_t idx=0; idx<(unsigned) ( hs_len + iteration ); idx++ )
                 TEST_ASSERT( tmp[idx] == (unsigned char) idx );
-            TEST_ASSERT( mbedtls_mps_reader_commit_ext( hs_in.handle ) == 0 );
+            TEST_ASSERT( mbedtls_mps_reader_commit( hs_in.handle ) == 0 );
 
             if( iteration == (unsigned) ( num_hs - 1 ) )
             {

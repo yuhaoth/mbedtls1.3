@@ -76,7 +76,7 @@ int mbedtls_ssl_mps_fetch_full_hs_msg( mbedtls_ssl_context *ssl,
     if( msg.type != hs_type )
         return( MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE );
 
-    ret = mbedtls_mps_reader_get_ext( msg.handle,
+    ret = mbedtls_mps_reader_get( msg.handle,
                                   msg.length,
                                   buf,
                                   NULL );
@@ -90,7 +90,7 @@ int mbedtls_ssl_mps_fetch_full_hs_msg( mbedtls_ssl_context *ssl,
     {
         MBEDTLS_SSL_PROC_CHK( ret );
 
-        /* *buf already set in mbedtls_mps_reader_get_ext() */
+        /* *buf already set in mbedtls_mps_reader_get() */
         *buflen = msg.length;
     }
 
@@ -107,7 +107,7 @@ int mbedtls_ssl_mps_hs_consume_full_hs_msg( mbedtls_ssl_context *ssl )
     MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read_handshake( &ssl->mps.l4,
                                                       &msg ) );
 
-    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_reader_commit_ext( msg.handle ) );
+    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_reader_commit( msg.handle ) );
     MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read_consume( &ssl->mps.l4 ) );
 
 cleanup:
@@ -582,7 +582,7 @@ int mbedtls_ssl_write_certificate_verify_process( mbedtls_ssl_context* ssl )
                                                            &msg, NULL, NULL ) );
 
         /* Request write-buffer */
-        MBEDTLS_SSL_PROC_CHK( mbedtls_writer_get_ext( msg.handle, MBEDTLS_MPS_SIZE_MAX,
+        MBEDTLS_SSL_PROC_CHK( mbedtls_writer_get( msg.handle, MBEDTLS_MPS_SIZE_MAX,
                                                       &buf, &buf_len ) );
 
         MBEDTLS_SSL_PROC_CHK( ssl_certificate_verify_write(
@@ -592,7 +592,7 @@ int mbedtls_ssl_write_certificate_verify_process( mbedtls_ssl_context* ssl )
                                             buf, msg_len );
 
         /* Commit message */
-        MBEDTLS_SSL_PROC_CHK( mbedtls_writer_commit_partial_ext( msg.handle,
+        MBEDTLS_SSL_PROC_CHK( mbedtls_writer_commit_partial( msg.handle,
                                                                  buf_len - msg_len ) );
 
         MBEDTLS_SSL_PROC_CHK( mbedtls_mps_dispatch( &ssl->mps.l4 ) );
@@ -1296,7 +1296,7 @@ int mbedtls_ssl_write_certificate_process( mbedtls_ssl_context* ssl )
                                                            &msg, NULL, NULL ) );
 
         /* Request write-buffer */
-        MBEDTLS_SSL_PROC_CHK( mbedtls_writer_get_ext( msg.handle, MBEDTLS_MPS_SIZE_MAX,
+        MBEDTLS_SSL_PROC_CHK( mbedtls_writer_get( msg.handle, MBEDTLS_MPS_SIZE_MAX,
                                                       &buf, &buf_len ) );
 
         MBEDTLS_SSL_PROC_CHK( ssl_write_certificate_write(
@@ -1306,8 +1306,8 @@ int mbedtls_ssl_write_certificate_process( mbedtls_ssl_context* ssl )
                                             buf, msg_len );
 
         /* Commit message */
-        MBEDTLS_SSL_PROC_CHK( mbedtls_writer_commit_partial_ext( msg.handle,
-                                                                 buf_len - msg_len ) );
+        MBEDTLS_SSL_PROC_CHK( mbedtls_writer_commit_partial( msg.handle,
+                                                             buf_len - msg_len ) );
 
         MBEDTLS_SSL_PROC_CHK( mbedtls_mps_dispatch( &ssl->mps.l4 ) );
 
@@ -2287,7 +2287,7 @@ int mbedtls_ssl_finished_out_process( mbedtls_ssl_context* ssl )
                                                        &msg, NULL, NULL ) );
 
     /* Request write-buffer */
-    MBEDTLS_SSL_PROC_CHK( mbedtls_writer_get_ext( msg.handle, MBEDTLS_MPS_SIZE_MAX,
+    MBEDTLS_SSL_PROC_CHK( mbedtls_writer_get( msg.handle, MBEDTLS_MPS_SIZE_MAX,
                                                   &buf, &buf_len ) );
 
     MBEDTLS_SSL_PROC_CHK( ssl_finished_out_write(
@@ -2297,7 +2297,7 @@ int mbedtls_ssl_finished_out_process( mbedtls_ssl_context* ssl )
                                         buf, msg_len );
 
     /* Commit message */
-    MBEDTLS_SSL_PROC_CHK( mbedtls_writer_commit_partial_ext( msg.handle,
+    MBEDTLS_SSL_PROC_CHK( mbedtls_writer_commit_partial( msg.handle,
                                                              buf_len - msg_len ) );
 
     MBEDTLS_SSL_PROC_CHK( mbedtls_mps_dispatch( &ssl->mps.l4 ) );
@@ -2801,7 +2801,7 @@ int mbedtls_ssl_write_early_data_ext( mbedtls_ssl_context *ssl,
         if( ( ssl->handshake->extensions_present & MBEDTLS_SSL_EXT_EARLY_DATA ) == 0 )
             return( 0 );
 
-        if( ssl->conf->key_exchange_modes != 
+        if( ssl->conf->key_exchange_modes !=
                    MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_KE ||
             ssl->conf->early_data_enabled == MBEDTLS_SSL_EARLY_DATA_DISABLED )
         {

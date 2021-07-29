@@ -49,23 +49,11 @@ void l2_out_write_version( int major, int minor,
                            mbedtls_mps_transport_type transport,
                            unsigned char ver[2] )
 {
-#if !defined(MBEDTLS_MPS_PROTO_BOTH)
-    ((void) transport);
-#endif
-
-    /* The goal of this guard-salad is to not include any mode checks in case
-     * only one of TLS or DTLS is enabled.
-     * The present solution, however, is not very readable, and I'd be glad
-     * about suggestions on how to improve this. */
-
-#if defined(MBEDTLS_MPS_PROTO_TLS)
     MBEDTLS_MPS_IF_TLS( transport )
     {
         ver[0] = (unsigned char) major;
         ver[1] = (unsigned char) minor;
     }
-#endif /* MBEDTLS_MPS_PROTO_TLS */
-#if defined(MBEDTLS_MPS_PROTO_DTLS)
     MBEDTLS_MPS_ELSE_IF_DTLS( transport )
     {
         if( minor == MBEDTLS_SSL_MINOR_VERSION_2 )
@@ -74,8 +62,6 @@ void l2_out_write_version( int major, int minor,
         ver[0] = (unsigned char)( 255 - ( major - 2 ) );
         ver[1] = (unsigned char)( 255 - ( minor - 1 ) );
     }
-#endif /* MBEDTLS_MPS_PROTO_DTLS */
-
 }
 
 #if defined(MBEDTLS_MPS_PROTO_TLS)
@@ -811,18 +797,13 @@ int l2_out_write_protected_record( mbedtls_mps_l2 *ctx, mps_rec *rec )
 MBEDTLS_MPS_STATIC
 int l2_out_write_protected_record_tls( mbedtls_mps_l2 *ctx, mps_rec *rec )
 {
-    mps_l1* const l1 = mbedtls_mps_l2_get_l1( ctx );
-
     uint8_t * const hdr = ctx->io.out.hdr;
     mbedtls_mps_size_t const hdr_len = ctx->io.out.hdr_len;
-
-    mbedtls_mps_size_t const tls_rec_hdr_len = 5;
-
+    mbedtls_mps_size_t const tls_rec_hdr_len     = 5;
     mbedtls_mps_size_t const tls_rec_type_offset = 0;
     mbedtls_mps_size_t const tls_rec_ver_offset  = 1;
     mbedtls_mps_size_t const tls_rec_len_offset  = 3;
-
-    ((void) tls_rec_hdr_len);
+    mps_l1* const l1 = mbedtls_mps_l2_get_l1( ctx );
     MBEDTLS_MPS_TRACE_INIT( "l2_write_protected_record_tls" );
 
     /* Double-check that we have calculated the header length
@@ -832,40 +813,31 @@ int l2_out_write_protected_record_tls( mbedtls_mps_l2 *ctx, mps_rec *rec )
                             "Invalid record header length" );
 
     /* Header structure is the same for all TLS versions.
-
-       From RFC 5246 - Section 6.2
-
-       struct {
-          uint8 major;
-          uint8 minor;
-       } ProtocolVersion;
-
-       enum {
-          change_cipher_spec(20), alert(21), handshake(22),
-          application_data(23), (255)
-       } ContentType;
-
-       struct {
-          ContentType type;
-          ProtocolVersion version;
-          uint16 length;
-          opaque fragment[TLSPlaintext.length];
-       } TLSPlaintext;
-
+     *  From RFC 5246 - Section 6.2
+     *  struct {
+     *     uint8 major;
+     *     uint8 minor;
+     *  } ProtocolVersion;
+     *  enum {
+     *     change_cipher_spec(20), alert(21), handshake(22),
+     *     application_data(23), (255)
+     *  } ContentType;
+     * struct {
+     *     ContentType type;
+     *     ProtocolVersion version;
+     *     uint16 length;
+     *     opaque fragment[TLSPlaintext.length];
+     *  } TLSPlaintext;
     */
 
     /* Write record content type. */
     MPS_WRITE_UINT8_BE( &rec->type, hdr + tls_rec_type_offset );
-
     /* Write record version. */
-    l2_out_write_version( rec->major_ver,
-                          rec->minor_ver,
+    l2_out_write_version( rec->major_ver, rec->minor_ver,
                           MBEDTLS_MPS_MODE_STREAM,
                           hdr + tls_rec_ver_offset );
-
     /* Write ciphertext length. */
     MPS_WRITE_UINT16_BE( &rec->buf.data_len, hdr + tls_rec_len_offset );
-
     MBEDTLS_MPS_TRACE_COMMENT( "* Type:    %u", (unsigned) rec->type );
     MBEDTLS_MPS_TRACE_COMMENT( "* Version: %u", (unsigned) rec->minor_ver );
     MBEDTLS_MPS_TRACE_RETURN( mps_l1_dispatch( l1, hdr_len + rec->buf.data_len, NULL ) );
@@ -910,7 +882,6 @@ int l2_out_write_protected_record_dtls12( mbedtls_mps_l2 *ctx,
     /* Double-check that we have calculated the header length
      * correctly when preparing the outgoing record.
      * This should always be true, but better err on the safe side. */
-    ((void) dtls_rec_hdr_len);
     MBEDTLS_MPS_ASSERT_RAW( hdr_len == dtls_rec_hdr_len,
                             "Invalid DTLS record header length" );
 
@@ -1326,28 +1297,22 @@ int l2_out_release_and_dispatch( mbedtls_mps_l2 *ctx, uint8_t force )
 int mps_l2_read_done( mbedtls_mps_l2 *ctx )
 {
     int ret;
-    mbedtls_mps_transport_type const mode =
-        mbedtls_mps_l2_conf_get_mode( &ctx->conf );
-
-    mbedtls_mps_l2_in_internal * active;
+    mbedtls_mps_transport_type const mode = mbedtls_mps_l2_conf_get_mode( &ctx->conf );
+    mbedtls_mps_l2_in_internal *active;
 #if defined(MBEDTLS_MPS_PROTO_TLS)
     int paused;
     int* const paused_ptr = &paused;
 #else
     int* const paused_ptr = NULL;
 #endif /* MBEDTLS_MPS_PROTO_TLS */
-
-    ((void) mode);
     MBEDTLS_MPS_TRACE_INIT( "mps_l2_read_done" );
 
     /* This only makes sense if the active reader is currently
      * on the user-side, i.e. 'external'. Everything else is
      * a violation of the API. */
-
     MBEDTLS_MPS_STATE_VALIDATE_RAW( mps_l2_readers_active_state( ctx )
                           == MBEDTLS_MPS_L2_READER_STATE_EXTERNAL,
                           "mbedtls_read_done() called in unexpected state" );
-
     /*
      * Layer 1 has provided the record the contents of which the
      * reader manages, so the order of freeing the resources is:
@@ -1464,16 +1429,12 @@ int l2_handle_invalid_record( mbedtls_mps_l2 *ctx, int ret )
 
     MBEDTLS_MPS_TRACE_INIT( "mps_l2_handle_invalid_record" );
     if( ret == MBEDTLS_ERR_MPS_INVALID_RECORD )
-    {
-        MBEDTLS_MPS_TRACE_ERROR( "Record with invalid header received -- discard" );
-    }
+        MBEDTLS_MPS_TRACE_ERROR( "Invalid record header - discard" );
     else if( ret == MBEDTLS_ERR_MPS_REPLAYED_RECORD )
-    {
-        MBEDTLS_MPS_TRACE_ERROR( "Record caught by replay protection -- discard" );
-    }
+        MBEDTLS_MPS_TRACE_ERROR( "Replayed Record - discard" );
     else /* ret == MBEDTLS_ERR_MPS_INVALID_MAC */
     {
-        MBEDTLS_MPS_TRACE_ERROR( "Record with invalid MAC received -- discard" );
+        MBEDTLS_MPS_TRACE_ERROR( "Invalid record MAC - discard" );
         ctx->io.in.bad_mac_ctr++;
         if( mbedtls_mps_l2_conf_get_badmac_limit( &ctx->conf ) != 0 &&
             ctx->io.in.bad_mac_ctr >=
@@ -1484,7 +1445,6 @@ int l2_handle_invalid_record( mbedtls_mps_l2 *ctx, int ret )
             MBEDTLS_MPS_TRACE_RETURN( MBEDTLS_ERR_MPS_INVALID_MAC );
         }
     }
-
     /* Silently discard datagrams containing invalid records. */
     MBEDTLS_MPS_TRACE_RETURN( mps_l1_skip( l1 ) );
 }
@@ -1493,12 +1453,11 @@ int l2_handle_invalid_record( mbedtls_mps_l2 *ctx, int ret )
 MBEDTLS_MPS_STATIC
 int l2_handle_record_content( mbedtls_mps_l2 *ctx, mps_rec *rec )
 {
+    int ret;
     /* The slot we attempt to use to store payload from the new record. */
     mbedtls_mps_l2_in_internal *slot = NULL;
     mbedtls_mps_transport_type const mode =
         mbedtls_mps_l2_conf_get_mode( &ctx->conf );
-    int ret;
-
     MBEDTLS_MPS_TRACE_INIT( "l2_handle_record_content" );
 
     /* Find a reader to handle the content.
@@ -1515,9 +1474,7 @@ int l2_handle_record_content( mbedtls_mps_l2 *ctx, mps_rec *rec )
                                rec->buf.buf + rec->buf.data_offset,
                                rec->buf.data_len );
 
-#if !defined(MBEDTLS_MPS_PROTO_TLS)
-    ((void) mode);
-#else
+#if defined(MBEDTLS_MPS_PROTO_TLS)
     if( MBEDTLS_MPS_IS_TLS( mode ) &&
         ret == MBEDTLS_ERR_MPS_READER_NEED_MORE )
     {
@@ -1769,19 +1726,15 @@ int l2_in_fetch_record( mbedtls_mps_l2 *ctx, mps_rec *rec )
     /*
      * Step 1: Read protected record
      */
-
     if( ( ret = l2_in_fetch_protected_record( ctx, rec ) ) != 0 )
         MBEDTLS_MPS_TRACE_RETURN( ret );
 
     /*
      * Step 2: Decrypt and authenticate record
      */
-
     MBEDTLS_MPS_TRACE_COMMENT( "Decrypt and authenticate record for epoch %u",
-           (unsigned) rec->epoch );
-
-    if( ( ret = l2_epoch_lookup( ctx, rec->epoch,
-                                 &epoch ) ) != 0 )
+                               (unsigned) rec->epoch );
+    if( ( ret = l2_epoch_lookup( ctx, rec->epoch, &epoch ) ) != 0 )
     {
         MBEDTLS_MPS_TRACE_COMMENT( "Epoch lookup failed with: %d", (int) ret );
         MBEDTLS_MPS_TRACE_RETURN( ret );
@@ -1795,8 +1748,7 @@ int l2_in_fetch_record( mbedtls_mps_l2 *ctx, mps_rec *rec )
     }
 
     /* Validate plaintext length */
-    if( rec->buf.data_len >
-        mbedtls_mps_l2_conf_get_max_plain_in( &ctx->conf ) )
+    if( rec->buf.data_len > mbedtls_mps_l2_conf_get_max_plain_in( &ctx->conf ) )
     {
         /* TODO: Release the record */
         MBEDTLS_MPS_TRACE_RETURN( MBEDTLS_ERR_MPS_INVALID_RECORD );
@@ -1819,7 +1771,6 @@ int l2_in_fetch_record( mbedtls_mps_l2 *ctx, mps_rec *rec )
      * Check if the record is empty, and if yes,
      * if empty records are allowed for the given content type.
      */
-
     if( rec->buf.data_len == 0 )
     {
         if( l2_type_empty_allowed( ctx, rec->type ) == 0 )
@@ -1879,24 +1830,14 @@ mbedtls_mps_size_t l2_get_header_len( mbedtls_mps_l2 *ctx,
 {
     mbedtls_mps_transport_type const mode =
         mbedtls_mps_l2_conf_get_mode( &ctx->conf );
-
-#if defined(MBEDTLS_MPS_PROTO_DTLS)
     mbedtls_mps_size_t const dtls12_rec_hdr_len = 13;
-#endif /* MBEDTLS_MPS_PROTO_DTLS */
-#if defined(MBEDTLS_MPS_PROTO_TLS)
     mbedtls_mps_size_t const  tls12_rec_hdr_len  = 5;
-#endif /* MBEDTLS_MPS_PROTO_TLS */
-
-    ((void) epoch);
     MBEDTLS_MPS_TRACE_INIT( "l2_get_header_len, %d", epoch );
 
-#if defined(MBEDTLS_MPS_PROTO_TLS)
     MBEDTLS_MPS_IF_TLS( mode )
     {
         MBEDTLS_MPS_TRACE_RETURN( tls12_rec_hdr_len );
     }
-#endif /* MBEDTLS_MPS_PROTO_TLS */
-#if defined(MBEDTLS_MPS_PROTO_DTLS)
     MBEDTLS_MPS_ELSE_IF_DTLS( mode )
     {
         /* OPTIMIZATION:
@@ -1915,7 +1856,6 @@ mbedtls_mps_size_t l2_get_header_len( mbedtls_mps_l2 *ctx,
          * which have a uniform and simple record header. */
         MBEDTLS_MPS_TRACE_RETURN( dtls12_rec_hdr_len );
     }
-#endif /* MBEDTLS_MPS_PROTO_DTLS */
 }
 
 #if defined(MBEDTLS_MPS_PROTO_TLS)
@@ -1951,35 +1891,25 @@ int l2_in_fetch_protected_record_tls( mbedtls_mps_l2 *ctx, mps_rec *rec )
 {
     int ret;
     mps_l1* const l1 = mbedtls_mps_l2_get_l1( ctx );
-
     /* Buffer to hold the record header; will be obtained from Layer 1 */
     unsigned char *buf;
-
     /* Header structure is the same for all TLS versions.
-
-       From RFC 5246 - Section 6.2
-
-       struct {
-          uint8 major;
-          uint8 minor;
-       } ProtocolVersion;
-
-       enum {
-          change_cipher_spec(20), alert(21), handshake(22),
-          application_data(23), (255)
-       } ContentType;
-
-       struct {
-          ContentType type;
-          ProtocolVersion version;
-          uint16 length;
-          opaque fragment[TLSPlaintext.length];
-       } TLSPlaintext;
-
-    */
-
+     * From RFC 5246 - Section 6.2
+     *  struct {
+     *     uint8 major;
+     *     uint8 minor;
+     *  } ProtocolVersion;
+     *  enum {
+     *     change_cipher_spec(20), alert(21), handshake(22),
+     *     application_data(23), (255)
+     *  } ContentType;
+     *  struct {
+     *     ContentType type;
+     *     ProtocolVersion version;
+     *     uint16 length;
+     *     opaque fragment[TLSPlaintext.length];
+     *  } TLSPlaintext; */
     const mbedtls_mps_size_t tls_rec_hdr_len     = 5;
-
     const mbedtls_mps_size_t tls_rec_type_offset = 0;
     const mbedtls_mps_size_t tls_rec_ver_offset  = 1;
     const mbedtls_mps_size_t tls_rec_len_offset  = 3;
@@ -1988,13 +1918,11 @@ int l2_in_fetch_protected_record_tls( mbedtls_mps_l2 *ctx, mps_rec *rec )
     uint8_t minor_ver, major_ver;
     mbedtls_mps_msg_type_t type;
     uint16_t len;
-
     MBEDTLS_MPS_TRACE_INIT( "l2_in_fetch_protected_record_tls" );
 
     /*
      * Fetch TLS record header from Layer 1
      */
-
     ret = mps_l1_fetch( l1, &buf, tls_rec_hdr_len );
     if( ret != 0 )
         MBEDTLS_MPS_TRACE_RETURN( ret );
@@ -2011,13 +1939,8 @@ int l2_in_fetch_protected_record_tls( mbedtls_mps_l2 *ctx, mps_rec *rec )
      * TODO: Strictly speaking we need to check that the content type
      *       is ApplicationData in the case of TLS 1.3.
      */
-
     MPS_READ_UINT8_BE( buf + tls_rec_type_offset, &type );
-
-    /* Version */
-    l2_read_version_tls( &major_ver, &minor_ver,
-                         buf + tls_rec_ver_offset );
-
+    l2_read_version_tls( &major_ver, &minor_ver, buf + tls_rec_ver_offset );
     if( major_ver != MBEDTLS_SSL_MAJOR_VERSION_3 )
     {
         MBEDTLS_MPS_TRACE_ERROR( "Invalid major record version %u received, expected %u",
@@ -2025,24 +1948,20 @@ int l2_in_fetch_protected_record_tls( mbedtls_mps_l2 *ctx, mps_rec *rec )
         MBEDTLS_MPS_TRACE_RETURN( MBEDTLS_ERR_MPS_INVALID_RECORD );
     }
 
-    /* Initially, the server doesn't know which TLS version
-     * the client will use for its ClientHello message, so
-     * Layer 2 must be configurable to allow arbitrary TLS
-     * versions. This is done through the initial version
-     * value MBEDTLS_MPS_L2_VERSION_UNSPECIFIED.
+    /* Initially, the server doesn't know which TLS version the client will use
+     * for its ClientHello message, so Layer 2 must be configurable to allow
+     * arbitrary TLS versions. This is done through the initial version value
+     * MBEDTLS_MPS_L2_VERSION_UNSPECIFIED.
      *
      * Also, for TLS 1.3, the wire-version is still TLS 1.2.
      *
-     * We capture both special cases in a helper function
-     * checking whether the wire-version matches the configured
-     * logical version.
-     */
+     * We capture both special cases in a helper function checking whether the
+     * wire-version matches the configured logical version. */
     if( l2_version_wire_matches_logical( minor_ver,
                   mbedtls_mps_l2_conf_get_version( &ctx->conf ) ) != 1 )
     {
         MBEDTLS_MPS_TRACE_ERROR( "Invalid minor record version %u received, expected %u",
-               (unsigned) minor_ver,
-               mbedtls_mps_l2_conf_get_version( &ctx->conf ) );
+               (unsigned) minor_ver, mbedtls_mps_l2_conf_get_version( &ctx->conf ) );
         MBEDTLS_MPS_TRACE_RETURN( MBEDTLS_ERR_MPS_INVALID_RECORD );
     }
 
@@ -2060,22 +1979,13 @@ int l2_in_fetch_protected_record_tls( mbedtls_mps_l2 *ctx, mps_rec *rec )
     if( ret != 0 )
         MBEDTLS_MPS_TRACE_RETURN( ret );
 
-    /*
-     * Check if the record should be silently ignored.
-     */
-
-    /*
-     * Check if we should ignore the record.
-     */
+    /* Check if record should be ignored */
     if( l2_type_ignore( ctx, type ) == 1 )
     {
-        MBEDTLS_MPS_TRACE_COMMENT( "Silently ignore record of type %u",
-               (unsigned) type );
-
+        MBEDTLS_MPS_TRACE_COMMENT( "Silently ignore record of type %u", (unsigned) type );
         ret = l2_in_release_record( ctx );
         if( ret != 0 )
             MBEDTLS_MPS_TRACE_RETURN( ret );
-
         MBEDTLS_MPS_TRACE_RETURN( MBEDTLS_ERR_MPS_RETRY );
     }
 
@@ -2083,17 +1993,13 @@ int l2_in_fetch_protected_record_tls( mbedtls_mps_l2 *ctx, mps_rec *rec )
      * Write target record structure
      */
 
-    /* For TLS-1.3, we must not increment the in_ctr here
-     * because (in contrast to prior versions of TLS), records
-     * may be silently dismissed on authentication failure,
-     * and in this case the record sequence number should stay
-     * unmodified.
+    /* For TLS-1.3, we must not increment the in_ctr here because (in contrast
+     * to prior versions of TLS), records may be silently dismissed on
+     * authentication failure, and in this case the record sequence number
+     * should stay unmodified.
      *
-     * Instead, postpone updating the incoming record sequence
-     * number to the point where the record has been successfully
-     * authenticated.
-     */
-
+     * Instead, postpone updating the incoming record sequence number to the
+     * point where the record has been successfully authenticated. */
     ret = l2_tls_in_get_epoch_and_counter( ctx, &rec->epoch, rec->ctr );
     if( ret != 0 )
         MBEDTLS_MPS_TRACE_RETURN( ret );
@@ -2122,22 +2028,19 @@ int l2_in_update_counter( mbedtls_mps_l2 *ctx,
                           uint32_t ctr_lo )
 {
     int ret;
-    mbedtls_mps_transport_type const mode =
-        mbedtls_mps_l2_conf_get_mode( &ctx->conf );
+    mbedtls_mps_transport_type const mode = mbedtls_mps_l2_conf_get_mode( &ctx->conf );
     mbedtls_mps_l2_epoch_t *epoch;
 
     ret = l2_epoch_lookup( ctx, epoch_id, &epoch );
     if( ret != 0 )
         return( ret );
 
-#if defined(MBEDTLS_MPS_PROTO_TLS)
     MBEDTLS_MPS_IF_TLS( mode )
     {
         ret = l2_increment_counter( epoch->stats.tls.in_ctr );
         if( ret != 0 )
             return( ret );
     }
-#endif /* MBEDTLS_MPS_PROTO_TLS */
 #if defined(MBEDTLS_MPS_PROTO_DTLS)
     MBEDTLS_MPS_ELSE_IF_DTLS( mode )
     {
@@ -2250,22 +2153,17 @@ int l2_in_fetch_protected_record_dtls12( mbedtls_mps_l2 *ctx,
     unsigned char *buf;
 
     /* Header structure the same for DTLS 1.0 and DTLS 1.2.
-
-       From RFC 6347 - Section 4.1
-
-       struct {
-            ContentType type;
-            ProtocolVersion version;
-            uint16 epoch;
-            uint48 sequence_number;
-            uint16 length;
-            opaque fragment[DTLSPlaintext.length];
-          } DTLSPlaintext;
-
-    */
+     *  From RFC 6347 - Section 4.1
+     *  struct {
+     *       ContentType type;
+     *       ProtocolVersion version;
+     *       uint16 epoch;
+     *       uint48 sequence_number;
+     *       uint16 length;
+     *       opaque fragment[DTLSPlaintext.length];
+     *  } DTLSPlaintext; */
 
     mbedtls_mps_size_t const dtls_rec_hdr_len      = 13;
-
     mbedtls_mps_size_t const dtls_rec_type_offset  = 0;
     mbedtls_mps_size_t const dtls_rec_ver_offset   = 1;
     mbedtls_mps_size_t const dtls_rec_epoch_offset = 3;
@@ -2273,11 +2171,9 @@ int l2_in_fetch_protected_record_dtls12( mbedtls_mps_l2 *ctx,
     mbedtls_mps_size_t const dtls_rec_len_offset   = 11;
 
     /* Temporaries for record fields. */
-    uint8_t  type;
-    uint8_t  minor_ver, major_ver;
-    uint16_t epoch;
+    uint8_t  type, minor_ver, major_ver;
+    uint16_t epoch, len;
     uint32_t seq_nr[2];
-    uint16_t len;
 
     MBEDTLS_MPS_TRACE_INIT( "l2_in_fetch_protected_record_dtls12" );
 
@@ -2733,8 +2629,8 @@ int l2_epoch_check( mbedtls_mps_l2 *ctx,
     mbedtls_mps_l2_epoch_t *epoch;
 
     MBEDTLS_MPS_TRACE_INIT( "l2_epoch_check for epoch %d, purpose %s",
-                epoch_id,
-                l2_epoch_usage_to_string( purpose ) );
+                            epoch_id,
+                            l2_epoch_usage_to_string( purpose ) );
 
     ret = l2_epoch_lookup( ctx, epoch_id, &epoch );
     if( ret != 0 )
