@@ -89,7 +89,6 @@ int mbedtls_ssl_check_timer( mbedtls_ssl_context *ssl )
 
 #if !defined(MBEDTLS_SSL_USE_MPS)
 static uint32_t ssl_get_hs_total_len( mbedtls_ssl_context const *ssl );
-#endif /* !MBEDTLS_SSL_USE_MPS */
 
 static int ssl_parse_record_header( mbedtls_ssl_context const *ssl,
                                     unsigned char *buf,
@@ -152,6 +151,17 @@ exit:
     MBEDTLS_SSL_DEBUG_MSG( 1, ( "<= mbedtls_ssl_check_record" ) );
     return( ret );
 }
+#else /* MBEDTLS_SSL_USE_MPS */
+int mbedtls_ssl_check_record( mbedtls_ssl_context const *ssl,
+                              unsigned char *buf,
+                              size_t buflen )
+{
+    ((void) ssl);
+    ((void) buf);
+    ((void) buflen);
+    return( MBEDTLS_ERR_SSL_FEATURE_UNAVAILABLE );
+}
+#endif /* !MBEDTLS_SSL_USE_MPS */
 
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
 
