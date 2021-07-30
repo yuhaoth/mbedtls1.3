@@ -706,5 +706,6 @@ int mbedtls_ssl_tls1_3_create_psk_binder( mbedtls_ssl_context *ssl,
                                int psk_type,
                                unsigned char const *transcript,
                                unsigned char *result );
+#endif /* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED */
 
 #endif /* MBEDTLS_SSL_TLS1_3_KEYS_H */
