@@ -1285,6 +1285,13 @@
 #define MBEDTLS_SSL_ALL_ALERT_MESSAGES
 
 /**
+ * \def MBEDTLS_SSL_USE_MPS
+ *
+ * TODO: Document
+ */
+#define MBEDTLS_SSL_USE_MPS
+
+/**
  * \def MBEDTLS_SSL_DTLS_CONNECTION_ID
  *
  * Enable support for the DTLS Connection ID extension
@@ -1348,7 +1355,7 @@
  *
  * Comment to disable the context serialization APIs.
  */
-#define MBEDTLS_SSL_CONTEXT_SERIALIZATION
+//#define MBEDTLS_SSL_CONTEXT_SERIALIZATION
 
 /**
  * \def MBEDTLS_SSL_DEBUG_ALL
@@ -1875,7 +1882,7 @@
  *
  * Comment this macro to disallow using RSASSA-PSS in certificates.
  */
-#define MBEDTLS_X509_RSASSA_PSS_SUPPORT
+//#define MBEDTLS_X509_RSASSA_PSS_SUPPORT
 /* \} name SECTION: mbed TLS feature support */
 
 /**
@@ -2750,7 +2757,7 @@
  *
  * Requires: MBEDTLS_BIGNUM_C, MBEDTLS_OID_C
  */
-#define MBEDTLS_RSA_C
+//#define MBEDTLS_RSA_C
 
 /**
  * \def MBEDTLS_SHA1_C
@@ -3269,6 +3276,8 @@
 
 //#define MBEDTLS_PSK_MAX_LEN               32 /**< Max size of TLS pre-shared keys, in bytes (default 256 bits) */
 //#define MBEDTLS_SSL_COOKIE_TIMEOUT        60 /**< Default expiration delay of DTLS cookies, in seconds if HAVE_TIME, or in number of cookies issued */
+
+#define MBEDTLS_SSL_TICKET_AGE_TOLERANCE 6000 /**< Tolerance window for ticket lifetime */
 
 /**
  * Complete list of ciphersuites to use, in order of preference.
