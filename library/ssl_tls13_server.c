@@ -19,12 +19,7 @@
 *  This file is part of mbed TLS ( https://tls.mbed.org )
 */
 
-
-#if !defined(MBEDTLS_CONFIG_FILE)
-#include "mbedtls/config.h"
-#else
-#include MBEDTLS_CONFIG_FILE
-#endif
+#include "common.h"
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
 
@@ -35,7 +30,7 @@
 
 #include "mbedtls/debug.h"
 #include "mbedtls/ssl.h"
-#include "mbedtls/ssl_internal.h"
+#include "ssl_misc.h"
 #include "ssl_tls13_keys.h"
 
 #include <string.h>

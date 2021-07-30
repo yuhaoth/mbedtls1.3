@@ -20,12 +20,7 @@
  *  This file is part of mbed TLS ( https://tls.mbed.org )
  */
 
-
-#if !defined(MBEDTLS_CONFIG_FILE)
-#include "mbedtls/config.h"
-#else
-#include MBEDTLS_CONFIG_FILE
-#endif
+#include "common.h"
 
 #if defined(MBEDTLS_SSL_TLS_C)
 
@@ -38,15 +33,13 @@
 #include "mbedtls/debug.h"
 #include "mbedtls/error.h"
 #include "mbedtls/ssl.h"
-#include "mbedtls/ssl_internal.h"
-#include "ssl_tls13_keys.h"
 #include "mbedtls/hkdf.h"
 #include <string.h>
 
-#if defined(MBEDTLS_X509_CRT_PARSE_C) &&                \
-    defined(MBEDTLS_X509_CHECK_EXTENDED_KEY_USAGE)
+#include "ssl_misc.h"
+#include "ssl_tls13_keys.h"
+
 #include "mbedtls/oid.h"
-#endif
 
 #if defined(MBEDTLS_PLATFORM_C)
 #include "mbedtls/platform.h"

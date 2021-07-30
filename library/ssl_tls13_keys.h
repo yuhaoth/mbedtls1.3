@@ -19,7 +19,7 @@
 #if !defined(MBEDTLS_SSL_TLS1_3_KEYS_H)
 #define MBEDTLS_SSL_TLS1_3_KEYS_H
 
-#include "mbedtls/ssl_internal.h"
+#include "ssl_misc.h"
 
 /* The maximum size of the intermediate key material.
  * The IKM can be a
