@@ -803,10 +803,14 @@ psk_parsing_successful:
         psk = ssl->handshake->psk;
         psk_len = ssl->handshake->psk_len;
 
+        if( ssl->handshake->resume == 1 )
+            psk_type = MBEDTLS_SSL_TLS1_3_PSK_RESUMPTION;
+        else
+            psk_type = MBEDTLS_SSL_TLS1_3_PSK_EXTERNAL;
+
         ret = mbedtls_ssl_tls1_3_create_psk_binder( ssl,
                  ssl->handshake->ciphersuite_info->mac,
-                 psk, psk_len,
-                 !( ssl->handshake->resume == 1 ) /* external PSK */,
+                 psk, psk_len, psk_type,
                  transcript, server_computed_binder );
 
         /* We do not check for multiple binders */

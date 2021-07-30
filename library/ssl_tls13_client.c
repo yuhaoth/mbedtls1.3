@@ -999,7 +999,7 @@ int mbedtls_ssl_write_pre_shared_key_ext( mbedtls_ssl_context *ssl,
     }
     else if( part == SSL_WRITE_PSK_EXT_ADD_PSK_BINDERS )
     {
-        int external_psk;
+        int psk_type;
 
         unsigned char transcript[MBEDTLS_MD_MAX_SIZE];
         size_t transcript_len;
@@ -1013,10 +1013,10 @@ int mbedtls_ssl_write_pre_shared_key_ext( mbedtls_ssl_context *ssl,
         /* 1 bytes length field for next psk binder */
         *p++ = (unsigned char)( ( hash_len ) & 0xFF );
 
-        if( ssl->handshake->resume )
-            external_psk = 0;
+        if( ssl->handshake->resume == 1 )
+            psk_type = MBEDTLS_SSL_TLS1_3_PSK_RESUMPTION;
         else
-            external_psk = 1;
+            psk_type = MBEDTLS_SSL_TLS1_3_PSK_EXTERNAL;
 
         /* Get current state of handshake transcript. */
         ret = mbedtls_ssl_get_handshake_transcript( ssl, suite_info->mac,
@@ -1027,8 +1027,7 @@ int mbedtls_ssl_write_pre_shared_key_ext( mbedtls_ssl_context *ssl,
 
         ret = mbedtls_ssl_tls1_3_create_psk_binder( ssl,
                                                     suite_info->mac,
-                                                    psk, psk_len,
-                                                    external_psk,
+                                                    psk, psk_len, psk_type,
                                                     transcript, p );
         if( ret != 0 )
         {
