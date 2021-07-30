@@ -246,7 +246,7 @@ requires_config_value_at_most() {
 # Space-separated list of ciphersuites supported by this build of
 # Mbed TLS.
 P_CIPHERSUITES=" $($P_CLI --help 2>/dev/null |
-                   grep TLS- |
+                   grep 'TLS-\|TLS1-3' |
                    tr -s ' \n' ' ')"
 requires_ciphersuite_enabled() {
     case $P_CIPHERSUITES in
