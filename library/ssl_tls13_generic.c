@@ -718,6 +718,7 @@ static int ssl_certificate_verify_write( mbedtls_ssl_context* ssl,
     const mbedtls_md_info_t *md_info;
     /* Verify whether we can use signature algorithm */
     int signature_scheme_client;
+    unsigned char * const end = buf + buflen;
 
 #if defined(MBEDTLS_SSL_USE_MPS)
     p = buf;
@@ -814,7 +815,7 @@ static int ssl_certificate_verify_write( mbedtls_ssl_context* ssl,
 
     if( ( ret = mbedtls_pk_sign( own_key, md_alg,
                                  verify_hash, verify_hash_len,
-                                 p + 2, &n,
+                                 p + 2, (size_t)( end - ( p + 2 ) ), &n,
                                  ssl->conf->f_rng, ssl->conf->p_rng ) ) != 0 )
     {
         MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_pk_sign", ret );
