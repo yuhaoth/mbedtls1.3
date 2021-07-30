@@ -1026,8 +1026,8 @@ int mbedtls_ssl_write_pre_shared_key_ext( mbedtls_ssl_context *ssl,
             return( ret );
 
         ret = mbedtls_ssl_tls1_3_create_psk_binder( ssl,
-                                                    psk, psk_len,
                                                     suite_info->mac,
+                                                    psk, psk_len,
                                                     external_psk,
                                                     transcript, p );
         if( ret != 0 )
