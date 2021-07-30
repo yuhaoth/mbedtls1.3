@@ -802,9 +802,9 @@ int main( int argc, char *argv[] )
     unsigned char eap_tls_keymaterial[16];
     unsigned char eap_tls_iv[8];
     const char* eap_tls_label = "client EAP encryption";
-    eap_tls_keys eap_tls_keying;
 #endif /* MBEDTLS_SSL_PROTO_TLS1 || MBEDTLS_SSL_PROTO_TLS1_1 || \
           MBEDTLS_SSL_PROTO_TLS1_2 */
+    eap_tls_keys eap_tls_keying;
 #if defined( MBEDTLS_SSL_DTLS_SRTP )
     /*! master keys and master salt for SRTP generated during handshake */
     unsigned char dtls_srtp_key_material[MBEDTLS_TLS_SRTP_MAX_KEY_MATERIAL_LENGTH];
@@ -941,7 +941,6 @@ int main( int argc, char *argv[] )
     opt.auth_mode           = DFL_AUTH_MODE;
     opt.mfl_code            = DFL_MFL_CODE;
     opt.trunc_hmac          = DFL_TRUNC_HMAC;
-    opt.recsplit            = DFL_RECSPLIT;
     opt.dhmlen              = DFL_DHMLEN;
     opt.reconnect           = DFL_RECONNECT;
     opt.reco_delay          = DFL_RECO_DELAY;
@@ -2068,6 +2067,10 @@ int main( int argc, char *argv[] )
         mbedtls_ssl_conf_encrypt_then_mac( &conf, opt.etm );
 #endif
 
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+    mbedtls_ssl_conf_tls13_key_exchange( &conf, opt.key_exchange_modes );
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+
 #if defined(MBEDTLS_DHM_C)
     if( opt.dhmlen != DFL_DHMLEN )
         mbedtls_ssl_conf_dhm_min_bitlen( &conf, opt.dhmlen );
@@ -2895,6 +2898,8 @@ send_request:
 
         if( opt.reco_mode == 1 )
         {
+            mbedtls_ssl_session exported_session;
+
             /* free any previously saved data */
             if( session_data != NULL )
             {
@@ -2903,9 +2908,19 @@ send_request:
                 session_data = NULL;
             }
 
+            mbedtls_ssl_session_init( &exported_session );
+            ret = mbedtls_ssl_get_session( &ssl, &exported_session );
+            if( ret != 0 )
+            {
+                mbedtls_printf(
+                    "failed\n  ! mbedtls_ssl_get_session() returned -%#02x\n",
+                    (unsigned) -ret );
+                goto exit;
+            }
+
             /* get size of the buffer needed */
-            mbedtls_ssl_session_save( mbedtls_ssl_get_session_pointer( &ssl ),
-                                        NULL, 0, &session_data_len );
+            mbedtls_ssl_session_save( &exported_session,
+                                      NULL, 0, &session_data_len );
             session_data = mbedtls_calloc( 1, session_data_len );
             if( session_data == NULL )
             {
@@ -2916,14 +2931,16 @@ send_request:
             }
 
             /* actually save session data */
-            if( ( ret = mbedtls_ssl_session_save( mbedtls_ssl_get_session_pointer( &ssl ),
-                                                    session_data, session_data_len,
-                                                    &session_data_len ) ) != 0 )
+            if( ( ret = mbedtls_ssl_session_save( &exported_session,
+                                                  session_data, session_data_len,
+                                                  &session_data_len ) ) != 0 )
             {
                 mbedtls_printf( " failed\n  ! mbedtls_ssl_session_saved returned -0x%04x\n\n",
                                 (unsigned int) -ret );
                 goto exit;
             }
+
+            mbedtls_ssl_session_free( &exported_session );
         }
         else
         {

@@ -65,16 +65,16 @@ void nss_keylog_export( void *p_expkey,
     ((void) server_random);
     ((void) tls_prf_type);
 
-    switch( type )
+    switch( secret_type )
     {
         case MBEDTLS_SSL_KEY_EXPORT_TLS12_MASTER_SECRET:
             strcpy(label, "CLIENT RANDOM ");
             break;
-        case MBEDTLS_SSL_KEY_EXPORT_TLS13_CLIENT_EARLY_TRAFFIC_SECRET:
+        case MBEDTLS_SSL_KEY_EXPORT_TLS13_CLIENT_EARLY_SECRET:
             strcpy(label, "CLIENT_EARLY_TRAFFIC_SECRET ");
             break;
-        case MBEDTLS_SSL_KEY_EXPORT_TLS13_EXPORTER_MASTER_SECRET:
-            strcpy(label, "EXPORTER_SECRET ");
+        case MBEDTLS_SSL_KEY_EXPORT_TLS13_EARLY_EXPORTER_SECRET:
+            strcpy(label, "EARLY_EXPORTER_SECRET ");
             break;
         case MBEDTLS_SSL_KEY_EXPORT_TLS13_CLIENT_HANDSHAKE_TRAFFIC_SECRET:
             strcpy(label, "CLIENT_HANDSHAKE_TRAFFIC_SECRET ");

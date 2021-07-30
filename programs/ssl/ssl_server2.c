@@ -1467,9 +1467,9 @@ int main( int argc, char *argv[] )
     unsigned char eap_tls_keymaterial[16];
     unsigned char eap_tls_iv[8];
     const char* eap_tls_label = "client EAP encryption";
-    eap_tls_keys eap_tls_keying;
 #endif /* MBEDTLS_SSL_PROTO_TLS1 || MBEDTLS_SSL_PROTO_TLS1_1 || \
           MBEDTLS_SSL_PROTO_TLS1_2 */
+    eap_tls_keys eap_tls_keying;
 #if defined( MBEDTLS_SSL_DTLS_SRTP )
     /*! master keys and master salt for SRTP generated during handshake */
      unsigned char dtls_srtp_key_material[MBEDTLS_TLS_SRTP_MAX_KEY_MATERIAL_LENGTH];
@@ -2943,7 +2943,7 @@ int main( int argc, char *argv[] )
     if( opt.cookies > 0 )
     {
         if( ( ret = mbedtls_ssl_cookie_setup( &cookie_ctx,
-                                        mbedtls_ctr_drbg_random, &ctr_drbg ) ) != 0 )
+                                              rng_get, &rng ) ) != 0 )
         {
             mbedtls_printf( " failed\n  ! mbedtls_ssl_cookie_setup returned %d\n\n", ret );
             goto exit;
