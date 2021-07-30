@@ -1484,7 +1484,8 @@ struct mbedtls_ssl_config
 #if defined(MBEDTLS_SSL_RENEGOTIATION)
     unsigned int MBEDTLS_PRIVATE(disable_renegotiation) : 1; /*!< disable renegotiation?     */
 #endif
-#if defined(MBEDTLS_SSL_SESSION_TICKETS)
+#if ( ( defined(MBEDTLS_SSL_SESSION_TICKETS) && defined(MBEDTLS_SSL_CLI_C) ) || \
+      ( defined(MBEDTLS_SSL_NEW_SESSION_TICKET) ) )
     unsigned int MBEDTLS_PRIVATE(session_tickets) : 1;   /*!< use session tickets?           */
 #endif
 
@@ -2818,9 +2819,6 @@ void mbedtls_ssl_conf_session_cache( mbedtls_ssl_config *conf,
                                      mbedtls_ssl_cache_get_t *f_get_cache,
                                      mbedtls_ssl_cache_set_t *f_set_cache );
 #endif /* MBEDTLS_SSL_SRV_C */
-
-#if defined(MBEDTLS_SSL_PROTO_TLS1_2) || defined(MBEDTLS_SSL_PROTO_TLS1_1) || \
-    defined(MBEDTLS_SSL_PROTO_TLS1) || defined(MBEDTLS_SSL_NEW_SESSION_TICKET)
 
 #if defined(MBEDTLS_SSL_CLI_C)
 /**
