@@ -4536,6 +4536,7 @@ run_test    "Authentication: client SHA384, server required" \
             -c "Supported Signature Algorithm found: 4," \
             -c "Supported Signature Algorithm found: 5,"
 
+requires_config_disabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
 run_test    "Authentication: client has no cert, server required (TLS)" \
             "$P_SRV debug_level=3 auth_mode=required" \
             "$P_CLI debug_level=3 crt_file=none \
@@ -5543,6 +5544,7 @@ run_test    "Not supported version check: cli TLS 1.0" \
             -S "Protocol is TLSv1.0" \
             -C "Handshake was completed"
 
+requires_config_disabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
 run_test    "Not supported version check: cli TLS 1.1" \
             "$P_SRV" \
             "$G_CLI localhost --priority=NORMAL:-VERS-ALL:+VERS-TLS1.1" \
