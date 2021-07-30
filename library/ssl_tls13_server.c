@@ -785,6 +785,7 @@ psk_parsing_successful:
     sum = 0;
     while( sum < item_array_length )
     {
+        int psk_type;
         /* Read to psk binder length */
         item_length = buf[0];
         sum = sum + 1 + item_length;
