@@ -21,10 +21,12 @@
  *  This file is part of mbed TLS (https://tls.mbed.org)
  */
 
-#ifndef MBEDTLS_MPS_ERROR_H
-#define MBEDTLS_MPS_ERROR_H
+#ifndef MBEDTLS_MPS_ERROR_ORIG_H
+#define MBEDTLS_MPS_ERROR_ORIG_H
 
 #include "common.h"
+
+#include "../library/mps_error.h"
 
 /**
  * MPS-specific error codes
@@ -39,7 +41,7 @@
 /*! The requested operation is not supported. */
 #define MBEDTLS_ERR_MPS_OPERATION_UNSUPPORTED MBEDTLS_MPS_MAKE_ERROR( 0x02 )
 /*! The requested operation cannot be performed in the current state. */
-#define MBEDTLS_ERR_MPS_OPERATION_UNEXPECTED  MBEDTLS_MPS_MAKE_ERROR( 0x03 )
+//#define MBEDTLS_ERR_MPS_OPERATION_UNEXPECTED  MBEDTLS_MPS_MAKE_ERROR( 0x03 )
 /*! The peer has sent a closure notification alert. */
 #define MBEDTLS_ERR_MPS_CLOSE_NOTIFY          MBEDTLS_MPS_MAKE_ERROR( 0x04 )
 /*! The MPS is blocked. */
@@ -47,7 +49,7 @@
 /*! The peer has sent a fatal alert. */
 #define MBEDTLS_ERR_MPS_FATAL_ALERT_RECEIVED  MBEDTLS_MPS_MAKE_ERROR( 0x07 )
 /*! An internal assertion has failed - should never happen. */
-#define MBEDTLS_ERR_MPS_INTERNAL_ERROR        MBEDTLS_MPS_MAKE_ERROR( 0x08 )
+//#define MBEDTLS_ERR_MPS_INTERNAL_ERROR        MBEDTLS_MPS_MAKE_ERROR( 0x08 )
 #define MBEDTLS_ERR_MPS_RETRY                 MBEDTLS_MPS_MAKE_ERROR( 0x09 )
 #define MBEDTLS_ERR_MPS_COUNTER_WRAP          MBEDTLS_MPS_MAKE_ERROR( 0x0a )
 #define MBEDTLS_ERR_MPS_FLIGHT_TOO_LONG       MBEDTLS_MPS_MAKE_ERROR( 0x0b )
@@ -329,4 +331,4 @@
             ( MBEDTLS_MPS_ERROR_FLAGS_FATAL ),                          \
             MBEDTLS_ERR_MPS_REASSEMBLY_FEED_NEED_MORE ) )
 
-#endif /* MBEDTLS_MPS_ERROR_H */
+#endif /* MBEDTLS_MPS_ERROR_ORIG_H */

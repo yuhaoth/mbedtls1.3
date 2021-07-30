@@ -23,6 +23,8 @@
 #include "mbedtls/mps/trace.h"
 #include "mbedtls/mps/common.h"
 
+#include "mbedtls/mps/reader.h"
+
 #if defined(MBEDTLS_PLATFORM_C)
 #include "mbedtls/platform.h"
 #else
