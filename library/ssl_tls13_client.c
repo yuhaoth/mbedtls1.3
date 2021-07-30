@@ -4023,6 +4023,9 @@ static int ssl_new_session_ticket_parse( mbedtls_ssl_context* ssl,
     ssl->session->ticket = ticket;
     ssl->session->ticket_len = ticket_len;
 
+    MBEDTLS_SSL_DEBUG_BUF( 4, "ticket", ticket, ticket_len );
+
+
     /* Ticket Extension */
     ext_len = ( (size_t) buf[ i + 0 ] << 8 ) |
               ( (size_t) buf[ i + 1 ] );
@@ -4098,8 +4101,6 @@ static int ssl_new_session_ticket_parse( mbedtls_ssl_context* ssl,
     /* Store ticket creation time */
     ssl->session->ticket_received = time( NULL );
 #endif
-
-    MBEDTLS_SSL_DEBUG_BUF( 4, "ticket", buf, buflen );
 
     return( 0 );
 }
