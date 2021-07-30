@@ -862,8 +862,7 @@ int mbedtls_ssl_write_pre_shared_key_ext( mbedtls_ssl_context *ssl,
     /*
      * Ciphersuite list
      */
-    ciphersuites = ssl->conf->ciphersuite_list[ssl->minor_ver];
-
+    ciphersuites = ssl->conf->ciphersuite_list;
     for ( int i = 0; ciphersuites[i] != 0; i++ )
     {
         suite_info = mbedtls_ssl_ciphersuite_from_id( ciphersuites[i] );
@@ -1646,7 +1645,7 @@ static int ssl_client_hello_write_partial( mbedtls_ssl_context* ssl,
      * ( including secret key length ) and a hash to be used with
      * HKDF, in descending order of client preference.
      */
-    ciphersuites = ssl->conf->ciphersuite_list[ssl->minor_ver];
+    ciphersuites = ssl->conf->ciphersuite_list;
 
     if( buflen < 2 /* for ciphersuite list length */ )
     {
@@ -3202,7 +3201,7 @@ static int ssl_server_hello_parse( mbedtls_ssl_context* ssl,
     i = 0;
     while ( 1 )
     {
-        if( ssl->conf->ciphersuite_list[ssl->minor_ver][i] == 0 )
+        if( ssl->conf->ciphersuite_list[i] == 0 )
         {
             MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad server hello message" ) );
             SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_INTERNAL_ERROR,
@@ -3210,7 +3209,7 @@ static int ssl_server_hello_parse( mbedtls_ssl_context* ssl,
             return( MBEDTLS_ERR_SSL_BAD_HS_SERVER_HELLO );
         }
 
-        if( ssl->conf->ciphersuite_list[ssl->minor_ver][i++] ==
+        if( ssl->conf->ciphersuite_list[i++] ==
             ssl->session_negotiate->ciphersuite )
         {
             break;
@@ -3581,7 +3580,7 @@ static int ssl_hrr_parse( mbedtls_ssl_context* ssl,
     i = 0;
     while ( 1 )
     {
-        if( ssl->conf->ciphersuite_list[ssl->minor_ver][i] == 0 )
+        if( ssl->conf->ciphersuite_list[i] == 0 )
         {
             MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad hello retry request message" ) );
             SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_INTERNAL_ERROR,
@@ -3589,7 +3588,7 @@ static int ssl_hrr_parse( mbedtls_ssl_context* ssl,
             return( MBEDTLS_ERR_SSL_BAD_HS_HELLO_RETRY_REQUEST );
         }
 
-        if( ssl->conf->ciphersuite_list[ssl->minor_ver][i++] ==
+        if( ssl->conf->ciphersuite_list[i++] ==
             ssl->session_negotiate->ciphersuite )
         {
             break;

@@ -2824,7 +2824,7 @@ static int ssl_client_hello_parse( mbedtls_ssl_context* ssl,
      * Search for a matching ciphersuite
      */
     got_common_suite = 0;
-    ciphersuites = ssl->conf->ciphersuite_list[ssl->minor_ver];
+    ciphersuites = ssl->conf->ciphersuite_list;
     ciphersuite_info = NULL;
 #if defined(MBEDTLS_SSL_SRV_RESPECT_CLIENT_PREFERENCE)
     for ( j = 0, p = ciph_offset + 2; j < ciph_len; j += 2, p += 2 )
