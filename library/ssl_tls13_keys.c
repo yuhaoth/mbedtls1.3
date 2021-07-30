@@ -589,13 +589,15 @@ int mbedtls_ssl_tls1_3_generate_early_data_keys(
                 md_size );
 
 #if defined(MBEDTLS_SSL_EXPORT_KEYS)
-    if( ssl->conf->f_export_secret != NULL )
+    if( ssl->f_export_keys != NULL )
     {
-        ssl->conf->f_export_secret( ssl->conf->p_export_secret,
-                ssl->handshake->randbytes,
-                MBEDTLS_SSL_TLS1_3_CLIENT_EARLY_TRAFFIC_SECRET,
+        ssl->f_export_keys( ssl->p_export_keys,
+                MBEDTLS_SSL_KEY_EXPORT_TLS13_CLIENT_EARLY_SECRET,
                 ssl->handshake->early_secrets.client_early_traffic_secret,
-                md_size );
+                md_size,
+                ssl->handshake->randbytes + 32,
+                ssl->handshake->randbytes,
+                MBEDTLS_SSL_TLS_PRF_NONE /* TODO: FIX! */ );
     }
 #endif /* MBEDTLS_SSL_EXPORT_KEYS */
 
@@ -674,19 +676,23 @@ int mbedtls_ssl_tls1_3_generate_handshake_keys(
      * Export client handshake traffic secret
      */
 #if defined(MBEDTLS_SSL_EXPORT_KEYS)
-    if( ssl->conf->f_export_secret != NULL )
+    if( ssl->f_export_keys != NULL )
     {
-        ssl->conf->f_export_secret( ssl->conf->p_export_secret,
-                ssl->handshake->randbytes,
-                MBEDTLS_SSL_TLS1_3_CLIENT_HANDSHAKE_TRAFFIC_SECRET,
+        ssl->f_export_keys( ssl->p_export_keys,
+                MBEDTLS_SSL_KEY_EXPORT_TLS13_CLIENT_HANDSHAKE_TRAFFIC_SECRET,
                 ssl->handshake->hs_secrets.client_handshake_traffic_secret,
-                md_size );
-
-        ssl->conf->f_export_secret( ssl->conf->p_export_secret,
+                md_size,
+                ssl->handshake->randbytes + 32,
                 ssl->handshake->randbytes,
-                MBEDTLS_SSL_TLS1_3_SERVER_HANDSHAKE_TRAFFIC_SECRET,
+                MBEDTLS_SSL_TLS_PRF_NONE /* TODO: FIX! */ );
+
+        ssl->f_export_keys( ssl->p_export_keys,
+                MBEDTLS_SSL_KEY_EXPORT_TLS13_SERVER_HANDSHAKE_TRAFFIC_SECRET,
                 ssl->handshake->hs_secrets.server_handshake_traffic_secret,
-                md_size );
+                md_size,
+                ssl->handshake->randbytes + 32,
+                ssl->handshake->randbytes,
+                MBEDTLS_SSL_TLS_PRF_NONE /* TODO: FIX! */ );
     }
 #endif /* MBEDTLS_SSL_EXPORT_KEYS */
 
@@ -809,17 +815,21 @@ int mbedtls_ssl_tls1_3_generate_application_keys(
      * Export client/server application traffic secret 0
      */
 #if defined(MBEDTLS_SSL_EXPORT_KEYS)
-    if( ssl->conf->f_export_secret != NULL )
+    if( ssl->f_export_keys != NULL )
     {
-        ssl->conf->f_export_secret( ssl->conf->p_export_secret,
+        ssl->f_export_keys( ssl->p_export_keys,
+                MBEDTLS_SSL_KEY_EXPORT_TLS13_CLIENT_APPLICATION_TRAFFIC_SECRET,
+                app_secrets->client_application_traffic_secret_N, md_size,
+                ssl->handshake->randbytes + 32,
                 ssl->handshake->randbytes,
-                MBEDTLS_SSL_TLS1_3_CLIENT_APPLICATION_TRAFFIC_SECRET_0,
-                app_secrets->client_application_traffic_secret_N, md_size );
+                MBEDTLS_SSL_TLS_PRF_NONE /* TODO: FIX! */ );
 
-        ssl->conf->f_export_secret( ssl->conf->p_export_secret,
+        ssl->f_export_keys( ssl->p_export_keys,
+                MBEDTLS_SSL_KEY_EXPORT_TLS13_SERVER_APPLICATION_TRAFFIC_SECRET,
+                app_secrets->server_application_traffic_secret_N, md_size,
+                ssl->handshake->randbytes + 32,
                 ssl->handshake->randbytes,
-                MBEDTLS_SSL_TLS1_3_SERVER_APPLICATION_TRAFFIC_SECRET_0,
-                app_secrets->server_application_traffic_secret_N, md_size );
+                MBEDTLS_SSL_TLS_PRF_NONE /* TODO: FIX! */ );
     }
 #endif /* MBEDTLS_SSL_EXPORT_KEYS */
 
@@ -931,12 +941,9 @@ static int ssl_tls1_3_complete_ephemeral_secret( mbedtls_ssl_context *ssl,
      * Compute ECDHE secret for second stage of secret evolution.
      */
 #if defined(MBEDTLS_KEY_EXCHANGE_SOME_ECDHE_ENABLED)
-    if( ssl->handshake->key_exchange ==
-          MBEDTLS_KEY_EXCHANGE_ECDHE_PSK ||
-        ssl->handshake->key_exchange ==
-          MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA )
+    if( ssl->handshake->key_exchange == MBEDTLS_KEY_EXCHANGE_ECDHE_PSK ||
+        ssl->handshake->key_exchange == MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA )
     {
-
         ret = mbedtls_ecdh_calc_secret(
                    &ssl->handshake->ecdh_ctx,
                    actual_len, secret, secret_len,
