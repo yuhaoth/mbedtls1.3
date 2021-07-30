@@ -162,7 +162,7 @@ int ssl_write_early_data_process( mbedtls_ssl_context* ssl )
 
         /* Write early-data to message buffer. */
         MBEDTLS_SSL_PROC_CHK( ssl_write_early_data_write( ssl, ssl->out_msg,
-                                                          MBEDTLS_SSL_MAX_CONTENT_LEN,
+                                                          MBEDTLS_SSL_OUT_CONTENT_LEN,
                                                           &ssl->out_msglen ) );
 
         ssl->out_msgtype = MBEDTLS_SSL_MSG_APPLICATION_DATA;
@@ -1394,7 +1394,7 @@ static int ssl_client_hello_process( mbedtls_ssl_context* ssl )
      * the total length of the message including the binders
      * list. */
     buf = ssl->out_msg;
-    len = MBEDTLS_SSL_MAX_CONTENT_LEN;
+    len = MBEDTLS_SSL_OUT_CONTENT_LEN;
     MBEDTLS_SSL_PROC_CHK( ssl_client_hello_write_partial( ssl, buf, len,
                                                   &len_without_binders,
                                                   &msg_len ) );

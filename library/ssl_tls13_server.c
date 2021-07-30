@@ -1424,7 +1424,7 @@ static int ssl_write_new_session_ticket_process( mbedtls_ssl_context *ssl )
         ssl->out_msg[0] = MBEDTLS_SSL_HS_NEW_SESSION_TICKET;
         MBEDTLS_SSL_PROC_CHK( ssl_write_new_session_ticket_write( ssl,
                                         ssl->out_msg,
-                                        MBEDTLS_SSL_MAX_CONTENT_LEN,
+                                        MBEDTLS_SSL_OUT_CONTENT_LEN,
                                         &ssl->out_msglen ) );
 
         MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_write_handshake_msg( ssl ) );
@@ -2204,7 +2204,7 @@ static int ssl_client_hello_fetch( mbedtls_ssl_context* ssl,
 
     msg_len = ( ssl->in_len[0] << 8 ) | ssl->in_len[1];
 
-    if( msg_len > MBEDTLS_SSL_MAX_CONTENT_LEN )
+    if( msg_len > MBEDTLS_SSL_IN_CONTENT_LEN )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad client hello message" ) );
         return( MBEDTLS_ERR_SSL_BAD_HS_CLIENT_HELLO );
@@ -3211,7 +3211,7 @@ static int ssl_encrypted_extensions_process( mbedtls_ssl_context* ssl )
     MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_flush_output( ssl ) );
 
     MBEDTLS_SSL_PROC_CHK( ssl_encrypted_extensions_write( ssl, ssl->out_msg,
-                                                          MBEDTLS_SSL_MAX_CONTENT_LEN,
+                                                          MBEDTLS_SSL_OUT_CONTENT_LEN,
                                                           &ssl->out_msglen ) );
 
     ssl->out_msgtype = MBEDTLS_SSL_MSG_HANDSHAKE;
@@ -3481,7 +3481,7 @@ static int ssl_write_hello_retry_request_process( mbedtls_ssl_context *ssl )
     ssl->out_msg[0] = MBEDTLS_SSL_HS_SERVER_HELLO;
     MBEDTLS_SSL_PROC_CHK( ssl_write_hello_retry_request_write( ssl,
                               ssl->out_msg,
-                              MBEDTLS_SSL_MAX_CONTENT_LEN,
+                              MBEDTLS_SSL_OUT_CONTENT_LEN,
                               &ssl->out_msglen ) );
 
     MBEDTLS_SSL_PROC_CHK( ssl_write_hello_retry_request_postprocess( ssl ) );
@@ -3814,7 +3814,7 @@ static int ssl_server_hello_process( mbedtls_ssl_context* ssl ) {
     MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_flush_output( ssl ) );
 
     MBEDTLS_SSL_PROC_CHK( ssl_server_hello_write( ssl, ssl->out_msg,
-                            MBEDTLS_SSL_MAX_CONTENT_LEN, &ssl->out_msglen ) );
+                            MBEDTLS_SSL_OUT_CONTENT_LEN, &ssl->out_msglen ) );
 
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= write server hello" ) );
 
@@ -4119,7 +4119,7 @@ static int ssl_certificate_request_process( mbedtls_ssl_context* ssl )
 
         /* Prepare CertificateRequest message in output buffer. */
         MBEDTLS_SSL_PROC_CHK( ssl_certificate_request_write( ssl, ssl->out_msg,
-                                                             MBEDTLS_SSL_MAX_CONTENT_LEN,
+                                                             MBEDTLS_SSL_OUT_CONTENT_LEN,
                                                              &ssl->out_msglen ) );
 
         ssl->out_msgtype = MBEDTLS_SSL_MSG_HANDSHAKE;

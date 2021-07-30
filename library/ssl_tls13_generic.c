@@ -183,7 +183,7 @@ int mbedtls_ssl_write_change_cipher_spec_process( mbedtls_ssl_context* ssl )
 
         /* Write CCS message */
         MBEDTLS_SSL_PROC_CHK( ssl_write_change_cipher_spec_write( ssl, ssl->out_msg,
-            MBEDTLS_SSL_MAX_CONTENT_LEN,
+            MBEDTLS_SSL_OUT_CONTENT_LEN,
             &ssl->out_msglen ) );
 
         ssl->out_msgtype = MBEDTLS_SSL_MSG_CHANGE_CIPHER_SPEC;
@@ -597,7 +597,7 @@ int mbedtls_ssl_write_certificate_verify_process( mbedtls_ssl_context* ssl )
 
         /* Prepare CertificateVerify message in output buffer. */
         MBEDTLS_SSL_PROC_CHK( ssl_certificate_verify_write( ssl, ssl->out_msg,
-                                                            MBEDTLS_SSL_MAX_CONTENT_LEN,
+                                                            MBEDTLS_SSL_OUT_CONTENT_LEN,
                                                             &ssl->out_msglen ) );
 
         ssl->out_msgtype = MBEDTLS_SSL_MSG_HANDSHAKE;
@@ -1311,7 +1311,7 @@ int mbedtls_ssl_write_certificate_process( mbedtls_ssl_context* ssl )
 
         /* Write certificate to message buffer. */
         MBEDTLS_SSL_PROC_CHK( ssl_write_certificate_write( ssl, ssl->out_msg,
-                                                           MBEDTLS_SSL_MAX_CONTENT_LEN,
+                                                           MBEDTLS_SSL_OUT_CONTENT_LEN,
                                                            &ssl->out_msglen ) );
 
         ssl->out_msgtype = MBEDTLS_SSL_MSG_HANDSHAKE;
@@ -1481,8 +1481,8 @@ static int ssl_write_certificate_write( mbedtls_ssl_context* ssl,
         if( n > buflen - 3 - i )
         {
             MBEDTLS_SSL_DEBUG_MSG( 1, ( "certificate too large, %d > %d",
-                                        i + 3 + n, MBEDTLS_SSL_MAX_CONTENT_LEN ) );
-            return( MBEDTLS_ERR_SSL_CERTIFICATE_TOO_LARGE );
+                                        i + 3 + n, MBEDTLS_SSL_OUT_CONTENT_LEN ) );
+            return( MBEDTLS_ERR_SSL_BUFFER_TOO_SMALL );
         }
 
         buf[i] = (unsigned char)( n >> 16 );
@@ -2303,7 +2303,7 @@ int mbedtls_ssl_finished_out_process( mbedtls_ssl_context* ssl )
     MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_flush_output( ssl ) );
 
     MBEDTLS_SSL_PROC_CHK( ssl_finished_out_write( ssl, ssl->out_msg,
-                                                  MBEDTLS_SSL_MAX_CONTENT_LEN,
+                                                  MBEDTLS_SSL_OUT_CONTENT_LEN,
                                                   &ssl->out_msglen ) );
     ssl->out_msgtype = MBEDTLS_SSL_MSG_HANDSHAKE;
     ssl->out_msg[0] = MBEDTLS_SSL_HS_FINISHED;
