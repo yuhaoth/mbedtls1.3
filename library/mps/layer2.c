@@ -20,8 +20,8 @@
  */
 
 #include "mbedtls/mps/layer2.h"
-#include "mbedtls/mps/trace.h"
-#include "mbedtls/mps/common.h"
+#include "../mps_trace.h"
+#include "../mps_common.h"
 
 #include "mbedtls/mps/reader.h"
 

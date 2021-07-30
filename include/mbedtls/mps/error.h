@@ -24,8 +24,7 @@
 #ifndef MBEDTLS_MPS_ERROR_ORIG_H
 #define MBEDTLS_MPS_ERROR_ORIG_H
 
-#include "common.h"
-
+#include "../library/mps_common.h"
 #include "../library/mps_error.h"
 
 /**

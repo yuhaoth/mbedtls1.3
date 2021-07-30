@@ -86,7 +86,7 @@
 #include <stdio.h>
 #include <stdint.h>
 
-#include "common.h"
+#include "../library/mps_common.h"
 
 struct mbedtls_writer;
 typedef struct mbedtls_writer mbedtls_writer;

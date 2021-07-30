@@ -24,7 +24,7 @@
 #ifndef MBEDTLS_MPS_H
 #define MBEDTLS_MPS_H
 
-#include "common.h"
+#include "../library/mps_common.h"
 #include "transport.h"
 #include "transform.h"
 #include "error.h"

@@ -23,10 +23,11 @@
  * \brief Tracing module for MPS
  */
 
+#include "common.h"
+
 #ifndef MBEDTLS_MPS_MBEDTLS_MPS_TRACE_H
 #define MBEDTLS_MPS_MBEDTLS_MPS_TRACE_H
 
-#include "common.h"
 #include "mps_common.h"
 #include "mps_trace.h"
 
@@ -37,8 +38,6 @@
 #define mbedtls_printf    printf
 #define mbedtls_vsnprintf vsnprintf
 #endif /* MBEDTLS_PLATFORM_C */
-
-#if defined(MBEDTLS_MPS_ENABLE_TRACE)
 
 /*
  * Adapt this to enable/disable tracing output
@@ -116,6 +115,8 @@ typedef enum
                                  MBEDTLS_MPS_TRACE_MASK_READER  |       \
                                  MBEDTLS_MPS_TRACE_MASK_WRITER )
 
+#if defined(MBEDTLS_MPS_ENABLE_TRACE)
+
 /* We have to avoid globals because E-ACSL chokes on them...
  * Wrap everything in stub functions. */
 int  mbedtls_mps_trace_get_depth( void );
@@ -164,12 +165,25 @@ void mbedtls_mps_trace_print_msg( int id, int line, const char *format, ... );
 
 #else /* MBEDTLS_MPS_TRACE */
 
-#define MBEDTLS_MPS_TRACE( type, ... ) do { } while( 0 )
-#define MBEDTLS_MPS_TRACE_INIT( ... )  do { } while( 0 )
+static inline void mps_trace_variable_sink( const char* fmt, ...)
+{
+    ((void) fmt);
+}
+
+/* Make sure to "use" arguments, to avoid unused variable warnings. */
+#define MBEDTLS_MPS_TRACE( type, ... ) \
+    do { ((void) type); mps_trace_variable_sink( __VA_ARGS__ ); } while( 0 )
+#define MBEDTLS_MPS_TRACE_INIT( ... )  \
+    do { mps_trace_variable_sink( __VA_ARGS__ ); } while( 0 )
 #define MBEDTLS_MPS_TRACE_END          do { } while( 0 )
 
 #define MBEDTLS_MPS_TRACE_RETURN( val ) return( val );
 
-#endif /* MBEDTLS_MPS_TRACE */
+#endif /* MBEDTLS_MPS_ENABLE_TRACE */
+
+#define MBEDTLS_MPS_TRACE_COMMENT(...) \
+    MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_COMMENT, __VA_ARGS__ )
+#define MBEDTLS_MPS_TRACE_ERROR(...) \
+    MBEDTLS_MPS_TRACE( MBEDTLS_MPS_TRACE_TYPE_ERROR, __VA_ARGS__ )
 
 #endif /* MBEDTLS_MPS_MBEDTLS_MPS_TRACE_H */

@@ -19,7 +19,7 @@
  *  This file is part of Mbed TLS (https://tls.mbed.org)
  */
 
-#include "mbedtls/mps/common.h"
+#include "../mps_common.h"
 
 /* Embed all other MPS translation units into here
  * for release builds on constrained systems to allow
@@ -34,7 +34,7 @@
 #endif /* MBEDTLS_MPS_SEPARATE_LAYERS */
 
 #include "mbedtls/mps/mps.h"
-#include "mbedtls/mps/trace.h"
+#include "../mps_trace.h"
 
 #include "mbedtls/platform_util.h"
 #include "mbedtls/ssl.h"

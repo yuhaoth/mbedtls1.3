@@ -124,7 +124,7 @@
 
 #include <stdio.h>
 
-#include "common.h"
+#include "../library/mps_common.h"
 #include "error.h"
 
 #include "../library/mps_error.h"

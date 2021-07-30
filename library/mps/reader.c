@@ -20,13 +20,12 @@
  */
 
 #include "common.h"
+#include "../mps_common.h"
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
 
 #include "mbedtls/mps/reader.h"
-#include "mbedtls/mps/common.h"
-#include "mbedtls/mps/trace.h"
-
+#include "../mps_trace.h"
 #include <string.h>
 
 #if ( defined(__ARMCC_VERSION) || defined(_MSC_VER) ) && \
