@@ -1144,7 +1144,7 @@ static int ssl_read_certificate_verify_parse( mbedtls_ssl_context* ssl,
     if( md_alg == MBEDTLS_MD_SHA256 )
     {
         verify_hash_len = 32;
-        if( ( ret = mbedtls_sha256_ret( verify_buffer,
+        if( ( ret = mbedtls_sha256( verify_buffer,
             verify_buffer_len, verify_hash, 0 /* 0 for SHA-256 instead of SHA-224 */ )  ) != 0 )
         {
             MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_sha256_ret", ret );
@@ -1157,7 +1157,7 @@ static int ssl_read_certificate_verify_parse( mbedtls_ssl_context* ssl,
     if( md_alg == MBEDTLS_MD_SHA384 )
     {
         verify_hash_len = 48;
-        if( ( ret = mbedtls_sha512_ret( verify_buffer,
+        if( ( ret = mbedtls_sha512( verify_buffer,
                                     verify_buffer_len,
                                     verify_hash,
                                     1 ) ) != 0 )
