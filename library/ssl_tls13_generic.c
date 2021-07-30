@@ -2932,7 +2932,7 @@ int mbedtls_ecdh_make_tls_13_params( mbedtls_ecdh_context *ctx, size_t *olen,
                                                  buf, blen, f_rng, p_rng ) );
 #endif
         case MBEDTLS_ECDH_VARIANT_MBEDTLS_2_0:
-            return( ecdh_make_params_internal( &ctx->ctx.mbed_ecdh, olen,
+            return( ecdh_make_tls_13_params_internal( &ctx->ctx.mbed_ecdh, olen,
                                                ctx->point_format, buf, blen,
                                                f_rng, p_rng,
                                                restart_enabled ) );
@@ -2979,7 +2979,7 @@ int mbedtls_ecdh_read_tls_13_params( mbedtls_ecdh_context *ctx,
                                                  buf, end) );
 #endif
         case MBEDTLS_ECDH_VARIANT_MBEDTLS_2_0:
-            return( ecdh_read_params_internal( &ctx->ctx.mbed_ecdh,
+            return( ecdh_read_tls_13_params_internal( &ctx->ctx.mbed_ecdh,
                                                buf, end ) );
         default:
             return MBEDTLS_ERR_ECP_BAD_INPUT_DATA;
@@ -3055,7 +3055,7 @@ int mbedtls_ecdh_make_tls_13_public( mbedtls_ecdh_context *ctx, size_t *olen,
                                                  buf, blen, f_rng, p_rng ) );
 #endif
         case MBEDTLS_ECDH_VARIANT_MBEDTLS_2_0:
-            return( ecdh_make_public_internal( &ctx->ctx.mbed_ecdh, olen,
+            return( ecdh_make_tls_13_public_internal( &ctx->ctx.mbed_ecdh, olen,
                                                ctx->point_format, buf, blen,
                                                f_rng, p_rng,
                                                restart_enabled ) );
@@ -3101,7 +3101,7 @@ int mbedtls_ecdh_read_tls_13_public( mbedtls_ecdh_context *ctx,
                                                  buf, blen ) );
 #endif
         case MBEDTLS_ECDH_VARIANT_MBEDTLS_2_0:
-            return( ecdh_read_public_internal( &ctx->ctx.mbed_ecdh,
+            return( ecdh_read_tls_13_public_internal( &ctx->ctx.mbed_ecdh,
                                                        buf, blen ) );
         default:
             return MBEDTLS_ERR_ECP_BAD_INPUT_DATA;

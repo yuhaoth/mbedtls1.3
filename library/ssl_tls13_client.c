@@ -60,7 +60,7 @@ static int check_ecdh_params( const mbedtls_ssl_context *ssl )
 {
     const mbedtls_ecp_curve_info *curve_info;
 
-    curve_info = mbedtls_ecp_curve_info_from_grp_id( ssl->handshake->ecdh_ctx.grp.id );
+    curve_info = mbedtls_ecp_curve_info_from_grp_id( ssl->handshake->ecdh_ctx.grp_id );
     if( curve_info == NULL )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "should never happen" ) );
@@ -70,7 +70,7 @@ static int check_ecdh_params( const mbedtls_ssl_context *ssl )
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "ECDH curve: %s", curve_info->name ) );
 
 #if defined(MBEDTLS_ECP_C)
-    if( mbedtls_ssl_check_curve( ssl, ssl->handshake->ecdh_ctx.grp.id ) != 0 )
+    if( mbedtls_ssl_check_curve( ssl, ssl->handshake->ecdh_ctx.grp_id ) != 0 )
 #else
     if( ssl->handshake->ecdh_ctx.grp.nbits < 163 ||
             ssl->handshake->ecdh_ctx.grp.nbits > 521 )
@@ -1233,7 +1233,6 @@ static int ssl_write_key_shares_ext( mbedtls_ssl_context *ssl,
                                      unsigned char* end,
                                      size_t* olen )
 {
-    const mbedtls_ecp_curve_info *info = NULL;
     const mbedtls_ecp_group_id *grp_id;
 
     size_t len;
@@ -1260,11 +1259,9 @@ static int ssl_write_key_shares_ext( mbedtls_ssl_context *ssl,
         MBEDTLS_SSL_DEBUG_MSG( 4, ( "Curve list is empty." ) );
         return( MBEDTLS_ERR_SSL_BAD_CONFIG );
     }
-    info = mbedtls_ecp_curve_info_from_grp_id( *grp_id );
-    MBEDTLS_SSL_DEBUG_MSG( 2, ( "ECDHE curve: %s", info->name ) );
 
-    ret = mbedtls_ecp_group_load( &ssl->handshake->ecdh_ctx.grp, info->grp_id );
-    if( ret != 0 )
+    if( ( ret = mbedtls_ecdh_setup( &ssl->handshake->ecdh_ctx,
+                                    *grp_id ) ) != 0 )
     {
         MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ecp_group_load", ret );
         return( ret );
@@ -1278,7 +1275,9 @@ static int ssl_write_key_shares_ext( mbedtls_ssl_context *ssl,
         MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ecdh_make_tls_13_params", ret );
         return( ret );
     }
-    MBEDTLS_SSL_DEBUG_ECP( 3, "ECDHE: Q ", &ssl->handshake->ecdh_ctx.Q );
+
+    MBEDTLS_SSL_DEBUG_ECDH( 3, &ssl->handshake->ecdh_ctx,
+                            MBEDTLS_DEBUG_ECDH_Q );
 
     /* Write length of the key_exchange entry */
     *p++ = (unsigned char)( ( len >> 8 ) & 0xFF );
@@ -2122,10 +2121,13 @@ static int ssl_parse_key_shares_ext( mbedtls_ssl_context *ssl,
         return( MBEDTLS_ERR_SSL_BAD_HS_SERVER_HELLO );
     }
 
-    if( ( ret = mbedtls_ecdh_read_tls_13_params( &ssl->handshake->ecdh_ctx,
-                                          ( const unsigned char ** )&start, end ) ) != 0 )
+    buf += 2;
+    len -= 2;
+
+    if( ( ret = mbedtls_ecdh_read_tls_13_public( &ssl->handshake->ecdh_ctx,
+                                                 buf, len ) ) != 0 )
     {
-        MBEDTLS_SSL_DEBUG_RET( 1, ( "mbedtls_ecdh_read_tls_13_params" ), ret );
+        MBEDTLS_SSL_DEBUG_RET( 1, ( "mbedtls_ecdh_read_tls_13_public" ), ret );
         return( ret );
     }
 
