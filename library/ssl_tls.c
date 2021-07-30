@@ -598,9 +598,9 @@ static int ssl_get_handshake_transcript_sha256( mbedtls_ssl_context *ssl,
     mbedtls_sha256_init( &sha256 );
     mbedtls_sha256_clone( &sha256, &ssl->handshake->fin_sha256 );
 
-    if( ( ret = mbedtls_sha256_finish_ret( &sha256, dst ) ) != 0 )
+    if( ( ret = mbedtls_sha256_finish( &sha256, dst ) ) != 0 )
     {
-        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_sha256_finish_ret", ret );
+        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_sha256_finish", ret );
         goto exit;
     }
 
@@ -628,9 +628,9 @@ static int ssl_get_handshake_transcript_sha384( mbedtls_ssl_context *ssl,
     mbedtls_sha512_init( &sha512 );
     mbedtls_sha512_clone( &sha512, &ssl->handshake->fin_sha512 );
 
-    if( ( ret = mbedtls_sha512_finish_ret( &sha512, dst ) ) != 0 )
+    if( ( ret = mbedtls_sha512_finish( &sha512, dst ) ) != 0 )
     {
-        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_sha512_finish_ret", ret );
+        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_sha512_finish", ret );
         goto exit;
     }
 
@@ -694,7 +694,7 @@ static int ssl_hash_transcript_sha256( mbedtls_ssl_context *ssl )
     MBEDTLS_SSL_DEBUG_BUF( 4, "Truncated SHA-256 handshake transcript",
                            transcript, olen );
 
-    mbedtls_sha256_starts_ret( &ssl->handshake->fin_sha256, 0 );
+    mbedtls_sha256_starts( &ssl->handshake->fin_sha256, 0 );
     ssl_update_checksum_sha256( ssl, transcript, olen );
 
     return( 0 );
@@ -718,7 +718,7 @@ static int ssl_hash_transcript_sha384( mbedtls_ssl_context *ssl )
     MBEDTLS_SSL_DEBUG_BUF( 4, "Truncated SHA-384 handshake transcript",
                            transcript, olen );
 
-    mbedtls_sha512_starts_ret( &ssl->handshake->fin_sha512, 1 );
+    mbedtls_sha512_starts( &ssl->handshake->fin_sha512, 1 );
     ssl_update_checksum_sha384( ssl, transcript, olen );
 
     return( 0 );
@@ -2710,7 +2710,7 @@ static void ssl_update_checksum_start_tls13( mbedtls_ssl_context *ssl,
 #if defined(MBEDTLS_SHA256_C)
     MBEDTLS_SSL_DEBUG_BUF( 4, "Transcript state (before)",
           (unsigned char*) ssl->handshake->fin_sha256.state, 32 );
-    mbedtls_sha256_update_ret( &ssl->handshake->fin_sha256, buf, len );
+    mbedtls_sha256_update( &ssl->handshake->fin_sha256, buf, len );
     MBEDTLS_SSL_DEBUG_BUF( 4, "Input to handshake hash", buf, len );
     MBEDTLS_SSL_DEBUG_BUF( 4, "Transcript state (after)", ( unsigned char* )
                            ssl->handshake->fin_sha256.state, 32 );
@@ -2718,7 +2718,7 @@ static void ssl_update_checksum_start_tls13( mbedtls_ssl_context *ssl,
 #if defined(MBEDTLS_SSL_DEBUG_HANDSHAKE_HASHES)
     mbedtls_sha256_init( &sha256_debug );
     mbedtls_sha256_clone( &sha256_debug, &ssl->handshake->fin_sha256 );
-    mbedtls_sha256_finish_ret( &sha256_debug, padbuf );
+    mbedtls_sha256_finish( &sha256_debug, padbuf );
     mbedtls_sha256_free( &sha256_debug );
     MBEDTLS_SSL_DEBUG_BUF( 4, "SHA-256 handshake hash", (unsigned char*)
                            padbuf, 32 );
@@ -2728,16 +2728,16 @@ static void ssl_update_checksum_start_tls13( mbedtls_ssl_context *ssl,
 #if defined(MBEDTLS_SHA512_C)
     MBEDTLS_SSL_DEBUG_BUF( 4, "Transcript state (before)", (unsigned char*)
                            ssl->handshake->fin_sha512.state, 48 );
-    mbedtls_sha512_update_ret( &ssl->handshake->fin_sha512, buf, len );
+    mbedtls_sha512_update( &ssl->handshake->fin_sha512, buf, len );
     MBEDTLS_SSL_DEBUG_BUF( 4, "Input to handshake hash", buf, len );
     MBEDTLS_SSL_DEBUG_BUF( 4, "Transcript state (after)", ( unsigned char* )
                            ssl->handshake->fin_sha512.state, 48 );
 
 #if defined(MBEDTLS_SSL_DEBUG_HANDSHAKE_HASHES)
     mbedtls_sha512_init( &sha512_debug );
-    mbedtls_sha512_starts_ret( &sha512_debug, 1 );
+    mbedtls_sha512_starts( &sha512_debug, 1 );
     mbedtls_sha512_clone( &sha512_debug, &ssl->handshake->fin_sha512 );
-    mbedtls_sha512_finish_ret( &sha512_debug, padbuf );
+    mbedtls_sha512_finish( &sha512_debug, padbuf );
     mbedtls_sha512_free( &sha512_debug );
     MBEDTLS_SSL_DEBUG_BUF( 4, "SHA-384 handshake hash", ( unsigned char* )
                            padbuf, 48 );
@@ -2809,11 +2809,11 @@ static void ssl_update_checksum_sha256_tls13( mbedtls_ssl_context* ssl,
 
 #endif /* MBEDTLS_SSL_DEBUG_HANDSHAKE_HASHES */
 
-    if( ( ret = mbedtls_sha256_update_ret( &ssl->handshake->fin_sha256,
+    if( ( ret = mbedtls_sha256_update( &ssl->handshake->fin_sha256,
                                            buf,
                                            len ) ) != 0 )
     {
-        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_sha256_update_ret", ret );
+        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_sha256_update", ret );
         goto exit;
     }
     MBEDTLS_SSL_DEBUG_BUF( 4, "Input to handshake hash", buf, len );
@@ -2824,10 +2824,10 @@ static void ssl_update_checksum_sha256_tls13( mbedtls_ssl_context* ssl,
     mbedtls_sha256_init( &sha256 );
     mbedtls_sha256_clone( &sha256, &ssl->handshake->fin_sha256 );
 
-    if( ( ret = mbedtls_sha256_finish_ret( &sha256,
+    if( ( ret = mbedtls_sha256_finish( &sha256,
                                            padbuf ) ) != 0 )
     {
-        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_sha256_finish_ret", ret );
+        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_sha256_finish", ret );
         goto exit;
     }
     MBEDTLS_SSL_DEBUG_BUF( 4, "Handshake hash", ( unsigned char* )
@@ -2853,11 +2853,11 @@ static void ssl_update_checksum_sha384_tls13( mbedtls_ssl_context* ssl,
     unsigned char padbuf[48];
 #endif /* MBEDTLS_SSL_DEBUG_HANDSHAKE_HASHES */
 
-    if( ( ret = mbedtls_sha512_update_ret( &ssl->handshake->fin_sha512,
+    if( ( ret = mbedtls_sha512_update( &ssl->handshake->fin_sha512,
                                            buf,
                                            len ) ) != 0 )
     {
-        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_sha512_update_ret", ret );
+        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_sha512_update", ret );
         goto exit;
     }
     MBEDTLS_SSL_DEBUG_BUF( 4, "Input to handshake hash", buf, len );
@@ -2867,17 +2867,17 @@ static void ssl_update_checksum_sha384_tls13( mbedtls_ssl_context* ssl,
 #if defined(MBEDTLS_SSL_DEBUG_HANDSHAKE_HASHES)
     mbedtls_sha512_init( &sha512 );
 
-    if( ( ret = mbedtls_sha512_starts_ret( &sha512, 1 ) ) != 0 )
+    if( ( ret = mbedtls_sha512_starts( &sha512, 1 ) ) != 0 )
     {
-        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_sha512_starts_ret", ret );
+        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_sha512_starts", ret );
         goto exit;
     }
 
     mbedtls_sha512_clone( &sha512, &ssl->handshake->fin_sha512 );
 
-    if( ( ret = mbedtls_sha512_finish_ret( &sha512, padbuf ) ) != 0 )
+    if( ( ret = mbedtls_sha512_finish( &sha512, padbuf ) ) != 0 )
     {
-        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_sha512_finish_ret", ret );
+        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_sha512_finish", ret );
         goto exit;
     }
     MBEDTLS_SSL_DEBUG_BUF( 4, "Handshake hash", ( unsigned char* )padbuf, 48 );
