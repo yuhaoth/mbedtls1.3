@@ -20,12 +20,7 @@
  *  This file is part of mbed TLS ( https://tls.mbed.org )
  */
 
-
-#if !defined(MBEDTLS_CONFIG_FILE)
-#include "mbedtls/config.h"
-#else
-#include MBEDTLS_CONFIG_FILE
-#endif
+#include "common.h"
 
 #if defined(MBEDTLS_SSL_TLS_C)
 
@@ -38,15 +33,13 @@
 #include "mbedtls/debug.h"
 #include "mbedtls/error.h"
 #include "mbedtls/ssl.h"
-#include "mbedtls/ssl_internal.h"
-#include "ssl_tls13_keys.h"
 #include "mbedtls/hkdf.h"
 #include <string.h>
 
-#if defined(MBEDTLS_X509_CRT_PARSE_C) &&                \
-    defined(MBEDTLS_X509_CHECK_EXTENDED_KEY_USAGE)
+#include "ssl_misc.h"
+#include "ssl_tls13_keys.h"
+
 #include "mbedtls/oid.h"
-#endif
 
 #if defined(MBEDTLS_PLATFORM_C)
 #include "mbedtls/platform.h"
@@ -190,7 +183,7 @@ int mbedtls_ssl_write_change_cipher_spec_process( mbedtls_ssl_context* ssl )
 
         /* Write CCS message */
         MBEDTLS_SSL_PROC_CHK( ssl_write_change_cipher_spec_write( ssl, ssl->out_msg,
-            MBEDTLS_SSL_MAX_CONTENT_LEN,
+            MBEDTLS_SSL_OUT_CONTENT_LEN,
             &ssl->out_msglen ) );
 
         ssl->out_msgtype = MBEDTLS_SSL_MSG_CHANGE_CIPHER_SPEC;
@@ -414,7 +407,7 @@ int mbedtls_ssl_parse_signature_algorithms_ext( mbedtls_ssl_context *ssl,
     if( buf_len < 2 )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad signature_algorithms extension" ) );
-        return( MBEDTLS_ERR_SSL_BAD_HS_CLIENT_HELLO );
+        return( MBEDTLS_ERR_SSL_DECODE_ERROR );
     }
 
     sig_alg_list_size = ( ( size_t) buf[0] << 8 ) | ( (size_t) buf[1] );
@@ -422,7 +415,7 @@ int mbedtls_ssl_parse_signature_algorithms_ext( mbedtls_ssl_context *ssl,
         sig_alg_list_size % 2 != 0 )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad signature_algorithms extension" ) );
-        return( MBEDTLS_ERR_SSL_BAD_HS_CLIENT_HELLO );
+        return( MBEDTLS_ERR_SSL_DECODE_ERROR );
     }
     memset( ssl->handshake->received_signature_schemes_list,
         0, sizeof( ssl->handshake->received_signature_schemes_list ) );
@@ -448,8 +441,8 @@ int mbedtls_ssl_parse_signature_algorithms_ext( mbedtls_ssl_context *ssl,
     {
         MBEDTLS_SSL_DEBUG_MSG( 3, ( "no signature algorithm in common" ) );
         SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_HANDSHAKE_FAILURE,
-                              MBEDTLS_ERR_SSL_NO_USABLE_CIPHERSUITE );
-        return( MBEDTLS_ERR_SSL_NO_USABLE_CIPHERSUITE );
+                              MBEDTLS_ERR_SSL_HANDSHAKE_FAILURE );
+        return( MBEDTLS_ERR_SSL_HANDSHAKE_FAILURE );
     }
 
     ssl->handshake->received_signature_schemes_list[common_idx] = SIGNATURE_NONE;
@@ -604,7 +597,7 @@ int mbedtls_ssl_write_certificate_verify_process( mbedtls_ssl_context* ssl )
 
         /* Prepare CertificateVerify message in output buffer. */
         MBEDTLS_SSL_PROC_CHK( ssl_certificate_verify_write( ssl, ssl->out_msg,
-                                                            MBEDTLS_SSL_MAX_CONTENT_LEN,
+                                                            MBEDTLS_SSL_OUT_CONTENT_LEN,
                                                             &ssl->out_msglen ) );
 
         ssl->out_msgtype = MBEDTLS_SSL_MSG_HANDSHAKE;
@@ -683,7 +676,7 @@ static int ssl_write_certificate_verify_coordinate( mbedtls_ssl_context* ssl )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1,
             ( "Certificate Verify: Only ECDSA signature algorithm is currently supported." ) );
-        return( MBEDTLS_ERR_SSL_BAD_HS_CERTIFICATE_VERIFY );
+        return( MBEDTLS_ERR_SSL_HANDSHAKE_FAILURE );
     }
 
     /* Calculate the transcript hash */
@@ -725,6 +718,7 @@ static int ssl_certificate_verify_write( mbedtls_ssl_context* ssl,
     const mbedtls_md_info_t *md_info;
     /* Verify whether we can use signature algorithm */
     int signature_scheme_client;
+    unsigned char * const end = buf + buflen;
 
 #if defined(MBEDTLS_SSL_USE_MPS)
     p = buf;
@@ -821,7 +815,7 @@ static int ssl_certificate_verify_write( mbedtls_ssl_context* ssl,
 
     if( ( ret = mbedtls_pk_sign( own_key, md_alg,
                                  verify_hash, verify_hash_len,
-                                 p + 2, &n,
+                                 p + 2, (size_t)( end - ( p + 2 ) ), &n,
                                  ssl->conf->f_rng, ssl->conf->p_rng ) ) != 0 )
     {
         MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_pk_sign", ret );
@@ -1078,7 +1072,7 @@ static int ssl_read_certificate_verify_parse( mbedtls_ssl_context* ssl,
     if( buflen < 2 )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad certificate verify message" ) );
-        return( MBEDTLS_ERR_SSL_BAD_HS_CERTIFICATE_VERIFY );
+        return( MBEDTLS_ERR_SSL_DECODE_ERROR );
     }
 
     signature_scheme = ( buf[0] << 8 ) | buf[1];
@@ -1107,7 +1101,7 @@ static int ssl_read_certificate_verify_parse( mbedtls_ssl_context* ssl,
 #endif /* MBEDTLS_X509_RSASSA_PSS_SUPPORT */
         default:
             MBEDTLS_SSL_DEBUG_MSG( 1, ( "Certificate Verify: Unknown signature algorithm." ) );
-            return( MBEDTLS_ERR_SSL_BAD_HS_CERTIFICATE_VERIFY );
+            return( MBEDTLS_ERR_SSL_HANDSHAKE_FAILURE );
     }
 
     MBEDTLS_SSL_DEBUG_MSG( 3, ( "Certificate Verify: Signature algorithm ( %04x )",
@@ -1126,13 +1120,13 @@ static int ssl_read_certificate_verify_parse( mbedtls_ssl_context* ssl,
     if( !mbedtls_pk_can_do( &ssl->session_negotiate->peer_cert->pk, sig_alg ) )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "signature algorithm doesn't match cert key" ) );
-        return( MBEDTLS_ERR_SSL_BAD_HS_CERTIFICATE_VERIFY );
+        return( MBEDTLS_ERR_SSL_ILLEGAL_PARAMETER );
     }
 
     if( buflen < 2 )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad certificate verify message" ) );
-        return( MBEDTLS_ERR_SSL_BAD_HS_CERTIFICATE_VERIFY );
+        return( MBEDTLS_ERR_SSL_DECODE_ERROR );
     }
 
     sig_len = ( buf[0] << 8 ) | buf[1];
@@ -1142,7 +1136,7 @@ static int ssl_read_certificate_verify_parse( mbedtls_ssl_context* ssl,
     if( buflen != sig_len )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad certificate verify message" ) );
-        return( MBEDTLS_ERR_SSL_BAD_HS_CERTIFICATE_VERIFY );
+        return( MBEDTLS_ERR_SSL_DECODE_ERROR );
     }
 
     /* Hash verify buffer with indicated hash function */
@@ -1150,11 +1144,11 @@ static int ssl_read_certificate_verify_parse( mbedtls_ssl_context* ssl,
     if( md_alg == MBEDTLS_MD_SHA256 )
     {
         verify_hash_len = 32;
-        if( ( ret = mbedtls_sha256_ret( verify_buffer,
+        if( ( ret = mbedtls_sha256( verify_buffer,
             verify_buffer_len, verify_hash, 0 /* 0 for SHA-256 instead of SHA-224 */ )  ) != 0 )
         {
             MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_sha256_ret", ret );
-            return( MBEDTLS_ERR_SSL_BAD_HS_CERTIFICATE_VERIFY );
+            return( MBEDTLS_ERR_SSL_HANDSHAKE_FAILURE );
         }
     }
     else
@@ -1163,20 +1157,20 @@ static int ssl_read_certificate_verify_parse( mbedtls_ssl_context* ssl,
     if( md_alg == MBEDTLS_MD_SHA384 )
     {
         verify_hash_len = 48;
-        if( ( ret = mbedtls_sha512_ret( verify_buffer,
+        if( ( ret = mbedtls_sha512( verify_buffer,
                                     verify_buffer_len,
                                     verify_hash,
                                     1 ) ) != 0 )
         {
             MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_sha512_ret", ret );
-            return( MBEDTLS_ERR_SSL_BAD_HS_CERTIFICATE_VERIFY );
+            return( MBEDTLS_ERR_SSL_HANDSHAKE_FAILURE );
         }
     }
     else
 #endif /* MBEDTLS_SHA512_C */
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "Certificate Verify: Unknown signature algorithm." ) );
-        return( MBEDTLS_ERR_SSL_BAD_HS_CERTIFICATE_VERIFY );
+        return( MBEDTLS_ERR_SSL_HANDSHAKE_FAILURE );
     }
 
     MBEDTLS_SSL_DEBUG_BUF( 3, "verify hash", verify_hash, verify_hash_len );
@@ -1318,7 +1312,7 @@ int mbedtls_ssl_write_certificate_process( mbedtls_ssl_context* ssl )
 
         /* Write certificate to message buffer. */
         MBEDTLS_SSL_PROC_CHK( ssl_write_certificate_write( ssl, ssl->out_msg,
-                                                           MBEDTLS_SSL_MAX_CONTENT_LEN,
+                                                           MBEDTLS_SSL_OUT_CONTENT_LEN,
                                                            &ssl->out_msglen ) );
 
         ssl->out_msgtype = MBEDTLS_SSL_MSG_HANDSHAKE;
@@ -1410,7 +1404,7 @@ static int ssl_write_certificate_coordinate( mbedtls_ssl_context* ssl )
         if( have_own_cert == 0 )
         {
             MBEDTLS_SSL_DEBUG_MSG( 1, ( "got no certificate to send" ) );
-            return( MBEDTLS_ERR_SSL_CERTIFICATE_REQUIRED );
+            return( MBEDTLS_ERR_SSL_HANDSHAKE_FAILURE );
         }
     }
 #endif /* MBEDTLS_SSL_SRV_C */
@@ -1488,8 +1482,8 @@ static int ssl_write_certificate_write( mbedtls_ssl_context* ssl,
         if( n > buflen - 3 - i )
         {
             MBEDTLS_SSL_DEBUG_MSG( 1, ( "certificate too large, %d > %d",
-                                        i + 3 + n, MBEDTLS_SSL_MAX_CONTENT_LEN ) );
-            return( MBEDTLS_ERR_SSL_CERTIFICATE_TOO_LARGE );
+                                        i + 3 + n, MBEDTLS_SSL_OUT_CONTENT_LEN ) );
+            return( MBEDTLS_ERR_SSL_BUFFER_TOO_SMALL );
         }
 
         buf[i] = (unsigned char)( n >> 16 );
@@ -1776,8 +1770,8 @@ static int ssl_read_certificate_parse( mbedtls_ssl_context* ssl,
         {
             MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad certificate message" ) );
             SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_DECODE_ERROR,
-                                  MBEDTLS_ERR_SSL_BAD_HS_CERTIFICATE_VERIFY );
-            return( MBEDTLS_ERR_SSL_BAD_HS_CERTIFICATE );
+                                  MBEDTLS_ERR_SSL_DECODE_ERROR );
+            return( MBEDTLS_ERR_SSL_DECODE_ERROR );
         }
 
         /* check whether we got an empty certificate message */
@@ -1803,8 +1797,8 @@ static int ssl_read_certificate_parse( mbedtls_ssl_context* ssl,
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad certificate message" ) );
         SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_DECODE_ERROR,
-                              MBEDTLS_ERR_SSL_BAD_HS_CERTIFICATE );
-        return( MBEDTLS_ERR_SSL_BAD_HS_CERTIFICATE );
+                              MBEDTLS_ERR_SSL_DECODE_ERROR );
+        return( MBEDTLS_ERR_SSL_DECODE_ERROR );
     }
 
     i = 0;
@@ -1822,8 +1816,8 @@ static int ssl_read_certificate_parse( mbedtls_ssl_context* ssl,
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad certificate message" ) );
         SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_DECODE_ERROR,
-                              MBEDTLS_ERR_SSL_BAD_HS_CERTIFICATE );
-        return( MBEDTLS_ERR_SSL_BAD_HS_CERTIFICATE );
+                              MBEDTLS_ERR_SSL_DECODE_ERROR );
+        return( MBEDTLS_ERR_SSL_DECODE_ERROR );
     }
 
     /* In case we tried to reuse a session but it failed */
@@ -1852,9 +1846,9 @@ static int ssl_read_certificate_parse( mbedtls_ssl_context* ssl,
         if( buf[i] != 0 )
         {
             MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad certificate message" ) );
-            SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_DECODE_ERROR,
-                                  MBEDTLS_ERR_SSL_BAD_HS_CERTIFICATE );
-            return( MBEDTLS_ERR_SSL_BAD_HS_CERTIFICATE );
+            SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_HANDSHAKE_FAILURE,
+                                  MBEDTLS_ERR_SSL_HANDSHAKE_FAILURE );
+            return( MBEDTLS_ERR_SSL_HANDSHAKE_FAILURE );
         }
 
         n = ( ( unsigned int )buf[i + 1] << 8 )
@@ -1865,8 +1859,8 @@ static int ssl_read_certificate_parse( mbedtls_ssl_context* ssl,
         {
             MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad certificate message" ) );
             SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_DECODE_ERROR,
-                                  MBEDTLS_ERR_SSL_BAD_HS_CERTIFICATE );
-            return( MBEDTLS_ERR_SSL_BAD_HS_CERTIFICATE );
+                                  MBEDTLS_ERR_SSL_DECODE_ERROR );
+            return( MBEDTLS_ERR_SSL_DECODE_ERROR );
         }
 
         ret = mbedtls_x509_crt_parse_der( ssl->session_negotiate->peer_cert,
@@ -2013,7 +2007,7 @@ static int ssl_read_certificate_validate( mbedtls_ssl_context* ssl )
 
             MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad certificate ( EC key curve )" ) );
             if( ret == 0 )
-                ret = MBEDTLS_ERR_SSL_BAD_HS_CERTIFICATE;
+                ret = MBEDTLS_ERR_SSL_BAD_CERTIFICATE;
         }
     }
 #endif /* MBEDTLS_ECP_C */
@@ -2025,7 +2019,7 @@ static int ssl_read_certificate_validate( mbedtls_ssl_context* ssl )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad certificate ( usage extensions )" ) );
         if( ret == 0 )
-            ret = MBEDTLS_ERR_SSL_BAD_HS_CERTIFICATE;
+            ret = MBEDTLS_ERR_SSL_BAD_CERTIFICATE;
     }
 
     /* mbedtls_x509_crt_verify_with_profile is supposed to report a
@@ -2036,7 +2030,7 @@ static int ssl_read_certificate_validate( mbedtls_ssl_context* ssl )
      * ssl_parse_certificate even if verification was optional. */
     if( authmode == MBEDTLS_SSL_VERIFY_OPTIONAL &&
         ( ret == MBEDTLS_ERR_X509_CERT_VERIFY_FAILED ||
-          ret == MBEDTLS_ERR_SSL_BAD_HS_CERTIFICATE ) )
+          ret == MBEDTLS_ERR_SSL_BAD_CERTIFICATE ) )
     {
         ret = 0;
     }
@@ -2310,7 +2304,7 @@ int mbedtls_ssl_finished_out_process( mbedtls_ssl_context* ssl )
     MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_flush_output( ssl ) );
 
     MBEDTLS_SSL_PROC_CHK( ssl_finished_out_write( ssl, ssl->out_msg,
-                                                  MBEDTLS_SSL_MAX_CONTENT_LEN,
+                                                  MBEDTLS_SSL_OUT_CONTENT_LEN,
                                                   &ssl->out_msglen ) );
     ssl->out_msgtype = MBEDTLS_SSL_MSG_HANDSHAKE;
     ssl->out_msg[0] = MBEDTLS_SSL_HS_FINISHED;
@@ -2611,8 +2605,8 @@ static int ssl_finished_in_parse( mbedtls_ssl_context* ssl,
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad finished message" ) );
 
         SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_DECODE_ERROR,
-                              MBEDTLS_ERR_SSL_BAD_HS_FINISHED );
-        return( MBEDTLS_ERR_SSL_BAD_HS_FINISHED );
+                              MBEDTLS_ERR_SSL_DECODE_ERROR );
+        return( MBEDTLS_ERR_SSL_DECODE_ERROR );
     }
 
     MBEDTLS_SSL_DEBUG_BUF( 4, "Hash (self-computed):",
@@ -2629,8 +2623,8 @@ static int ssl_finished_in_parse( mbedtls_ssl_context* ssl,
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad finished message" ) );
 
         SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_DECODE_ERROR,
-                              MBEDTLS_ERR_SSL_BAD_HS_FINISHED );
-        return( MBEDTLS_ERR_SSL_BAD_HS_FINISHED );
+                              MBEDTLS_ERR_SSL_HANDSHAKE_FAILURE );
+        return( MBEDTLS_ERR_SSL_HANDSHAKE_FAILURE );
     }
     return( 0 );
 }
@@ -2939,7 +2933,7 @@ int mbedtls_ecdh_make_tls_13_params( mbedtls_ecdh_context *ctx, size_t *olen,
                                                  buf, blen, f_rng, p_rng ) );
 #endif
         case MBEDTLS_ECDH_VARIANT_MBEDTLS_2_0:
-            return( ecdh_make_params_internal( &ctx->ctx.mbed_ecdh, olen,
+            return( ecdh_make_tls_13_params_internal( &ctx->ctx.mbed_ecdh, olen,
                                                ctx->point_format, buf, blen,
                                                f_rng, p_rng,
                                                restart_enabled ) );
@@ -2986,7 +2980,7 @@ int mbedtls_ecdh_read_tls_13_params( mbedtls_ecdh_context *ctx,
                                                  buf, end) );
 #endif
         case MBEDTLS_ECDH_VARIANT_MBEDTLS_2_0:
-            return( ecdh_read_params_internal( &ctx->ctx.mbed_ecdh,
+            return( ecdh_read_tls_13_params_internal( &ctx->ctx.mbed_ecdh,
                                                buf, end ) );
         default:
             return MBEDTLS_ERR_ECP_BAD_INPUT_DATA;
@@ -3062,7 +3056,7 @@ int mbedtls_ecdh_make_tls_13_public( mbedtls_ecdh_context *ctx, size_t *olen,
                                                  buf, blen, f_rng, p_rng ) );
 #endif
         case MBEDTLS_ECDH_VARIANT_MBEDTLS_2_0:
-            return( ecdh_make_public_internal( &ctx->ctx.mbed_ecdh, olen,
+            return( ecdh_make_tls_13_public_internal( &ctx->ctx.mbed_ecdh, olen,
                                                ctx->point_format, buf, blen,
                                                f_rng, p_rng,
                                                restart_enabled ) );
@@ -3108,7 +3102,7 @@ int mbedtls_ecdh_read_tls_13_public( mbedtls_ecdh_context *ctx,
                                                  buf, blen ) );
 #endif
         case MBEDTLS_ECDH_VARIANT_MBEDTLS_2_0:
-            return( ecdh_read_public_internal( &ctx->ctx.mbed_ecdh,
+            return( ecdh_read_tls_13_public_internal( &ctx->ctx.mbed_ecdh,
                                                        buf, blen ) );
         default:
             return MBEDTLS_ERR_ECP_BAD_INPUT_DATA;

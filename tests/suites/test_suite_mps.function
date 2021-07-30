@@ -14,9 +14,13 @@
 #include "../include/mbedtls/mps/layer3.h"
 #include "../include/mbedtls/mps/mps.h"
 
-#include "../include/mbedtls/ssl_internal.h"
+#include "../library/ssl_misc.h"
 
 #include "../include/mbedtls/timing.h"
+
+#include <stdlib.h>
+
+#include "mps_reader.h"
 
 /*
  * Compile-time configuration for test suite.

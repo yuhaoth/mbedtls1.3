@@ -19,7 +19,7 @@
 #if !defined(MBEDTLS_SSL_TLS1_3_KEYS_H)
 #define MBEDTLS_SSL_TLS1_3_KEYS_H
 
-#include "mbedtls/ssl_internal.h"
+#include "ssl_misc.h"
 
 /* The maximum size of the intermediate key material.
  * The IKM can be a
@@ -247,6 +247,26 @@ int mbedtls_ssl_tls1_3_derive_secret(
  *        This is a small wrapper invoking mbedtls_ssl_tls1_3_derive_secret()
  *        with the appropriate labels.
  *
+ * <tt>
+ *        Early Secret
+ *             |
+ *             +-----> Derive-Secret(., "c e traffic", ClientHello)
+ *             |                      = client_early_traffic_secret
+ *             |
+ *             +-----> Derive-Secret(., "e exp master", ClientHello)
+ *             .                      = early_exporter_master_secret
+ *             .
+ *             .
+ * </tt>
+ *
+ * \note  To obtain the actual key and IV for the early data traffic,
+ *        the client secret derived by this function need to be
+ *        further processed by mbedtls_ssl_tls1_3_make_traffic_keys().
+ *
+ * \note  The binder key, which is also generated from the early secret,
+ *        is omitted here. Its calculation is part of the separate routine
+ *        mbedtls_ssl_tls1_3_create_psk_binder().
+ *
  * \param md_type      The hash algorithm associated with the PSK for which
  *                     early data key material is being derived.
  * \param early_secret The early secret from which the early data key material
@@ -257,8 +277,8 @@ int mbedtls_ssl_tls1_3_derive_secret(
  *                     respect to \p md_type. This must be a readable buffer
  *                     whose length is the digest size of the hash algorithm
  *                     represented by \p md_size.
- * \param derived_early_secrets The address of the structure in which to store
- *                              the early data key material.
+ * \param derived      The address of the structure in which to store
+ *                     the early data key material.
  *
  * \returns        \c 0 on success.
  * \returns        A negative error code on failure.
@@ -267,16 +287,33 @@ int mbedtls_ssl_tls1_3_derive_early_secrets(
           mbedtls_md_type_t md_type,
           unsigned char const *early_secret,
           unsigned char const *transcript, size_t transcript_len,
-          mbedtls_ssl_tls1_3_early_secrets *derived_early_secrets );
+          mbedtls_ssl_tls1_3_early_secrets *derived );
 
 /**
- * \brief Derive TLS 1.3 handshake key material from handshake secret.
+ * \brief Derive TLS 1.3 handshake key material from the handshake secret.
  *
  *        This is a small wrapper invoking mbedtls_ssl_tls1_3_derive_secret()
- *        with the appropriate labels.
+ *        with the appropriate labels from the standard.
  *
- * \param md_type           The hash algorithm used in the handshake for which
- *                          key material is being derived.
+ * <tt>
+ *        Handshake Secret
+ *              |
+ *              +-----> Derive-Secret( ., "c hs traffic",
+ *              |                      ClientHello...ServerHello )
+ *              |                      = client_handshake_traffic_secret
+ *              |
+ *              +-----> Derive-Secret( ., "s hs traffic",
+ *              .                      ClientHello...ServerHello )
+ *              .                      = server_handshake_traffic_secret
+ *              .
+ * </tt>
+ *
+ * \note  To obtain the actual key and IV for the encrypted handshake traffic,
+ *        the client and server secret derived by this function need to be
+ *        further processed by mbedtls_ssl_tls1_3_make_traffic_keys().
+ *
+ * \param md_type           The hash algorithm associated with the ciphersuite
+ *                          that's being used for the connection.
  * \param handshake_secret  The handshake secret from which the handshake key
  *                          material should be derived. This must be a readable
  *                          buffer whose length is the digest size of the hash
@@ -285,8 +322,8 @@ int mbedtls_ssl_tls1_3_derive_early_secrets(
  *                          with respect to \p md_type. This must be a readable
  *                          buffer whose length is the digest size of the hash
  *                          algorithm represented by \p md_size.
- * \param derived_handshake_secrets The address of the structure in which to
- *                                  store the handshake key material.
+ * \param derived           The address of the structure in which to
+ *                          store the handshake key material.
  *
  * \returns        \c 0 on success.
  * \returns        A negative error code on failure.
@@ -295,26 +332,48 @@ int mbedtls_ssl_tls1_3_derive_handshake_secrets(
           mbedtls_md_type_t md_type,
           unsigned char const *handshake_secret,
           unsigned char const *transcript, size_t transcript_len,
-          mbedtls_ssl_tls1_3_handshake_secrets *derived_handshake_secrets );
+          mbedtls_ssl_tls1_3_handshake_secrets *derived );
 
 /**
- * \brief Derive TLS 1.3 application key material from master secret.
+ * \brief Derive TLS 1.3 application key material from the master secret.
  *
  *        This is a small wrapper invoking mbedtls_ssl_tls1_3_derive_secret()
- *        with the appropriate labels.
+ *        with the appropriate labels from the standard.
  *
- * \param md_type           The hash algorithm used in the application for which
- *                          key material is being derived.
+ * <tt>
+ *        Master Secret
+ *              |
+ *              +-----> Derive-Secret( ., "c ap traffic",
+ *              |                      ClientHello...server Finished )
+ *              |                      = client_application_traffic_secret_0
+ *              |
+ *              +-----> Derive-Secret( ., "s ap traffic",
+ *              |                      ClientHello...Server Finished )
+ *              |                      = server_application_traffic_secret_0
+ *              |
+ *              +-----> Derive-Secret( ., "exp master",
+ *              .                      ClientHello...server Finished)
+ *              .                      = exporter_master_secret
+ *              .
+ * </tt>
+ *
+ * \note  To obtain the actual key and IV for the (0-th) application traffic,
+ *        the client and server secret derived by this function need to be
+ *        further processed by mbedtls_ssl_tls1_3_make_traffic_keys().
+ *
+ * \param md_type           The hash algorithm associated with the ciphersuite
+ *                          that's being used for the connection.
  * \param master_secret     The master secret from which the application key
  *                          material should be derived. This must be a readable
  *                          buffer whose length is the digest size of the hash
  *                          algorithm represented by \p md_size.
- * \param transcript        The transcript of the application so far, calculated
- *                          with respect to \p md_type. This must be a readable
- *                          buffer whose length is the digest size of the hash
- *                          algorithm represented by \p md_size.
- * \param derived_application_secrets The address of the structure in which to
- *                                    store the application key material.
+ * \param transcript        The transcript of the handshake up to and including
+ *                          the ServerFinished message, calculated with respect
+ *                          to \p md_type. This must be a readable buffer whose
+ *                          length is the digest size of the hash algorithm
+ *                          represented by \p md_type.
+ * \param derived           The address of the structure in which to
+ *                          store the application key material.
  *
  * \returns        \c 0 on success.
  * \returns        A negative error code on failure.
@@ -323,14 +382,13 @@ int mbedtls_ssl_tls1_3_derive_application_secrets(
           mbedtls_md_type_t md_type,
           unsigned char const *master_secret,
           unsigned char const *transcript, size_t transcript_len,
-          mbedtls_ssl_tls1_3_application_secrets *derived_application_secrets );
+          mbedtls_ssl_tls1_3_application_secrets *derived );
 
-#if defined(MBEDTLS_SSL_NEW_SESSION_TICKET)
 /**
- * \brief Derive TLS 1.3 resumption master secret.
+ * \brief Derive TLS 1.3 resumption master secret from the master secret.
  *
  *        This is a small wrapper invoking mbedtls_ssl_tls1_3_derive_secret()
- *        with the appropriate label.
+ *        with the appropriate labels from the standard.
  *
  * \param md_type           The hash algorithm used in the application for which
  *                          key material is being derived.
@@ -338,13 +396,14 @@ int mbedtls_ssl_tls1_3_derive_application_secrets(
  *                          secret should be derived. This must be a readable
  *                          buffer whose length is the digest size of the hash
  *                          algorithm represented by \p md_size.
- * \param transcript        The transcript of the application so far, calculated
- *                          with respect to \p md_type. This must be a readable
- *                          buffer whose length is the digest size of the hash
- *                          algorithm represented by \p md_size.
+ * \param transcript        The transcript of the handshake up to and including
+ *                          the ClientFinished message, calculated with respect
+ *                          to \p md_type. This must be a readable buffer whose
+ *                          length is the digest size of the hash algorithm
+ *                          represented by \p md_type.
  * \param transcript_len    The length of \p transcript in Bytes.
- * \param derived_application_secrets The address of the structure in which to
- *                                    store the resumption master secret.
+ * \param derived           The address of the structure in which to
+ *                          store the resumption master secret.
  *
  * \returns        \c 0 on success.
  * \returns        A negative error code on failure.
@@ -353,8 +412,7 @@ int mbedtls_ssl_tls1_3_derive_resumption_master_secret(
           mbedtls_md_type_t md_type,
           unsigned char const *application_secret,
           unsigned char const *transcript, size_t transcript_len,
-          mbedtls_ssl_tls1_3_application_secrets *derived_application_secrets );
-#endif /* MBEDTLS_SSL_NEW_SESSION_TICKET */
+          mbedtls_ssl_tls1_3_application_secrets *derived );
 
 /**
  * \brief Compute the next secret in the TLS 1.3 key schedule
@@ -595,33 +653,36 @@ int mbedtls_ssl_tls1_3_calc_finished( mbedtls_ssl_context* ssl,
                                       int from );
 
 #if defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
+#define MBEDTLS_SSL_TLS1_3_PSK_EXTERNAL   0
+#define MBEDTLS_SSL_TLS1_3_PSK_RESUMPTION 1
+
 /**
- * \brief Calculate a TLS 1.3 PSK binder
+ * \brief             Calculate a TLS 1.3 PSK binder.
  *
- * \param ssl  The SSL context. This is used for debugging only and may
- *             be \c NULL if MBEDTLS_DEBUG_C is disabled.
+ * \param ssl         The SSL context. This is used for debugging only and may
+ *                    be \c NULL if MBEDTLS_DEBUG_C is disabled.
+ * \param md_type     The hash algorithm associated to the PSK \p psk.
  * \param psk         The buffer holding the PSK for which to create a binder.
  * \param psk_len     The size of \p psk in bytes.
- * \param md_type     The hash algorithm associated to the PSK \p psk.
- * \param is_external This indicates whether the PSK \p psk is externally
- *                    provisioned or a resumption PSK:
- *                    - \c 1: Externally provisioned PSK
- *                    - \c 0: Resumption PSK
+ * \param psk_type    This indicates whether the PSK \p psk is externally
+ *                    provisioned (#MBEDTLS_SSL_TLS1_3_PSK_EXTERNAL) or a
+ *                    resumption PSK (#MBEDTLS_SSL_TLS1_3_PSK_RESUMPTION).
  * \param transcript  The handshake transcript up to the point where the
  *                    PSK binder calculation happens. This must be readable,
  *                    and its size must be equal to the digest size of
  *                    the hash algorithm represented by \p md_type.
  * \param result      The address at which to store the PSK binder on success.
  *                    This must be writable, and its size must be equal to the
- *                    digest size of  the hash algorithm represented by \p md_type.
+ *                    digest size of  the hash algorithm represented by
+ *                    \p md_type.
  *
- * \returns    \c 0 on success.
- * \returns    A negative error code on failure.
+ * \returns           \c 0 on success.
+ * \returns           A negative error code on failure.
  */
 int mbedtls_ssl_tls1_3_create_psk_binder( mbedtls_ssl_context *ssl,
-                               unsigned char const *psk, size_t psk_len,
                                const mbedtls_md_type_t md_type,
-                               int is_external,
+                               unsigned char const *psk, size_t psk_len,
+                               int psk_type,
                                unsigned char const *transcript,
                                unsigned char *result );
 #endif /* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED */

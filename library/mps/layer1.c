@@ -20,7 +20,7 @@
  */
 
 #include "mbedtls/mps/layer1.h"
-#include "mbedtls/mps/trace.h"
+#include "../mps_trace.h"
 
 #if defined(MBEDTLS_MPS_SEPARATE_LAYERS) ||     \
     defined(MBEDTLS_MPS_TOP_TRANSLATION_UNIT)

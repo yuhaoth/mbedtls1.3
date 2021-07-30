@@ -27,7 +27,7 @@
 #include <stdio.h>
 #include <stdint.h>
 
-#include "common.h"
+#include "../library/mps_common.h"
 #include "allocator.h"
 #include "error.h"
 

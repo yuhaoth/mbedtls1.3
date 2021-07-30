@@ -30,7 +30,7 @@
 #include "writer.h"
 
 #include "layer2.h"
-#include "common.h"
+#include "../library/mps_common.h"
 
 #include "transform.h"
 #include "error.h"
