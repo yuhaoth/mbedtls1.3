@@ -7150,7 +7150,8 @@ void mbedtls_ssl_config_init( mbedtls_ssl_config *conf )
     memset( conf, 0, sizeof( mbedtls_ssl_config ) );
 }
 
-#if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
+#if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED) && \
+    defined(MBEDTLS_SSL_PROTO_TLS1_2)
 /* The selection should be the same as mbedtls_x509_crt_profile_default in
  * x509_crt.c. Here, the order matters. Currently we favor stronger hashes,
  * for no fundamental reason.
@@ -7168,7 +7169,7 @@ static int ssl_preset_default_hashes[] = {
 #endif
     MBEDTLS_MD_NONE
 };
-#endif /* MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED */
+#endif /* MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED && MBEDTLS_SSL_PROTO_TLS1_2 */
 
 #if defined(MBEDTLS_ECP_C)
 /* The selection should be the same as mbedtls_x509_crt_profile_default in
