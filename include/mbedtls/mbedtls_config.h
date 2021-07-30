@@ -3274,7 +3274,10 @@
  */
 //#define MBEDTLS_SSL_DTLS_MAX_BUFFERING             32768
 
-//#define MBEDTLS_PSK_MAX_LEN               32 /**< Max size of TLS pre-shared keys, in bytes (default 256 bits) */
+/* TODO: This deviates from the default in TLS 1.2 -- it's 48 Bytes here because
+ *       TLS 1.3 PSKs obtained via SHA-384 have that length. */
+#define MBEDTLS_PSK_MAX_LEN               48
+
 //#define MBEDTLS_SSL_COOKIE_TIMEOUT        60 /**< Default expiration delay of DTLS cookies, in seconds if HAVE_TIME, or in number of cookies issued */
 
 #define MBEDTLS_SSL_TICKET_AGE_TOLERANCE 6000 /**< Tolerance window for ticket lifetime */
