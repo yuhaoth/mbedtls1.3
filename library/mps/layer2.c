@@ -1867,6 +1867,17 @@ MBEDTLS_MPS_ALWAYS_INLINE
 int l2_version_wire_matches_logical( uint8_t wire_version,
                                      int logical_version )
 {
+
+    /* TODO: Since MBEDTLS_MPS_L2_VERSION_UNSPECIFIED is not 
+     * yet implemented we include this special handling.
+     */
+    if( wire_version == MBEDTLS_SSL_MINOR_VERSION_1 )
+    { 
+        /* Backwards compatibility case */
+        MBEDTLS_MPS_TRACE_COMMENT( "Record with TLS 1.1 version number received" );
+        return( 1 );
+    }
+        
     switch( logical_version )
     {
         case MBEDTLS_MPS_L2_VERSION_UNSPECIFIED:
@@ -1961,12 +1972,7 @@ int l2_in_fetch_protected_record_tls( mbedtls_mps_l2 *ctx, mps_rec *rec )
      *
      * We capture both special cases in a helper function checking whether the
      * wire-version matches the configured logical version. */
-    if( minor_ver == MBEDTLS_SSL_MINOR_VERSION_1 )
-    { 
-        /* Backwards compatibility case */
-        MBEDTLS_MPS_TRACE_COMMENT( "Record with TLS 1.1 version number received" );
-    }
-    else if( l2_version_wire_matches_logical( minor_ver,
+    if( l2_version_wire_matches_logical( minor_ver,
                   mbedtls_mps_l2_conf_get_version( &ctx->conf ) ) != 1 )
     {
         MBEDTLS_MPS_TRACE_ERROR( "Invalid minor record version %u received, expected %u",
