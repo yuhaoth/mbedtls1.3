@@ -206,6 +206,11 @@ if(USE_SHARED_MBEDTLS_LIBRARY)
         target_link_libraries(${mbedcrypto_target} PUBLIC everest)
     endif()
 
+    if(TARGET liboqs)
+        add_dependencies(${mbedcrypto_target} PUBLIC liboqs)
+	target_link_libraries(${mbedcrypto_target} PUBLIC ${CMAKE_BINARY_DIR}/lib/liboqs.a)
+    endif()
+
     add_library(${mbedx509_target} SHARED ${src_x509})
     set_target_properties(${mbedx509_target} PROPERTIES VERSION 3.0.0 SOVERSION 4)
     target_link_libraries(${mbedx509_target} PUBLIC ${libs} ${mbedcrypto_target})
@@ -221,6 +226,7 @@ foreach(target IN LISTS target_libraries)
     # from /library and others declared by /3rdparty/**/CMakeLists.txt.
     # /library needs to be listed explicitly when building .c files outside
     # of /library (which currently means: under /3rdparty).
+    add_dependencies(${target} liboqs)
     target_include_directories(${target}
         PUBLIC $<BUILD_INTERFACE:${MBEDTLS_DIR}/include/>
                $<INSTALL_INTERFACE:include/>

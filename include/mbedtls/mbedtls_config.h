@@ -3348,4 +3348,9 @@
  */
 //#define MBEDTLS_ECDH_VARIANT_EVEREST_ENABLED
 
+/**
+ * Enable liboqs post-quantum cryptography
+ */
+#define MBEDTLS_LIBOQS_ENABLE
+
 /* \} name SECTION: Customisation configuration options */

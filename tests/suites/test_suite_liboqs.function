@@ -1,0 +1,17 @@
+/* BEGIN_HEADER */
+#include "oqs/kem_bike.h"
+/* END_HEADER */
+
+/* BEGIN_DEPENDENCIES
+ * depends_on:MBEDTLS_LIBOQS_ENABLE
+ * END_DEPENDENCIES
+ */
+
+/* BEGIN_CASE */
+void dummy_test()
+{
+    OQS_KEM_bike_l1_new();
+    /* This goto is added to avoid warnings from the generated code. */
+    goto exit;
+}
+/* END_CASE */

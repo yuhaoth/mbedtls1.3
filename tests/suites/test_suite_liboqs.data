@@ -1,0 +1,3 @@
+Dummy test
+depends_on:MBEDTLS_LIBOQS_ENABLE
+dummy_test
