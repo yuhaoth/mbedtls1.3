@@ -1623,7 +1623,7 @@ static int ssl_client_hello_write_partial( mbedtls_ssl_context* ssl,
     buflen -= ssl->session_negotiate->id_len;
 
 
-    MBEDTLS_SSL_DEBUG_MSG( 3, ( "session id len.: %d", ssl->session_negotiate->id_len ) );
+    MBEDTLS_SSL_DEBUG_MSG( 3, ( "session id len.: %" MBEDTLS_PRINTF_SIZET , ssl->session_negotiate->id_len ) );
     MBEDTLS_SSL_DEBUG_BUF( 3, "session id", ssl->session_negotiate->id, ssl->session_negotiate->id_len );
 #else
     if( buflen < 1 )
@@ -1695,7 +1695,7 @@ static int ssl_client_hello_write_partial( mbedtls_ssl_context* ssl,
     *ciphersuite_start++ = (unsigned char)( ciphersuite_count*2 >> 8 );
     *ciphersuite_start++ = (unsigned char)( ciphersuite_count*2 );
 
-    MBEDTLS_SSL_DEBUG_MSG( 3, ( "client hello, got %d ciphersuites", ciphersuite_count ) );
+    MBEDTLS_SSL_DEBUG_MSG( 3, ( "client hello, got %" MBEDTLS_PRINTF_SIZET " ciphersuites", ciphersuite_count ) );
 
     /* For every TLS 1.3 ClientHello, this vector MUST contain exactly
      * one byte set to zero, which corresponds to the 'null' compression
@@ -1832,7 +1832,7 @@ static int ssl_client_hello_write_partial( mbedtls_ssl_context* ssl,
     }
 #endif /* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED */
 
-    MBEDTLS_SSL_DEBUG_MSG( 3, ( "client hello, total extension length: %d",
+    MBEDTLS_SSL_DEBUG_MSG( 3, ( "client hello, total extension length: %" MBEDTLS_PRINTF_SIZET ,
                                 total_ext_len ) );
 
     MBEDTLS_SSL_DEBUG_BUF( 3, "client hello extensions", extension_start, total_ext_len );
@@ -2493,7 +2493,7 @@ static int ssl_certificate_request_parse( mbedtls_ssl_context* ssl,
 
             default:
                 MBEDTLS_SSL_DEBUG_MSG( 3,
-                    ( "unknown extension found: %d ( ignoring )", ext_id ) );
+                    ( "unknown extension found: %" MBEDTLS_PRINTF_SIZET " ( ignoring )", ext_id ) );
                 break;
         }
 
@@ -3229,7 +3229,7 @@ static int ssl_server_hello_parse( mbedtls_ssl_context* ssl,
 
     ext = buf;
 
-    MBEDTLS_SSL_DEBUG_MSG( 3, ( "server hello, total extension length: %d", ext_len ) );
+    MBEDTLS_SSL_DEBUG_MSG( 3, ( "server hello, total extension length: %" MBEDTLS_PRINTF_SIZET , ext_len ) );
 
     MBEDTLS_SSL_DEBUG_BUF( 3, "server hello extensions", ext, ext_len );
 
@@ -3607,7 +3607,7 @@ static int ssl_hrr_parse( mbedtls_ssl_context* ssl,
 
     ext = buf;
 
-    MBEDTLS_SSL_DEBUG_MSG( 3, ( "hello retry request, total extension length: %d", ext_len ) );
+    MBEDTLS_SSL_DEBUG_MSG( 3, ( "hello retry request, total extension length: %" MBEDTLS_PRINTF_SIZET , ext_len ) );
 
     MBEDTLS_SSL_DEBUG_BUF( 3, "extensions", ext, ext_len );
 
@@ -3655,7 +3655,7 @@ static int ssl_hrr_parse( mbedtls_ssl_context* ssl,
                 ssl->handshake->verify_cookie = mbedtls_calloc( 1, cookie_len );
                 if( ssl->handshake->verify_cookie == NULL )
                 {
-                    MBEDTLS_SSL_DEBUG_MSG( 1, ( "alloc failed ( %d bytes )", cookie_len ) );
+                    MBEDTLS_SSL_DEBUG_MSG( 1, ( "alloc failed ( %" MBEDTLS_PRINTF_SIZET " bytes )", cookie_len ) );
                     return( MBEDTLS_ERR_SSL_ALLOC_FAILED );
                 }
 
@@ -4001,7 +4001,7 @@ static int ssl_new_session_ticket_parse( mbedtls_ssl_context* ssl,
          return( MBEDTLS_ERR_SSL_DECODE_ERROR );
     }
 
-    MBEDTLS_SSL_DEBUG_MSG( 3, ( "ticket->length: %u", ticket_len ) );
+    MBEDTLS_SSL_DEBUG_MSG( 3, ( "ticket->length: %" MBEDTLS_PRINTF_SIZET , ticket_len ) );
 
     /* Check if we previously received a ticket already. */
     if( ssl->session->ticket != NULL || ssl->session->ticket_len > 0 )

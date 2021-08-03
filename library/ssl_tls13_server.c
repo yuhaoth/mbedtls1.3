@@ -456,7 +456,7 @@ int mbedtls_ssl_parse_new_session_ticket_server(
         return( 0 );
     }
 
-    MBEDTLS_SSL_DEBUG_MSG( 3, ( "ticket length: %d", len ) );
+    MBEDTLS_SSL_DEBUG_MSG( 3, ( "ticket length: %" MBEDTLS_PRINTF_SIZET , len ) );
 
     if( len == 0 ) return( 0 );
 
@@ -643,7 +643,7 @@ int mbedtls_ssl_parse_client_psk_identity_ext(
                     if( now < ssl->session_negotiate->start )
                     {
                         MBEDTLS_SSL_DEBUG_MSG( 3,
-                               ( "Ticket expired: now=%d, ticket.start=%d",
+                               ( "Ticket expired: now=%ld, ticket.start=%ld",
                                  now, ssl->session_negotiate->start ) );
                         ret = MBEDTLS_ERR_SSL_SESSION_TICKET_EXPIRED;
                     }
@@ -655,7 +655,7 @@ int mbedtls_ssl_parse_client_psk_identity_ext(
                     if( now - ssl->session_negotiate->start > ssl->session_negotiate->ticket_lifetime )
                     {
                         MBEDTLS_SSL_DEBUG_MSG( 3,
-                               ( "Ticket expired ( now - ticket.start=%d, "\
+                               ( "Ticket expired ( now - ticket.start=%ld, "\
                                  "ticket.ticket_lifetime=%d",
                                  now - ssl->session_negotiate->start,
                                  ssl->session_negotiate->ticket_lifetime ) );
@@ -677,7 +677,7 @@ int mbedtls_ssl_parse_client_psk_identity_ext(
                     if( diff > MBEDTLS_SSL_TICKET_AGE_TOLERANCE )
                     {
                         MBEDTLS_SSL_DEBUG_MSG( 3,
-                            ( "Ticket age outside tolerance window ( diff=%d )",
+                            ( "Ticket age outside tolerance window ( diff=%ld )",
                               diff ) );
                         ret = MBEDTLS_ERR_SSL_SESSION_TICKET_EXPIRED;
                     }
@@ -693,7 +693,7 @@ int mbedtls_ssl_parse_client_psk_identity_ext(
                         else
                         {
                             MBEDTLS_SSL_DEBUG_MSG( 3,
-                            ( "0-RTT is disabled ( diff=%d exceeds "\
+                            ( "0-RTT is disabled ( diff=%ld exceeds "\
                               "MBEDTLS_SSL_EARLY_DATA_MAX_DELAY )", diff ) );
                             ssl->session_negotiate->process_early_data =
                                 MBEDTLS_SSL_EARLY_DATA_DISABLED;
@@ -915,7 +915,7 @@ static int ssl_write_server_pre_shared_key_ext( mbedtls_ssl_context *ssl,
 
     *olen = 6;
 
-    MBEDTLS_SSL_DEBUG_MSG( 4, ( "sent selected_identity: %d", selected_identity ) );
+    MBEDTLS_SSL_DEBUG_MSG( 4, ( "sent selected_identity: %" MBEDTLS_PRINTF_SIZET , selected_identity ) );
 
     return( 0 );
 }
@@ -1618,9 +1618,9 @@ static int ssl_write_new_session_ticket_write( mbedtls_ssl_context* ssl,
     *(p++) = ( ext_len >> 8 ) & 0xFF;
     *(p++) = ( ext_len >> 0 ) & 0xFF;
 
-    MBEDTLS_SSL_DEBUG_MSG( 3, ( "NewSessionTicket (extension_length): %d", ext_len ) );
+    MBEDTLS_SSL_DEBUG_MSG( 3, ( "NewSessionTicket (extension_length): %" MBEDTLS_PRINTF_SIZET , ext_len ) );
 
-    MBEDTLS_SSL_DEBUG_MSG( 3, ( "NewSessionTicket (ticket length): %d", tlen ) );
+    MBEDTLS_SSL_DEBUG_MSG( 3, ( "NewSessionTicket (ticket length): %" MBEDTLS_PRINTF_SIZET , tlen ) );
 
     *olen = p - buf;
 
@@ -1999,7 +1999,7 @@ static int ssl_read_early_data_parse( mbedtls_ssl_context* ssl,
     }
     else
     {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "Buffer too small (recv %d bytes, buffer %d bytes)",
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "Buffer too small (recv %" MBEDTLS_PRINTF_SIZET " bytes, buffer %" MBEDTLS_PRINTF_SIZET " bytes)",
                                     buflen, ssl->conf->max_early_data ) );
         return ( MBEDTLS_ERR_SSL_ALLOC_FAILED );
     }
@@ -2499,7 +2499,7 @@ static int ssl_client_hello_parse( mbedtls_ssl_context* ssl,
      * it sent in the ClientHello MUST abort the handshake with an
      * "illegal_parameter" alert.
      */
-    MBEDTLS_SSL_DEBUG_MSG( 3, ( "client hello, session id length ( %d )", sess_len ) );
+    MBEDTLS_SSL_DEBUG_MSG( 3, ( "client hello, session id length ( %" MBEDTLS_PRINTF_SIZET " )", sess_len ) );
     MBEDTLS_SSL_DEBUG_BUF( 3, "client hello, session id", buf, sess_len );
 
     memcpy( &ssl->session_negotiate->id[0], buf, sess_len ); /* write session id */
@@ -3918,7 +3918,7 @@ static int ssl_server_hello_write( mbedtls_ssl_context* ssl,
     buflen--;
     memcpy( buf, &ssl->session_negotiate->id[0], ssl->session_negotiate->id_len );
     buf += ssl->session_negotiate->id_len;
-    MBEDTLS_SSL_DEBUG_MSG( 3, ( "session id length ( %d )", ssl->session_negotiate->id_len ) );
+    MBEDTLS_SSL_DEBUG_MSG( 3, ( "session id length ( %" MBEDTLS_PRINTF_SIZET " )", ssl->session_negotiate->id_len ) );
     MBEDTLS_SSL_DEBUG_BUF( 3, "session id", ssl->session_negotiate->id, ssl->session_negotiate->id_len );
     buflen -= ssl->session_negotiate->id_len;
 

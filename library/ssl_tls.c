@@ -3811,7 +3811,7 @@ int mbedtls_ssl_setup( mbedtls_ssl_context *ssl,
         ssl->early_data_server_buf_len = conf->max_early_data;
         if( ssl->early_data_server_buf == NULL )
         {
-            MBEDTLS_SSL_DEBUG_MSG( 1, ( "alloc(%d bytes) failed", conf->max_early_data ) );
+            MBEDTLS_SSL_DEBUG_MSG( 1, ( "alloc(%" MBEDTLS_PRINTF_SIZET " bytes) failed", conf->max_early_data ) );
             ret = MBEDTLS_ERR_SSL_ALLOC_FAILED;
             goto error;
         }
