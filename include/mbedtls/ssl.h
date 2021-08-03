@@ -186,6 +186,8 @@
                                                   MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_ECDHE_ECDSA )
 #define MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_ALL ( MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_KE     | \
                                                       MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_DHE_KE )
+#define MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_ECDHE_ALL ( MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_ECDHE_ECDSA     | \
+                                                      MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_DHE_KE )
 
 /*
  * Constants from RFC 8446 for TLS 1.3 PSK modes

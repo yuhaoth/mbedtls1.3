@@ -1253,76 +1253,54 @@ int ssl_parse_encrypted_extensions_early_data_ext( mbedtls_ssl_context *ssl,
 /*
  * Helper functions around key exchange modes.
  */
-static inline unsigned mbedtls_ssl_conf_tls13_get_key_exchange_modes( mbedtls_ssl_context *ssl )
+static inline unsigned mbedtls_ssl_conf_tls13_kex_modes_check( mbedtls_ssl_context *ssl,
+                                                               int kex_mode_mask )
 {
-    return( ssl->conf->key_exchange_modes );
+    return( ( ssl->conf->key_exchange_modes & kex_mode_mask ) != 0 );
 }
 
 static inline int mbedtls_ssl_conf_tls13_pure_psk_enabled( mbedtls_ssl_context *ssl )
 {
-    if( ( mbedtls_ssl_conf_tls13_get_key_exchange_modes( ssl ) &
-          MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_KE ) != 0 )
-    {
-        return( 1 );
-    }
-
-    return( 0 );
+    return( mbedtls_ssl_conf_tls13_kex_modes_check( ssl,
+                   MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_KE ) );
 }
-
 static inline int mbedtls_ssl_conf_tls13_psk_ecdhe_enabled( mbedtls_ssl_context *ssl )
 {
-    if( ( mbedtls_ssl_conf_tls13_get_key_exchange_modes( ssl ) &
-          MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_DHE_KE ) != 0 )
-    {
-        return( 1 );
-    }
-
-    return( 0 );
+    return( mbedtls_ssl_conf_tls13_kex_modes_check( ssl,
+                   MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_DHE_KE ) );
 }
-
 static inline int mbedtls_ssl_conf_tls13_some_ecdhe_enabled( mbedtls_ssl_context *ssl )
 {
-    if( ( mbedtls_ssl_conf_tls13_get_key_exchange_modes( ssl ) &
-          ( MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_DHE_KE | \
-            MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_ECDHE_ECDSA ) ) != 0 )
-    {
-        return( 1 );
-    }
-
-    return( 0 );
+    return( mbedtls_ssl_conf_tls13_kex_modes_check( ssl,
+                   MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_ECDHE_ALL ) );
 }
-
 static inline int mbedtls_ssl_conf_tls13_some_psk_enabled( mbedtls_ssl_context *ssl )
 {
-    if( ( mbedtls_ssl_conf_tls13_get_key_exchange_modes( ssl ) &
-          MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_ALL ) != 0 )
-    {
-        return( 1 );
-    }
-
-    return( 0 );
+    return( mbedtls_ssl_conf_tls13_kex_modes_check( ssl,
+                   MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_ALL ) );
 }
-
 static inline int mbedtls_ssl_conf_tls13_pure_ecdhe_enabled( mbedtls_ssl_context *ssl )
 {
-    if( ( mbedtls_ssl_conf_tls13_get_key_exchange_modes( ssl ) &
-          MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_ECDHE_ECDSA ) != 0 )
-    {
-        return( 1 );
-    }
-
-    return( 0 );
+    return( mbedtls_ssl_conf_tls13_kex_modes_check( ssl,
+                   MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_ECDHE_ECDSA ) );
 }
 
-static inline int mbedtls_ssl_tls13_key_exchange_with_psk( mbedtls_ssl_context *ssl )
+static inline int mbedtls_ssl_tls13_kex_check( mbedtls_ssl_context *ssl,
+                                      int kex_mask )
 {
-    if( ssl->handshake->key_exchange == MBEDTLS_KEY_EXCHANGE_PSK ||
-        ssl->handshake->key_exchange == MBEDTLS_KEY_EXCHANGE_ECDHE_PSK )
-    {
-        return( 1 );
-    }
+    return( ( ssl->handshake->key_exchange & kex_mask ) != 0 );
+}
 
-    return( 0 );
+static inline int mbedtls_ssl_tls13_kex_with_psk( mbedtls_ssl_context *ssl )
+{
+    return( mbedtls_ssl_tls13_kex_check( ssl,
+                   MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_ALL ) );
+}
+
+static inline int mbedtls_ssl_tls13_kex_with_ecdhe( mbedtls_ssl_context *ssl )
+{
+    return( mbedtls_ssl_tls13_kex_check( ssl,
+                   MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_ECDHE_ALL ) );
 }
 
 /*
