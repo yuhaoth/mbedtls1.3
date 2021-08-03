@@ -1065,16 +1065,13 @@ static int ssl_parse_max_fragment_length_ext( mbedtls_ssl_context *ssl,
 #endif /* MBEDTLS_SSL_MAX_FRAGMENT_LENGTH */
 
 #if defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
-/*
- * ssl_parse_key_exchange_modes_ext( ) structure:
+/* From RFC 8446:
  *
- * enum { psk_ke( 0 ), psk_dhe_ke( 1 ), ( 255 ) } PskKeyExchangeMode;
- *
- * struct {
- *     PskKeyExchangeMode ke_modes<1..255>;
- * } PskKeyExchangeModes;
+ *   enum { psk_ke(0), psk_dhe_ke(1), (255) } PskKeyExchangeMode;
+ *   struct {
+ *       PskKeyExchangeMode ke_modes<1..255>;
+ *   } PskKeyExchangeModes;
  */
-
 static int ssl_parse_key_exchange_modes_ext( mbedtls_ssl_context *ssl,
                                              const unsigned char *buf,
                                              size_t len )
@@ -1112,7 +1109,7 @@ static int ssl_parse_key_exchange_modes_ext( mbedtls_ssl_context *ssl,
     }
 
     ssl->handshake->key_exchange_modes = psk_key_exchange_modes;
-    return ( 0 );
+    return( 0 );
 }
 #endif /* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED */
 
