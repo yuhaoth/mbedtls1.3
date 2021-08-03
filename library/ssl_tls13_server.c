@@ -1158,16 +1158,16 @@ static int ssl_parse_key_exchange_modes_ext( mbedtls_ssl_context *ssl,
 }
 #endif /* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED */
 
-
-
-/*
- * ssl_write_supported_version_ext( ):
- * ( as sent by server )
- *
- * case server_hello:
- *          ProtocolVersion selected_version;
+/* From RFC 8446:
+ *   struct {
+ *       select (Handshake.msg_type) {
+ *           case client_hello:
+ *                ProtocolVersion versions<2..254>;
+ *           case server_hello: // and HelloRetryRequest
+ *                ProtocolVersion selected_version;
+ *       };
+ *   } SupportedVersions;
  */
-
 static int ssl_write_supported_version_ext( mbedtls_ssl_context *ssl,
                                             unsigned char* buf,
                                             unsigned char* end,
@@ -1177,7 +1177,7 @@ static int ssl_write_supported_version_ext( mbedtls_ssl_context *ssl,
     *olen = 0;
 
     /* With only a single supported version we do not need the ssl structure. */
-    ( (void ) ssl );
+    ((void) ssl);
 
     MBEDTLS_SSL_DEBUG_MSG( 3, ( "adding supported version extension" ) );
 
@@ -1204,64 +1204,69 @@ static int ssl_write_supported_version_ext( mbedtls_ssl_context *ssl,
     return( 0 );
 }
 
-
+/* From RFC 8446:
+ *   struct {
+ *       select (Handshake.msg_type) {
+ *           case client_hello:
+ *                ProtocolVersion versions<2..254>;
+ *           case server_hello: // and HelloRetryRequest
+ *                ProtocolVersion selected_version;
+ *       };
+ *   } SupportedVersions;
+ */
 static int ssl_parse_supported_versions_ext( mbedtls_ssl_context *ssl,
-                                            const unsigned char *buf, size_t len )
+                                             const unsigned char *buf,
+                                             size_t len )
 {
     size_t list_len;
+    int tls13_supported = 0;
     int major_ver, minor_ver;
 
-    if( len < 3 )
+    if( len < 1 )
+        return( MBEDTLS_ERR_SSL_DECODE_ERROR );
+
+    list_len = buf[0];
+    len -= 1;
+    buf += 1;
+
+    if( len != list_len || list_len % 2 != 0 )
     {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "ssl_parse_supported_versions_ext: Incorrect length" ) );
-        return( MBEDTLS_ERR_SSL_BAD_HS_SUPPORTED_VERSIONS_EXT );
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "Invalid supported version list length %" MBEDTLS_PRINTF_SIZET,
+                                    list_len ) );
+        return( MBEDTLS_ERR_SSL_DECODE_ERROR );
     }
 
-    while ( len > 0 )
+    while( len > 0 )
     {
-        list_len = buf[0];
-
-        /* length has to be at least 2 bytes long */
-        if( list_len < 2 )
-        {
-            MBEDTLS_SSL_DEBUG_MSG( 1, ( "ssl_parse_supported_versions_ext: Incorrect length" ) );
-            return( MBEDTLS_ERR_SSL_BAD_HS_SUPPORTED_VERSIONS_EXT );
-        }
-
-        /* skip length field */
-        buf++;
-
         mbedtls_ssl_read_version( &major_ver, &minor_ver, ssl->conf->transport, buf );
 
         /* In this implementation we only support TLS 1.3 and DTLS 1.3. */
         if( major_ver == MBEDTLS_SSL_MAJOR_VERSION_3 &&
             minor_ver == MBEDTLS_SSL_MINOR_VERSION_4 )
         {
-            /* we found a supported version */
-            goto found_version;
+            tls13_supported = 1;
+            break;
         }
-        else
-        {
-            /* if no match found, check next entry */
-            buf += 2;
-            len -= 3;
-        }
+
+        buf += 2;
+        len -= 2;
     }
 
-    /* If we got here then we have no version in common */
-    MBEDTLS_SSL_DEBUG_MSG( 1, ( "Unsupported version of TLS. Supported is [%d:%d]",
-                              ssl->conf->min_major_ver, ssl->conf->min_minor_ver ) );
+    if( tls13_supported == 0 )
+    {
+        /* When we support runtime negotiation of TLS 1.2 and TLS 1.3, we need
+         * a graceful fallback to TLS 1.2 in this case. */
 
-    SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_PROTOCOL_VERSION,
-                          MBEDTLS_ERR_SSL_BAD_PROTOCOL_VERSION );
-    return( MBEDTLS_ERR_SSL_BAD_PROTOCOL_VERSION );
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "TLS 1.3 is not supported by the client" ) );
 
-found_version:
+        SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_PROTOCOL_VERSION,
+                              MBEDTLS_ERR_SSL_BAD_PROTOCOL_VERSION );
+        return( MBEDTLS_ERR_SSL_BAD_PROTOCOL_VERSION );
+    }
 
     MBEDTLS_SSL_DEBUG_MSG( 1, ( "Negotiated version. Supported is [%d:%d]",
                               major_ver, minor_ver ) );
 
-    /* version in common */
     ssl->major_ver = major_ver;
     ssl->minor_ver = minor_ver;
     ssl->handshake->max_major_ver = ssl->major_ver;
