@@ -769,7 +769,7 @@ static int ssl_certificate_verify_write( mbedtls_ssl_context* ssl,
                 sig_alg = SIGNATURE_ECDSA_SECP384r1_SHA384;
                 break;
             default:
-                MBEDTLS_SSL_DEBUG_MSG( 3, ( "unknown key size: %d bits",
+                MBEDTLS_SSL_DEBUG_MSG( 3, ( "unknown key size: %" MBEDTLS_PRINTF_SIZET " bits",
                                own_key_size ) );
                 return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
         }
@@ -1481,7 +1481,7 @@ static int ssl_write_certificate_write( mbedtls_ssl_context* ssl,
         n = crt->raw.len;
         if( n > buflen - 3 - i )
         {
-            MBEDTLS_SSL_DEBUG_MSG( 1, ( "certificate too large, %d > %d",
+            MBEDTLS_SSL_DEBUG_MSG( 1, ( "certificate too large, %" MBEDTLS_PRINTF_SIZET " > %d",
                                         i + 3 + n, MBEDTLS_SSL_OUT_CONTENT_LEN ) );
             return( MBEDTLS_ERR_SSL_BUFFER_TOO_SMALL );
         }
@@ -1830,7 +1830,7 @@ static int ssl_read_certificate_parse( mbedtls_ssl_context* ssl,
     if( ( ssl->session_negotiate->peer_cert = mbedtls_calloc( 1,
                                                               sizeof( mbedtls_x509_crt ) ) ) == NULL )
     {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "alloc( %d bytes ) failed",
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "alloc( %" MBEDTLS_PRINTF_SIZET " bytes ) failed",
                                     sizeof( mbedtls_x509_crt ) ) );
         SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_INTERNAL_ERROR,
                               MBEDTLS_ERR_SSL_ALLOC_FAILED );
