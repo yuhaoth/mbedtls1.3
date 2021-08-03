@@ -2302,38 +2302,39 @@ static void ssl_debug_print_client_hello_exts( mbedtls_ssl_context *ssl )
 #endif /* MBEDTLS_ZERO_RTT*/
 }
 
+static int ssl_client_hello_has_exts( mbedtls_ssl_context *ssl,
+                                      int ext_id_mask )
+{
+    int masked = ssl->handshake->extensions_present & ext_id_mask;
+    return( masked == ext_id_mask );
+}
+
 static int ssl_client_hello_has_psk_extensions( mbedtls_ssl_context *ssl )
 {
-    if( ( ssl->handshake->extensions_present & MBEDTLS_SSL_EXT_PRE_SHARED_KEY ) &&
-        ( ssl->handshake->extensions_present & MBEDTLS_SSL_EXT_PSK_KEY_EXCHANGE_MODES ) )
-    {
-        return( 1 );
-    }
+    return( ssl_client_hello_has_exts( ssl,
+                MBEDTLS_SSL_EXT_PRE_SHARED_KEY |
+                MBEDTLS_SSL_EXT_PSK_KEY_EXCHANGE_MODES ) );
+}
 
-    return( 0 );
+static int ssl_client_hello_has_key_share_extensions( mbedtls_ssl_context *ssl )
+{
+    return( ssl_client_hello_has_exts( ssl,
+                          MBEDTLS_SSL_EXT_SUPPORTED_GROUPS |
+                          MBEDTLS_SSL_EXT_KEY_SHARE ) );
 }
 
 static int ssl_client_hello_has_cert_extensions( mbedtls_ssl_context *ssl )
 {
-    if( ( ssl->handshake->extensions_present & MBEDTLS_SSL_EXT_SUPPORTED_GROUPS )    &&
-        ( ssl->handshake->extensions_present & MBEDTLS_SSL_EXT_SIGNATURE_ALGORITHM ) &&
-        ( ssl->handshake->extensions_present & MBEDTLS_SSL_EXT_KEY_SHARE ) )
-    {
-        return( 1 );
-    }
-
-    return( 0 );
+    return( ssl_client_hello_has_exts( ssl,
+                          MBEDTLS_SSL_EXT_SUPPORTED_GROUPS |
+                          MBEDTLS_SSL_EXT_KEY_SHARE        |
+                          MBEDTLS_SSL_EXT_SIGNATURE_ALGORITHM ) );
 }
 
 static int ssl_client_hello_allows_psk_mode( mbedtls_ssl_context *ssl,
                                              unsigned psk_mode )
 {
-    if( ( ssl->handshake->key_exchange_modes & psk_mode ) != 0 )
-    {
-        return( 1 );
-    }
-
-    return( 0 );
+    return( ( ssl->handshake->key_exchange_modes & psk_mode ) != 0 );
 }
 
 static int ssl_client_hello_allows_pure_psk( mbedtls_ssl_context *ssl )
@@ -2364,7 +2365,8 @@ static int ssl_check_psk_key_exchange( mbedtls_ssl_context *ssl )
 
     /* Test whether PSK-ECDHE is offered by client and supported by us. */
     if( mbedtls_ssl_conf_tls13_psk_ecdhe_enabled( ssl ) &&
-        ssl_client_hello_allows_psk_ecdhe( ssl ) )
+        ssl_client_hello_allows_psk_ecdhe( ssl )        &&
+        ssl_client_hello_has_key_share_extensions( ssl ) )
     {
         MBEDTLS_SSL_DEBUG_MSG( 3, ( "Using a ECDHE-PSK key exchange" ) );
         ssl->handshake->key_exchange = MBEDTLS_KEY_EXCHANGE_ECDHE_PSK;
