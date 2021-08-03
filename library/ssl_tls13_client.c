@@ -2281,8 +2281,7 @@ static int ssl_certificate_request_coordinate( mbedtls_ssl_context* ssl )
     int ret;
     mbedtls_mps_handshake_in msg;
 
-    if( ssl->handshake->key_exchange == MBEDTLS_KEY_EXCHANGE_PSK ||
-        ssl->handshake->key_exchange == MBEDTLS_KEY_EXCHANGE_ECDHE_PSK )
+    if( mbedtls_ssl_tls13_kex_with_psk( ssl ) )
     {
         MBEDTLS_SSL_DEBUG_MSG( 3, ( "<= skip parse certificate request" ) );
         return( SSL_CERTIFICATE_REQUEST_SKIP );
@@ -2314,8 +2313,7 @@ static int ssl_certificate_request_coordinate( mbedtls_ssl_context* ssl )
 {
     int ret;
 
-    if( ssl->handshake->key_exchange == MBEDTLS_KEY_EXCHANGE_PSK ||
-        ssl->handshake->key_exchange == MBEDTLS_KEY_EXCHANGE_ECDHE_PSK )
+    if( mbedtls_ssl_tls13_kex_with_psk( ssl ) )
     {
         MBEDTLS_SSL_DEBUG_MSG( 3, ( "<= skip parse certificate request" ) );
         return( SSL_CERTIFICATE_REQUEST_SKIP );
@@ -3317,12 +3315,12 @@ static int ssl_server_hello_postprocess( mbedtls_ssl_context* ssl )
     if( ssl->handshake->extensions_present & MBEDTLS_SSL_EXT_PRE_SHARED_KEY )
     {
         if( ssl->handshake->extensions_present & MBEDTLS_SSL_EXT_KEY_SHARE )
-            ssl->handshake->key_exchange = MBEDTLS_KEY_EXCHANGE_ECDHE_PSK;
+            ssl->handshake->key_exchange = MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_DHE_KE;
         else
-            ssl->handshake->key_exchange = MBEDTLS_KEY_EXCHANGE_PSK;
+            ssl->handshake->key_exchange = MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_KE;
     }
     else if( ssl->handshake->extensions_present & MBEDTLS_SSL_EXT_KEY_SHARE )
-        ssl->handshake->key_exchange = MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA;
+        ssl->handshake->key_exchange = MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_ECDHE_ECDSA;
     else
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "Unknown key exchange." ) );

@@ -636,7 +636,7 @@ static int ssl_write_certificate_verify_coordinate( mbedtls_ssl_context* ssl )
     int have_own_cert = 1;
     int ret;
 
-    if( mbedtls_ssl_tls13_key_exchange_with_psk( ssl ) )
+    if( mbedtls_ssl_tls13_kex_with_psk( ssl ) )
     {
         MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= skip write certificate verify" ) );
         return( SSL_WRITE_CERTIFICATE_VERIFY_SKIP );
@@ -1024,10 +1024,8 @@ cleanup:
 
 static int ssl_read_certificate_verify_coordinate( mbedtls_ssl_context* ssl )
 {
-    if( ssl->handshake->key_exchange != MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA )
-    {
+    if( mbedtls_ssl_tls13_kex_with_psk( ssl ) )
         return( SSL_CERTIFICATE_VERIFY_SKIP );
-    }
 
 #if !defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
     MBEDTLS_SSL_DEBUG_MSG( 1, ( "should never happen" ) );
@@ -1369,8 +1367,7 @@ static int ssl_write_certificate_coordinate( mbedtls_ssl_context* ssl )
 #endif /* MBEDTLS_SSL_CLI_C */
 
     /* For PSK and ECDHE-PSK ciphersuites there is no certificate to exchange. */
-    if( ssl->handshake->key_exchange == MBEDTLS_KEY_EXCHANGE_PSK ||
-        ssl->handshake->key_exchange == MBEDTLS_KEY_EXCHANGE_ECDHE_PSK )
+    if( mbedtls_ssl_tls13_kex_with_psk( ssl ) )
     {
         MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= skip write certificate" ) );
         return( SSL_WRITE_CERTIFICATE_SKIP );
@@ -1712,11 +1709,8 @@ static int ssl_read_certificate_coordinate( mbedtls_ssl_context* ssl )
     }
 #endif /* MBEDTLS_SSL_SRV_C */
 
-    if( ssl->handshake->key_exchange == MBEDTLS_KEY_EXCHANGE_PSK ||
-        ssl->handshake->key_exchange == MBEDTLS_KEY_EXCHANGE_ECDHE_PSK )
-    {
+    if( mbedtls_ssl_tls13_kex_with_psk( ssl ) )
         return( SSL_CERTIFICATE_SKIP );
-    }
 
 #if !defined(MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED)
     ( ( void )authmode );
