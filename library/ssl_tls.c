@@ -3142,6 +3142,29 @@ void mbedtls_ssl_init( mbedtls_ssl_context *ssl )
     memset( ssl, 0, sizeof( mbedtls_ssl_context ) );
 }
 
+static int ssl_conf_check(const mbedtls_ssl_context *ssl)
+{
+
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+
+    if( ssl_conf_is_tls13_only(ssl->conf) )
+    {
+        MBEDTLS_SSL_DEBUG_MSG( 4, ("ssl->conf is tls13 only."));
+        return( 0 );
+    }
+#endif
+
+#if defined(MBEDTLS_SSL_PROTO_TLS1_2)
+    if( ssl_conf_is_tls12_only(ssl->conf) )
+    {
+        MBEDTLS_SSL_DEBUG_MSG( 4, ("ssl->conf is tls12 only."));
+        return( 0 );
+    }
+#endif
+    MBEDTLS_SSL_DEBUG_MSG( 4, ("ssl->conf is invalid."));
+    return( 1 );
+}
+
 /*
  * Setup an SSL context
  */
@@ -3154,6 +3177,9 @@ int mbedtls_ssl_setup( mbedtls_ssl_context *ssl,
     size_t out_buf_len = MBEDTLS_SSL_OUT_BUFFER_LEN;
 
     ssl->conf = conf;
+
+    if( ssl_conf_check(ssl) != 0 )
+        return( MBEDTLS_ERR_SSL_BAD_CONFIG );
 
     /*
      * Prepare base structures
