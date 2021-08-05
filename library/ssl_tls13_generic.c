@@ -39,6 +39,8 @@
 #include "ssl_misc.h"
 #include "ssl_tls13_keys.h"
 
+#include "ecp_internal.h"
+
 #include "mbedtls/oid.h"
 
 #if defined(MBEDTLS_PLATFORM_C)
@@ -2957,8 +2959,8 @@ int mbedtls_ecdh_read_tls_13_params( mbedtls_ecdh_context *ctx,
     ECDH_VALIDATE_RET( *buf != NULL );
     ECDH_VALIDATE_RET( end != NULL );
 
-    if( ( ret = mbedtls_ecp_tls_13_read_group_id( &grp_id, buf, end - *buf ) )
-            != 0 )
+    ret = mbedtls_ecp_tls_read_named_curve( &grp_id, buf, end - *buf );
+    if( ret != 0 )
         return( ret );
 
     if( ( ret = mbedtls_ecdh_setup( ctx, grp_id ) ) != 0 )
@@ -3162,37 +3164,6 @@ int mbedtls_ecp_tls_13_write_point( const mbedtls_ecp_group *grp, const mbedtls_
     *buf++ = (unsigned char)( ( *olen >> 8 ) & 0xFF );
     *buf++ = (unsigned char)( ( *olen ) & 0xFF );
     *olen += 2;
-
-    return( 0 );
-}
-
-/*
- * Read a group id from an ECParameters record (TLS 1.3) and convert it to
- * mbedtls_ecp_group_id.
- */
-int mbedtls_ecp_tls_13_read_group_id( mbedtls_ecp_group_id *grp,
-                                   const unsigned char **buf, size_t len )
-{
-    uint16_t tls_id;
-    const mbedtls_ecp_curve_info *curve_info;
-    ECP_VALIDATE_RET( grp  != NULL );
-    ECP_VALIDATE_RET( buf  != NULL );
-    ECP_VALIDATE_RET( *buf != NULL );
-
-    if( len < 2 )
-        return( MBEDTLS_ERR_ECP_BAD_INPUT_DATA );
-
-    /*
-     * Next two bytes are the namedcurve value
-     */
-    tls_id = *(*buf)++;
-    tls_id <<= 8;
-    tls_id |= *(*buf)++;
-
-    if( ( curve_info = mbedtls_ecp_curve_info_from_tls_id( tls_id ) ) == NULL )
-        return( MBEDTLS_ERR_ECP_FEATURE_UNAVAILABLE );
-
-    *grp = curve_info->grp_id;
 
     return( 0 );
 }

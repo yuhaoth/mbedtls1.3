@@ -1929,29 +1929,6 @@ int mbedtls_ecp_tls_13_write_point( const mbedtls_ecp_group *grp,
 
 
 /**
- * \brief           This function extracts an elliptic curve group ID from a
- *                  TLS ECParameters record as defined in TLS 1.3.
- *
- * \note            The read pointer \p buf is updated to point right after
- *                  the ECParameters record on exit.
- *
- * \param grp       The address at which to store the group id.
- *                  This must not be \c NULL.
- * \param buf       The address of the pointer to the start of the input buffer.
- * \param len       The length of the input buffer \c *buf in Bytes.
- *
- * \return          \c 0 on success.
- * \return          #MBEDTLS_ERR_ECP_BAD_INPUT_DATA if input is invalid.
- * \return          #MBEDTLS_ERR_ECP_FEATURE_UNAVAILABLE if the group is not
- *                  recognized.
- * \return          Another negative error code on other kinds of failure.
- */
-int mbedtls_ecp_tls_13_read_group_id( mbedtls_ecp_group_id *grp,
-                                   const unsigned char **buf,
-                                   size_t len );
-
-
-/**
  * \brief           This function exports an elliptic curve as a TLS
  *                  ECParameters record as defined in TLS 1.3.
  *
