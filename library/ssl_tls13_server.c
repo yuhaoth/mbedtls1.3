@@ -1037,14 +1037,13 @@ static int ssl_parse_servername_ext( mbedtls_ssl_context *ssl,
 
 #if defined(MBEDTLS_SSL_MAX_FRAGMENT_LENGTH)
 static int ssl_parse_max_fragment_length_ext( mbedtls_ssl_context *ssl,
-                                             const unsigned char *buf,
-                                             size_t len )
+                                              const unsigned char *buf,
+                                              size_t len )
 {
-    if( len != 1 || buf[0] >= MBEDTLS_SSL_MAX_FRAG_LEN_INVALID )
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad client hello message" ) );
-        return( MBEDTLS_ERR_SSL_BAD_HS_CLIENT_HELLO );
-    }
+    if( len != 1 )
+        return( MBEDTLS_ERR_SSL_DECODE_ERROR );
+    if( buf[0] >= MBEDTLS_SSL_MAX_FRAG_LEN_INVALID )
+        return( MBEDTLS_ERR_SSL_ILLEGAL_PARAMETER );
 
     ssl->session_negotiate->mfl_code = buf[0];
     MBEDTLS_SSL_DEBUG_MSG( 3, ( "Maximum fragment length = %d", buf[0] ) );
