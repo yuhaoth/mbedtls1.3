@@ -36,6 +36,8 @@
 #include "ssl_misc.h"
 #include "ssl_tls13_keys.h"
 
+#include "ecp_internal.h"
+
 #include <string.h>
 
 #if defined(MBEDTLS_PLATFORM_C)
@@ -2067,11 +2069,7 @@ static int ssl_parse_key_shares_ext( mbedtls_ssl_context *ssl,
                                      const unsigned char *buf,
                                      size_t len ) {
 
-    int ret = 0;
-    int named_group;
-    int i;
-    const mbedtls_ecp_curve_info *curve_info;
-    int match_found = 0;
+    int ret = 0, i, match_found;
     mbedtls_ecp_group_id their_gid;
 
     /* Note: When we introduce non-ECP key shares, e.g. from PQC,
@@ -2086,14 +2084,13 @@ static int ssl_parse_key_shares_ext( mbedtls_ssl_context *ssl,
     len -= 2;
 
     /* Check if chosen group matches one of the offered key shares. */
-    for( i=0;
-         ssl->handshake->key_shares_curve_list[i] != MBEDTLS_ECP_DP_NONE;
+    match_found = 0;
+    for( i=0; ssl->handshake->key_shares_curve_list[i] != MBEDTLS_ECP_DP_NONE;
          i++ )
     {
         mbedtls_ecp_group_id our_gid = ssl->handshake->key_shares_curve_list[i];
         if( our_gid != their_gid )
             continue;
-
         match_found = 1;
         break;
     }
