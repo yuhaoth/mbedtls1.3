@@ -1279,16 +1279,6 @@ struct mbedtls_ssl_config
     mbedtls_ssl_cache_set_t *MBEDTLS_PRIVATE(f_set_cache);
     void *MBEDTLS_PRIVATE(p_cache);                  /*!< context for cache callbacks        */
 
-    /* Ephemeral ECC key pair(s) for use with the key share extension
-     * Provided by the client during the ClientHello, and when used for
-     * the session copied to the ssl->handshake->ecdh_ctx.
-     * This structure is only used by the client since he may offer
-     * multiple key shares to the server.
-    */
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && defined(MBEDTLS_ECDH_C) && defined(MBEDTLS_SSL_CLI_C)
-    mbedtls_ecdh_context keyshare_ctx;
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL && MBEDTLS_ECDH_C && MBEDTLS_SSL_CLI_C */
-
 #if defined(MBEDTLS_SSL_SERVER_NAME_INDICATION)
     /** Callback for setting cert according to SNI extension                */
     int (*MBEDTLS_PRIVATE(f_sni))(void *, mbedtls_ssl_context *, const unsigned char *, size_t);
