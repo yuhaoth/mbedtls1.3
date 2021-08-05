@@ -2639,7 +2639,7 @@ static int ssl_client_hello_parse( mbedtls_ssl_context* ssl,
                 if( ret != 0 )
                 {
                     MBEDTLS_SSL_DEBUG_RET( 1, "ssl_parse_early_data_ext", ret );
-                    return( MBEDTLS_ERR_SSL_BAD_HS_SUPPORTED_GROUPS );
+                    return( ret );
                 }
 
                 ssl->handshake->extensions_present |= MBEDTLS_SSL_EXT_EARLY_DATA;
@@ -2661,7 +2661,7 @@ static int ssl_client_hello_parse( mbedtls_ssl_context* ssl,
                 if( ret != 0 )
                 {
                     MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_parse_supported_groups_ext", ret );
-                    return( MBEDTLS_ERR_SSL_BAD_HS_SUPPORTED_GROUPS );
+                    return( ret );
                 }
 
                 ssl->handshake->extensions_present |= MBEDTLS_SSL_EXT_SUPPORTED_GROUPS;
@@ -2676,7 +2676,7 @@ static int ssl_client_hello_parse( mbedtls_ssl_context* ssl,
                 if( ret != 0 )
                 {
                     MBEDTLS_SSL_DEBUG_RET( 1, "ssl_parse_key_exchange_modes_ext", ret );
-                    return( MBEDTLS_ERR_SSL_BAD_HS_PSK_KEY_EXCHANGE_MODES_EXT );
+                    return( ret );
                 }
 
                 ssl->handshake->extensions_present |= MBEDTLS_SSL_EXT_PSK_KEY_EXCHANGE_MODES;
@@ -2716,7 +2716,7 @@ static int ssl_client_hello_parse( mbedtls_ssl_context* ssl,
                 if( ret != 0 )
                 {
                     MBEDTLS_SSL_DEBUG_RET( 1, ( "ssl_parse_max_fragment_length_ext" ), ret );
-                    return( MBEDTLS_ERR_SSL_BAD_HS_MAX_FRAGMENT_LENGTH_EXT );
+                    return( ret );
                 }
                 ssl->handshake->extensions_present |= MAX_FRAGMENT_LENGTH_EXTENSION;
                 break;
@@ -2729,7 +2729,7 @@ static int ssl_client_hello_parse( mbedtls_ssl_context* ssl,
                 if( ret != 0 )
                 {
                     MBEDTLS_SSL_DEBUG_RET( 1, ( "ssl_parse_supported_versions_ext" ), ret );
-                    return( MBEDTLS_ERR_SSL_BAD_HS_SUPPORTED_VERSIONS_EXT );
+                    return( ret );
                 }
                 ssl->handshake->extensions_present |= MBEDTLS_SSL_EXT_SUPPORTED_VERSION;
                 break;
@@ -2742,7 +2742,7 @@ static int ssl_client_hello_parse( mbedtls_ssl_context* ssl,
                 if( ret != 0 )
                 {
                     MBEDTLS_SSL_DEBUG_RET( 1, ( "ssl_parse_alpn_ext" ), ret );
-                    return( MBEDTLS_ERR_SSL_BAD_HS_ALPN_EXT );
+                    return( ret );
                 }
                 ssl->handshake->extensions_present |= ALPN_EXTENSION;
                 break;
@@ -3452,7 +3452,7 @@ static int ssl_write_hello_retry_request_coordinate( mbedtls_ssl_context *ssl )
     if( ssl->handshake->hello_retry_requests_sent > 1 )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "Too many HRRs" ) );
-        return( MBEDTLS_ERR_SSL_BAD_HS_TOO_MANY_HRR );
+        return( MBEDTLS_ERR_SSL_HANDSHAKE_FAILURE );
     }
 
     return( 0 );
