@@ -121,8 +121,8 @@
 #define MBEDTLS_ERR_SSL_CONTINUE_PROCESSING               -0x6580  /**< Internal-only message signaling that further message-processing should be done */
 #define MBEDTLS_ERR_SSL_ASYNC_IN_PROGRESS                 -0x6500  /**< The asynchronous operation is not completed yet. */
 #define MBEDTLS_ERR_SSL_EARLY_MESSAGE                     -0x6480  /**< Internal-only message signaling that a message arrived early. */
-/* Error space gap */
-/* Error space gap */
+#define MBEDTLS_ERR_SSL_HRR_REQUIRED                      -0x6400  /**< Server needs to send a HelloRetryRequest */
+#define MBEDTLS_ERR_SSL_RECEIVED_NEW_SESSION_TICKET       -0x6380  /**< Received NewSessionTicket Post Handshake Message */
 /* Error space gap */
 /* Error space gap */
 /* Error space gap */
@@ -132,23 +132,6 @@
 #define MBEDTLS_ERR_SSL_UNEXPECTED_CID                    -0x6000  /**< An encrypted DTLS-frame with an unexpected CID was received. */
 #define MBEDTLS_ERR_SSL_VERSION_MISMATCH                  -0x5F00  /**< An operation failed due to an unexpected version or configuration. */
 #define MBEDTLS_ERR_SSL_BAD_CONFIG                        -0x5E80  /**< Invalid value in SSL config */
-#define MBEDTLS_ERR_SSL_BAD_HS_CLIENT_KEY_SHARE           -0x6781  /**< Problem encountered with the key share provided by the client. */
-#define MBEDTLS_ERR_SSL_BAD_HS_SUPPORTED_GROUPS           -0x6782  /**< Problem encountered with the supported group extension provided by the client. */
-#define MBEDTLS_ERR_SSL_BAD_HS_SERVER_KEY_SHARE           -0x6783  /**< Problem encountered with the key share provided by the server. */
-#define MBEDTLS_ERR_SSL_BAD_HS_WRONG_KEY_SHARE            -0x6784  /**< The key share provided by the client does not match a group supported by the server. A Hello Retry Request will be needed. */
-#define MBEDTLS_ERR_SSL_BAD_HS_MAX_FRAGMENT_LENGTH_EXT    -0x6785  /**< Problem encountered with the max fragment length extension provided by the client. */
-#define MBEDTLS_ERR_SSL_BAD_HS_ALPN_EXT                   -0x6786  /**< Problem encountered with the ALPN extension provided by the client. */
-#define MBEDTLS_ERR_SSL_BAD_HS_SERVERNAME_EXT             -0x6787  /**< Problem encountered with the ServerName extension provided by the client. */
-#define MBEDTLS_ERR_SSL_BAD_HS_PRE_SHARED_KEY_EXT         -0x6788  /**< Problem encountered with the Pre-Shared-Key extension provided by the client. */
-#define MBEDTLS_ERR_SSL_BAD_HS_COOKIE_EXT                 -0x6789  /**< Problem encountered with the cookie extension provided by the client. */
-#define MBEDTLS_ERR_SSL_HRR_REQUIRED                      -0x6790  /**< Server needs to send a HelloRetryRequest */
-#define MBEDTLS_ERR_SSL_BAD_HS_UNKNOWN_MSG                -0x6791  /**< Case where an unknown handshake message was received */
-#define MBEDTLS_ERR_SSL_BAD_HS_TOO_MANY_HRR               -0x6792  /**< Too many Hello Retry Request messages received */
-#define MBEDTLS_ERR_SSL_BAD_HS_SUPPORTED_VERSIONS_EXT     -0x6793  /**< Problem encountered with the supported versions extension */
-#define MBEDTLS_ERR_SSL_BAD_HS_PSK_KEY_EXCHANGE_MODES_EXT -0x6794  /**< Problem encountered with the psk key exchange modes extension */
-#define MBEDTLS_ERR_SSL_BAD_HS_MISSING_EXTENSION_EXT      -0x6795  /**< Missing extension. */
-#define MBEDTLS_ERR_SSL_RECEIVED_NEW_SESSION_TICKET       -0x6796  /**< Received NewSessionTicket Post Handshake Message */
-#define MBEDTLS_ERR_SSL_BAD_HS_CID_EXT                    -0x6797  /**< Received invalid CID extension */
 
 #define MBEDTLS_ERR_LAST 0x7F80 /**< This definition points to the last error code to have a correct parsing in error.c */
 
