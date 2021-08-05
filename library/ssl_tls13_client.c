@@ -4343,9 +4343,10 @@ int mbedtls_ssl_handshake_client_step_tls1_3( mbedtls_ssl_context *ssl )
             /* if we received a second HRR we abort */
             if( ssl->handshake->hello_retry_requests_received == 2 )
             {
-                MBEDTLS_SSL_DEBUG_MSG( 1, ( "Too many HelloRetryRequests received from server; I give up." ) );
-                mbedtls_ssl_send_alert_message( ssl, MBEDTLS_SSL_ALERT_LEVEL_FATAL, MBEDTLS_SSL_ALERT_MSG_UNEXPECTED_MESSAGE );
-                return ( MBEDTLS_ERR_SSL_BAD_HS_TOO_MANY_HRR );
+                MBEDTLS_SSL_DEBUG_MSG( 1, ( "Multiple HRRs received" ) );
+                SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_LEVEL_FATAL,
+                                      MBEDTLS_SSL_ALERT_MSG_HANDSHAKE_FAILURE );
+                return( MBEDTLS_ERR_SSL_HANDSHAKE_FAILURE );
             }
             mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_ENCRYPTED_EXTENSIONS );
             break;

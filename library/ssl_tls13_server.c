@@ -224,15 +224,17 @@ static int check_ecdh_params( const mbedtls_ssl_context *ssl )
 #if ( defined(MBEDTLS_ECDH_C) || defined(MBEDTLS_ECDSA_C) )
 
 
-/*
-  mbedtls_ssl_parse_supported_groups_ext( ) processes the received
-  supported groups extension and copies the client provided
-  groups into ssl->handshake->curves.
-
-  Possible response values are:
-  - MBEDTLS_ERR_SSL_BAD_HS_SUPPORTED_GROUPS
-  - MBEDTLS_ERR_SSL_ALLOC_FAILED
-*/
+/* This function parses the TLS 1.3 supported_groups extension and
+ * stores the received groups in ssl->handshake->curves.
+ *
+ * From RFC 8446:
+ *   enum {
+ *       ... (0xFFFF)
+ *   } NamedGroup;
+ *   struct {
+ *       NamedGroup named_group_list<2..2^16-1>;
+ *   } NamedGroupList;
+ */
 int mbedtls_ssl_parse_supported_groups_ext(
     mbedtls_ssl_context *ssl,
     const unsigned char *buf, size_t len ) {
@@ -241,23 +243,22 @@ int mbedtls_ssl_parse_supported_groups_ext(
     const unsigned char *p;
     const mbedtls_ecp_curve_info *curve_info, **curves;
 
-    MBEDTLS_SSL_DEBUG_BUF( 3, "Received supported groups", buf, len );
+    MBEDTLS_SSL_DEBUG_BUF( 3, "supported_groups extension", buf, len );
 
     list_size = ( ( buf[0] << 8 ) | ( buf[1] ) );
-    if( list_size + 2 != len ||
-        list_size % 2 != 0 )
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad supported groups extension" ) );
+    if( list_size + 2 != len || list_size % 2 != 0 )
         return( MBEDTLS_ERR_SSL_DECODE_ERROR );
+
+    /* TODO: At the moment, this can happen when receiving a second
+     *       ClientHello after an HRR. We should properly reset the
+     *       state upon receiving an HRR, in which case we should
+     *       not observe handshake->curves already being allocated. */
+    if( ssl->handshake->curves != NULL )
+    {
+        mbedtls_free( ssl->handshake->curves );
+        ssl->handshake->curves = NULL;
     }
 
-    /* Should never happen unless client duplicates the extension */
-    /*	if( ssl->handshake->curves != NULL )
-	{
-	MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad supported groups extension" ) );
-	return( MBEDTLS_ERR_SSL_BAD_HS_SUPPORTED_GROUPS );
-	}
-    */
     /* Don't allow our peer to make us allocate too much memory,
      * and leave room for a final 0 */
     our_size = list_size / 2 + 1;
@@ -265,30 +266,24 @@ int mbedtls_ssl_parse_supported_groups_ext(
         our_size = MBEDTLS_ECP_DP_MAX;
 
     if( ( curves = mbedtls_calloc( our_size, sizeof( *curves ) ) ) == NULL )
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "mbedtls_calloc failed" ) );
         return( MBEDTLS_ERR_SSL_ALLOC_FAILED );
-    }
 
     ssl->handshake->curves = curves;
 
     p = buf + 2;
     while ( list_size > 0 && our_size > 1 )
     {
-        curve_info = mbedtls_ecp_curve_info_from_tls_id( ( p[0] << 8 ) | p[1] );
+        uint16_t tls_grp_id = p[0] << 8 | p[1];
+        curve_info = mbedtls_ecp_curve_info_from_tls_id( tls_grp_id );
 
-        /*
-          mbedtls_ecp_curve_info_from_tls_id( ) uses the mbedtls_ecp_curve_info
-          data structure ( defined in ecp.c ), which only includes the list of
-          curves implemented. Hence, we only add curves that are also supported
-          and implemented by the server.
-        */
-
+        /* mbedtls_ecp_curve_info_from_tls_id() uses the mbedtls_ecp_curve_info
+         * data structure (defined in ecp.c), which only includes the list of
+         * curves implemented. Hence, we only add curves that are also supported
+         * and implemented by the server. */
         if( curve_info != NULL )
         {
             *curves++ = curve_info;
             MBEDTLS_SSL_DEBUG_MSG( 4, ( "supported curve: %s", curve_info->name ) );
-
             our_size--;
         }
 
@@ -300,6 +295,29 @@ int mbedtls_ssl_parse_supported_groups_ext(
 
 }
 #endif /* MBEDTLS_ECDH_C || ( MBEDTLS_ECDSA_C */
+
+#if defined(MBEDTLS_ZERO_RTT)
+static int ssl_parse_early_data_ext( mbedtls_ssl_context *ssl,
+                                     const unsigned char *buf,
+                                     size_t len )
+{
+    ((void) ssl);
+    ((void) buf);
+    /* From RFC 8446:
+     *  struct {} Empty;
+     *  struct {
+     *     select (Handshake.msg_type) {
+     *         case new_session_ticket:   uint32 max_early_data_size;
+     *         case client_hello:         Empty;
+     *         case encrypted_extensions: Empty;
+     *     };
+     * } EarlyDataIndication;
+     */
+    if( len != 0 )
+        return( MBEDTLS_ERR_SSL_DECODE_ERROR );
+    return( 0 );
+}
+#endif /* MBEDTLS_ZERO_RTT */
 
 #if ( defined(MBEDTLS_ECDH_C) || defined(MBEDTLS_ECDSA_C) )
 
@@ -366,8 +384,7 @@ static int ssl_parse_key_shares_ext( mbedtls_ssl_context *ssl,
          *
          *       Play safe for now and treat any error as fatal here. */
         if( ret != 0 )
-            return( MBEDTLS_ERR_SSL_BAD_HS_CLIENT_KEY_SHARE );
-
+            return( MBEDTLS_ERR_SSL_HANDSHAKE_FAILURE );
 
         /* Check if we support the curve chosen by the client. */
         for ( gid = ssl->conf->curve_list; *gid != MBEDTLS_ECP_DP_NONE; gid++ )
@@ -971,13 +988,12 @@ static int ssl_parse_cookie_ext( mbedtls_ssl_context *ssl,
 
 #if defined(MBEDTLS_SSL_SERVER_NAME_INDICATION)
 static int ssl_parse_servername_ext( mbedtls_ssl_context *ssl,
-                                    const unsigned char *buf,
-                                    size_t len )
+                                     const unsigned char *buf,
+                                     size_t len )
 {
     int ret;
     size_t servername_list_size, hostname_len;
     const unsigned char *p;
-
 
     if( ssl->conf->p_sni == NULL )
     {
@@ -1048,14 +1064,13 @@ static int ssl_parse_servername_ext( mbedtls_ssl_context *ssl,
 
 #if defined(MBEDTLS_SSL_MAX_FRAGMENT_LENGTH)
 static int ssl_parse_max_fragment_length_ext( mbedtls_ssl_context *ssl,
-                                             const unsigned char *buf,
-                                             size_t len )
+                                              const unsigned char *buf,
+                                              size_t len )
 {
-    if( len != 1 || buf[0] >= MBEDTLS_SSL_MAX_FRAG_LEN_INVALID )
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad client hello message" ) );
-        return( MBEDTLS_ERR_SSL_BAD_HS_CLIENT_HELLO );
-    }
+    if( len != 1 )
+        return( MBEDTLS_ERR_SSL_DECODE_ERROR );
+    if( buf[0] >= MBEDTLS_SSL_MAX_FRAG_LEN_INVALID )
+        return( MBEDTLS_ERR_SSL_ILLEGAL_PARAMETER );
 
     ssl->session_negotiate->mfl_code = buf[0];
     MBEDTLS_SSL_DEBUG_MSG( 3, ( "Maximum fragment length = %d", buf[0] ) );
@@ -1239,9 +1254,12 @@ static int ssl_parse_supported_versions_ext( mbedtls_ssl_context *ssl,
 static int ssl_parse_alpn_ext( mbedtls_ssl_context *ssl,
                               const unsigned char *buf, size_t len )
 {
-    size_t list_len, cur_len, ours_len;
-    const unsigned char *theirs, *start, *end;
-    const char **ours;
+    const unsigned char *end const = buf + len;
+    size_t list_len;
+
+    const char **cur_ours;
+    const unsigned char *cur_cli;
+    size_t cur_cli_len;
 
     /* If ALPN not configured, just ignore the extension */
     if( ssl->conf->alpn_list == NULL )
@@ -1255,47 +1273,46 @@ static int ssl_parse_alpn_ext( mbedtls_ssl_context *ssl,
      * } ProtocolNameList;
      */
 
-    /* Min length is 2 ( list_len ) + 1 ( name_len ) + 1 ( name ) */
-    if( len < 4 )
-        return( MBEDTLS_ERR_SSL_BAD_HS_CLIENT_HELLO );
-
+    if( len < 2 )
+        return( MBEDTLS_ERR_SSL_DECODE_ERROR );
     list_len = ( buf[0] << 8 ) | buf[1];
     if( list_len != len - 2 )
-        return( MBEDTLS_ERR_SSL_BAD_HS_CLIENT_HELLO );
+        return( MBEDTLS_ERR_SSL_DECODE_ERROR );
 
-    /*
-     * Use our order of preference
-     */
-    start = buf + 2;
-    end = buf + len;
-    for ( ours = ssl->conf->alpn_list; *ours != NULL; ours++ )
+    buf += 2;
+    len -= 2;
+
+    /* Validate peer's list (lengths) */
+    for( cur_cli = buf; cur_cli != end; cur_cli += cur_cli_len )
     {
-        ours_len = strlen( *ours );
-        for ( theirs = start; theirs != end; theirs += cur_len )
+        cur_cli_len = *cur_cli++;
+        if( cur_cli_len > (size_t)( end - cur_cli ) )
+            return( MBEDTLS_ERR_SSL_DECODE_ERROR );
+        if( cur_cli_len == 0 )
+            return( MBEDTLS_ERR_SSL_ILLEGAL_PARAMETER );
+    }
+
+    /* Use our order of preference */
+    for( cur_ours = ssl->conf->alpn_list; *cur_ours != NULL; cur_ours++ )
+    {
+        size_t const cur_ours_len = strlen( *cur_ours );
+        for( cur_cli = buf; cur_cli != end; cur_cli += cur_cli_len )
         {
-            /* If the list is well formed, we should get equality first */
-            if( theirs > end )
-                return( MBEDTLS_ERR_SSL_BAD_HS_CLIENT_HELLO );
+            cur_cli_len = *cur_cli++;
 
-            cur_len = *theirs++;
-
-            /* Empty strings MUST NOT be included */
-            if( cur_len == 0 )
-                return( MBEDTLS_ERR_SSL_BAD_HS_CLIENT_HELLO );
-
-            if( cur_len == ours_len &&
-                memcmp( theirs, *ours, cur_len ) == 0 )
+            if( cur_cli_len == cur_ours_len &&
+                memcmp( cur_cli, *cur_ours, cur_len ) == 0 )
             {
-                ssl->alpn_chosen = *ours;
+                ssl->alpn_chosen = *cur_ours;
                 return( 0 );
             }
         }
     }
 
-    /* If we get there, no match was found */
-    mbedtls_ssl_send_alert_message( ssl, MBEDTLS_SSL_ALERT_LEVEL_FATAL,
-                                   MBEDTLS_SSL_ALERT_MSG_NO_APPLICATION_PROTOCOL );
-    return( MBEDTLS_ERR_SSL_BAD_HS_CLIENT_HELLO );
+    /* If we get hhere, no match was found */
+    SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_LEVEL_FATAL,
+                          MBEDTLS_SSL_ALERT_MSG_NO_APPLICATION_PROTOCOL );
+    return( MBEDTLS_ERR_SSL_NO_APPLICATION_PROTOCOL );
 }
 #endif /* MBEDTLS_SSL_ALPN */
 
@@ -2576,7 +2593,7 @@ static int ssl_client_hello_parse( mbedtls_ssl_context* ssl,
                 if( ret != 0 )
                 {
                     MBEDTLS_SSL_DEBUG_RET( 1, "ssl_parse_servername_ext", ret );
-                    return( MBEDTLS_ERR_SSL_BAD_HS_SERVERNAME_EXT );
+                    return( ret );
                 }
                 ssl->handshake->extensions_present |= MBEDTLS_SSL_EXT_SERVERNAME;
                 break;
@@ -2618,14 +2635,13 @@ static int ssl_client_hello_parse( mbedtls_ssl_context* ssl,
             case MBEDTLS_TLS_EXT_EARLY_DATA:
                 MBEDTLS_SSL_DEBUG_MSG( 3, ( "found early_data extension" ) );
 
-                /* There is nothing really to process with this extension.
+                ret = ssl_parse_early_data_ext( ssl, ext + 4, ext_size );
+                if( ret != 0 )
+                {
+                    MBEDTLS_SSL_DEBUG_RET( 1, "ssl_parse_early_data_ext", ret );
+                    return( ret );
+                }
 
-                   ret = ssl_parse_early_data_ext( ssl, ext + 4, ext_size );
-                   if( ret != 0 ) {
-                   MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_parse_supported_groups_ext", ret );
-                   return( MBEDTLS_ERR_SSL_BAD_HS_SUPPORTED_GROUPS );
-                   }
-                */
                 ssl->handshake->extensions_present |= MBEDTLS_SSL_EXT_EARLY_DATA;
                 break;
 #endif /* MBEDTLS_ZERO_RTT */
@@ -2645,7 +2661,7 @@ static int ssl_client_hello_parse( mbedtls_ssl_context* ssl,
                 if( ret != 0 )
                 {
                     MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_parse_supported_groups_ext", ret );
-                    return( MBEDTLS_ERR_SSL_BAD_HS_SUPPORTED_GROUPS );
+                    return( ret );
                 }
 
                 ssl->handshake->extensions_present |= MBEDTLS_SSL_EXT_SUPPORTED_GROUPS;
@@ -2660,7 +2676,7 @@ static int ssl_client_hello_parse( mbedtls_ssl_context* ssl,
                 if( ret != 0 )
                 {
                     MBEDTLS_SSL_DEBUG_RET( 1, "ssl_parse_key_exchange_modes_ext", ret );
-                    return( MBEDTLS_ERR_SSL_BAD_HS_PSK_KEY_EXCHANGE_MODES_EXT );
+                    return( ret );
                 }
 
                 ssl->handshake->extensions_present |= MBEDTLS_SSL_EXT_PSK_KEY_EXCHANGE_MODES;
@@ -2700,7 +2716,7 @@ static int ssl_client_hello_parse( mbedtls_ssl_context* ssl,
                 if( ret != 0 )
                 {
                     MBEDTLS_SSL_DEBUG_RET( 1, ( "ssl_parse_max_fragment_length_ext" ), ret );
-                    return( MBEDTLS_ERR_SSL_BAD_HS_MAX_FRAGMENT_LENGTH_EXT );
+                    return( ret );
                 }
                 ssl->handshake->extensions_present |= MAX_FRAGMENT_LENGTH_EXTENSION;
                 break;
@@ -2713,7 +2729,7 @@ static int ssl_client_hello_parse( mbedtls_ssl_context* ssl,
                 if( ret != 0 )
                 {
                     MBEDTLS_SSL_DEBUG_RET( 1, ( "ssl_parse_supported_versions_ext" ), ret );
-                    return( MBEDTLS_ERR_SSL_BAD_HS_SUPPORTED_VERSIONS_EXT );
+                    return( ret );
                 }
                 ssl->handshake->extensions_present |= MBEDTLS_SSL_EXT_SUPPORTED_VERSION;
                 break;
@@ -2726,7 +2742,7 @@ static int ssl_client_hello_parse( mbedtls_ssl_context* ssl,
                 if( ret != 0 )
                 {
                     MBEDTLS_SSL_DEBUG_RET( 1, ( "ssl_parse_alpn_ext" ), ret );
-                    return( MBEDTLS_ERR_SSL_BAD_HS_ALPN_EXT );
+                    return( ret );
                 }
                 ssl->handshake->extensions_present |= ALPN_EXTENSION;
                 break;
@@ -3436,7 +3452,7 @@ static int ssl_write_hello_retry_request_coordinate( mbedtls_ssl_context *ssl )
     if( ssl->handshake->hello_retry_requests_sent > 1 )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "Too many HRRs" ) );
-        return( MBEDTLS_ERR_SSL_BAD_HS_TOO_MANY_HRR );
+        return( MBEDTLS_ERR_SSL_HANDSHAKE_FAILURE );
     }
 
     return( 0 );
