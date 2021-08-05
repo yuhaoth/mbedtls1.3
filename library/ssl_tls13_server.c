@@ -248,7 +248,7 @@ int mbedtls_ssl_parse_supported_groups_ext(
         list_size % 2 != 0 )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad supported groups extension" ) );
-        return( MBEDTLS_ERR_SSL_BAD_HS_SUPPORTED_GROUPS );
+        return( MBEDTLS_ERR_SSL_DECODE_ERROR );
     }
 
     /* Should never happen unless client duplicates the extension */
@@ -317,125 +317,83 @@ int mbedtls_ssl_parse_supported_groups_ext(
  *  - Another negative return value for fatal errors.
 */
 
-static int ssl_parse_key_shares_ext(
-    mbedtls_ssl_context *ssl,
-    const unsigned char *buf,
-    size_t len )
+static int ssl_parse_key_shares_ext( mbedtls_ssl_context *ssl,
+                                     const unsigned char *buf,
+                                     size_t len )
 {
-    int ret = 0, final_ret = 0, extensions_available = 1;
-    unsigned char *end = (unsigned char*)buf + len;
-    unsigned char *start = (unsigned char*)buf;
-    unsigned char *old;
+    int ret = 0;
+    unsigned char const *end = buf + len;
+    unsigned char const *p = buf;
 
     size_t n;
-    unsigned int ks_entry_size;
-
     int match_found = 0;
 
     const mbedtls_ecp_group_id *gid;
 
-    /* Pick the first KeyShareEntry  */
-    n = ( buf[0] << 8 ) | buf[1];
+    /* From RFC 8446:
+     *
+     * struct {
+     *     KeyShareEntry client_shares<0..2^16-1>;
+     * } KeyShareClientHello;
+     *
+     */
 
+    /* Read total legnth of KeyShareClientHello */
+    n = ( p[0] << 8 ) | p[1];
+    p += 2;
     if( n + 2 > len )
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad key share extension in client hello message" ) );
         return( MBEDTLS_ERR_SSL_DECODE_ERROR );
-    }
-    start += 2;
 
     /* We try to find a suitable key share entry and copy it to the
      * handshake context. Later, we have to find out whether we can do
      * something with the provided key share or whether we have to
      * dismiss it and send a HelloRetryRequest message. */
 
-    /*
-     * Ephemeral ECDH parameters:
-     *
-     * struct {
-     *    NamedGroup group;
-     *    opaque key_exchange<1..2^16-1>;
-     * } KeyShareEntry;
-     */
-
-    /* Jump over extension length field to the first KeyShareEntry by advancing buf+2 */
-    old = start;
-    while( extensions_available )
+    while( p < end )
     {
-        ret = mbedtls_ecdh_read_tls_13_params(
-            &ssl->handshake->ecdh_ctx,
-            (const unsigned char **) &start, end );
+        /*
+         * struct {
+         *    NamedGroup group;
+         *    opaque key_exchange<1..2^16-1>;
+         * } KeyShareEntry;
+         */
 
+        ret = mbedtls_ecdh_read_tls_13_params( &ssl->handshake->ecdh_ctx,
+                                               &p, end );
+        /* TODO: Previously, we just tried to skip the extension on an
+         *       arbitrary error. Without clear specification of what read_params
+         *       does to the input pointer in case of failure, we can't do that.
+         *
+         *       Play safe for now and treat any error as fatal here. */
         if( ret != 0 )
-        {
-            /* For some reason we didn't recognize the key share. We jump
-             * to the next one
-             */
+            return( MBEDTLS_ERR_SSL_BAD_HS_CLIENT_KEY_SHARE );
 
-            MBEDTLS_SSL_DEBUG_RET( 1, ( "mbedtls_ecdh_read_tls_13_params failed " ), ret );
-            final_ret = MBEDTLS_ERR_SSL_BAD_HS_CLIENT_KEY_SHARE;
-            goto skip_parsing_key_share_entry;
-        }
 
-        /* Does the provided key share match any of our supported groups */
+        /* Check if we support the curve chosen by the client. */
         for ( gid = ssl->conf->curve_list; *gid != MBEDTLS_ECP_DP_NONE; gid++ )
         {
-            /* Currently we only support a single key share */
-            /* Hence, we do not need a loop */
-            if( ssl->handshake->ecdh_ctx.grp_id == *gid )
-            {
-                match_found = 1;
+            if( ssl->handshake->ecdh_ctx.grp_id != *gid )
+                continue;
 
-                ret = check_ecdh_params( ssl );
+            ret = check_ecdh_params( ssl );
+            if( ret != 0 )
+                continue;
 
-                if( ret != 0 )
-                {
-                    MBEDTLS_SSL_DEBUG_RET( 1, ( "check_ecdh_params: %d" ), ret );
-                    final_ret = MBEDTLS_ERR_SSL_HANDSHAKE_FAILURE;
-                    goto skip_parsing_key_share_entry;
-                }
-
-                break;
-            }
+            match_found = 1;
+            break;
         }
 
-        if( match_found == 0 )
-        {
-            /* A HelloRetryRequest is needed */
-            MBEDTLS_SSL_DEBUG_MSG( 1, ( "no matching curve for ECDHE" ) );
-            final_ret = MBEDTLS_ERR_SSL_HRR_REQUIRED;
-        }
-        else
-        {
-            final_ret = 0;
-            goto finish_key_share_parsing;
-        }
-    skip_parsing_key_share_entry:
-
-        /* we jump to the next key share entry, if there is one */
-        ks_entry_size = ( ( old[2] << 8 ) | ( old[3] ) );
-        /* skip named group id + length field + key share entry length */
-        start = old + ( ks_entry_size + 4 );
-        old = start;
-        if( start >= end )
-        {
-            /* we reached the end */
-            final_ret = MBEDTLS_ERR_SSL_BAD_HS_WRONG_KEY_SHARE;
-            extensions_available = 0;
-        }
+        if( match_found == 1 )
+            break;
     }
 
-finish_key_share_parsing:
-
-    if( final_ret == 0 )
+    if( match_found == 0 )
     {
-        /* we found a key share we like */
-        return ( 0 );
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "no matching curve for ECDHE" ) );
+        return( MBEDTLS_ERR_SSL_HRR_REQUIRED );
     }
-    else {
-        ( (void ) buf );
-        return ( final_ret );
-    }
+
+    return( 0 );
 }
 #endif /* MBEDTLS_ECDH_C || MBEDTLS_ECDSA_C */
 
@@ -1107,16 +1065,13 @@ static int ssl_parse_max_fragment_length_ext( mbedtls_ssl_context *ssl,
 #endif /* MBEDTLS_SSL_MAX_FRAGMENT_LENGTH */
 
 #if defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
-/*
- * ssl_parse_key_exchange_modes_ext( ) structure:
+/* From RFC 8446:
  *
- * enum { psk_ke( 0 ), psk_dhe_ke( 1 ), ( 255 ) } PskKeyExchangeMode;
- *
- * struct {
- *     PskKeyExchangeMode ke_modes<1..255>;
- * } PskKeyExchangeModes;
+ *   enum { psk_ke(0), psk_dhe_ke(1), (255) } PskKeyExchangeMode;
+ *   struct {
+ *       PskKeyExchangeMode ke_modes<1..255>;
+ *   } PskKeyExchangeModes;
  */
-
 static int ssl_parse_key_exchange_modes_ext( mbedtls_ssl_context *ssl,
                                              const unsigned char *buf,
                                              size_t len )
@@ -1154,7 +1109,7 @@ static int ssl_parse_key_exchange_modes_ext( mbedtls_ssl_context *ssl,
     }
 
     ssl->handshake->key_exchange_modes = psk_key_exchange_modes;
-    return ( 0 );
+    return( 0 );
 }
 #endif /* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED */
 
@@ -2420,7 +2375,7 @@ static int ssl_client_hello_parse( mbedtls_ssl_context* ssl,
                                   unsigned char* buf,
                                   size_t buflen )
 {
-    int ret, final_ret = 0;
+    int ret;
     size_t i, j;
     size_t comp_len, sess_len;
     size_t ciph_len, ext_len, ext_len_psk_ext = 0;
@@ -2432,6 +2387,8 @@ static int ssl_client_hello_parse( mbedtls_ssl_context* ssl,
 
     const int* ciphersuites;
     const mbedtls_ssl_ciphersuite_t* ciphersuite_info;
+
+    int hrr_required = 0;
 
     ssl->handshake->extensions_present = MBEDTLS_SSL_EXT_NONE;
     ssl->handshake->key_exchange = MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_NONE;
@@ -2475,7 +2432,8 @@ static int ssl_client_hello_parse( mbedtls_ssl_context* ssl,
      * We ignore the version field in the ClientHello.
      * We use the version field in the extension.
      */
-    buf += 2; /* skip version */
+    /* TODO: Parse this */
+    buf += 2;
 
     /*
      * Save client random
@@ -2633,7 +2591,7 @@ static int ssl_client_hello_parse( mbedtls_ssl_context* ssl,
                 /* if cookie verification failed then we return a hello retry message */
                 if( ret == MBEDTLS_ERR_SSL_HRR_REQUIRED )
                 {
-                    final_ret = ret;
+                    hrr_required = 1;
                 }
                 else if( ret == 0 ) /* cookie extension present and processed succesfully */
                 {
@@ -2721,17 +2679,15 @@ static int ssl_client_hello_parse( mbedtls_ssl_context* ssl,
                  * ECDHE/DHE key establishment methods.
                  */
                 ret = ssl_parse_key_shares_ext( ssl, ext + 4, ext_size );
-                if( ret == MBEDTLS_ERR_SSL_BAD_HS_WRONG_KEY_SHARE )
+                if( ret == MBEDTLS_ERR_SSL_HRR_REQUIRED )
                 {
-                    /* We need to send a HelloRetryRequest message
-                     * but we still have to determine the ciphersuite.
-                     * Note: We got the key share - we just didn't like
-                     *       the content of it.
-                     */
-                    final_ret = MBEDTLS_ERR_SSL_HRR_REQUIRED;
-                    ssl->handshake->extensions_present |= MBEDTLS_SSL_EXT_KEY_SHARE;
-                    break;
+                    hrr_required = 1;
+                    ret = 0;
                 }
+
+                if( ret != 0 )
+                    return( ret );
+
                 ssl->handshake->extensions_present |= MBEDTLS_SSL_EXT_KEY_SHARE;
                 break;
 #endif /* MBEDTLS_ECDH_C || MBEDTLS_ECDSA_C */
@@ -2923,17 +2879,13 @@ static int ssl_client_hello_parse( mbedtls_ssl_context* ssl,
         !( ssl->handshake->extensions_present & MBEDTLS_SSL_EXT_COOKIE ) )
     {
         MBEDTLS_SSL_DEBUG_MSG( 2, ( "Cookie extension missing. Need to send a HRR." ) );
-        final_ret = MBEDTLS_ERR_SSL_HRR_REQUIRED;
+        hrr_required = 1;
     }
 #endif /* MBEDTLS_SSL_COOKIE_C */
 
-    if( final_ret == MBEDTLS_ERR_SSL_HRR_REQUIRED )
+    if( hrr_required == 1 )
     {
-        final_ret = SSL_CLIENT_HELLO_HRR_REQUIRED;
-
-        /*
-         * Create stateless transcript hash for HRR
-         */
+        /* Create stateless transcript hash for HRR */
         MBEDTLS_SSL_DEBUG_MSG( 4, ( "Compress transcript hash for stateless HRR" ) );
         ret = mbedtls_ssl_hash_transcript( ssl );
         if( ret != 0 )
@@ -2941,9 +2893,11 @@ static int ssl_client_hello_parse( mbedtls_ssl_context* ssl,
             MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_hash_transcript", ret );
             return( ret );
         }
+
+        return( SSL_CLIENT_HELLO_HRR_REQUIRED );
     }
 
-    return( final_ret );
+    return( 0 );
 }
 
 static int ssl_client_hello_postprocess( mbedtls_ssl_context* ssl,
