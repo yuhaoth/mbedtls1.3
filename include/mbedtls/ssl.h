@@ -1329,8 +1329,16 @@ struct mbedtls_ssl_config
 #endif /* MBEDTLS_SSL_ASYNC_PRIVATE */
 
 #if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
-    const int *MBEDTLS_PRIVATE(sig_hashes);          /*!< allowed signature hashes           */
-#endif
+
+#if defined(MBEDTLS_SSL_PROTO_TLS1_2)
+    const int *MBEDTLS_PRIVATE(sig_hashes);             /*!< allowed signature hashes           */
+#endif /* MBEDTLS_SSL_PROTO_TLS1_2 */
+
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+    const int* MBEDTLS_PRIVATE(tls13_sig_algs);   /*!< allowed signature algorithms in TLS 1.3 */
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+
+#endif /* MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED */
 
 #if defined(MBEDTLS_ECP_C)
     const mbedtls_ecp_group_id *MBEDTLS_PRIVATE(curve_list); /*!< allowed curves             */
@@ -1960,7 +1968,7 @@ void mbedtls_ssl_conf_verify( mbedtls_ssl_config *conf,
                      void *p_vrfy );
 #endif /* MBEDTLS_X509_CRT_PARSE_C */
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && defined(MBEDTLS_X509_CRT_PARSE_C)
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
 /**
  * \brief          Configure signature algorithms (Optional).
  *
@@ -1976,7 +1984,7 @@ void mbedtls_ssl_conf_verify( mbedtls_ssl_config *conf,
  */
 void mbedtls_ssl_conf_signature_algorithms( mbedtls_ssl_config *conf,
                      const int* sig_algs );
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL && MBEDTLS_X509_CRT_PARSE_C */
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL && MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED */
 
 /**
  * \brief          Set the random number generator callback
@@ -3480,7 +3488,7 @@ void mbedtls_ssl_conf_key_share_curves(mbedtls_ssl_config* conf,
     const mbedtls_ecp_group_id* curve_list);
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL && MBEDTLS_SSL_CLI_C && MBEDTLS_ECP_C */
 
-#if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
+#if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED) && defined(MBEDTLS_SSL_PROTO_TLS1_2)
 /**
  * \brief          Set the allowed hashes for signatures during the handshake.
  *
@@ -3512,7 +3520,7 @@ void mbedtls_ssl_conf_key_share_curves(mbedtls_ssl_config* conf,
  */
 void mbedtls_ssl_conf_sig_hashes( mbedtls_ssl_config *conf,
                                   const int *hashes );
-#endif /* MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED */
+#endif /* MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED && MBEDTLS_SSL_PROTO_TLS1_2 */
 
 #if defined(MBEDTLS_X509_CRT_PARSE_C)
 /**

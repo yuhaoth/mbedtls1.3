@@ -607,7 +607,7 @@ static int my_verify( void *data, mbedtls_x509_crt *crt,
 #endif /* MBEDTLS_X509_CRT_PARSE_C */
 
 #if defined(MBEDTLS_ECP_C) && defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
-static int ssl_sig_hashes_for_test_tls13[] = {
+static int ssl_tls13_sig_algs_for_test[] = {
 #if defined(MBEDTLS_SHA256_C) && defined(MBEDTLS_ECDSA_C) && defined(MBEDTLS_ECP_DP_SECP256R1_ENABLED)
     SIGNATURE_ECDSA_SECP256r1_SHA256,
 #endif
@@ -1965,7 +1965,9 @@ int main( int argc, char *argv[] )
     {
         crt_profile_for_test.allowed_mds |= MBEDTLS_X509_ID_FLAG( MBEDTLS_MD_SHA1 );
         mbedtls_ssl_conf_cert_profile( &conf, &crt_profile_for_test );
+#if defined(MBEDTLS_SSL_PROTO_TLS1_2)
         mbedtls_ssl_conf_sig_hashes( &conf, ssl_sig_hashes_for_test );
+#endif /* MBEDTLS_SSL_PROTO_TLS1_2 */
     }
 
     if( opt.context_crt_cb == 0 )
@@ -1975,9 +1977,9 @@ int main( int argc, char *argv[] )
 
 #endif /* MBEDTLS_X509_CRT_PARSE_C */
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && defined(MBEDTLS_ECP_C)
-    mbedtls_ssl_conf_sig_hashes( &conf, ssl_sig_hashes_for_test_tls13 );
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL && MBEDTLS_ECP_C */
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
+    mbedtls_ssl_conf_signature_algorithms( &conf, ssl_tls13_sig_algs_for_test );
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL && MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED */
 
 #if defined(MBEDTLS_SSL_DTLS_CONNECTION_ID)
     if( opt.cid_enabled == 1 || opt.cid_enabled_renego == 1 )
