@@ -296,6 +296,29 @@ int mbedtls_ssl_parse_supported_groups_ext(
 }
 #endif /* MBEDTLS_ECDH_C || ( MBEDTLS_ECDSA_C */
 
+#if defined(MBEDTLS_ZERO_RTT)
+static int ssl_parse_early_data_ext( mbedtls_ssl_context *ssl,
+                                     const unsigned char *buf,
+                                     size_t len )
+{
+    ((void) ssl);
+    ((void) buf);
+    /* From RFC 8446:
+     *  struct {} Empty;
+     *  struct {
+     *     select (Handshake.msg_type) {
+     *         case new_session_ticket:   uint32 max_early_data_size;
+     *         case client_hello:         Empty;
+     *         case encrypted_extensions: Empty;
+     *     };
+     * } EarlyDataIndication;
+     */
+    if( len != 0 )
+        return( MBEDTLS_ERR_SSL_DECODE_ERROR );
+    return( 0 );
+}
+#endif /* MBEDTLS_ZERO_RTT */
+
 #if ( defined(MBEDTLS_ECDH_C) || defined(MBEDTLS_ECDSA_C) )
 
 /* TODO: Code for MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED missing */
@@ -965,13 +988,12 @@ static int ssl_parse_cookie_ext( mbedtls_ssl_context *ssl,
 
 #if defined(MBEDTLS_SSL_SERVER_NAME_INDICATION)
 static int ssl_parse_servername_ext( mbedtls_ssl_context *ssl,
-                                    const unsigned char *buf,
-                                    size_t len )
+                                     const unsigned char *buf,
+                                     size_t len )
 {
     int ret;
     size_t servername_list_size, hostname_len;
     const unsigned char *p;
-
 
     if( ssl->conf->p_sni == NULL )
     {
@@ -2571,7 +2593,7 @@ static int ssl_client_hello_parse( mbedtls_ssl_context* ssl,
                 if( ret != 0 )
                 {
                     MBEDTLS_SSL_DEBUG_RET( 1, "ssl_parse_servername_ext", ret );
-                    return( MBEDTLS_ERR_SSL_BAD_HS_SERVERNAME_EXT );
+                    return( ret );
                 }
                 ssl->handshake->extensions_present |= MBEDTLS_SSL_EXT_SERVERNAME;
                 break;
@@ -2613,14 +2635,13 @@ static int ssl_client_hello_parse( mbedtls_ssl_context* ssl,
             case MBEDTLS_TLS_EXT_EARLY_DATA:
                 MBEDTLS_SSL_DEBUG_MSG( 3, ( "found early_data extension" ) );
 
-                /* There is nothing really to process with this extension.
+                ret = ssl_parse_early_data_ext( ssl, ext + 4, ext_size );
+                if( ret != 0 )
+                {
+                    MBEDTLS_SSL_DEBUG_RET( 1, "ssl_parse_early_data_ext", ret );
+                    return( MBEDTLS_ERR_SSL_BAD_HS_SUPPORTED_GROUPS );
+                }
 
-                   ret = ssl_parse_early_data_ext( ssl, ext + 4, ext_size );
-                   if( ret != 0 ) {
-                   MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_parse_supported_groups_ext", ret );
-                   return( MBEDTLS_ERR_SSL_BAD_HS_SUPPORTED_GROUPS );
-                   }
-                */
                 ssl->handshake->extensions_present |= MBEDTLS_SSL_EXT_EARLY_DATA;
                 break;
 #endif /* MBEDTLS_ZERO_RTT */
