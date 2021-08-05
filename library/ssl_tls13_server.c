@@ -1227,9 +1227,12 @@ static int ssl_parse_supported_versions_ext( mbedtls_ssl_context *ssl,
 static int ssl_parse_alpn_ext( mbedtls_ssl_context *ssl,
                               const unsigned char *buf, size_t len )
 {
-    size_t list_len, cur_len, ours_len;
-    const unsigned char *theirs, *start, *end;
-    const char **ours;
+    const unsigned char *end const = buf + len;
+    size_t list_len;
+
+    const char **cur_ours;
+    const unsigned char *cur_cli;
+    size_t cur_cli_len;
 
     /* If ALPN not configured, just ignore the extension */
     if( ssl->conf->alpn_list == NULL )
@@ -1243,47 +1246,46 @@ static int ssl_parse_alpn_ext( mbedtls_ssl_context *ssl,
      * } ProtocolNameList;
      */
 
-    /* Min length is 2 ( list_len ) + 1 ( name_len ) + 1 ( name ) */
-    if( len < 4 )
-        return( MBEDTLS_ERR_SSL_BAD_HS_CLIENT_HELLO );
-
+    if( len < 2 )
+        return( MBEDTLS_ERR_SSL_DECODE_ERROR );
     list_len = ( buf[0] << 8 ) | buf[1];
     if( list_len != len - 2 )
-        return( MBEDTLS_ERR_SSL_BAD_HS_CLIENT_HELLO );
+        return( MBEDTLS_ERR_SSL_DECODE_ERROR );
 
-    /*
-     * Use our order of preference
-     */
-    start = buf + 2;
-    end = buf + len;
-    for ( ours = ssl->conf->alpn_list; *ours != NULL; ours++ )
+    buf += 2;
+    len -= 2;
+
+    /* Validate peer's list (lengths) */
+    for( cur_cli = buf; cur_cli != end; cur_cli += cur_cli_len )
     {
-        ours_len = strlen( *ours );
-        for ( theirs = start; theirs != end; theirs += cur_len )
+        cur_cli_len = *cur_cli++;
+        if( cur_cli_len > (size_t)( end - cur_cli ) )
+            return( MBEDTLS_ERR_SSL_DECODE_ERROR );
+        if( cur_cli_len == 0 )
+            return( MBEDTLS_ERR_SSL_ILLEGAL_PARAMETER );
+    }
+
+    /* Use our order of preference */
+    for( cur_ours = ssl->conf->alpn_list; *cur_ours != NULL; cur_ours++ )
+    {
+        size_t const cur_ours_len = strlen( *cur_ours );
+        for( cur_cli = buf; cur_cli != end; cur_cli += cur_cli_len )
         {
-            /* If the list is well formed, we should get equality first */
-            if( theirs > end )
-                return( MBEDTLS_ERR_SSL_BAD_HS_CLIENT_HELLO );
+            cur_cli_len = *cur_cli++;
 
-            cur_len = *theirs++;
-
-            /* Empty strings MUST NOT be included */
-            if( cur_len == 0 )
-                return( MBEDTLS_ERR_SSL_BAD_HS_CLIENT_HELLO );
-
-            if( cur_len == ours_len &&
-                memcmp( theirs, *ours, cur_len ) == 0 )
+            if( cur_cli_len == cur_ours_len &&
+                memcmp( cur_cli, *cur_ours, cur_len ) == 0 )
             {
-                ssl->alpn_chosen = *ours;
+                ssl->alpn_chosen = *cur_ours;
                 return( 0 );
             }
         }
     }
 
-    /* If we get there, no match was found */
-    mbedtls_ssl_send_alert_message( ssl, MBEDTLS_SSL_ALERT_LEVEL_FATAL,
-                                   MBEDTLS_SSL_ALERT_MSG_NO_APPLICATION_PROTOCOL );
-    return( MBEDTLS_ERR_SSL_BAD_HS_CLIENT_HELLO );
+    /* If we get hhere, no match was found */
+    SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_LEVEL_FATAL,
+                          MBEDTLS_SSL_ALERT_MSG_NO_APPLICATION_PROTOCOL );
+    return( MBEDTLS_ERR_SSL_NO_APPLICATION_PROTOCOL );
 }
 #endif /* MBEDTLS_SSL_ALPN */
 
