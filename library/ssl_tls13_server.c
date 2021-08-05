@@ -224,15 +224,17 @@ static int check_ecdh_params( const mbedtls_ssl_context *ssl )
 #if ( defined(MBEDTLS_ECDH_C) || defined(MBEDTLS_ECDSA_C) )
 
 
-/*
-  mbedtls_ssl_parse_supported_groups_ext( ) processes the received
-  supported groups extension and copies the client provided
-  groups into ssl->handshake->curves.
-
-  Possible response values are:
-  - MBEDTLS_ERR_SSL_BAD_HS_SUPPORTED_GROUPS
-  - MBEDTLS_ERR_SSL_ALLOC_FAILED
-*/
+/* This function parses the TLS 1.3 supported_groups extension and
+ * stores the received groups in ssl->handshake->curves.
+ *
+ * From RFC 8446:
+ *   enum {
+ *       ... (0xFFFF)
+ *   } NamedGroup;
+ *   struct {
+ *       NamedGroup named_group_list<2..2^16-1>;
+ *   } NamedGroupList;
+ */
 int mbedtls_ssl_parse_supported_groups_ext(
     mbedtls_ssl_context *ssl,
     const unsigned char *buf, size_t len ) {
@@ -241,23 +243,17 @@ int mbedtls_ssl_parse_supported_groups_ext(
     const unsigned char *p;
     const mbedtls_ecp_curve_info *curve_info, **curves;
 
-    MBEDTLS_SSL_DEBUG_BUF( 3, "Received supported groups", buf, len );
+    MBEDTLS_SSL_DEBUG_BUF( 3, "supported_groups extension", buf, len );
 
     list_size = ( ( buf[0] << 8 ) | ( buf[1] ) );
-    if( list_size + 2 != len ||
-        list_size % 2 != 0 )
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad supported groups extension" ) );
+    if( list_size + 2 != len || list_size % 2 != 0 )
         return( MBEDTLS_ERR_SSL_DECODE_ERROR );
-    }
 
-    /* Should never happen unless client duplicates the extension */
-    /*	if( ssl->handshake->curves != NULL )
-	{
-	MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad supported groups extension" ) );
-	return( MBEDTLS_ERR_SSL_BAD_HS_SUPPORTED_GROUPS );
-	}
-    */
+    /* Should only if the client duplicates the extension.
+     * TODO: Remove once we check for duplicated extensions. */
+    if( ssl->handshake->curves != NULL )
+	return( MBEDTLS_ERR_SSL_ILLEGAL_PARAMETER );
+
     /* Don't allow our peer to make us allocate too much memory,
      * and leave room for a final 0 */
     our_size = list_size / 2 + 1;
@@ -265,30 +261,24 @@ int mbedtls_ssl_parse_supported_groups_ext(
         our_size = MBEDTLS_ECP_DP_MAX;
 
     if( ( curves = mbedtls_calloc( our_size, sizeof( *curves ) ) ) == NULL )
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "mbedtls_calloc failed" ) );
         return( MBEDTLS_ERR_SSL_ALLOC_FAILED );
-    }
 
     ssl->handshake->curves = curves;
 
     p = buf + 2;
     while ( list_size > 0 && our_size > 1 )
     {
-        curve_info = mbedtls_ecp_curve_info_from_tls_id( ( p[0] << 8 ) | p[1] );
+        uint16_t tls_grp_id = p[0] << 8 | p[1];
+        curve_info = mbedtls_ecp_curve_info_from_tls_id( tls_grp_id );
 
-        /*
-          mbedtls_ecp_curve_info_from_tls_id( ) uses the mbedtls_ecp_curve_info
-          data structure ( defined in ecp.c ), which only includes the list of
-          curves implemented. Hence, we only add curves that are also supported
-          and implemented by the server.
-        */
-
+        /* mbedtls_ecp_curve_info_from_tls_id() uses the mbedtls_ecp_curve_info
+         * data structure (defined in ecp.c), which only includes the list of
+         * curves implemented. Hence, we only add curves that are also supported
+         * and implemented by the server. */
         if( curve_info != NULL )
         {
             *curves++ = curve_info;
             MBEDTLS_SSL_DEBUG_MSG( 4, ( "supported curve: %s", curve_info->name ) );
-
             our_size--;
         }
 
@@ -366,8 +356,7 @@ static int ssl_parse_key_shares_ext( mbedtls_ssl_context *ssl,
          *
          *       Play safe for now and treat any error as fatal here. */
         if( ret != 0 )
-            return( MBEDTLS_ERR_SSL_BAD_HS_CLIENT_KEY_SHARE );
-
+            return( MBEDTLS_ERR_SSL_HANDSHAKE_FAILURE );
 
         /* Check if we support the curve chosen by the client. */
         for ( gid = ssl->conf->curve_list; *gid != MBEDTLS_ECP_DP_NONE; gid++ )
