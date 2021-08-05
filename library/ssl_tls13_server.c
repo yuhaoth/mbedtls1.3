@@ -249,10 +249,15 @@ int mbedtls_ssl_parse_supported_groups_ext(
     if( list_size + 2 != len || list_size % 2 != 0 )
         return( MBEDTLS_ERR_SSL_DECODE_ERROR );
 
-    /* Should only if the client duplicates the extension.
-     * TODO: Remove once we check for duplicated extensions. */
+    /* TODO: At the moment, this can happen when receiving a second
+     *       ClientHello after an HRR. We should properly reset the
+     *       state upon receiving an HRR, in which case we should
+     *       not observe handshake->curves already being allocated. */
     if( ssl->handshake->curves != NULL )
-	return( MBEDTLS_ERR_SSL_ILLEGAL_PARAMETER );
+    {
+        mbedtls_free( ssl->handshake->curves );
+        ssl->handshake->curves = NULL;
+    }
 
     /* Don't allow our peer to make us allocate too much memory,
      * and leave room for a final 0 */
