@@ -2080,9 +2080,7 @@ static int ssl_parse_key_shares_ext( mbedtls_ssl_context *ssl,
                                      size_t len )
 {
     int ret = 0;
-    int named_group;
-    const mbedtls_ecp_curve_info *curve_info;
-    mbedtls_ecp_group_id gid;
+    mbedtls_ecp_group_id their_gid;
 
     /* Note: When we introduce non-ECP key shares, e.g. from PQC,
      *       we will want to call multiple parsers here and dispatch
@@ -2097,9 +2095,7 @@ static int ssl_parse_key_shares_ext( mbedtls_ssl_context *ssl,
     len -= 2;
 
     /* Check that chosen group matches the one we offered. */
-    gid = ssl->handshake->offered_group_id;
-    curve_info = mbedtls_ecp_curve_info_from_grp_id( gid );
-    if( curve_info == NULL || curve_info->tls_id != named_group )
+    if( ssl->handshake->offered_group_id != their_gid )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "Invalid server key share" ) );
         return( MBEDTLS_ERR_SSL_ILLEGAL_PARAMETER );

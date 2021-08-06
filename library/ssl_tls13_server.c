@@ -37,6 +37,7 @@
 
 #if defined(MBEDTLS_ECP_C)
 #include "mbedtls/ecp.h"
+#include "ecp_internal.h"
 #endif /* MBEDTLS_ECP_C */
 
 #include "mbedtls/hkdf.h"
@@ -175,41 +176,7 @@ static int ssl_write_key_shares_ext(
 }
 #endif /* MBEDTLS_ECDH_C && MBEDTLS_ECDSA_C */
 
-
 #if ( defined(MBEDTLS_ECDH_C) || defined(MBEDTLS_ECDSA_C) )
-
-/* TODO: Code for MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED missing */
-static int check_ecdh_params( const mbedtls_ssl_context *ssl )
-{
-    const mbedtls_ecp_curve_info *curve_info;
-
-    curve_info = mbedtls_ecp_curve_info_from_grp_id( ssl->handshake->ecdh_ctx.grp_id );
-    if( curve_info == NULL )
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "should never happen" ) );
-        return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
-    }
-
-    MBEDTLS_SSL_DEBUG_MSG( 2, ( "ECDH curve: %s", curve_info->name ) );
-
-#if defined(MBEDTLS_ECP_C)
-    if( mbedtls_ssl_check_curve( ssl, ssl->handshake->ecdh_ctx.grp_id ) != 0 )
-#else
-	if( ssl->handshake->ecdh_ctx.grp.nbits < 163 ||
-            ssl->handshake->ecdh_ctx.grp.nbits > 521 )
-#endif /* MBEDTLS_ECP_C */
-            return( -1 );
-
-    MBEDTLS_SSL_DEBUG_ECDH( 3, &ssl->handshake->ecdh_ctx,
-                            MBEDTLS_DEBUG_ECDH_QP );
-
-    return( 0 );
-}
-#endif /* MBEDTLS_ECDH_C || ( MBEDTLS_ECDSA_C */
-
-#if ( defined(MBEDTLS_ECDH_C) || defined(MBEDTLS_ECDSA_C) )
-
-
 /* This function parses the TLS 1.3 supported_groups extension and
  * stores the received groups in ssl->handshake->curves.
  *
@@ -326,13 +293,10 @@ static int ssl_parse_key_shares_ext( mbedtls_ssl_context *ssl,
                                      size_t len )
 {
     int ret = 0;
-    unsigned char const *end = buf + len;
     unsigned char const *p = buf;
 
-    size_t n;
+    size_t total_ext_len, cur_share_len;
     int match_found = 0;
-
-    const mbedtls_ecp_group_id *gid;
 
     /* From RFC 8446:
      *
@@ -343,18 +307,36 @@ static int ssl_parse_key_shares_ext( mbedtls_ssl_context *ssl,
      */
 
     /* Read total legnth of KeyShareClientHello */
-    n = ( p[0] << 8 ) | p[1];
-    p += 2;
-    if( n + 2 > len )
+    if( len < 2 )
+    {
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "Invalid key share extension" ) );
         return( MBEDTLS_ERR_SSL_DECODE_ERROR );
+    }
+
+    total_ext_len = ( (size_t) p[0] << 8 ) | p[1];
+    p   += 2;
+    len -= 2;
+
+    if( total_ext_len != len )
+    {
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "Invalid key share extension" ) );
+        return( MBEDTLS_ERR_SSL_DECODE_ERROR );
+    }
+
+    ssl->handshake->offered_group_id = MBEDTLS_ECP_DP_NONE;
 
     /* We try to find a suitable key share entry and copy it to the
      * handshake context. Later, we have to find out whether we can do
      * something with the provided key share or whether we have to
      * dismiss it and send a HelloRetryRequest message. */
 
-    while( p < end )
+    for( ; len > 0; p += cur_share_len, len -= cur_share_len )
     {
+        uint16_t named_group;
+        mbedtls_ecp_group_id their_curve;
+        mbedtls_ecp_curve_info const *their_curve_info;
+        unsigned char const *end_of_share;
+
         /*
          * struct {
          *    NamedGroup group;
@@ -362,37 +344,96 @@ static int ssl_parse_key_shares_ext( mbedtls_ssl_context *ssl,
          * } KeyShareEntry;
          */
 
-        ret = mbedtls_ecdh_read_tls_13_params( &ssl->handshake->ecdh_ctx,
-                                               &p, end );
-        /* TODO: Previously, we just tried to skip the extension on an
-         *       arbitrary error. Without clear specification of what read_params
-         *       does to the input pointer in case of failure, we can't do that.
-         *
-         *       Play safe for now and treat any error as fatal here. */
-        if( ret != 0 )
-            return( MBEDTLS_ERR_SSL_HANDSHAKE_FAILURE );
-
-        /* Check if we support the curve chosen by the client. */
-        for ( gid = ssl->conf->curve_list; *gid != MBEDTLS_ECP_DP_NONE; gid++ )
+        if( len < 4 )
         {
-            if( ssl->handshake->ecdh_ctx.grp_id != *gid )
-                continue;
-
-            ret = check_ecdh_params( ssl );
-            if( ret != 0 )
-                continue;
-
-            match_found = 1;
-            break;
+            MBEDTLS_SSL_DEBUG_MSG( 1, ( "Invalid key share extension" ) );
+            return( MBEDTLS_ERR_SSL_DECODE_ERROR );
         }
 
+        named_group = ((size_t) p[0] << 8) | (size_t) p[1];
+        p   += 2;
+        len -= 2;
+
+        cur_share_len = ((size_t) p[0] << 8) | (size_t) p[1];
+        p   += 2;
+        len -= 2;
+
+        if( len < cur_share_len )
+            return( MBEDTLS_ERR_SSL_DECODE_ERROR );
+
+        end_of_share = p + cur_share_len;
+
+        /* Continue parsing even if we have already found a match,
+         * for input validation purposes. */
         if( match_found == 1 )
-            break;
+            continue;
+
+        /*
+         * NamedGroup matching
+         *
+         * For now, we only support ECDHE groups, but e.g.
+         * PQC KEMs will need to be added at a later stage.
+         */
+
+        /* Type 1: ECDHE shares
+         *
+         * - Check if we recognize the group
+         * - Check if it's supported
+         */
+
+        their_curve = mbedtls_ecp_named_group_to_id( named_group );
+        if( mbedtls_ssl_check_curve( ssl, their_curve ) != 0 )
+            continue;
+
+        /* Type 2..X: Other kinds of shares */
+        /* TO BE ADDED */
+
+        /* Skip if we no match succeeded. */
+        if( their_curve == MBEDTLS_ECP_DP_NONE )
+        {
+            MBEDTLS_SSL_DEBUG_MSG( 4, ( "Unrecognized NamedGroup %u",
+                                        (unsigned) named_group ) );
+            continue;
+        }
+
+        match_found = 1;
+
+        /* KeyShare parsing
+         *
+         * Once we add more key share types, this needs to be a switch
+         * over the (type of) the named curve */
+
+        /* Type 1: ECDHE shares
+         *
+         * - Setup ECDHE context
+         * - Import client's public key
+         * - Apply further curve checks
+         */
+
+        their_curve_info = mbedtls_ecp_curve_info_from_grp_id( their_curve );
+        MBEDTLS_SSL_DEBUG_MSG( 2, ( "ECDH curve: %s", their_curve_info->name ) );
+
+        ret = mbedtls_ecdh_setup( &ssl->handshake->ecdh_ctx, their_curve );
+        if( ret != 0 )
+        {
+            MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ecdh_setup()", ret );
+            return( ret );
+        }
+
+        ret = mbedtls_ecdh_import_public_raw( &ssl->handshake->ecdh_ctx,
+                                              p, end_of_share );
+        if( ret != 0 )
+        {
+            MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ecdh_import_public_raw()", ret );
+            return( ret );
+        }
+
+        ssl->handshake->offered_group_id = their_curve;
     }
 
     if( match_found == 0 )
     {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "no matching curve for ECDHE" ) );
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "no matching key share" ) );
         return( MBEDTLS_ERR_SSL_HRR_REQUIRED );
     }
 
@@ -3457,6 +3498,80 @@ static int ssl_write_hello_retry_request_postprocess( mbedtls_ssl_context *ssl )
     return( 0 );
 }
 
+static int ssl_write_hrr_key_share_ext( mbedtls_ssl_context *ssl,
+                                        unsigned char* buf,
+                                        unsigned char* end,
+                                        size_t* olen )
+{
+    const mbedtls_ecp_group_id *gid;
+    const mbedtls_ecp_curve_info **curve = NULL;
+
+    size_t total_len = 0;
+
+    /* key_share Extension
+     *
+     *  struct {
+     *    select (Handshake.msg_type) {
+     *      ...
+     *      case hello_retry_request:
+     *          NamedGroup selected_group;
+     *      ...
+     *    };
+     * } KeyShare;
+     */
+
+    *olen = 0;
+
+    /* For a pure PSK-based ciphersuite there is no key share to declare. */
+    if( mbedtls_ssl_tls13_kex_with_ecdhe( ssl ) == 0 )
+        return( 0 );
+
+    /* We should only send the key_share extension if the client's initial
+     * key share was not acceptable. */
+    if( ssl->handshake->offered_group_id != MBEDTLS_ECP_DP_NONE )
+    {
+        MBEDTLS_SSL_DEBUG_MSG( 4, ( "Skip key_share extension in HRR" ) );
+        return( 0 );
+    }
+
+    total_len = 6; /* extension header, extension length, NamedGroup value */
+
+    if( (size_t)( end - buf ) < total_len )
+        return( MBEDTLS_ERR_SSL_BUFFER_TOO_SMALL );
+
+    /* Write extension header */
+    *buf++ = (unsigned char)( ( MBEDTLS_TLS_EXT_KEY_SHARES >> 8 ) & 0xFF );
+    *buf++ = (unsigned char)( ( MBEDTLS_TLS_EXT_KEY_SHARES >> 0 ) & 0xFF );
+    /* Write extension length */
+    *buf++ = 0;
+    *buf++ = 2;
+
+    /* Find common curve */
+    for( gid = ssl->conf->curve_list; *gid != MBEDTLS_ECP_DP_NONE; gid++ )
+    {
+        for( curve = ssl->handshake->curves; *curve != NULL; curve++ )
+        {
+            if( (*curve)->grp_id == *gid )
+                goto curve_matching_done;
+        }
+    }
+
+curve_matching_done:
+    if( curve == NULL || *curve == NULL )
+    {
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "no matching named group found" ) );
+        return( MBEDTLS_ERR_SSL_HANDSHAKE_FAILURE );
+    }
+
+    /* Write selected group */
+    *buf++ = (*curve)->tls_id >> 8;
+    *buf++ = (*curve)->tls_id & 0xFF;
+
+    MBEDTLS_SSL_DEBUG_MSG( 3, ( "NamedGroup in HRR: %s", (*curve)->name ) );
+    *olen = total_len;
+    return( 0 );
+}
+
 static int ssl_write_hello_retry_request_write( mbedtls_ssl_context* ssl,
                                                 unsigned char* buf,
                                                 size_t buflen,
@@ -3476,8 +3591,6 @@ static int ssl_write_hello_retry_request_write( mbedtls_ssl_context* ssl,
                  0xE2, 0xC8, 0xA8, 0x33 ,0x9C };
 
 #if defined(MBEDTLS_ECDH_C)
-    const mbedtls_ecp_group_id *gid;
-    const mbedtls_ecp_curve_info **curve = NULL;
 #endif /* MBEDTLS_ECDH_C */
 
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> write hello retry request" ) );
@@ -3600,66 +3713,15 @@ static int ssl_write_hello_retry_request_write( mbedtls_ssl_context* ssl,
     total_ext_len += ext_length;
     p += ext_length;
 
-#if defined(MBEDTLS_ECDH_C)
-    /* key_share Extension
-     *
-     *  struct {
-     *    select ( Handshake.msg_type ) {
-     *      case client_hello:
-     *          KeyShareEntry client_shares<0..2^16-1>;
-     *
-     *      case hello_retry_request:
-     *          NamedGroup selected_group;
-     *
-     *      case server_hello:
-     *          KeyShareEntry server_share;
-     *    };
-     * } KeyShare;
-     *
-     */
-
-    /* For a pure PSK-based ciphersuite there is no key share to declare. */
-    if( mbedtls_ssl_tls13_kex_with_ecdhe( ssl ) )
+    /* Add key_share extension, if necessary */
+    ret = ssl_write_hrr_key_share_ext( ssl, p, end, &ext_length );
+    if( ret != 0 )
     {
-        /* Write extension header */
-        *p++ = (unsigned char)( ( MBEDTLS_TLS_EXT_KEY_SHARES >> 8 ) & 0xFF );
-        *p++ = (unsigned char)( ( MBEDTLS_TLS_EXT_KEY_SHARES >> 0 ) & 0xFF );
-
-        ext_len_byte = p;
-
-        /* Write length */
-        *p++ = 0;
-        *p++ = 2;
-        ext_length = 2;
-
-        for ( gid = ssl->conf->curve_list; *gid != MBEDTLS_ECP_DP_NONE; gid++ )
-        {
-            for ( curve = ssl->handshake->curves; *curve != NULL; curve++ )
-            {
-                if( ( *curve )->grp_id == *gid )
-                    goto curve_matching_done;
-            }
-        }
-
-    curve_matching_done:
-        if( curve == NULL || *curve == NULL )
-        {
-            /* This case should not happen */
-            MBEDTLS_SSL_DEBUG_MSG( 1, ( "no matching named group found" ) );
-            return( MBEDTLS_ERR_SSL_HANDSHAKE_FAILURE );
-        }
-
-        /* Write selected group */
-        *p++ = ( *curve )->tls_id >> 8;
-        *p++ = ( *curve )->tls_id & 0xFF;
-
-        MBEDTLS_SSL_DEBUG_MSG( 3, ( "NamedGroup in HRR: %s", (*curve)->name ) );
-
-        /* 2 bytes for extension_type and 2 bytes for length field */
-        total_ext_len += ext_length + 4;
-
+        MBEDTLS_SSL_DEBUG_RET( 1, "ssl_write_hrr_key_share_ext", ret );
+        return( ret );
     }
-#endif /* MBEDTLS_ECDH_C */
+    total_ext_len += ext_length;
+    p += ext_length;
 
     *extension_start++ = (unsigned char)( ( total_ext_len >> 8 ) & 0xFF );
     *extension_start++ = (unsigned char)( ( total_ext_len >> 0 ) & 0xFF );

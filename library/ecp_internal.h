@@ -25,6 +25,7 @@
 
 #include "common.h"
 #include "mbedtls/ecp.h"
+#include "mbedtls/ecdh.h"
 
 /* Convert NamedCurve (RFC 4492) to an Mbed TLS internal curve id.
  * - Returns MBEDTLS_ERR_ECP_BAD_INPUT_DATA if buffer is too small.
@@ -32,5 +33,19 @@
 int mbedtls_ecp_tls_read_named_curve( mbedtls_ecp_group_id *grp,
                                       const unsigned char *buf,
                                       size_t len );
+
+static inline mbedtls_ecp_group_id mbedtls_ecp_named_group_to_id(
+    uint16_t named_curve )
+{
+    const mbedtls_ecp_curve_info *curve_info;
+    curve_info = mbedtls_ecp_curve_info_from_tls_id( named_curve );
+    if( curve_info == NULL )
+        return( MBEDTLS_ECP_DP_NONE );
+    return( curve_info->grp_id );
+}
+
+int mbedtls_ecdh_import_public_raw( mbedtls_ecdh_context *ctx,
+                                    const unsigned char *buf,
+                                    const unsigned char *end );
 
 #endif /* MBEDTLS_ECP_INTERNAL_H */

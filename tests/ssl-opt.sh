@@ -1676,6 +1676,7 @@ run_test    "TLS 1.3, TLS1-3-AES-128-CCM-8-SHA256, ECDHE-ECDSA, CLI+SRV auth, HR
             "$P_CLI nbio=2 debug_level=5 force_version=tls1_3 server_name=localhost force_ciphersuite=TLS1-3-AES-128-CCM-8-SHA256 key_exchange_modes=ecdhe_ecdsa" \
             0 \
 	    -s "Cookie extension missing. Need to send a HRR."                   \
+            -s "Skip key_share extension in HRR"                                 \
 	    -s "write hello retry request"                                       \
 	    -c "received HelloRetryRequest message"                              \
 	    -s "Verifying peer X.509 certificate... ok"                          \
@@ -1694,7 +1695,7 @@ run_test    "TLS 1.3, TLS1-3-AES-128-CCM-SHA256 with ECDHE-ECDSA, SRV auth, HRR 
             "$P_SRV nbio=2 debug_level=5 force_version=tls1_3 key_exchange_modes=ecdhe_ecdsa named_groups=secp256r1 cookies=1 tickets=0" \
             "$P_CLI nbio=2 debug_level=5 force_version=tls1_3 server_name=localhost force_ciphersuite=TLS1-3-AES-128-CCM-SHA256 key_exchange_modes=ecdhe_ecdsa named_groups=secp384r1,secp256r1" \
             0 \
-            -s "no matching curve for ECDHE"            \
+            -s "no matching key share"                  \
             -s "write hello retry request"              \
             -s "NamedGroup in HRR: secp256r1"           \
             -s "ECDH curve: secp256r1"                  \

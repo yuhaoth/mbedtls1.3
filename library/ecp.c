@@ -950,7 +950,6 @@ int mbedtls_ecp_tls_read_named_curve( mbedtls_ecp_group_id *grp,
                                       size_t len )
 {
     uint16_t tls_id;
-    const mbedtls_ecp_curve_info *curve_info;
     ECP_VALIDATE_RET( grp  != NULL );
     ECP_VALIDATE_RET( buf  != NULL );
 
@@ -959,12 +958,11 @@ int mbedtls_ecp_tls_read_named_curve( mbedtls_ecp_group_id *grp,
      *} NamedCurve; */
     if( len < 2 )
         return( MBEDTLS_ERR_ECP_BAD_INPUT_DATA );
-
     tls_id = (uint16_t) buf[0] << 8 | (uint16_t) buf[1];
-    curve_info = mbedtls_ecp_curve_info_from_tls_id( tls_id );
-    if( curve_info == NULL )
+
+    *grp = mbedtls_ecp_named_group_to_id( tls_id );
+    if( *grp == MBEDTLS_ECP_DP_NONE )
         return( MBEDTLS_ERR_ECP_FEATURE_UNAVAILABLE );
-    *grp = curve_info->grp_id;
     return( 0 );
 }
 
