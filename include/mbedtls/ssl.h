@@ -1343,7 +1343,6 @@ struct mbedtls_ssl_config
 #endif
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
-    const mbedtls_ecp_group_id* MBEDTLS_PRIVATE(key_shares_curve_list); /*!< curves to send as key shares, as configured by app*/
     int MBEDTLS_PRIVATE(key_exchange_modes); /*!< key exchange mode */
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 
