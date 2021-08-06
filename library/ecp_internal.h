@@ -30,6 +30,7 @@
  * - Returns MBEDTLS_ERR_ECP_BAD_INPUT_DATA if buffer is too small.
  * - Returns MBEDTLS_ERR_ECP_FEATURE_UNAVAILABLE is the group is unknown. */
 int mbedtls_ecp_tls_read_named_curve( mbedtls_ecp_group_id *grp,
-                                      const unsigned char **buf, size_t len );
+                                      const unsigned char *buf,
+                                      size_t len );
 
 #endif /* MBEDTLS_ECP_INTERNAL_H */

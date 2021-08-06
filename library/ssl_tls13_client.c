@@ -2087,12 +2087,13 @@ static int ssl_parse_key_shares_ext( mbedtls_ssl_context *ssl,
     /* Note: When we introduce non-ECP key shares, e.g. from PQC,
      *       we will want to call multiple parsers here and dispatch
      *       to the corresponding handler. */
-    ret = mbedtls_ecp_tls_read_named_curve( &their_gid, &buf, len );
+    ret = mbedtls_ecp_tls_read_named_curve( &their_gid, buf, len );
     if( ret == MBEDTLS_ERR_ECP_FEATURE_UNAVAILABLE )
         return( MBEDTLS_ERR_SSL_FEATURE_UNAVAILABLE );
     else if( ret != 0 )
         return( MBEDTLS_ERR_SSL_DECODE_ERROR );
 
+    buf += 2;
     len -= 2;
 
     /* Check that chosen group matches the one we offered. */

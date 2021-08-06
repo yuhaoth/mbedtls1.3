@@ -946,13 +946,13 @@ int mbedtls_ecp_tls_read_group( mbedtls_ecp_group *grp,
 
 /* Convert NamedCurve structure to Mbed TLS internal ECC group id */
 int mbedtls_ecp_tls_read_named_curve( mbedtls_ecp_group_id *grp,
-                                      const unsigned char **buf, size_t len )
+                                      const unsigned char *buf,
+                                      size_t len )
 {
     uint16_t tls_id;
     const mbedtls_ecp_curve_info *curve_info;
     ECP_VALIDATE_RET( grp  != NULL );
     ECP_VALIDATE_RET( buf  != NULL );
-    ECP_VALIDATE_RET( *buf != NULL );
 
     /* enum {
      * ...  (0xFFFF)
@@ -960,16 +960,10 @@ int mbedtls_ecp_tls_read_named_curve( mbedtls_ecp_group_id *grp,
     if( len < 2 )
         return( MBEDTLS_ERR_ECP_BAD_INPUT_DATA );
 
-    /*
-     * Next two bytes are the namedcurve value
-     */
-    tls_id = *(*buf)++;
-    tls_id <<= 8;
-    tls_id |= *(*buf)++;
-
-    if( ( curve_info = mbedtls_ecp_curve_info_from_tls_id( tls_id ) ) == NULL )
+    tls_id = (uint16_t) buf[0] << 8 | (uint16_t) buf[1];
+    curve_info = mbedtls_ecp_curve_info_from_tls_id( tls_id );
+    if( curve_info == NULL )
         return( MBEDTLS_ERR_ECP_FEATURE_UNAVAILABLE );
-
     *grp = curve_info->grp_id;
     return( 0 );
 }
@@ -981,6 +975,7 @@ int mbedtls_ecp_tls_read_named_curve( mbedtls_ecp_group_id *grp,
 int mbedtls_ecp_tls_read_group_id( mbedtls_ecp_group_id *grp,
                                    const unsigned char **buf, size_t len )
 {
+    int ret;
     ECP_VALIDATE_RET( grp  != NULL );
     ECP_VALIDATE_RET( buf  != NULL );
     ECP_VALIDATE_RET( *buf != NULL );
@@ -992,7 +987,14 @@ int mbedtls_ecp_tls_read_group_id( mbedtls_ecp_group_id *grp,
     if( *(*buf)++ != MBEDTLS_ECP_TLS_NAMED_CURVE )
         return( MBEDTLS_ERR_ECP_BAD_INPUT_DATA );
 
-    return( mbedtls_ecp_tls_read_named_curve( grp, buf, len ) );
+    len--;
+
+    ret = mbedtls_ecp_tls_read_named_curve( grp, *buf, len );
+    if( ret != 0 )
+        return( ret );
+
+    *buf += 2;
+    return( 0 );
 }
 
 /*

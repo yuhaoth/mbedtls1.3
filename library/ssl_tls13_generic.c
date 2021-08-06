@@ -2959,9 +2959,10 @@ int mbedtls_ecdh_read_tls_13_params( mbedtls_ecdh_context *ctx,
     ECDH_VALIDATE_RET( *buf != NULL );
     ECDH_VALIDATE_RET( end != NULL );
 
-    ret = mbedtls_ecp_tls_read_named_curve( &grp_id, buf, end - *buf );
+    ret = mbedtls_ecp_tls_read_named_curve( &grp_id, *buf, end - *buf );
     if( ret != 0 )
         return( ret );
+    *buf += 2;
 
     if( ( ret = mbedtls_ecdh_setup( ctx, grp_id ) ) != 0 )
         return( ret );
