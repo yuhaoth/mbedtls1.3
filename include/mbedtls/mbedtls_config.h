@@ -3354,6 +3354,6 @@
  * If this is enabled, libOQS will be built in 3rdparty/liboqs
  * and made available to Mbed TLS compilation units.
  */
-#define MBEDTLS_LIBOQS_ENABLE
+//#define MBEDTLS_LIBOQS_ENABLE
 
 /* \} name SECTION: Customisation configuration options */
