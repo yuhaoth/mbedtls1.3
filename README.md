@@ -58,6 +58,12 @@ Implementation](https://github.com/hannestschofenig/mbedtls/tree/tls13-prototype
 
 MPS is controlled by the configuration option `MBEDTLS_SSL_USE_MPS`, which is enabled by default.
 
+## Post-Quantum Cryptography
+
+We're in the early stages of experimenting with PQC support in Mbed TLS on the basis of the [libOQS](...) post-quantum
+cryptography library. You can enable libOQS via `MBEDTLS_LIBOQS_ENABLE` in `include/mbedtls/mbedtls_config.h`, which
+will make header files and library of libOQS available to the Mbed TLS compilation units.
+
 # Known limitations
 
 Please consult the [issues](https://github.com/hannestschofenig/mbedtls/issues) for a complete list of issues. Here we
