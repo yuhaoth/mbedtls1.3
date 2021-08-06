@@ -79,6 +79,7 @@
 
 #include "bn_mul.h"
 #include "ecp_invasive.h"
+#include "ecp_internal.h"
 
 #include <string.h>
 
@@ -943,12 +944,9 @@ int mbedtls_ecp_tls_read_group( mbedtls_ecp_group *grp,
     return( mbedtls_ecp_group_load( grp, grp_id ) );
 }
 
-/*
- * Read a group id from an ECParameters record (RFC 4492) and convert it to
- * mbedtls_ecp_group_id.
- */
-int mbedtls_ecp_tls_read_group_id( mbedtls_ecp_group_id *grp,
-                                   const unsigned char **buf, size_t len )
+/* Convert NamedCurve structure to Mbed TLS internal ECC group id */
+int mbedtls_ecp_tls_read_named_curve( mbedtls_ecp_group_id *grp,
+                                      const unsigned char **buf, size_t len )
 {
     uint16_t tls_id;
     const mbedtls_ecp_curve_info *curve_info;
@@ -956,16 +954,10 @@ int mbedtls_ecp_tls_read_group_id( mbedtls_ecp_group_id *grp,
     ECP_VALIDATE_RET( buf  != NULL );
     ECP_VALIDATE_RET( *buf != NULL );
 
-    /*
-     * We expect at least three bytes (see below)
-     */
-    if( len < 3 )
-        return( MBEDTLS_ERR_ECP_BAD_INPUT_DATA );
-
-    /*
-     * First byte is curve_type; only named_curve is handled
-     */
-    if( *(*buf)++ != MBEDTLS_ECP_TLS_NAMED_CURVE )
+    /* enum {
+     * ...  (0xFFFF)
+     *} NamedCurve; */
+    if( len < 2 )
         return( MBEDTLS_ERR_ECP_BAD_INPUT_DATA );
 
     /*
@@ -979,8 +971,28 @@ int mbedtls_ecp_tls_read_group_id( mbedtls_ecp_group_id *grp,
         return( MBEDTLS_ERR_ECP_FEATURE_UNAVAILABLE );
 
     *grp = curve_info->grp_id;
-
     return( 0 );
+}
+
+/*
+ * Read a group id from an ECParameters record (RFC 4492) and convert it to
+ * mbedtls_ecp_group_id.
+ */
+int mbedtls_ecp_tls_read_group_id( mbedtls_ecp_group_id *grp,
+                                   const unsigned char **buf, size_t len )
+{
+    ECP_VALIDATE_RET( grp  != NULL );
+    ECP_VALIDATE_RET( buf  != NULL );
+    ECP_VALIDATE_RET( *buf != NULL );
+
+    if( len < 1 )
+        return( MBEDTLS_ERR_ECP_BAD_INPUT_DATA );
+
+    /* Only named_curve is handled */
+    if( *(*buf)++ != MBEDTLS_ECP_TLS_NAMED_CURVE )
+        return( MBEDTLS_ERR_ECP_BAD_INPUT_DATA );
+
+    return( mbedtls_ecp_tls_read_named_curve( grp, buf, len ) );
 }
 
 /*

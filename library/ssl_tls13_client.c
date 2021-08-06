@@ -36,6 +36,8 @@
 #include "ssl_misc.h"
 #include "ssl_tls13_keys.h"
 
+#include "ecp_internal.h"
+
 #include <string.h>
 
 #if defined(MBEDTLS_PLATFORM_C)
@@ -2067,30 +2069,30 @@ static int ssl_parse_key_shares_ext( mbedtls_ssl_context *ssl,
                                      const unsigned char *buf,
                                      size_t len ) {
 
-    int ret = 0;
-    int named_group;
-    int i;
-    const mbedtls_ecp_curve_info *curve_info;
-    int match_found = 0;
-    mbedtls_ecp_group_id gid;
+    int ret = 0, i, match_found;
+    mbedtls_ecp_group_id their_gid;
 
-    /* read named group
-     * TODO: Is there no reader for this? */
-    named_group = ( buf[0] << 8 ) | buf[1];
+    /* Note: When we introduce non-ECP key shares, e.g. from PQC,
+     *       we will want to call multiple parsers here and dispatch
+     *       to the corresponding handler. */
+    ret = mbedtls_ecp_tls_read_named_curve( &their_gid, &buf, len );
+    if( ret == MBEDTLS_ERR_ECP_FEATURE_UNAVAILABLE )
+        return( MBEDTLS_ERR_SSL_FEATURE_UNAVAILABLE );
+    else if( ret != 0 )
+        return( MBEDTLS_ERR_SSL_DECODE_ERROR );
+
+    len -= 2;
 
     /* Check if chosen group matches one of the offered key shares. */
-    for( i=0;
-         ssl->handshake->key_shares_curve_list[i] != MBEDTLS_ECP_DP_NONE;
+    match_found = 0;
+    for( i=0; ssl->handshake->key_shares_curve_list[i] != MBEDTLS_ECP_DP_NONE;
          i++ )
     {
-        gid = ssl->handshake->key_shares_curve_list[i];
-        curve_info = mbedtls_ecp_curve_info_from_grp_id( gid );
-
-        if( curve_info->tls_id == named_group )
-        {
-            match_found = 1;
-            break;
-        }
+        mbedtls_ecp_group_id our_gid = ssl->handshake->key_shares_curve_list[i];
+        if( our_gid != their_gid )
+            continue;
+        match_found = 1;
+        break;
     }
 
     if( match_found == 0 )
@@ -2098,9 +2100,6 @@ static int ssl_parse_key_shares_ext( mbedtls_ssl_context *ssl,
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "no matching curve for ECDHE" ) );
         return( MBEDTLS_ERR_SSL_HANDSHAKE_FAILURE );
     }
-
-    buf += 2;
-    len -= 2;
 
     if( ( ret = mbedtls_ecdh_read_tls_13_public( &ssl->handshake->ecdh_ctx,
                                                  buf, len ) ) != 0 )
