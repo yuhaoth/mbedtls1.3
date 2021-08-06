@@ -53,11 +53,5 @@ case "${GNUTLS_SERV:-default}" in
 esac
 
 run_in_docker \
-    -e P_SRV \
-    -e P_CLI \
-    -e P_PXY \
-    -e GNUTLS_CLI \
-    -e GNUTLS_SERV \
-    -e OPENSSL_CMD \
     tests/ssl-opt.sh \
     $@
