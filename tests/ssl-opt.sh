@@ -8498,6 +8498,15 @@ run_test    "TLS1.3: Not supported version check: tls1_2 and tls1_3" \
             -s "SSL - Invalid value in SSL config" \
             -c "SSL - Invalid value in SSL config"
 
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+run_test    "TLS1.3: handshake dispatch test: tls1_3 only" \
+            "$P_SRV debug_level=4 min_version=tls1_3 max_version=tls1_3" \
+            "$P_CLI debug_level=4 min_version=tls1_3 max_version=tls1_3" \
+            1 \
+            -s "SSL - The requested feature is not available" \
+            -c "SSL - The requested feature is not available"
+
 # Test heap memory usage after handshake
 requires_config_enabled MBEDTLS_MEMORY_DEBUG
 requires_config_enabled MBEDTLS_MEMORY_BUFFER_ALLOC_C

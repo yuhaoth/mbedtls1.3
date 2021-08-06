@@ -57,6 +57,11 @@
 #include <time.h>
 #endif /* MBEDTLS_HAVE_TIME */
 
+int mbedtls_ssl_handshake_server_step_tls1_3( mbedtls_ssl_context *ssl )
+{
+    ( (void)ssl );
+    return( MBEDTLS_ERR_SSL_FEATURE_UNAVAILABLE );
+}
 
 #endif /* MBEDTLS_SSL_SRV_C */
 

@@ -36,8 +36,6 @@
 #include "ssl_misc.h"
 #include "ssl_tls13_keys.h"
 
-#include "ecp_internal.h"
-
 #include <string.h>
 
 #if defined(MBEDTLS_PLATFORM_C)
@@ -54,7 +52,11 @@
 #include <time.h>
 #endif
 
-
+int mbedtls_ssl_handshake_client_step_tls1_3( mbedtls_ssl_context *ssl )
+{
+    ( (void)ssl );
+    return( MBEDTLS_ERR_SSL_FEATURE_UNAVAILABLE );
+}
 
 #endif /* MBEDTLS_SSL_CLI_C */
 
