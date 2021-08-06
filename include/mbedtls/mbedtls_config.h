@@ -3349,7 +3349,10 @@
 //#define MBEDTLS_ECDH_VARIANT_EVEREST_ENABLED
 
 /**
- * Enable liboqs post-quantum cryptography
+ * Enable the libOQS Post-Quantum Cryptography library
+ *
+ * If this is enabled, libOQS will be built in 3rdparty/liboqs
+ * and made available to Mbed TLS compilation units.
  */
 #define MBEDTLS_LIBOQS_ENABLE
 
