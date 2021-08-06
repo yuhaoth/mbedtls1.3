@@ -783,12 +783,7 @@ struct mbedtls_ssl_handshake_params
 #endif
 
 #if defined(MBEDTLS_ECDH_C)
-    /* This is the actual key share list we sent.
-     * The list configured by the application may
-     * get modified via the server provided hint
-     * using the HRR message.
-     */
-    mbedtls_ecp_group_id* key_shares_curve_list; /*!< curves to send as key shares */
+    mbedtls_ecp_group_id offered_group_id;
 #endif /* MBEDTLS_ECDH_C */
 
 #if defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)

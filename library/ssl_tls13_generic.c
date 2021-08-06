@@ -2940,31 +2940,33 @@ int mbedtls_ecdh_make_tls_13_params( mbedtls_ecdh_context *ctx, size_t *olen,
 #endif
 }
 
-static int ecdh_read_tls_13_params_internal( mbedtls_ecdh_context_mbed *ctx,
-                                      const unsigned char **buf,
-                                      const unsigned char *end )
+static int ecdh_import_public_raw( mbedtls_ecdh_context_mbed *ctx,
+                                   const unsigned char *buf,
+                                   const unsigned char *end )
 {
-    return( mbedtls_ecp_tls_13_read_point( &ctx->grp, &ctx->Qp, buf,
-                                        end - *buf ) );
+    return( mbedtls_ecp_point_read_binary( &ctx->grp, &ctx->Qp,
+                                           buf, end - buf ) );
 }
 
-int mbedtls_ecdh_read_tls_13_params( mbedtls_ecdh_context *ctx,
-                              const unsigned char **buf,
-                              const unsigned char *end )
+#if defined(MBEDTLS_ECDH_VARIANT_EVEREST_ENABLED)
+static int everest_import_public_raw( mbedtls_x25519_context *ctx,
+                        const unsigned char *buf, const unsigned char *end )
 {
-    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
-    mbedtls_ecp_group_id grp_id;
+    if( end - buf != MBEDTLS_X25519_KEY_SIZE_BYTES )
+        return( MBEDTLS_ERR_ECP_BAD_INPUT_DATA );
+
+    memcpy( ctx->peer_point, buf, MBEDTLS_X25519_KEY_SIZE_BYTES );
+    return( 0 );
+}
+#endif /* MBEDTLS_ECDH_VARIANT_EVEREST_ENABLED */
+
+int mbedtls_ecdh_import_public_raw( mbedtls_ecdh_context *ctx,
+                                    const unsigned char *buf,
+                                    const unsigned char *end )
+{
     ECDH_VALIDATE_RET( ctx != NULL );
     ECDH_VALIDATE_RET( buf != NULL );
-    ECDH_VALIDATE_RET( *buf != NULL );
     ECDH_VALIDATE_RET( end != NULL );
-
-    ret = mbedtls_ecp_tls_read_named_curve( &grp_id, buf, end - *buf );
-    if( ret != 0 )
-        return( ret );
-
-    if( ( ret = mbedtls_ecdh_setup( ctx, grp_id ) ) != 0 )
-        return( ret );
 
 #if defined(MBEDTLS_ECDH_LEGACY_CONTEXT)
     return( ecdh_read_tls_13_params_internal( ctx, buf, end ) );
@@ -2973,12 +2975,12 @@ int mbedtls_ecdh_read_tls_13_params( mbedtls_ecdh_context *ctx,
     {
 #if defined(MBEDTLS_ECDH_VARIANT_EVEREST_ENABLED)
         case MBEDTLS_ECDH_VARIANT_EVEREST:
-            return( mbedtls_everest_read_params( &ctx->ctx.everest_ecdh,
-                                                 buf, end) );
+            return( everest_import_public_raw( &ctx->ctx.everest_ecdh,
+                                               buf, end) );
 #endif
         case MBEDTLS_ECDH_VARIANT_MBEDTLS_2_0:
-            return( ecdh_read_tls_13_params_internal( &ctx->ctx.mbed_ecdh,
-                                               buf, end ) );
+            return( ecdh_import_public_raw( &ctx->ctx.mbed_ecdh,
+                                            buf, end ) );
         default:
             return MBEDTLS_ERR_ECP_BAD_INPUT_DATA;
     }

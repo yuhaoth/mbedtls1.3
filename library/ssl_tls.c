@@ -4616,20 +4616,6 @@ void mbedtls_ssl_conf_curves( mbedtls_ssl_config *conf,
     conf->curve_list = curve_list;
 }
 
-
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
-/*
-* Set the named groups for use in a key share extension
-*/
-#if defined(MBEDTLS_SSL_CLI_C)
-void mbedtls_ssl_conf_key_share_curves( mbedtls_ssl_config* conf,
-    const mbedtls_ecp_group_id* curve_list )
-{
-    conf->key_shares_curve_list = curve_list;
-}
-#endif /* MBEDTLS_SSL_CLI_C */
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
-
 #endif /* MBEDTLS_ECP_C */
 
 #if defined(MBEDTLS_X509_CRT_PARSE_C)
@@ -6305,10 +6291,6 @@ void mbedtls_ssl_handshake_free( mbedtls_ssl_context *ssl )
     if( handshake == NULL )
         return;
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
-    mbedtls_free( handshake->key_shares_curve_list );
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
-
 #if defined(MBEDTLS_SSL_ASYNC_PRIVATE)
     if( ssl->conf->f_async_cancel != NULL && handshake->async_in_progress != 0 )
     {
@@ -7453,10 +7435,6 @@ int mbedtls_ssl_config_defaults( mbedtls_ssl_config *conf,
                                     MBEDTLS_SSL_MIN_VALID_MINOR_VERSION;
             conf->max_major_ver = MBEDTLS_SSL_MAX_MAJOR_VERSION;
             conf->max_minor_ver = MBEDTLS_SSL_MAX_MINOR_VERSION;
-        // As a default send key shares for all supported curves
-#if defined(MBEDTLS_ECP_C) && defined(MBEDTLS_SSL_CLI_C) && defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
-        conf->key_shares_curve_list = ssl_preset_suiteb_curves;
-#endif /* MBEDTLS_ECP_C && MBEDTLS_SSL_CLI_C && MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
             if( transport == MBEDTLS_SSL_TRANSPORT_DATAGRAM )

@@ -1235,7 +1235,8 @@ static int ssl_write_key_shares_ext( mbedtls_ssl_context *ssl,
                                      unsigned char* end,
                                      size_t* olen )
 {
-    const mbedtls_ecp_group_id *grp_id;
+    mbedtls_ecp_group_id grp_id;
+    const mbedtls_ecp_curve_info *curve_info;
 
     size_t len;
     int ret;
@@ -1253,17 +1254,24 @@ static int ssl_write_key_shares_ext( mbedtls_ssl_context *ssl,
 
     MBEDTLS_SSL_DEBUG_MSG( 3, ( "client hello, adding key share extension" ) );
 
-    /* Use the first entry of the key share list for the share. */
-    /* TODO: Further work needed, see #310 */
-    grp_id = ssl->handshake->key_shares_curve_list;
-    if( *grp_id == MBEDTLS_ECP_DP_NONE )
+    /* By default, offer topmost entry in the curve list, but an HRR
+     * will be able to overwrite this. */
+    grp_id = ssl->handshake->offered_group_id;
+    if( grp_id == MBEDTLS_ECP_DP_NONE )
+        grp_id = ssl->conf->curve_list[0];
+    if( grp_id == MBEDTLS_ECP_DP_NONE )
     {
-        MBEDTLS_SSL_DEBUG_MSG( 4, ( "Curve list is empty." ) );
-        return( MBEDTLS_ERR_SSL_BAD_CONFIG );
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "Should never happen" ) );
+        return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
     }
 
+    curve_info = mbedtls_ecp_curve_info_from_grp_id( grp_id );
+    if( curve_info == NULL )
+        return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
+    MBEDTLS_SSL_DEBUG_MSG( 3, ( "offer curve %s", curve_info->name ) );
+
     if( ( ret = mbedtls_ecdh_setup( &ssl->handshake->ecdh_ctx,
-                                    *grp_id ) ) != 0 )
+                                    grp_id ) ) != 0 )
     {
         MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ecp_group_load", ret );
         return( ret );
@@ -1299,6 +1307,8 @@ static int ssl_write_key_shares_ext( mbedtls_ssl_context *ssl,
     *olen += 4; /* 4 bytes for fixed header */
 
     ssl->handshake->extensions_present |= MBEDTLS_SSL_EXT_KEY_SHARE;
+    ssl->handshake->offered_group_id = grp_id;
+
     return( 0 );
 }
 
@@ -2067,38 +2077,28 @@ int mbedtls_ssl_set_early_data( mbedtls_ssl_context *ssl,
  */
 static int ssl_parse_key_shares_ext( mbedtls_ssl_context *ssl,
                                      const unsigned char *buf,
-                                     size_t len ) {
-
-    int ret = 0, i, match_found;
+                                     size_t len )
+{
+    int ret = 0;
     mbedtls_ecp_group_id their_gid;
 
     /* Note: When we introduce non-ECP key shares, e.g. from PQC,
      *       we will want to call multiple parsers here and dispatch
      *       to the corresponding handler. */
-    ret = mbedtls_ecp_tls_read_named_curve( &their_gid, &buf, len );
+    ret = mbedtls_ecp_tls_read_named_curve( &their_gid, buf, len );
     if( ret == MBEDTLS_ERR_ECP_FEATURE_UNAVAILABLE )
         return( MBEDTLS_ERR_SSL_FEATURE_UNAVAILABLE );
     else if( ret != 0 )
         return( MBEDTLS_ERR_SSL_DECODE_ERROR );
 
+    buf += 2;
     len -= 2;
 
-    /* Check if chosen group matches one of the offered key shares. */
-    match_found = 0;
-    for( i=0; ssl->handshake->key_shares_curve_list[i] != MBEDTLS_ECP_DP_NONE;
-         i++ )
+    /* Check that chosen group matches the one we offered. */
+    if( ssl->handshake->offered_group_id != their_gid )
     {
-        mbedtls_ecp_group_id our_gid = ssl->handshake->key_shares_curve_list[i];
-        if( our_gid != their_gid )
-            continue;
-        match_found = 1;
-        break;
-    }
-
-    if( match_found == 0 )
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "no matching curve for ECDHE" ) );
-        return( MBEDTLS_ERR_SSL_HANDSHAKE_FAILURE );
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "Invalid server key share" ) );
+        return( MBEDTLS_ERR_SSL_ILLEGAL_PARAMETER );
     }
 
     if( ( ret = mbedtls_ecdh_read_tls_13_public( &ssl->handshake->ecdh_ctx,
@@ -3420,7 +3420,6 @@ static int ssl_hrr_parse( mbedtls_ssl_context* ssl,
 {
     int ret; /* return value */
     int i; /* scratch value */
-    int found = 0;
     const unsigned char* msg_end = buf + buflen; /* pointer to the end of the buffer for length checks */
 
     size_t ext_len; /* stores length of all extensions */
@@ -3429,13 +3428,6 @@ static int ssl_hrr_parse( mbedtls_ssl_context* ssl,
     unsigned int ext_size; /* size of an individual extension */
 
     const mbedtls_ssl_ciphersuite_t* suite_info; /* pointer to ciphersuite */
-
-#if defined(MBEDTLS_ECDH_C)
-    /* Variables for parsing the key_share */
-    const mbedtls_ecp_group_id* grp_id;
-    const mbedtls_ecp_curve_info* info, * curve = NULL;
-    int tls_id;
-#endif /* MBEDTLS_ECDH_C */
 
 #if defined(MBEDTLS_SSL_COOKIE_C)
     size_t cookie_len;
@@ -3661,7 +3653,6 @@ static int ssl_hrr_parse( mbedtls_ssl_context* ssl,
                 break;
 #endif /* MBEDTLS_SSL_COOKIE_C */
 
-
             case MBEDTLS_TLS_EXT_SUPPORTED_VERSIONS:
                 MBEDTLS_SSL_DEBUG_MSG( 3, ( "found supported_versions extension" ) );
 
@@ -3672,6 +3663,12 @@ static int ssl_hrr_parse( mbedtls_ssl_context* ssl,
 
 #if defined(MBEDTLS_ECDH_C) || defined(MBEDTLS_ECDSA_C)
             case MBEDTLS_TLS_EXT_KEY_SHARES:
+            {
+                /* Variables for parsing the key_share */
+                const mbedtls_ecp_group_id* grp_id;
+                const mbedtls_ecp_curve_info *curve_info = NULL;
+                int tls_id;
+                int found = 0;
 
                 MBEDTLS_SSL_DEBUG_BUF( 3, "key_share extension", ext + 4, ext_size );
 
@@ -3679,94 +3676,44 @@ static int ssl_hrr_parse( mbedtls_ssl_context* ssl,
                 tls_id = ( ( ext[4] << 8 ) | ( ext[5] ) );
                 MBEDTLS_SSL_DEBUG_MSG( 3, ( "selected_group ( %d )", tls_id ) );
 
-                info = mbedtls_ecp_curve_info_from_tls_id( tls_id );
-
-                if( info != NULL )
-                {
-                    MBEDTLS_SSL_DEBUG_MSG( 3, ( "selected_group by name ( %s )", info->name ) );
-                }
-                /*
-                 * Upon receipt of this extension in a HelloRetryRequest, the client
+                /* Upon receipt of this extension in a HelloRetryRequest, the client
                  * MUST first verify that the selected_group field corresponds to a
                  * group which was provided in the "supported_groups" extension in the
                  * original ClientHello.
-                 *
-                 * The supported_group was based on the info in ssl->conf->curve_list.
-                 */
+                 * The supported_group was based on the info in ssl->conf->curve_list. */
+                for( grp_id = ssl->conf->curve_list; *grp_id != MBEDTLS_ECP_DP_NONE; grp_id++ )
+                {
+                    curve_info = mbedtls_ecp_curve_info_from_grp_id( *grp_id );
+                    if( curve_info == NULL || curve_info->tls_id != tls_id )
+                        continue;
 
-                for ( grp_id = ssl->conf->curve_list; *grp_id != MBEDTLS_ECP_DP_NONE; grp_id++ ) {
-                    /* In the initial ClientHello we transmitted the key shares based on
-                     * key_shares_curve_list.
-                     */
-                    info = mbedtls_ecp_curve_info_from_grp_id( *grp_id );
-
-                    if( info == NULL ) return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
-
-                    if( info->tls_id == tls_id )
-                    {
-                        /* We found a match */
-                        found = 1;
-                        break;
-                    }
+                    /* We found a match */
+                    found = 1;
+                    break;
                 }
 
                 /* If the server provided a key share that was not sent in the ClientHello
                  * then the client MUST abort the handshake with an "illegal_parameter" alert.
-                 */
-                if( found == 0 )
+                 *
+                 * Client MUST verify that the selected_group field does not
+                 * correspond to a group which was provided in the "key_share"
+                 * extension in the original ClientHello. If the server sent an
+                 * HRR message with a key share already provided in the
+                 * ClientHello then the client MUST abort the handshake with
+                 * an "illegal_parameter" alert. */
+                if( found == 0 || *grp_id == ssl->handshake->offered_group_id )
                 {
-                    MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad HRR ( server provided key share that was not sent in ClientHello )" ) );
+                    MBEDTLS_SSL_DEBUG_MSG( 1, ( "Invalid key share in HRR" ) );
                     SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_ILLEGAL_PARAMETER,
                                           MBEDTLS_ERR_SSL_ILLEGAL_PARAMETER );
                     return( MBEDTLS_ERR_SSL_ILLEGAL_PARAMETER );
                 }
 
-                /*
-                 * Client MUST verify that the selected_group
-                 * field does not correspond to a group which was provided in the
-                 * "key_share" extension in the original ClientHello.
-                 */
-                found = 0;
-                for ( grp_id = ssl->handshake->key_shares_curve_list;
-                      *grp_id != MBEDTLS_ECP_DP_NONE; grp_id++ )
-                {
-                    info = mbedtls_ecp_curve_info_from_grp_id( *grp_id );
-
-                    if( info == NULL ) return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
-
-                    if( info->tls_id == tls_id )
-                    {
-                        /* We found a match */
-                        found = 1;
-                        break;
-                    }
-                }
-
-                /* If the server sent an HRR message with a key share already
-                 * provided in the ClientHello then the client MUST abort the
-                 * handshake with an "illegal_parameter" alert.
-                 */
-                if( found == 1 )
-                {
-                    MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad HRR ( server sent HRR with a key share already provided in ClientHello )" ) );
-                    SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_ILLEGAL_PARAMETER,
-                                          MBEDTLS_ERR_SSL_ILLEGAL_PARAMETER );
-                    return( MBEDTLS_ERR_SSL_ILLEGAL_PARAMETER );
-                }
-
-                /* Modify key_shares_curve_list for next ClientHello
-                 * based on info provided by server. For the second
-                 * ClientHello we only send the key share expected
-                 * by the server.
-                 */
-                curve = mbedtls_ecp_curve_info_from_tls_id( tls_id );
-
-                if( curve == NULL ) return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
-
-                ssl->handshake->key_shares_curve_list[0] = curve->grp_id;
-                ssl->handshake->key_shares_curve_list[1] = MBEDTLS_ECP_DP_NONE;
-
+                /* Remember server's preference for next ClientHello */
+                ssl->handshake->offered_group_id = *grp_id;
                 break;
+            }
+
 #endif /* MBEDTLS_ECDH_C || MBEDTLS_ECDSA_C */
             default:
                 MBEDTLS_SSL_DEBUG_MSG( 3, ( "unknown extension found: %d ( ignoring )", ext_id ) );
@@ -4170,27 +4117,6 @@ int mbedtls_ssl_handshake_client_step_tls1_3( mbedtls_ssl_context *ssl )
     {
         case MBEDTLS_SSL_HELLO_REQUEST:
             mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_CLIENT_HELLO );
-
-#if defined(MBEDTLS_ECP_C)
-            /* We need to initialize the handshake->key_shares_curve_list. */
-            if( ssl->handshake->key_shares_curve_list == NULL )
-            {
-                /* We need to allocate one additional key share for the delimiter. */
-                ssl->handshake->key_shares_curve_list =
-                    mbedtls_calloc( 1, sizeof( mbedtls_ecp_group_id* ) * 2 );
-                if( ssl->conf->key_shares_curve_list == NULL )
-                {
-                    MBEDTLS_SSL_DEBUG_MSG( 1, ( "should never happen" ) );
-                    return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
-                }
-                memcpy( ssl->handshake->key_shares_curve_list,
-                        ssl->conf->key_shares_curve_list,
-                        sizeof( mbedtls_ecp_group_id ) );
-
-                /* We need to put a delimiter to the end of the key shares curve list */
-                ssl->handshake->key_shares_curve_list[1] = MBEDTLS_ECP_DP_NONE;
-            }
-#endif /* MBEDTLS_ECP_C */
 
 #if defined(MBEDTLS_SSL_NEW_SESSION_TICKET)
             ssl->session_negotiate->endpoint = ssl->conf->endpoint;

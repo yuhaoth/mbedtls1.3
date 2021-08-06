@@ -384,14 +384,6 @@ int main( void )
 #define USAGE_NAMED_GROUP ""
 #endif /* MBEDTLS_ECP_C && MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 
-#if defined(MBEDTLS_ECP_C) && defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
-#define USAGE_KEY_SHARE_NAMED_GROUPS \
-    "    key_share_named_groups=%%s    default: secp256r1\n"      \
-    "                        options: secp256r1, secp384r1, secp521r1, all\n"
-#else
-#define USAGE_KEY_SHARE_NAMED_GROUPS ""
-#endif /* MBEDTLS_ECP_C && MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
-
 /* USAGE is arbitrarily split to stay under the portable string literal
  * length limit: 4095 bytes in C99. */
 #define USAGE1 \
@@ -454,7 +446,6 @@ int main( void )
     USAGE_EARLY_DATA                                        \
     USAGE_KEX_MODES                                         \
     USAGE_NAMED_GROUP                                       \
-    USAGE_KEY_SHARE_NAMED_GROUPS                            \
     USAGE_DHMLEN                                            \
     "\n"
 #define USAGE4 \
@@ -765,8 +756,6 @@ int main( int argc, char *argv[] )
     defined(MBEDTLS_ECP_C)
     /* list of named groups */
     mbedtls_ecp_group_id named_groups_list[NAMED_GROUPS_LIST_SIZE];
-    /* list of named groups for key share*/
-    mbedtls_ecp_group_id key_share_named_groups_list[NAMED_GROUPS_LIST_SIZE];
     char *start;
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL && MBEDTLS_ECP_C */
 
@@ -839,9 +828,6 @@ int main( int argc, char *argv[] )
 
 #if defined(MBEDTLS_ECP_C)
     memset( (void *) named_groups_list, MBEDTLS_ECP_DP_NONE, sizeof( named_groups_list ) );
-    memset( (void *) key_share_named_groups_list,
-            MBEDTLS_ECP_DP_NONE,
-            sizeof( key_share_named_groups_list ) );
 #endif /* MBEDTLS_ECP_C */
 
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
@@ -1684,46 +1670,6 @@ int main( int argc, char *argv[] )
 
         if( i == 0 ) goto usage;
     }
-
-    if( opt.key_share_named_groups_string != NULL )
-    {
-        p = (char *) opt.key_share_named_groups_string;
-        i = 0;
-        start = p;
-
-        /* Leave room for a final NULL in named_groups_list */
-        while( i < NAMED_GROUPS_LIST_SIZE - 1 && *p != '\0')
-        {
-            while( *p != ',' && *p != '\0' )
-                p++;
-
-            if( *p == ',' || *p == '\0' )
-            {
-
-                if( *p == ',' )
-                    *p++ = '\0';
-
-                if( strcmp( start, "secp256r1" ) == 0 )
-                    key_share_named_groups_list[i++] = MBEDTLS_ECP_DP_SECP256R1;
-                else if( strcmp( start, "secp384r1" ) == 0 )
-                    key_share_named_groups_list[i++] = MBEDTLS_ECP_DP_SECP384R1;
-                else if( strcmp( start, "secp521r1" ) == 0 )
-                    key_share_named_groups_list[i++] = MBEDTLS_ECP_DP_SECP521R1;
-                else if( strcmp( start, "all" ) == 0 )
-                {
-                    key_share_named_groups_list[i++] = MBEDTLS_ECP_DP_SECP256R1;
-                    key_share_named_groups_list[i++] = MBEDTLS_ECP_DP_SECP384R1;
-                    key_share_named_groups_list[i++] = MBEDTLS_ECP_DP_SECP521R1;
-                    break;
-                }
-                else goto usage;
-                start = p;
-
-            }
-        }
-
-        if( i == 0 ) goto usage;
-    }
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL && MBEDTLS_ECP_C */
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && defined(MBEDTLS_ECP_C)
@@ -2143,9 +2089,6 @@ int main( int argc, char *argv[] )
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
     if( named_groups_list[0] != MBEDTLS_ECP_DP_NONE )
         mbedtls_ssl_conf_curves(&conf, named_groups_list);
-
-    if( key_share_named_groups_list[0] != MBEDTLS_ECP_DP_NONE )
-        mbedtls_ssl_conf_key_share_curves( &conf, key_share_named_groups_list );
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
     if( opt.curves != NULL &&
         strcmp( opt.curves, "default" ) != 0 )
