@@ -10,8 +10,19 @@
 /* BEGIN_CASE */
 void dummy_test()
 {
+    unsigned char sk[OQS_KEM_bike_l1_length_secret_key];
+    unsigned char pk[OQS_KEM_bike_l1_length_public_key];
+    unsigned char cc[OQS_KEM_bike_l1_length_ciphertext];
+    unsigned char ss0[OQS_KEM_bike_l1_length_shared_secret];
+    unsigned char ss1[OQS_KEM_bike_l1_length_shared_secret];
+
     OQS_KEM_bike_l1_new();
-    /* This goto is added to avoid warnings from the generated code. */
-    goto exit;
+
+    OQS_KEM_bike_l1_keypair(pk,sk);
+    OQS_KEM_bike_l1_encaps(cc,ss0,pk);
+    OQS_KEM_bike_l1_decaps(ss1,cc,sk);
+
+    ASSERT_COMPARE(ss0, sizeof(ss0), ss1, sizeof(ss1));
+    TEST_ASSERT(1);
 }
 /* END_CASE */
