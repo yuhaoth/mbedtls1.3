@@ -96,38 +96,24 @@ static int ssl_write_sni_server_ext(
 #endif /* MBEDTLS_SSL_SERVER_NAME_INDICATION */
 
 
-/*
-
-  Key Shares Extension
-
-  enum {
-      obsolete_RESERVED( 1..22 ),
-      secp256r1( 23 ), secp384r1( 24 ), secp521r1( 25 ),
-      obsolete_RESERVED( 26..28 ),
-      x25519( 29 ), x448( 30 ),
-
-      ffdhe2048( 256 ), ffdhe3072( 257 ), ffdhe4096( 258 ),
-      ffdhe6144( 259 ), ffdhe8192( 260 ),
-
-      ffdhe_private_use( 0x01FC..0x01FF ),
-      ecdhe_private_use( 0xFE00..0xFEFF ),
-      obsolete_RESERVED( 0xFF01..0xFF02 ),
-      ( 0xFFFF )
-  } NamedGroup;
-
-  struct {
-      NamedGroup group;
-      opaque key_exchange<1..2^16-1>;
-  } KeyShareEntry;
-
-  struct {
-      select ( role ) {
-      case client:
-          KeyShareEntry client_shares<0..2^16-1>;
-      case server:
-          KeyShareEntry server_share;
-      }
-  } KeyShare;
+/* Key Shares Extension
+ *
+ * enum {
+ *     ... (0xFFFF)
+ * } NamedGroup;
+ *
+ * struct {
+ *     NamedGroup group;
+ *     opaque key_exchange<1..2^16-1>;
+ * } KeyShareEntry;
+ *
+ * struct {
+ *     select(role) {
+ *     ...
+ *     case server:
+ *         KeyShareEntry server_share;
+ *     }
+ * } KeyShare;
 */
 
 #if ( defined(MBEDTLS_ECDH_C) || defined(MBEDTLS_ECDSA_C) )
