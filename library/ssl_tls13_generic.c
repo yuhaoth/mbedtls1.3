@@ -178,6 +178,7 @@ int mbedtls_ssl_write_change_cipher_spec_process( mbedtls_ssl_context* ssl )
         MBEDTLS_SSL_PROC_CHK( mbedtls_mps_flush( &ssl->mps.l4 ) );
         MBEDTLS_SSL_PROC_CHK( mbedtls_mps_write_ccs( &ssl->mps.l4 ) );
         MBEDTLS_SSL_PROC_CHK( mbedtls_mps_dispatch( &ssl->mps.l4 ) );
+        MBEDTLS_SSL_PROC_CHK( ssl_write_change_cipher_spec_postprocess( ssl ) );
 
 #else /* MBEDTLS_SSL_USE_MPS */
         /* Make sure we can write a new message. */
@@ -190,13 +191,13 @@ int mbedtls_ssl_write_change_cipher_spec_process( mbedtls_ssl_context* ssl )
 
         ssl->out_msgtype = MBEDTLS_SSL_MSG_CHANGE_CIPHER_SPEC;
 
+        /* Update state */
+        MBEDTLS_SSL_PROC_CHK( ssl_write_change_cipher_spec_postprocess( ssl ) );
+
         /* Dispatch message */
         MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_write_record( ssl, SSL_FORCE_FLUSH ) );
 
 #endif /* MBEDTLS_SSL_USE_MPS */
-
-        /* Update state */
-        MBEDTLS_SSL_PROC_CHK( ssl_write_change_cipher_spec_postprocess( ssl ) );
     }
     else
     {
@@ -592,6 +593,9 @@ int mbedtls_ssl_write_certificate_verify_process( mbedtls_ssl_context* ssl )
 
         MBEDTLS_SSL_PROC_CHK( mbedtls_mps_dispatch( &ssl->mps.l4 ) );
 
+        /* Update state */
+        MBEDTLS_SSL_PROC_CHK( ssl_certificate_verify_postprocess( ssl ) );
+
 #else  /* MBEDTLS_SSL_USE_MPS */
 
         /* Make sure we can write a new message. */
@@ -605,27 +609,17 @@ int mbedtls_ssl_write_certificate_verify_process( mbedtls_ssl_context* ssl )
         ssl->out_msgtype = MBEDTLS_SSL_MSG_HANDSHAKE;
         ssl->out_msg[0] = MBEDTLS_SSL_HS_CERTIFICATE_VERIFY;
 
+        /* Update state */
+        MBEDTLS_SSL_PROC_CHK( ssl_certificate_verify_postprocess( ssl ) );
+
         /* Dispatch message */
         MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_write_handshake_msg( ssl ) );
-
-        /* NOTE: With the new messaging layer, the postprocessing
-         *       step might come after the dispatching step if the
-         *       latter doesn't send the message immediately.
-         *       At the moment, we must do the postprocessing
-         *       prior to the dispatching because if the latter
-         *       returns WANT_WRITE, we want the handshake state
-         *       to be updated in order to not enter
-         *       this function again on retry.
-         *
-         *       Further, once the two calls can be re-ordered, the two
-         *       calls to ssl_certificate_verify_postprocess( ) can be
-         *       consolidated. */
-
 #endif /* MBEDTLS_SSL_USE_MPS */
     }
-
-    /* Update state */
-    MBEDTLS_SSL_PROC_CHK( ssl_certificate_verify_postprocess( ssl ) );
+    else
+    {
+        MBEDTLS_SSL_PROC_CHK( ssl_certificate_verify_postprocess( ssl ) );
+    }
 
 cleanup:
 
@@ -1305,6 +1299,9 @@ int mbedtls_ssl_write_certificate_process( mbedtls_ssl_context* ssl )
 
         MBEDTLS_SSL_PROC_CHK( mbedtls_mps_dispatch( &ssl->mps.l4 ) );
 
+        /* Update state */
+        MBEDTLS_SSL_PROC_CHK( ssl_write_certificate_postprocess( ssl ) );
+
 #else  /* MBEDTLS_SSL_USE_MPS */
 
         /* Make sure we can write a new message. */
@@ -1318,6 +1315,9 @@ int mbedtls_ssl_write_certificate_process( mbedtls_ssl_context* ssl )
         ssl->out_msgtype = MBEDTLS_SSL_MSG_HANDSHAKE;
         ssl->out_msg[0] = MBEDTLS_SSL_HS_CERTIFICATE;
 
+        /* Update state */
+        MBEDTLS_SSL_PROC_CHK( ssl_write_certificate_postprocess( ssl ) );
+
         /* Dispatch message */
         MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_write_handshake_msg( ssl ) );
 
@@ -1328,10 +1328,8 @@ int mbedtls_ssl_write_certificate_process( mbedtls_ssl_context* ssl )
 #endif /* MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED */
     {
         MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= skip write certificate" ) );
+        MBEDTLS_SSL_PROC_CHK( ssl_write_certificate_postprocess( ssl ) );
     }
-
-    /* Update state */
-    MBEDTLS_SSL_PROC_CHK( ssl_write_certificate_postprocess( ssl ) );
 
 cleanup:
 
@@ -2305,10 +2303,11 @@ int mbedtls_ssl_finished_out_process( mbedtls_ssl_context* ssl )
     ssl->out_msgtype = MBEDTLS_SSL_MSG_HANDSHAKE;
     ssl->out_msg[0] = MBEDTLS_SSL_HS_FINISHED;
 
-    /* TODO: This doesn't work if mbedtls_ssl_write_handshake_msg() fails
-     * because the underlying transport isn't ready. */
-    MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_write_handshake_msg( ssl ) );
+    mbedtls_ssl_add_hs_msg_to_checksum( ssl, MBEDTLS_SSL_HS_FINISHED,
+                                        ssl->out_msg + 4, ssl->out_msglen - 4 );
+
     MBEDTLS_SSL_PROC_CHK( ssl_finished_out_postprocess( ssl ) );
+    MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_write_handshake_msg_ext( ssl, 0 ) );
 
 
 #endif /* MBEDTLS_SSL_USE_MPS */
@@ -2526,6 +2525,7 @@ int mbedtls_ssl_finished_in_process( mbedtls_ssl_context* ssl )
 #else /* MBEDTLS_SSL_USE_MPS */
 
     MBEDTLS_SSL_PROC_CHK( ssl_read_finished_fetch( ssl, &buf, &buflen ) );
+
     MBEDTLS_SSL_PROC_CHK( ssl_finished_in_parse( ssl, buf, buflen ) );
 
 #endif /* MBEDTLS_SSL_USE_MPS */
