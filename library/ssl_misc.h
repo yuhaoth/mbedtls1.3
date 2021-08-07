@@ -782,9 +782,13 @@ struct mbedtls_ssl_handshake_params
     unsigned char* certificate_request_context;
 #endif
 
-#if defined(MBEDTLS_ECDH_C)
-    mbedtls_ecp_group_id offered_group_id;
-#endif /* MBEDTLS_ECDH_C */
+    uint16_t named_group_id; /* The NamedGroup value for the group
+                              * that is being used for ephemeral
+                              * key exchange.
+                              *
+                              * On the client: Defaults to the first
+                              * entry in the client's group list,
+                              * but can be overwritten by the HRR. */
 
 #if defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
     // pointer to the pre_shared_key extension
@@ -1987,5 +1991,31 @@ static inline int ssl_conf_is_tls12_and_tls13(const mbedtls_ssl_config *conf)
     return( 0 );
 }
 #endif /* MBEDTLS_SSL_PROTO_TLS1_2 && MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL*/
+
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+/* From RF 8446
+ *    enum {
+ *         // Elliptic Curve Groups (ECDHE)
+ *         secp256r1(0x0017), secp384r1(0x0018), secp521r1(0x0019),
+ *         x25519(0x001D), x448(0x001E),
+ *         // Finite Field Groups (DHE)
+ *         ffdhe2048(0x0100), ffdhe3072(0x0101), ffdhe4096(0x0102),
+ *         ffdhe6144(0x0103), ffdhe8192(0x0104),
+ *         // Reserved Code Points
+ *         ffdhe_private_use(0x01FC..0x01FF),
+ *         ecdhe_private_use(0xFE00..0xFEFF),
+ *         (0xFFFF)
+ *     } NamedGroup; */
+static inline int mbedtls_ssl_named_group_is_ecdhe( uint16_t named_group )
+{
+    return( named_group == MBEDTLS_SSL_TLS13_NAMED_GROUP_SEC256R1 ||
+            named_group == MBEDTLS_SSL_TLS13_NAMED_GROUP_SEC384R1 ||
+            named_group == MBEDTLS_SSL_TLS13_NAMED_GROUP_SEC521R1 ||
+            named_group == MBEDTLS_SSL_TLS13_NAMED_GROUP_X25519   ||
+            named_group == MBEDTLS_SSL_TLS13_NAMED_GROUP_X448 );
+}
+
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+
 
 #endif /* ssl_misc.h */

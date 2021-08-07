@@ -150,6 +150,15 @@
 
 
 /*
+ * TLS 1.3 NamedGroup values
+ */
+#define MBEDTLS_SSL_TLS13_NAMED_GROUP_SEC256R1  0x0017
+#define MBEDTLS_SSL_TLS13_NAMED_GROUP_SEC384R1  0x0018
+#define MBEDTLS_SSL_TLS13_NAMED_GROUP_SEC521R1  0x0019
+#define MBEDTLS_SSL_TLS13_NAMED_GROUP_X25519    0x001D
+#define MBEDTLS_SSL_TLS13_NAMED_GROUP_X448      0x001E
+
+/*
  * TLS 1.3 Key Exchange Modes
  *
  * Mbed TLS internal identifiers for use with the SSL configuration API

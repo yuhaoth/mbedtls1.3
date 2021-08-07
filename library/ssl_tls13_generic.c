@@ -2860,7 +2860,6 @@ static int ecdh_make_tls_13_params_internal( mbedtls_ecdh_context_mbed *ctx,
                                       int restart_enabled )
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
-    size_t grp_len, pt_len;
 #if defined(MBEDTLS_ECP_RESTARTABLE)
     mbedtls_ecp_restart_ctx *rs_ctx = NULL;
 #endif
@@ -2886,18 +2885,11 @@ static int ecdh_make_tls_13_params_internal( mbedtls_ecdh_context_mbed *ctx,
         return( ret );
 #endif /* MBEDTLS_ECP_RESTARTABLE */
 
-    if( ( ret = mbedtls_ecp_tls_13_write_group( &ctx->grp, &grp_len, buf,
-                                             blen ) ) != 0 )
+    ret = mbedtls_ecp_point_write_binary( &ctx->grp, &ctx->Q, point_format,
+                                          olen, buf, blen );
+    if( ret != 0 )
         return( ret );
 
-    buf += grp_len;
-    blen -= grp_len;
-
-    if( ( ret = mbedtls_ecp_tls_13_write_point( &ctx->grp, &ctx->Q, point_format,
-                                             &pt_len, buf, blen ) ) != 0 )
-        return( ret );
-
-    *olen = grp_len + pt_len;
     return( 0 );
 }
 
