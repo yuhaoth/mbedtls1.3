@@ -1275,16 +1275,6 @@ static uint16_t ssl_get_default_group_id( mbedtls_ssl_context *ssl )
     return( curve_info->tls_id );
 }
 
-static int ssl_named_group_is_ecdhe( mbedtls_ssl_context *ssl,
-                                     uint16_t named_group )
-{
-    ((void) ssl);
-    ((void) named_group);
-    /* TODO: This will need to include some range checks
-     *       as we start to support non-ECDHE exchanges. */
-    return( 1 );
-}
-
 static int ssl_write_key_shares_ext( mbedtls_ssl_context *ssl,
                                      unsigned char* buf,
                                      unsigned char* end,
@@ -1325,7 +1315,7 @@ static int ssl_write_key_shares_ext( mbedtls_ssl_context *ssl,
      * type of KEM, and dispatch to the corresponding crypto.
      */
 
-    if( ssl_named_group_is_ecdhe( ssl, group_id ) )
+    if( mbedtls_ssl_named_group_is_ecdhe( group_id ) )
     {
         /* Skip over NamedGroup value and share length bytes */
         unsigned char * const key_share = key_share_entry + 4;
@@ -2176,7 +2166,7 @@ static int ssl_parse_key_shares_ext( mbedtls_ssl_context *ssl,
         return( MBEDTLS_ERR_SSL_ILLEGAL_PARAMETER );
     }
 
-    if( ssl_named_group_is_ecdhe( ssl, their_group ) )
+    if( mbedtls_ssl_named_group_is_ecdhe( their_group ) )
     {
         /* Complete ECDHE key agreement */
         ret = ssl_read_public_ecdhe_share( ssl, buf, len );

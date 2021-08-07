@@ -30,6 +30,7 @@
 
 #include "mbedtls/debug.h"
 #include "mbedtls/ssl.h"
+#include "mbedtls/error.h"
 #include "ssl_misc.h"
 #include "ssl_tls13_keys.h"
 
@@ -118,6 +119,37 @@ static int ssl_write_sni_server_ext(
 */
 
 #if ( defined(MBEDTLS_ECDH_C) || defined(MBEDTLS_ECDSA_C) )
+/* Generate and export a single key share. For hybrid KEMs, this can
+ * be called multiple times with the different components of the hybrid. */
+static int ssl_key_share_encapsulate( mbedtls_ssl_context *ssl,
+                                      uint16_t named_group,
+                                      unsigned char* buf,
+                                      unsigned char* end,
+                                      size_t* olen )
+{
+    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
+
+    if( mbedtls_ssl_named_group_is_ecdhe( named_group ) )
+    {
+        ret = mbedtls_ecdh_make_tls_13_params( &ssl->handshake->ecdh_ctx,
+                 olen, buf, end - buf, ssl->conf->f_rng, ssl->conf->p_rng );
+        if( ret != 0 )
+        {
+            MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ecdh_make_tls_13_params", ret );
+            return( ret );
+        }
+    }
+    else if( 0 /* Other kinds of KEMs */ )
+    {
+    }
+    else
+    {
+        ret = MBEDTLS_ERR_SSL_INTERNAL_ERROR;
+    }
+
+    return( ret );
+}
+
 static int ssl_write_key_shares_ext(
     mbedtls_ssl_context *ssl,
     unsigned char* buf,
@@ -132,22 +164,20 @@ static int ssl_write_key_shares_ext(
 
     *olen = 0;
 
-    /* TBD: Can we say something about the smallest number of bytes needed for the ecdhe parameters */
-    if( end < buf || ( end - buf ) < 8 )
+    MBEDTLS_SSL_DEBUG_MSG( 3, ( "server hello, adding key share extension" ) );
+
+    if( end - buf < 8 )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "buffer too small" ) );
         return( MBEDTLS_ERR_SSL_BUFFER_TOO_SMALL );
     }
 
-    MBEDTLS_SSL_DEBUG_MSG( 3, ( "server hello, adding key share extension" ) );
-
-    if( ( ret = mbedtls_ecdh_make_tls_13_params( &ssl->handshake->ecdh_ctx, &share_len,
-                                        key_share, end - key_share,
-                                        ssl->conf->f_rng, ssl->conf->p_rng ) ) != 0 )
-    {
-        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ecdh_make_tls_13_params", ret );
+    /* When we introduce PQC-ECDHE hybrids, we'll want to call this
+     * function multiple times. */
+    ret = ssl_key_share_encapsulate( ssl, ssl->handshake->named_group_id,
+                                     key_share, end, &share_len );
+    if( ret != 0 )
         return( ret );
-    }
 
     /* Write group ID */
     *key_share_entry++ = ( ssl->handshake->named_group_id >> 8 ) & 0xFF;
