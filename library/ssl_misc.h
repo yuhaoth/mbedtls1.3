@@ -782,9 +782,13 @@ struct mbedtls_ssl_handshake_params
     unsigned char* certificate_request_context;
 #endif
 
-#if defined(MBEDTLS_ECDH_C)
-    mbedtls_ecp_group_id offered_group_id;
-#endif /* MBEDTLS_ECDH_C */
+    uint16_t named_group_id; /* The NamedGroup value for the group
+                              * that is being used for ephemeral
+                              * key exchange.
+                              *
+                              * On the client: Defaults to the first
+                              * entry in the client's group list,
+                              * but can be overwritten by the HRR. */
 
 #if defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
     // pointer to the pre_shared_key extension
