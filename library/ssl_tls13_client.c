@@ -1521,7 +1521,7 @@ cleanup:
 
 static int ssl_client_hello_postprocess( mbedtls_ssl_context* ssl )
 {
-    if( ssl->state == MBEDTLS_SSL_CLIENT_HELLO )
+    if( ssl->handshake->hello_retry_requests_received == 0 )
     {
 #if defined(MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE)
         mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_CLIENT_CCS_AFTER_CLIENT_HELLO );
@@ -1529,14 +1529,9 @@ static int ssl_client_hello_postprocess( mbedtls_ssl_context* ssl )
         mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_EARLY_APP_DATA );
 #endif /* MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE */
     }
-    else if( ssl->state == MBEDTLS_SSL_SECOND_CLIENT_HELLO )
-    {
-        mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_SECOND_SERVER_HELLO );
-    }
+    /* TODO: Reconsider the need for a SECOND_SERER_HELLO state? */
     else
-    {
-        return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
-    }
+        mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_SECOND_SERVER_HELLO );
 
     return( 0 );
 }
@@ -4285,7 +4280,7 @@ int mbedtls_ssl_handshake_client_step_tls1_3( mbedtls_ssl_context *ssl )
                  */
                 mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_CLIENT_CCS_BEFORE_2ND_CLIENT_HELLO );
 #else
-                mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_SECOND_CLIENT_HELLO );
+                mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_CLIENT_HELLO );
 #endif /* MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE */
             }
             else
@@ -4309,24 +4304,6 @@ int mbedtls_ssl_handshake_client_step_tls1_3( mbedtls_ssl_context *ssl )
 
             break;
 #endif /* MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE */
-
-            /* ----- WRITE 2nd CLIENT HELLO ----*/
-        case MBEDTLS_SSL_SECOND_CLIENT_HELLO:
-            ret = ssl_client_hello_process( ssl );
-
-            if( ret != 0 )
-            {
-                MBEDTLS_SSL_DEBUG_RET( 1, "ssl_write_client_hello", ret );
-                break;
-            }
-
-#if defined(MBEDTLS_SSL_USE_MPS)
-            ret = mbedtls_mps_flush( &ssl->mps.l4 );
-            if( ret != 0 )
-                break;
-#endif /* MBEDTLS_SSL_USE_MPS */
-
-            break;
 
             /* ----- READ 2nd SERVER HELLO ----*/
 
