@@ -750,23 +750,12 @@ static int ssl_certificate_verify_write( mbedtls_ssl_context* ssl,
     int signature_scheme_client;
     unsigned char * const end = buf + buflen;
 
-#if defined(MBEDTLS_SSL_USE_MPS)
     p = buf;
     if( buflen < 2 + MBEDTLS_MD_MAX_SIZE )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "buffer too short" ) );
         return( MBEDTLS_ERR_SSL_BUFFER_TOO_SMALL );
     }
-
-#else
-    p = buf + 4;
-    /* TBD: Check whether the signature fits into the buffer. */
-    if( buflen < ( mbedtls_ssl_hs_hdr_len( ssl ) + 2 + MBEDTLS_MD_MAX_SIZE ) )
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "buffer too short" ) );
-        return( MBEDTLS_ERR_SSL_BUFFER_TOO_SMALL );
-    }
-#endif /* MBEDTLS_SSL_USE_MPS */
 
     /* Create verify structure */
     ssl_create_verify_structure(
@@ -1304,22 +1293,11 @@ int mbedtls_ssl_write_certificate_process( mbedtls_ssl_context* ssl )
 #if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
     if( ret == SSL_WRITE_CERTIFICATE_AVAILABLE )
     {
-#if defined(MBEDTLS_SSL_USE_MPS)
-        mbedtls_mps_handshake_out msg;
         unsigned char *buf;
-        mbedtls_mps_size_t buf_len, msg_len;
+        size_t buf_len, msg_len;
 
-        /* Make sure we can write a new message. */
-        MBEDTLS_SSL_PROC_CHK( mbedtls_mps_flush( &ssl->mps.l4 ) );
-
-        msg.type   = MBEDTLS_SSL_HS_CERTIFICATE;
-        msg.length = MBEDTLS_MPS_SIZE_UNKNOWN;
-        MBEDTLS_SSL_PROC_CHK( mbedtls_mps_write_handshake( &ssl->mps.l4,
-                                                           &msg, NULL, NULL ) );
-
-        /* Request write-buffer */
-        MBEDTLS_SSL_PROC_CHK( mbedtls_writer_get( msg.handle, MBEDTLS_MPS_SIZE_MAX,
-                                                      &buf, &buf_len ) );
+        MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_start_handshake_msg( ssl,
+                   MBEDTLS_SSL_HS_CERTIFICATE, &buf, &buf_len ) );
 
         MBEDTLS_SSL_PROC_CHK( ssl_write_certificate_write(
                                   ssl, buf, buf_len, &msg_len ) );
@@ -1327,36 +1305,8 @@ int mbedtls_ssl_write_certificate_process( mbedtls_ssl_context* ssl )
         mbedtls_ssl_add_hs_msg_to_checksum( ssl, MBEDTLS_SSL_HS_CERTIFICATE,
                                             buf, msg_len );
 
-        /* Commit message */
-        MBEDTLS_SSL_PROC_CHK( mbedtls_writer_commit_partial( msg.handle,
-                                                             buf_len - msg_len ) );
-
-        MBEDTLS_SSL_PROC_CHK( mbedtls_mps_dispatch( &ssl->mps.l4 ) );
-
-        /* Update state */
         MBEDTLS_SSL_PROC_CHK( ssl_write_certificate_postprocess( ssl ) );
-
-#else  /* MBEDTLS_SSL_USE_MPS */
-
-        /* Make sure we can write a new message. */
-        MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_flush_output( ssl ) );
-
-        /* Write certificate to message buffer. */
-        MBEDTLS_SSL_PROC_CHK( ssl_write_certificate_write( ssl, ssl->out_msg,
-                                                           MBEDTLS_SSL_OUT_CONTENT_LEN,
-                                                           &ssl->out_msglen ) );
-
-        ssl->out_msgtype = MBEDTLS_SSL_MSG_HANDSHAKE;
-        ssl->out_msg[0] = MBEDTLS_SSL_HS_CERTIFICATE;
-
-        /* Update state */
-        MBEDTLS_SSL_PROC_CHK( ssl_write_certificate_postprocess( ssl ) );
-
-        /* Dispatch message */
-        MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_write_handshake_msg( ssl ) );
-
-#endif /* MBEDTLS_SSL_USE_MPS */
-
+        MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_finish_handshake_msg( ssl, buf_len, msg_len ) );
     }
     else
 #endif /* MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED */
@@ -1452,27 +1402,12 @@ static int ssl_write_certificate_write( mbedtls_ssl_context* ssl,
                                         size_t buflen,
                                         size_t* olen )
 {
-    size_t i, n, total_len;
+    size_t i=0, n, total_len;
     const mbedtls_x509_crt* crt;
     unsigned char* start;
 
     /* TODO: Add bounds checks! Only then remove the next line. */
     ((void) buflen );
-
-#if !defined(MBEDTLS_SSL_USE_MPS)
-    /*
-     *  Handshake Header is 4 ( before adding DTLS-specific fields, which is done later )
-     *  Certificate Request Context: 1 byte
-     *  Length of CertificateEntry: 3 bytes
-     *     Length of cert. 1: 2 bytes
-     *     cert_data: n bytes
-     *	   Extension: 2 bytes
-     *     Extension value: m bytes
-     */
-    i = 4;
-#else /* MBEDTLS_SSL_USE_MPS */
-    i = 0;
-#endif /* MBEDTLS_SSL_USE_MPS */
 
     /* empty certificate_request_context with length 0 */
     buf[i] = 0;
