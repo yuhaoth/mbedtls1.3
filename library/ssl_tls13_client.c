@@ -390,41 +390,16 @@ int ssl_write_end_of_early_data_process( mbedtls_ssl_context* ssl )
     MBEDTLS_SSL_PROC_CHK_NEG( ssl_write_end_of_early_data_coordinate( ssl ) );
     if( ret == SSL_END_OF_EARLY_DATA_WRITE )
     {
-#if defined(MBEDTLS_SSL_USE_MPS)
-        mbedtls_mps_handshake_out msg;
-        msg.type   = MBEDTLS_SSL_HS_END_OF_EARLY_DATA;
-        msg.length = MBEDTLS_MPS_SIZE_UNKNOWN;
-        MBEDTLS_SSL_PROC_CHK( mbedtls_mps_write_handshake( &ssl->mps.l4,
-                                                           &msg, NULL, NULL ) );
+        unsigned char *buf;
+        size_t buf_len;
 
-        /* EndOfEarlyData message is empty */
+        MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_start_handshake_msg( ssl,
+                          MBEDTLS_SSL_HS_END_OF_EARLY_DATA, &buf, &buf_len ) );
 
-        MBEDTLS_SSL_PROC_CHK( mbedtls_mps_dispatch( &ssl->mps.l4 ) );
+        mbedtls_ssl_add_hs_hdr_to_checksum( ssl, MBEDTLS_SSL_HS_END_OF_EARLY_DATA, 0 );
 
-        mbedtls_ssl_add_hs_hdr_to_checksum(
-            ssl, MBEDTLS_SSL_HS_END_OF_EARLY_DATA, 0 );
-
-        /* Update state */
         MBEDTLS_SSL_PROC_CHK( ssl_write_end_of_early_data_postprocess( ssl ) );
-
-        MBEDTLS_SSL_PROC_CHK( mbedtls_mps_flush( &ssl->mps.l4 ) );
-
-#else  /* MBEDTLS_SSL_USE_MPS */
-
-        /* EndOfEarlyData message is empty */
-
-        ssl->out_msgtype = MBEDTLS_SSL_MSG_HANDSHAKE;
-        ssl->out_msg[0]  = MBEDTLS_SSL_HS_END_OF_EARLY_DATA;
-        ssl->out_msglen  = 4;
-
-        /* Update state */
-        MBEDTLS_SSL_PROC_CHK( ssl_write_end_of_early_data_postprocess( ssl ) );
-
-        /* Dispatch message */
-        MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_write_handshake_msg( ssl ) );
-
-#endif /* MBEDTLS_SSL_USE_MPS */
-
+        MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_finish_handshake_msg( ssl, buf_len, 0 ) );
     }
     else
     {
