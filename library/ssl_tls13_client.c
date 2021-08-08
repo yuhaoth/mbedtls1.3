@@ -3623,18 +3623,6 @@ static int ssl_hrr_postprocess( mbedtls_ssl_context* ssl,
 
 #if defined(MBEDTLS_SSL_NEW_SESSION_TICKET)
 
-#if !defined(MBEDTLS_SSL_USE_MPS)
-static int ssl_new_session_ticket_fetch( mbedtls_ssl_context* ssl,
-                                         unsigned char** dst,
-                                         size_t* dstlen )
-{
-    *dst = ssl->in_msg + mbedtls_ssl_hs_hdr_len( ssl );
-    *dstlen = ssl->in_hslen - mbedtls_ssl_hs_hdr_len( ssl );
-
-    return( 0 );
-}
-#endif /* MBEDTLS_SSL_USE_MPS */
-
 static int ssl_new_session_ticket_early_data_ext_parse( mbedtls_ssl_context* ssl,
                                                         const unsigned char* buf,
                                                         size_t ext_size )
@@ -3928,22 +3916,14 @@ static int ssl_new_session_ticket_process( mbedtls_ssl_context* ssl )
 
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> parse new session ticket" ) );
 
-#if defined(MBEDTLS_SSL_USE_MPS)
-
     MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_fetch_handshake_msg( ssl,
                                           MBEDTLS_SSL_HS_NEW_SESSION_TICKET,
                                           &buf, &buflen ) );
 
-    /* Process the message contents */
     MBEDTLS_SSL_PROC_CHK( ssl_new_session_ticket_parse( ssl, buf, buflen ) );
 
+#if defined(MBEDTLS_SSL_USE_MPS)
     MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_mps_hs_consume_full_hs_msg( ssl ) );
-
-#else /* MBEDTLS_SSL_USE_MPS */
-
-    MBEDTLS_SSL_PROC_CHK( ssl_new_session_ticket_fetch( ssl, &buf, &buflen ) );
-    MBEDTLS_SSL_PROC_CHK( ssl_new_session_ticket_parse( ssl, buf, buflen ) );
-
 #endif /* MBEDTLS_SSL_USE_MPS */
 
     MBEDTLS_SSL_PROC_CHK( ssl_new_session_ticket_postprocess( ssl ) );

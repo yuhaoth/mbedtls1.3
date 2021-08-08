@@ -5439,6 +5439,8 @@ static int ssl_check_new_session_ticket( mbedtls_ssl_context *ssl )
     {
         return( 0 );
     }
+
+    ssl->keep_current_message = 1;
 #endif /* MBEDTLS_SSL_USE_MPS */
 
     MBEDTLS_SSL_DEBUG_MSG( 3, ( "NewSessionTicket received" ) );
