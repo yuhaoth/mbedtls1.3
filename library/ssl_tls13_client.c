@@ -140,9 +140,6 @@ int ssl_write_early_data_process( mbedtls_ssl_context* ssl )
         MBEDTLS_SSL_PROC_CHK( ssl_write_early_data_prepare( ssl ) );
 
 #if defined(MBEDTLS_SSL_USE_MPS)
-        /* Make sure we can write a new message. */
-        MBEDTLS_SSL_PROC_CHK( mbedtls_mps_flush( &ssl->mps.l4 ) );
-
         MBEDTLS_SSL_PROC_CHK( mbedtls_mps_write_application( &ssl->mps.l4,
                                                              &msg ) );
 
@@ -163,9 +160,6 @@ int ssl_write_early_data_process( mbedtls_ssl_context* ssl )
         MBEDTLS_SSL_PROC_CHK( ssl_write_early_data_postprocess( ssl ) );
 
 #else  /* MBEDTLS_SSL_USE_MPS */
-
-        /* Make sure we can write a new message. */
-        MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_flush_output( ssl ) );
 
         /* Write early-data to message buffer. */
         MBEDTLS_SSL_PROC_CHK( ssl_write_early_data_write( ssl, ssl->out_msg,
@@ -396,47 +390,16 @@ int ssl_write_end_of_early_data_process( mbedtls_ssl_context* ssl )
     MBEDTLS_SSL_PROC_CHK_NEG( ssl_write_end_of_early_data_coordinate( ssl ) );
     if( ret == SSL_END_OF_EARLY_DATA_WRITE )
     {
-#if defined(MBEDTLS_SSL_USE_MPS)
-        mbedtls_mps_handshake_out msg;
-        /* Make sure we can write a new message. */
-        MBEDTLS_SSL_PROC_CHK( mbedtls_mps_flush( &ssl->mps.l4 ) );
+        unsigned char *buf;
+        size_t buf_len;
 
-        msg.type   = MBEDTLS_SSL_HS_END_OF_EARLY_DATA;
-        msg.length = MBEDTLS_MPS_SIZE_UNKNOWN;
-        MBEDTLS_SSL_PROC_CHK( mbedtls_mps_write_handshake( &ssl->mps.l4,
-                                                           &msg, NULL, NULL ) );
+        MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_start_handshake_msg( ssl,
+                          MBEDTLS_SSL_HS_END_OF_EARLY_DATA, &buf, &buf_len ) );
 
-        /* EndOfEarlyData message is empty */
+        mbedtls_ssl_add_hs_hdr_to_checksum( ssl, MBEDTLS_SSL_HS_END_OF_EARLY_DATA, 0 );
 
-        MBEDTLS_SSL_PROC_CHK( mbedtls_mps_dispatch( &ssl->mps.l4 ) );
-
-        mbedtls_ssl_add_hs_hdr_to_checksum(
-            ssl, MBEDTLS_SSL_HS_END_OF_EARLY_DATA, 0 );
-
-        /* Update state */
         MBEDTLS_SSL_PROC_CHK( ssl_write_end_of_early_data_postprocess( ssl ) );
-
-        MBEDTLS_SSL_PROC_CHK( mbedtls_mps_flush( &ssl->mps.l4 ) );
-
-#else  /* MBEDTLS_SSL_USE_MPS */
-
-        /* Make sure we can write a new message. */
-        MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_flush_output( ssl ) );
-
-        /* EndOfEarlyData message is empty */
-
-        ssl->out_msgtype = MBEDTLS_SSL_MSG_HANDSHAKE;
-        ssl->out_msg[0]  = MBEDTLS_SSL_HS_END_OF_EARLY_DATA;
-        ssl->out_msglen  = 4;
-
-        /* Update state */
-        MBEDTLS_SSL_PROC_CHK( ssl_write_end_of_early_data_postprocess( ssl ) );
-
-        /* Dispatch message */
-        MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_write_handshake_msg( ssl ) );
-
-#endif /* MBEDTLS_SSL_USE_MPS */
-
+        MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_finish_handshake_msg( ssl, buf_len, 0 ) );
     }
     else
     {
@@ -1379,16 +1342,9 @@ static int ssl_client_hello_postprocess( mbedtls_ssl_context* ssl );
 static int ssl_client_hello_process( mbedtls_ssl_context* ssl )
 {
     int ret = 0;
-#if defined(MBEDTLS_SSL_USE_MPS)
+    unsigned char *buf;
+    size_t buf_len, msg_len;
     size_t len_without_binders;
-    mbedtls_mps_handshake_out msg;
-    unsigned char *buf;
-    mbedtls_mps_size_t buf_len, msg_len;
-#else /* MBEDTLS_SSL_USE_MPS */
-    size_t msg_len, len_without_binders;
-    unsigned char *buf;
-    size_t len;
-#endif /* MBEDTLS_SSL_USE_MPS */
 
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> write client hello" ) );
 
@@ -1398,19 +1354,8 @@ static int ssl_client_hello_process( mbedtls_ssl_context* ssl )
         ssl->handshake->state_local.cli_hello_out.preparation_done = 1;
     }
 
-#if defined(MBEDTLS_SSL_USE_MPS)
-
-    /* Make sure we can write a new message. */
-    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_flush( &ssl->mps.l4 ) );
-
-    msg.type   = MBEDTLS_SSL_HS_CLIENT_HELLO;
-    msg.length = MBEDTLS_MPS_SIZE_UNKNOWN;
-    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_write_handshake( &ssl->mps.l4,
-                                                       &msg, NULL, NULL ) );
-
-    /* Request write-buffer */
-    MBEDTLS_SSL_PROC_CHK( mbedtls_writer_get( msg.handle, MBEDTLS_MPS_SIZE_MAX,
-                                              &buf, &buf_len ) );
+    MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_start_handshake_msg( ssl,
+                 MBEDTLS_SSL_HS_CLIENT_HELLO, &buf, &buf_len ) );
 
     MBEDTLS_SSL_PROC_CHK( ssl_client_hello_write_partial( ssl, buf, buf_len,
                                                   &len_without_binders,
@@ -1437,81 +1382,8 @@ static int ssl_client_hello_process( mbedtls_ssl_context* ssl )
     }
 #endif /* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED */
 
-    /* Commit message */
-    MBEDTLS_SSL_PROC_CHK( mbedtls_writer_commit_partial( msg.handle,
-                                                         buf_len - msg_len ) );
-
-    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_dispatch( &ssl->mps.l4 ) );
-
     MBEDTLS_SSL_PROC_CHK( ssl_client_hello_postprocess( ssl ) );
-
-#else /* MBEDTLS_SSL_USE_MPS */
-
-    /* Make sure we can write a new message. */
-    MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_flush_output( ssl ) );
-
-    /* Prepare ClientHello message in output buffer, up to
-     * but excluding the PSK binder list (if present).
-     *
-     * In contrast to other handshake writing functions, this
-     * function returns two length values: Firstly, the length
-     * of the message up to the binder's list. And secondly,
-     * the total length of the message including the binders
-     * list. */
-    buf = ssl->out_msg;
-    len = MBEDTLS_SSL_OUT_CONTENT_LEN;
-    MBEDTLS_SSL_PROC_CHK( ssl_client_hello_write_partial( ssl, buf, len,
-                                                  &len_without_binders,
-                                                  &msg_len ) );
-    ssl->out_msglen = msg_len;
-
-    {
-        unsigned char hs_hdr[4];
-        size_t const hs_len = msg_len - 4;
-
-        /* Build HS header for checksum update. */
-        hs_hdr[0] = MBEDTLS_SSL_HS_CLIENT_HELLO;
-        hs_hdr[1] = (unsigned char)( hs_len >> 16 );
-        hs_hdr[2] = (unsigned char)( hs_len >>  8 );
-        hs_hdr[3] = (unsigned char)( hs_len >>  0 );
-
-        ssl->handshake->update_checksum( ssl, hs_hdr, sizeof( hs_hdr ) );
-
-        /* Manually update the checksum with ClientHello using dummy PSK binders. */
-        ssl->handshake->update_checksum( ssl, buf + 4, len_without_binders - 4 );
-    }
-
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && \
-    defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
-    /* Patch the PSK binder after updating the HS checksum. */
-    {
-
-        size_t dummy0, dummy1;
-        mbedtls_ssl_write_pre_shared_key_ext( ssl,
-                                              buf + len_without_binders,
-                                              buf + len,
-                                              &dummy0, &dummy1,
-                                              SSL_WRITE_PSK_EXT_ADD_PSK_BINDERS );
-
-        /* Manually update the checksum with ClientHello using dummy PSK binders. */
-        ssl->handshake->update_checksum( ssl, buf + len_without_binders,
-                                         msg_len - len_without_binders );
-    }
-#endif /* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED &&
-          MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
-
-    ssl->out_msgtype = MBEDTLS_SSL_MSG_HANDSHAKE;
-    ssl->out_msg[0] = MBEDTLS_SSL_HS_CLIENT_HELLO;
-
-    MBEDTLS_SSL_DEBUG_BUF( 3, "ClientHello", ssl->out_msg, ssl->out_msglen );
-
-    MBEDTLS_SSL_PROC_CHK( ssl_client_hello_postprocess( ssl ) );
-
-    /* Dispatch message */
-    MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_write_handshake_msg_ext(
-                              ssl, 0 /* no checksum update */ ) );
-
-#endif /* MBEDTLS_SSL_USE_MPS */
+    MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_finish_handshake_msg( ssl, buf_len, msg_len ) );
 
 cleanup:
 
@@ -1521,22 +1393,11 @@ cleanup:
 
 static int ssl_client_hello_postprocess( mbedtls_ssl_context* ssl )
 {
-    if( ssl->state == MBEDTLS_SSL_CLIENT_HELLO )
-    {
 #if defined(MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE)
-        mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_CLIENT_CCS_AFTER_CLIENT_HELLO );
+    mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_CLIENT_CCS_AFTER_CLIENT_HELLO );
 #else
-        mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_EARLY_APP_DATA );
+    mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_EARLY_APP_DATA );
 #endif /* MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE */
-    }
-    else if( ssl->state == MBEDTLS_SSL_SECOND_CLIENT_HELLO )
-    {
-        mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_SECOND_SERVER_HELLO );
-    }
-    else
-    {
-        return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
-    }
 
     return( 0 );
 }
@@ -1628,22 +1489,6 @@ static int ssl_client_hello_write_partial( mbedtls_ssl_context* ssl,
      * are elided. The random bytes are shorter.
      */
     version_len = 2;
-
-    /* With MPS we don't need to write the handshake header. */
-#if !defined(MBEDTLS_SSL_USE_MPS)
-    {
-        size_t const tls_hs_hdr_len = 4;
-
-        if( buflen < tls_hs_hdr_len + version_len + rand_bytes_len )
-        {
-            MBEDTLS_SSL_DEBUG_MSG( 1, ( "buffer too small to hold ClientHello" ) );
-            return( MBEDTLS_ERR_SSL_BUFFER_TOO_SMALL );
-        }
-
-        buf += tls_hs_hdr_len;
-        buflen -= tls_hs_hdr_len;
-    }
-#endif /* MBEDTLS_SSL_USE_MPS */
 
     if( ssl->conf->max_major_ver == 0 )
     {
@@ -2909,6 +2754,8 @@ static int ssl_server_hello_process( mbedtls_ssl_context* ssl )
      * - Switch processing routine in case of HRR
      */
 
+    ssl->handshake->extensions_present = MBEDTLS_SSL_EXT_NONE;
+
 #if defined(MBEDTLS_SSL_USE_MPS)
     MBEDTLS_SSL_PROC_CHK_NEG( ssl_server_hello_coordinate( ssl, &msg,
                                                  &buf, &buflen ) );
@@ -3495,8 +3342,12 @@ static int ssl_server_hello_postprocess( mbedtls_ssl_context* ssl )
     mbedtls_ssl_set_inbound_transform( ssl, ssl->transform_handshake );
 #endif /* MBEDTLS_SSL_USE_MPS */
 
-    mbedtls_platform_zeroize( &traffic_keys, sizeof( traffic_keys ) );
+    /*
+     * State machine update
+     */
+    mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_ENCRYPTED_EXTENSIONS );
 
+    mbedtls_platform_zeroize( &traffic_keys, sizeof( traffic_keys ) );
     return( 0 );
 }
 
@@ -3826,6 +3677,14 @@ static int ssl_hrr_postprocess( mbedtls_ssl_context* ssl,
 {
     int ret = 0;
 
+    if( ssl->handshake->hello_retry_requests_received > 0 )
+    {
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "Multiple HRRs received" ) );
+        SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_LEVEL_FATAL,
+                              MBEDTLS_SSL_ALERT_MSG_HANDSHAKE_FAILURE );
+        return( MBEDTLS_ERR_SSL_HANDSHAKE_FAILURE );
+    }
+
     ssl->handshake->hello_retry_requests_received++;
 
     MBEDTLS_SSL_DEBUG_MSG( 4, ( "Compress transcript hash for stateless HRR" ) );
@@ -3843,6 +3702,15 @@ static int ssl_hrr_postprocess( mbedtls_ssl_context* ssl,
     /* Add transcript for HRR */
     ssl->handshake->update_checksum( ssl, orig_buf, orig_msg_len );
 #endif /* MBEDTLS_SSL_USE_MPS */
+
+#if defined(MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE)
+    /* If not offering early data, the client sends a dummy CCS record
+     * immediately before its second flight. This may either be before
+     * its second ClientHello or before its encrypted handshake flight. */
+    mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_CLIENT_CCS_BEFORE_2ND_CLIENT_HELLO );
+#else
+    mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_CLIENT_HELLO );
+#endif /* MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE */
 
     return( 0 );
 }
@@ -4134,10 +4002,9 @@ static int ssl_new_session_ticket_parse( mbedtls_ssl_context* ssl,
     return( 0 );
 }
 
-static int ssl_new_session_ticket_postprocess( mbedtls_ssl_context* ssl, int ret )
+static int ssl_new_session_ticket_postprocess( mbedtls_ssl_context* ssl )
 {
-    ((void ) ssl);
-    ((void ) ret);
+    mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_HANDSHAKE_OVER );
     return( 0 );
 }
 
@@ -4149,7 +4016,7 @@ static int ssl_new_session_ticket_postprocess( mbedtls_ssl_context* ssl, int ret
 
 static int ssl_new_session_ticket_process( mbedtls_ssl_context* ssl )
 {
-    int ret;
+    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
     unsigned char* buf;
     size_t buflen;
 
@@ -4173,7 +4040,7 @@ static int ssl_new_session_ticket_process( mbedtls_ssl_context* ssl )
 
 #endif /* MBEDTLS_SSL_USE_MPS */
 
-    MBEDTLS_SSL_PROC_CHK( ssl_new_session_ticket_postprocess( ssl, ret ) );
+    MBEDTLS_SSL_PROC_CHK( ssl_new_session_ticket_postprocess( ssl ) );
 
 cleanup:
 
@@ -4203,292 +4070,100 @@ int mbedtls_ssl_handshake_client_step_tls1_3( mbedtls_ssl_context *ssl )
     {
         case MBEDTLS_SSL_HELLO_REQUEST:
             mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_CLIENT_HELLO );
-
-#if defined(MBEDTLS_SSL_NEW_SESSION_TICKET)
-            ssl->session_negotiate->endpoint = ssl->conf->endpoint;
-#endif /* MBEDTLS_SSL_NEW_SESSION_TICKET */
             break;
 
-            /* ----- WRITE CLIENT HELLO ----*/
-
+        /*
+         *  ==>   ClientHello
+         *        (EarlyData)
+         */
         case MBEDTLS_SSL_CLIENT_HELLO:
-
             ret = ssl_client_hello_process( ssl );
-            if( ret != 0 )
-            {
-                MBEDTLS_SSL_DEBUG_RET( 1, "ssl_write_client_hello", ret );
-                break;
-            }
-
-#if defined(MBEDTLS_SSL_USE_MPS)
-            ret = mbedtls_mps_flush( &ssl->mps.l4 );
-            if( ret != 0 )
-                break;
-#endif /* MBEDTLS_SSL_USE_MPS */
-
             break;
-
-            /* ----- WRITE CHANGE CIPHER SPEC ----*/
-
-#if defined(MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE)
-        case MBEDTLS_SSL_CLIENT_CCS_AFTER_CLIENT_HELLO:
-
-            ret = mbedtls_ssl_write_change_cipher_spec_process( ssl );
-            if( ret != 0 )
-            {
-                MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_write_change_cipher_spec_process", ret );
-                break;
-            }
-
-            break;
-#endif /* MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE */
-
-            /* ----- WRITE EARLY DATA ----*/
 
         case MBEDTLS_SSL_EARLY_APP_DATA:
-
             ret = ssl_write_early_data_process( ssl );
-
-            if( ret != 0 )
-            {
-                MBEDTLS_SSL_DEBUG_RET( 1, "ssl_write_early_data_process", ret );
-                break;
-            }
-
             break;
 
-            /* ----- READ SERVER HELLO ----*/
-
+        /*
+         *  <==   ServerHello / HelloRetryRequest
+         *        EncryptedExtensions
+         *        (CertificateRequest)
+         *        (Certificate)
+         *        (CertificateVerify)
+         *        Finished
+         */
         case MBEDTLS_SSL_SERVER_HELLO:
-            /* In this state the client is expecting a ServerHello
-             * message but the server could also return a HelloRetryRequest.
-             *
-             * Reset extensions we have seen so far.
-             */
-            ssl->handshake->extensions_present = MBEDTLS_SSL_EXT_NONE;
             ret = ssl_server_hello_process( ssl );
-
-            if( ret != 0 )
-            {
-                MBEDTLS_SSL_DEBUG_RET( 1, "ssl_server_hello_process", ret );
-                break;
-            }
-
-            if( ssl->handshake->hello_retry_requests_received > 0 )
-            {
-                /* If we received the HRR msg then we send another ClientHello */
-#if defined(MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE)
-                /* If not offering early data, the client sends a dummy
-                 * change_cipher_spec record immediately before its
-                 * second flight. This may either be before its second
-                 * ClientHello or before its encrypted handshake flight.
-                 */
-                mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_CLIENT_CCS_BEFORE_2ND_CLIENT_HELLO );
-#else
-                mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_SECOND_CLIENT_HELLO );
-#endif /* MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE */
-            }
-            else
-            {
-                mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_ENCRYPTED_EXTENSIONS );
-            }
             break;
-
-            /* ----- WRITE CHANGE_CIPHER_SPEC ----*/
-
-#if defined(MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE)
-        case MBEDTLS_SSL_CLIENT_CCS_BEFORE_2ND_CLIENT_HELLO:
-
-            ret = mbedtls_ssl_write_change_cipher_spec_process( ssl );
-
-            if( ret != 0 )
-            {
-                MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_write_change_cipher_spec_process", ret );
-                break;
-            }
-
-            break;
-#endif /* MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE */
-
-            /* ----- WRITE 2nd CLIENT HELLO ----*/
-        case MBEDTLS_SSL_SECOND_CLIENT_HELLO:
-            ret = ssl_client_hello_process( ssl );
-
-            if( ret != 0 )
-            {
-                MBEDTLS_SSL_DEBUG_RET( 1, "ssl_write_client_hello", ret );
-                break;
-            }
-
-#if defined(MBEDTLS_SSL_USE_MPS)
-            ret = mbedtls_mps_flush( &ssl->mps.l4 );
-            if( ret != 0 )
-                break;
-#endif /* MBEDTLS_SSL_USE_MPS */
-
-            break;
-
-            /* ----- READ 2nd SERVER HELLO ----*/
-
-        case MBEDTLS_SSL_SECOND_SERVER_HELLO:
-            /* In this state the client is expecting a ServerHello
-             * message and not the HRR anymore.
-             */
-            /* reset extensions we have seen so far */
-            ssl->handshake->extensions_present = MBEDTLS_SSL_EXT_NONE;
-            ret = ssl_server_hello_process( ssl );
-
-            if( ret != 0 )
-            {
-                MBEDTLS_SSL_DEBUG_RET( 1, "ssl_parse_server_hello", ret );
-                break;
-            }
-
-            /* if we received a second HRR we abort */
-            if( ssl->handshake->hello_retry_requests_received == 2 )
-            {
-                MBEDTLS_SSL_DEBUG_MSG( 1, ( "Multiple HRRs received" ) );
-                SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_LEVEL_FATAL,
-                                      MBEDTLS_SSL_ALERT_MSG_HANDSHAKE_FAILURE );
-                return( MBEDTLS_ERR_SSL_HANDSHAKE_FAILURE );
-            }
-            mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_ENCRYPTED_EXTENSIONS );
-            break;
-
-            /* ----- READ ENCRYPTED EXTENSIONS ----*/
 
         case MBEDTLS_SSL_ENCRYPTED_EXTENSIONS:
-
             ret = ssl_encrypted_extensions_process( ssl );
-
-            if( ret != 0 )
-            {
-                MBEDTLS_SSL_DEBUG_RET( 1, "ssl_encrypted_extensions_process", ret );
-                break;
-            }
-
             break;
-
-            /* ----- READ CERTIFICATE REQUEST ----*/
 
         case MBEDTLS_SSL_CERTIFICATE_REQUEST:
             ret = ssl_certificate_request_process( ssl );
-
-            if( ret != 0 )
-            {
-                MBEDTLS_SSL_DEBUG_RET( 1, "ssl_certificate_request_process", ret );
-                break;
-            }
-
             break;
-
-            /* ----- READ SERVER CERTIFICATE ----*/
 
         case MBEDTLS_SSL_SERVER_CERTIFICATE:
             ret = mbedtls_ssl_read_certificate_process( ssl );
-
-            if( ret != 0 )
-            {
-                MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_read_certificate_process", ret );
-                break;
-            }
             break;
-
-            /* ----- READ CERTIFICATE VERIFY ----*/
 
         case MBEDTLS_SSL_CERTIFICATE_VERIFY:
             ret = mbedtls_ssl_read_certificate_verify_process( ssl );
-
-            if( ret != 0 )
-            {
-                MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_read_certificate_verify_process", ret );
-                break;
-            }
-
             break;
-
-            /* ----- READ FINISHED ----*/
 
         case MBEDTLS_SSL_SERVER_FINISHED:
-
             ret = mbedtls_ssl_finished_in_process( ssl );
-
-            if( ret != 0 )
-            {
-                MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_finished_in_process", ret );
-                break;
-            }
-
-            mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_END_OF_EARLY_DATA );
             break;
 
-            /* ----- WRITE END-OF-EARLY-DATA ----*/
-
+        /*
+         *  ==>   (EndOfEarlyData)
+         *        (Certificate)
+         *        (CertificateVerify)
+         *        (Finished)
+         */
         case MBEDTLS_SSL_END_OF_EARLY_DATA:
-
             ret = ssl_write_end_of_early_data_process( ssl );
-
-            if( ret != 0 )
-            {
-                MBEDTLS_SSL_DEBUG_RET( 1, "ssl_write_end_of_early_data_process", ret );
-                break;
-            }
-
             break;
-
-            /* ----- WRITE CHANGE CIPHER SPEC ----*/
-
-#if defined(MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE)
-        case MBEDTLS_SSL_CLIENT_CCS_AFTER_SERVER_FINISHED:
-
-            ret = mbedtls_ssl_write_change_cipher_spec_process( ssl );
-
-            if( ret != 0 )
-            {
-                MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_write_change_cipher_spec_process", ret );
-                break;
-            }
-
-            break;
-#endif /* MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE */
-
-
-            /* ----- WRITE CERTIFICATE ----*/
 
         case MBEDTLS_SSL_CLIENT_CERTIFICATE:
-
             ret = mbedtls_ssl_write_certificate_process( ssl );
-
-            if( ret != 0 )
-            {
-                MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_write_certificate_process", ret );
-                break;
-            }
             break;
-
-            /* ----- WRITE CLIENT CERTIFICATE VERIFY ----*/
 
         case MBEDTLS_SSL_CLIENT_CERTIFICATE_VERIFY:
             ret = mbedtls_ssl_write_certificate_verify_process( ssl );
-
-            if( ret != 0 )
-            {
-                MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_write_certificate_verify_process", ret );
-                break;
-            }
             break;
-
-            /* ----- WRITE CLIENT FINISHED ----*/
 
         case MBEDTLS_SSL_CLIENT_FINISHED:
             ret = mbedtls_ssl_finished_out_process( ssl );
-
-            if( ret != 0 )
-            {
-                MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_finished_out_process", ret );
-                break;
-            }
             break;
+
+        /*
+         *  <==   NewSessionTicket
+         */
+        case MBEDTLS_SSL_CLIENT_NEW_SESSION_TICKET:
+
+            ret = ssl_new_session_ticket_process( ssl );
+            if( ret != 0 )
+                break;
+
+            ret = MBEDTLS_ERR_SSL_RECEIVED_NEW_SESSION_TICKET;
+            break;
+
+        /*
+         * Injection of dummy-CCS's for middlebox compatibility
+         */
+#if defined(MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE)
+        case MBEDTLS_SSL_CLIENT_CCS_AFTER_CLIENT_HELLO:
+        case MBEDTLS_SSL_CLIENT_CCS_BEFORE_2ND_CLIENT_HELLO:
+        case MBEDTLS_SSL_CLIENT_CCS_AFTER_SERVER_FINISHED:
+            ret = mbedtls_ssl_write_change_cipher_spec_process( ssl );
+            break;
+#endif /* MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE */
+
+        /*
+         * Internal intermediate states
+         */
 
         case MBEDTLS_SSL_FLUSH_BUFFERS:
             MBEDTLS_SSL_DEBUG_MSG( 2, ( "handshake: done" ) );
@@ -4517,19 +4192,6 @@ int mbedtls_ssl_handshake_client_step_tls1_3( mbedtls_ssl_context *ssl )
 
             mbedtls_ssl_handshake_wrapup_tls13( ssl );
             mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_HANDSHAKE_OVER );
-            break;
-
-    case MBEDTLS_SSL_CLIENT_NEW_SESSION_TICKET:
-
-            ret = ssl_new_session_ticket_process( ssl );
-            if( ret != 0 )
-            {
-                MBEDTLS_SSL_DEBUG_RET( 1, "ssl_new_session_ticket_process", ret );
-                break;
-            }
-
-            mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_HANDSHAKE_OVER );
-            ret = MBEDTLS_ERR_SSL_RECEIVED_NEW_SESSION_TICKET;
             break;
 
         default:

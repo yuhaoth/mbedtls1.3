@@ -672,6 +672,10 @@ struct mbedtls_ssl_handshake_params
 
     mbedtls_ssl_tls_prf_cb *tls_prf;
 
+#if defined(MBEDTLS_SSL_USE_MPS)
+    mbedtls_mps_handshake_out hs_msg_out;
+#endif
+
     /*
      * State-local variables used during the processing
      * of a specific handshake state.
@@ -2014,6 +2018,14 @@ static inline int mbedtls_ssl_named_group_is_ecdhe( uint16_t named_group )
             named_group == MBEDTLS_SSL_TLS13_NAMED_GROUP_X25519   ||
             named_group == MBEDTLS_SSL_TLS13_NAMED_GROUP_X448 );
 }
+
+int mbedtls_ssl_start_handshake_msg( mbedtls_ssl_context *ssl,
+                                     unsigned hs_type,
+                                     unsigned char **buf,
+                                     size_t *buflen );
+int mbedtls_ssl_finish_handshake_msg( mbedtls_ssl_context *ssl,
+                                      size_t buf_len,
+                                      size_t msg_len );
 
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 
