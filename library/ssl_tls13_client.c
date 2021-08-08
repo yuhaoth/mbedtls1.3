@@ -4223,6 +4223,7 @@ int mbedtls_ssl_handshake_client_step_tls1_3( mbedtls_ssl_context *ssl )
 #if defined(MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE)
         case MBEDTLS_SSL_CLIENT_CCS_AFTER_CLIENT_HELLO:
         case MBEDTLS_SSL_CLIENT_CCS_BEFORE_2ND_CLIENT_HELLO:
+        case MBEDTLS_SSL_CLIENT_CCS_AFTER_SERVER_FINISHED:
             ret = mbedtls_ssl_write_change_cipher_spec_process( ssl );
             break;
 #endif /* MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE */
@@ -4276,96 +4277,25 @@ int mbedtls_ssl_handshake_client_step_tls1_3( mbedtls_ssl_context *ssl )
 
         case MBEDTLS_SSL_CERTIFICATE_VERIFY:
             ret = mbedtls_ssl_read_certificate_verify_process( ssl );
-
-            if( ret != 0 )
-            {
-                MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_read_certificate_verify_process", ret );
-                break;
-            }
-
             break;
-
-            /* ----- READ FINISHED ----*/
 
         case MBEDTLS_SSL_SERVER_FINISHED:
-
             ret = mbedtls_ssl_finished_in_process( ssl );
-
-            if( ret != 0 )
-            {
-                MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_finished_in_process", ret );
-                break;
-            }
-
-            mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_END_OF_EARLY_DATA );
             break;
-
-            /* ----- WRITE END-OF-EARLY-DATA ----*/
 
         case MBEDTLS_SSL_END_OF_EARLY_DATA:
-
             ret = ssl_write_end_of_early_data_process( ssl );
-
-            if( ret != 0 )
-            {
-                MBEDTLS_SSL_DEBUG_RET( 1, "ssl_write_end_of_early_data_process", ret );
-                break;
-            }
-
             break;
-
-            /* ----- WRITE CHANGE CIPHER SPEC ----*/
-
-#if defined(MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE)
-        case MBEDTLS_SSL_CLIENT_CCS_AFTER_SERVER_FINISHED:
-
-            ret = mbedtls_ssl_write_change_cipher_spec_process( ssl );
-
-            if( ret != 0 )
-            {
-                MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_write_change_cipher_spec_process", ret );
-                break;
-            }
-
-            break;
-#endif /* MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE */
-
-
-            /* ----- WRITE CERTIFICATE ----*/
 
         case MBEDTLS_SSL_CLIENT_CERTIFICATE:
-
             ret = mbedtls_ssl_write_certificate_process( ssl );
-
-            if( ret != 0 )
-            {
-                MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_write_certificate_process", ret );
-                break;
-            }
-            break;
-
-            /* ----- WRITE CLIENT CERTIFICATE VERIFY ----*/
 
         case MBEDTLS_SSL_CLIENT_CERTIFICATE_VERIFY:
             ret = mbedtls_ssl_write_certificate_verify_process( ssl );
-
-            if( ret != 0 )
-            {
-                MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_write_certificate_verify_process", ret );
-                break;
-            }
             break;
-
-            /* ----- WRITE CLIENT FINISHED ----*/
 
         case MBEDTLS_SSL_CLIENT_FINISHED:
             ret = mbedtls_ssl_finished_out_process( ssl );
-
-            if( ret != 0 )
-            {
-                MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_finished_out_process", ret );
-                break;
-            }
             break;
 
         case MBEDTLS_SSL_FLUSH_BUFFERS:

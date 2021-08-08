@@ -4465,25 +4465,7 @@ int mbedtls_ssl_handshake_server_step_tls1_3( mbedtls_ssl_context *ssl )
             /* ----- READ FINISHED ----*/
 
         case MBEDTLS_SSL_CLIENT_FINISHED:
-
             ret = mbedtls_ssl_finished_in_process( ssl );
-
-            if( ret != 0 )
-            {
-                MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_finished_in_process", ret );
-                return( ret );
-            }
-
-            /* Compute resumption_master_secret */
-            ret = mbedtls_ssl_tls1_3_generate_resumption_master_secret( ssl );
-            if( ret != 0 )
-            {
-                MBEDTLS_SSL_DEBUG_RET( 1,
-                          "mbedtls_ssl_tls1_3_generate_resumption_master_secret ", ret );
-                return( ret );
-            }
-
-            mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_HANDSHAKE_WRAPUP );
             break;
 
         case MBEDTLS_SSL_HANDSHAKE_WRAPUP:

@@ -2685,16 +2685,27 @@ static int ssl_finished_in_postprocess_cli( mbedtls_ssl_context *ssl )
     }
 #endif /* MBEDTLS_SSL_USE_MPS */
 
+    mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_END_OF_EARLY_DATA );
     return( 0 );
 }
 #endif /* MBEDTLS_SSL_CLI_C */
 
 static int ssl_finished_in_postprocess( mbedtls_ssl_context* ssl )
 {
+    int ret;
 #if defined(MBEDTLS_SSL_SRV_C)
     if( ssl->conf->endpoint == MBEDTLS_SSL_IS_SERVER )
     {
-        /* Nothing to be done in this case. */
+        /* Compute resumption_master_secret */
+        ret = mbedtls_ssl_tls1_3_generate_resumption_master_secret( ssl );
+        if( ret != 0 )
+        {
+            MBEDTLS_SSL_DEBUG_RET( 1,
+               "mbedtls_ssl_tls1_3_generate_resumption_master_secret ", ret );
+            return( ret );
+        }
+
+        mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_HANDSHAKE_WRAPUP );
         return( 0 );
     }
 #endif /* MBEDTLS_SSL_SRV_C */
