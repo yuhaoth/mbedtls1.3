@@ -2038,12 +2038,6 @@ static int ssl_read_early_data_postprocess( mbedtls_ssl_context* ssl )
 /* Main entry point from the state machine; orchestrates the otherfunctions. */
 static int ssl_client_hello_process( mbedtls_ssl_context* ssl );
 
-#if !defined(MBEDTLS_SSL_USE_MPS)
-static int ssl_client_hello_fetch( mbedtls_ssl_context* ssl,
-                                   unsigned char** buf,
-                                   size_t* buflen );
-#endif /* MBEDTLS_SSL_USE_MPS */
-
 static int ssl_client_hello_parse( mbedtls_ssl_context* ssl,
                                    unsigned char* buf,
                                    size_t buflen );
@@ -2069,26 +2063,20 @@ static int ssl_client_hello_process( mbedtls_ssl_context* ssl )
     size_t buflen = 0;
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> parse client hello" ) );
 
-#if defined(MBEDTLS_SSL_USE_MPS)
-
     MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_fetch_handshake_msg( ssl,
                                             MBEDTLS_SSL_HS_CLIENT_HELLO,
                                             &buf, &buflen ) );
 
+#if defined(MBEDTLS_SSL_USE_MPS)
     mbedtls_ssl_add_hs_hdr_to_checksum( ssl,
                   MBEDTLS_SSL_HS_CLIENT_HELLO, buflen );
+#endif /* MBEDTLS_SSL_USE_MPS */
 
     MBEDTLS_SSL_PROC_CHK_NEG( ssl_client_hello_parse( ssl, buf, buflen ) );
     hrr_required = ret;
 
+#if defined(MBEDTLS_SSL_USE_MPS)
     MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_mps_hs_consume_full_hs_msg( ssl ) );
-
-#else /* MBEDTLS_SSL_USE_MPS */
-
-    MBEDTLS_SSL_PROC_CHK( ssl_client_hello_fetch( ssl, &buf, &buflen ) );
-    MBEDTLS_SSL_PROC_CHK_NEG( ssl_client_hello_parse( ssl, buf, buflen ) );
-    hrr_required = ret;
-
 #endif /* MBEDTLS_SSL_USE_MPS */
 
     MBEDTLS_SSL_DEBUG_MSG( 1, ( "postprocess" ) );
@@ -2099,148 +2087,6 @@ cleanup:
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= parse client hello" ) );
     return( ret );
 }
-
-#if !defined(MBEDTLS_SSL_USE_MPS)
-static int ssl_client_hello_fetch( mbedtls_ssl_context* ssl,
-                                   unsigned char** dst,
-                                   size_t* dstlen )
-{
-    int ret;
-    unsigned char* buf;
-    size_t msg_len;
-
-    if( ( ret = mbedtls_ssl_fetch_input( ssl, 5 ) ) != 0 )
-    {
-        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_fetch_input", ret );
-        return( ret );
-    }
-
-    buf = ssl->in_hdr;
-
-    MBEDTLS_SSL_DEBUG_BUF( 4, "record header", buf,
-             mbedtls_ssl_hdr_len( ssl ) );
-
-    /*
-     * TLS Client Hello
-     *
-     * Record layer:
-     *     0  .   0   message type
-     *     1  .   2   protocol version
-     *     3  .   11  DTLS: epoch + record sequence number
-     *     3  .   4   message length
-     */
-    MBEDTLS_SSL_DEBUG_MSG( 3, ( "client hello, message type: %d", buf[0] ) );
-
-    if( buf[0] != MBEDTLS_SSL_MSG_HANDSHAKE )
-    {
-#if defined(MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE)
-        if( buf[0] == MBEDTLS_SSL_MSG_CHANGE_CIPHER_SPEC )
-        {
-            msg_len = ( ssl->in_len[0] << 8 ) | ssl->in_len[1];
-
-            if( msg_len != 1 )
-            {
-                MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad CCS message" ) );
-                return( MBEDTLS_ERR_SSL_DECODE_ERROR );
-            }
-
-            MBEDTLS_SSL_DEBUG_MSG( 3, ( "CCS, message len.: %" MBEDTLS_PRINTF_SIZET , msg_len ) );
-
-            if( ( ret = mbedtls_ssl_fetch_input( ssl,
-                            mbedtls_ssl_hdr_len( ssl ) + msg_len ) ) != 0 )
-            {
-                MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_fetch_input", ret );
-                return( ret );
-            }
-
-            if( ssl->in_msg[0] == 1 )
-            {
-                MBEDTLS_SSL_DEBUG_MSG( 3, ( "Change Cipher Spec message received and ignoring it." ) );
-                ssl->in_left = 0;
-                return ( MBEDTLS_ERR_SSL_CONTINUE_PROCESSING );
-            }
-            else
-            {
-                if( ( ret = mbedtls_ssl_send_alert_message( ssl,
-                                                          MBEDTLS_SSL_ALERT_LEVEL_FATAL,
-                                                          MBEDTLS_SSL_ALERT_MSG_UNEXPECTED_MESSAGE ) ) != 0 )
-                {
-                    return( ret );
-                }
-                return ( MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE );
-            }
-        }
-        else
-#endif /* MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE */
-        {
-            MBEDTLS_SSL_DEBUG_MSG( 1, ( "Spurious message ( maybe alert message )" ) );
-
-            return( MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE );
-        }
-    }
-
-    MBEDTLS_SSL_DEBUG_MSG( 3, ( "client hello, message len.: %d",
-                              ( ssl->in_len[0] << 8 ) | ssl->in_len[1] ) );
-
-    msg_len = ( ssl->in_len[0] << 8 ) | ssl->in_len[1];
-
-    if( msg_len > MBEDTLS_SSL_IN_CONTENT_LEN )
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad client hello message" ) );
-        return( MBEDTLS_ERR_SSL_HANDSHAKE_FAILURE );
-    }
-
-    if( ( ret = mbedtls_ssl_fetch_input( ssl,
-                      mbedtls_ssl_hdr_len( ssl ) + msg_len ) ) != 0 )
-    {
-        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_fetch_input", ret );
-        return( ret );
-    }
-
-    ssl->in_left = 0;
-    buf = ssl->in_msg;
-
-    MBEDTLS_SSL_DEBUG_BUF( 4, "record contents", buf, msg_len );
-
-    /*
-     * Handshake layer:
-     *     0  .   0   handshake type
-     *     1  .   3   handshake length
-     *     4  .   5   DTLS only: message seqence number
-     *     6  .   8   DTLS only: fragment offset
-     *     9  .  11   DTLS only: fragment length
-     */
-    if( msg_len < mbedtls_ssl_hs_hdr_len( ssl ) )
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad client hello message" ) );
-        return( MBEDTLS_ERR_SSL_DECODE_ERROR );
-    }
-
-    MBEDTLS_SSL_DEBUG_MSG( 3, ( "client hello v3, handshake type: %d", buf[0] ) );
-
-    if( buf[0] != MBEDTLS_SSL_HS_CLIENT_HELLO )
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad client hello message" ) );
-        return( MBEDTLS_ERR_SSL_ILLEGAL_PARAMETER );
-    }
-
-    MBEDTLS_SSL_DEBUG_MSG( 3, ( "client hello v3, handshake len.: %d",
-                              ( buf[1] << 16 ) | ( buf[2] << 8 ) | buf[3] ) );
-
-    /* We don't support fragmentation of ClientHello ( yet? ) */
-    if( buf[1] != 0 ||
-        msg_len != mbedtls_ssl_hs_hdr_len( ssl ) + ( ( buf[2] << 8 ) | buf[3] ) )
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad client hello message" ) );
-        return( MBEDTLS_ERR_SSL_HANDSHAKE_FAILURE );
-    }
-
-    *dst = ssl->in_msg;
-    *dstlen = msg_len;
-    return( 0 );
-}
-
-#endif /* MBEDTLS_SSL_USE_MPS */
 
 static void ssl_debug_print_client_hello_exts( mbedtls_ssl_context *ssl )
 {
@@ -2444,11 +2290,6 @@ static int ssl_client_hello_parse( mbedtls_ssl_context* ssl,
      *    ..  .  ..   extensions length ( 2 bytes, optional )
      *    ..  .  ..   extensions ( optional )
      */
-
-#if !defined(MBEDTLS_SSL_USE_MPS)
-    buf    += mbedtls_ssl_hs_hdr_len( ssl );
-    buflen -= mbedtls_ssl_hs_hdr_len( ssl );
-#endif /* MBEDTLS_SSL_USE_MPS */
 
     /* TBD: Needs to be updated due to mandatory extensions
      * Minimal length ( with everything empty and extensions ommitted ) is
