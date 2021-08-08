@@ -1667,13 +1667,12 @@ int ssl_read_end_of_early_data_process( mbedtls_ssl_context* ssl )
 #if defined(MBEDTLS_SSL_USE_MPS)
         MBEDTLS_SSL_PROC_CHK( ssl_end_of_early_data_fetch( ssl ) );
         MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read_consume( &ssl->mps.l4 ) );
-
-        mbedtls_ssl_add_hs_hdr_to_checksum(
-            ssl, MBEDTLS_SSL_HS_END_OF_EARLY_DATA, 0 );
-
 #else /* MBEDTLS_SSL_USE_MPS */
         MBEDTLS_SSL_PROC_CHK( ssl_end_of_early_data_fetch( ssl ) );
 #endif /* MBEDTLS_SSL_USE_MPS */
+
+        mbedtls_ssl_add_hs_hdr_to_checksum(
+            ssl, MBEDTLS_SSL_HS_END_OF_EARLY_DATA, 0 );
 
 #else /* MBEDTLS_ZERO_RTT */
 
@@ -2063,14 +2062,13 @@ static int ssl_client_hello_process( mbedtls_ssl_context* ssl )
     size_t buflen = 0;
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> parse client hello" ) );
 
+    ssl->major_ver = MBEDTLS_SSL_MAJOR_VERSION_3;
     MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_fetch_handshake_msg( ssl,
                                             MBEDTLS_SSL_HS_CLIENT_HELLO,
                                             &buf, &buflen ) );
 
-#if defined(MBEDTLS_SSL_USE_MPS)
     mbedtls_ssl_add_hs_hdr_to_checksum( ssl,
                   MBEDTLS_SSL_HS_CLIENT_HELLO, buflen );
-#endif /* MBEDTLS_SSL_USE_MPS */
 
     MBEDTLS_SSL_PROC_CHK_NEG( ssl_client_hello_parse( ssl, buf, buflen ) );
     hrr_required = ret;
@@ -2970,12 +2968,8 @@ static int ssl_encrypted_extensions_postprocess( mbedtls_ssl_context* ssl );
 static int ssl_encrypted_extensions_process( mbedtls_ssl_context* ssl )
 {
     int ret;
-
-#if defined(MBEDTLS_SSL_USE_MPS)
-    mbedtls_mps_handshake_out msg;
     unsigned char *buf;
-    mbedtls_mps_size_t buf_len, msg_len;
-#endif /* MBEDTLS_SSL_USE_MPS */
+    size_t buf_len, msg_len;
 
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> write encrypted extension" ) );
 
@@ -2985,15 +2979,8 @@ static int ssl_encrypted_extensions_process( mbedtls_ssl_context* ssl )
         ssl->handshake->state_local.encrypted_extensions_out.preparation_done = 1;
     }
 
-#if defined(MBEDTLS_SSL_USE_MPS)
-    msg.type   = MBEDTLS_SSL_HS_ENCRYPTED_EXTENSION;
-    msg.length = MBEDTLS_MPS_SIZE_UNKNOWN;
-    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_write_handshake( &ssl->mps.l4,
-                                                       &msg, NULL, NULL ) );
-
-    /* Request write-buffer */
-    MBEDTLS_SSL_PROC_CHK( mbedtls_writer_get( msg.handle, MBEDTLS_MPS_SIZE_MAX,
-                                              &buf, &buf_len ) );
+    MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_start_handshake_msg( ssl,
+                       MBEDTLS_SSL_HS_ENCRYPTED_EXTENSION, &buf, &buf_len ) );
 
     MBEDTLS_SSL_PROC_CHK( ssl_encrypted_extensions_write(
                               ssl, buf, buf_len, &msg_len ) );
@@ -3001,42 +2988,11 @@ static int ssl_encrypted_extensions_process( mbedtls_ssl_context* ssl )
     mbedtls_ssl_add_hs_msg_to_checksum( ssl, MBEDTLS_SSL_HS_ENCRYPTED_EXTENSION,
                                         buf, msg_len );
 
-    /* Commit message */
-    MBEDTLS_SSL_PROC_CHK( mbedtls_writer_commit_partial( msg.handle,
-                                                         buf_len - msg_len ) );
-
-    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_dispatch( &ssl->mps.l4 ) );
-
     /* Update state */
     MBEDTLS_SSL_PROC_CHK( ssl_encrypted_extensions_postprocess( ssl ) );
 
-#else  /* MBEDTLS_SSL_USE_MPS */
-
-    MBEDTLS_SSL_PROC_CHK( ssl_encrypted_extensions_write( ssl, ssl->out_msg,
-                                                          MBEDTLS_SSL_OUT_CONTENT_LEN,
-                                                          &ssl->out_msglen ) );
-
-    ssl->out_msgtype = MBEDTLS_SSL_MSG_HANDSHAKE;
-    ssl->out_msg[0] = MBEDTLS_SSL_HS_ENCRYPTED_EXTENSION;
-
-    MBEDTLS_SSL_DEBUG_BUF( 3, "EncryptedExtensions", ssl->out_msg, ssl->out_msglen );
-
-    /* Update state */
-    MBEDTLS_SSL_PROC_CHK( ssl_encrypted_extensions_postprocess( ssl ) );
-
-    /* Dispatch message */
-    MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_write_handshake_msg( ssl ) );
-
-    /* NOTE: For the new messaging layer, the postprocessing step
-     *       might come after the dispatching step if the latter
-     *       doesn't send the message immediately.
-     *       At the moment, we must do the postprocessing
-     *       prior to the dispatching because if the latter
-     *       returns WANT_WRITE, we want the handshake state
-     *       to be updated in order to not enter
-     *       this function again on retry. */
-
-#endif /* MBEDTLS_SSL_USE_MPS */
+    MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_finish_handshake_msg( ssl,
+                                                  buf_len, msg_len ) );
 
 cleanup:
 
@@ -3143,17 +3099,6 @@ static int ssl_encrypted_extensions_write( mbedtls_ssl_context* ssl,
 
     end = buf + buflen;
     p = buf;
-
-#if !defined(MBEDTLS_SSL_USE_MPS)
-    if( buflen < 4 )
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "buffer too small" ) );
-        return( MBEDTLS_ERR_SSL_BUFFER_TOO_SMALL );
-    }
-
-    /* Skip HS header */
-    p += 4;
-#endif /* MBEDTLS_SSL_USE_MPS */
 
     /*
      * struct {

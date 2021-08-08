@@ -989,9 +989,9 @@ int mbedtls_ssl_read_certificate_verify_process( mbedtls_ssl_context* ssl )
                                                                  verify_buffer,
                                                                  verify_buffer_len ) );
 
-#if defined(MBEDTLS_SSL_USE_MPS)
         mbedtls_ssl_add_hs_msg_to_checksum(
             ssl, MBEDTLS_SSL_HS_CERTIFICATE_VERIFY, buf, buflen );
+#if defined(MBEDTLS_SSL_USE_MPS)
         MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_mps_hs_consume_full_hs_msg( ssl ) );
 #endif
     }
@@ -1552,9 +1552,9 @@ int mbedtls_ssl_read_certificate_process( mbedtls_ssl_context* ssl )
         /* Validate the certificate chain and set the verification results. */
         MBEDTLS_SSL_PROC_CHK( ssl_read_certificate_validate( ssl ) );
 
-#if defined(MBEDTLS_SSL_USE_MPS)
         mbedtls_ssl_add_hs_msg_to_checksum(
             ssl, MBEDTLS_SSL_HS_CERTIFICATE, buf, buflen );
+#if defined(MBEDTLS_SSL_USE_MPS)
         MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_mps_hs_consume_full_hs_msg( ssl ) );
 #endif /* MBEDTLS_SSL_USE_MPS */
 
@@ -2350,9 +2350,9 @@ int mbedtls_ssl_finished_in_process( mbedtls_ssl_context* ssl )
                                               MBEDTLS_SSL_HS_FINISHED,
                                               &buf, &buflen ) );
     MBEDTLS_SSL_PROC_CHK( ssl_finished_in_parse( ssl, buf, buflen ) );
-#if defined(MBEDTLS_SSL_USE_MPS)
     mbedtls_ssl_add_hs_msg_to_checksum(
         ssl, MBEDTLS_SSL_HS_FINISHED, buf, buflen );
+#if defined(MBEDTLS_SSL_USE_MPS)
     MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_mps_hs_consume_full_hs_msg( ssl ) );
 #endif /* MBEDTLS_SSL_USE_MPS */
     MBEDTLS_SSL_PROC_CHK( ssl_finished_in_postprocess( ssl ) );
