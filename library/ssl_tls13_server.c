@@ -1409,9 +1409,6 @@ static int ssl_write_new_session_ticket_process( mbedtls_ssl_context *ssl )
         unsigned char *buf;
         mbedtls_mps_size_t buf_len, msg_len;
 
-        /* Make sure we can write a new message. */
-        MBEDTLS_SSL_PROC_CHK( mbedtls_mps_flush( &ssl->mps.l4 ) );
-
         msg.type   = MBEDTLS_SSL_HS_NEW_SESSION_TICKET;
         msg.length = MBEDTLS_MPS_SIZE_UNKNOWN;
         MBEDTLS_SSL_PROC_CHK( mbedtls_mps_write_handshake( &ssl->mps.l4,
@@ -3183,9 +3180,6 @@ static int ssl_encrypted_extensions_process( mbedtls_ssl_context* ssl )
     }
 
 #if defined(MBEDTLS_SSL_USE_MPS)
-    /* Make sure we can write a new message. */
-    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_flush( &ssl->mps.l4 ) );
-
     msg.type   = MBEDTLS_SSL_HS_ENCRYPTED_EXTENSION;
     msg.length = MBEDTLS_MPS_SIZE_UNKNOWN;
     MBEDTLS_SSL_PROC_CHK( mbedtls_mps_write_handshake( &ssl->mps.l4,
@@ -3211,9 +3205,6 @@ static int ssl_encrypted_extensions_process( mbedtls_ssl_context* ssl )
     MBEDTLS_SSL_PROC_CHK( ssl_encrypted_extensions_postprocess( ssl ) );
 
 #else  /* MBEDTLS_SSL_USE_MPS */
-
-    /* Make sure we can write a new message. */
-    MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_flush_output( ssl ) );
 
     MBEDTLS_SSL_PROC_CHK( ssl_encrypted_extensions_write( ssl, ssl->out_msg,
                                                           MBEDTLS_SSL_OUT_CONTENT_LEN,
@@ -3451,9 +3442,6 @@ static int ssl_write_hello_retry_request_process( mbedtls_ssl_context *ssl )
     MBEDTLS_SSL_PROC_CHK( ssl_write_hello_retry_request_coordinate( ssl ) );
 
 #if defined(MBEDTLS_SSL_USE_MPS)
-
-    /* Make sure we can write a new message. */
-    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_flush( &ssl->mps.l4 ) );
 
     msg.type   = MBEDTLS_SSL_HS_SERVER_HELLO;
     msg.length = MBEDTLS_MPS_SIZE_UNKNOWN;
@@ -3802,8 +3790,6 @@ static int ssl_server_hello_process( mbedtls_ssl_context* ssl ) {
     MBEDTLS_SSL_PROC_CHK( ssl_server_hello_prepare( ssl ) );
 
 #if defined(MBEDTLS_SSL_USE_MPS)
-    /* Make sure we can write a new message. */
-    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_flush( &ssl->mps.l4 ) );
 
     msg.type   = MBEDTLS_SSL_HS_SERVER_HELLO;
     msg.length = MBEDTLS_MPS_SIZE_UNKNOWN;
@@ -3830,11 +3816,6 @@ static int ssl_server_hello_process( mbedtls_ssl_context* ssl ) {
     MBEDTLS_SSL_PROC_CHK( ssl_server_hello_postprocess( ssl ) );
 
 #else  /* MBEDTLS_SSL_USE_MPS */
-
-    /* Writing */
-
-    /* Make sure we can write a new message. */
-    MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_flush_output( ssl ) );
 
     MBEDTLS_SSL_PROC_CHK( ssl_server_hello_write( ssl, ssl->out_msg,
                             MBEDTLS_SSL_OUT_CONTENT_LEN, &ssl->out_msglen ) );
@@ -4103,9 +4084,6 @@ static int ssl_certificate_request_process( mbedtls_ssl_context* ssl )
         unsigned char *buf;
         mbedtls_mps_size_t buf_len, msg_len;
 
-        /* Make sure we can write a new message. */
-        MBEDTLS_SSL_PROC_CHK( mbedtls_mps_flush( &ssl->mps.l4 ) );
-
         msg.type   = MBEDTLS_SSL_HS_CERTIFICATE_REQUEST;
         msg.length = MBEDTLS_MPS_SIZE_UNKNOWN;
         MBEDTLS_SSL_PROC_CHK( mbedtls_mps_write_handshake( &ssl->mps.l4,
@@ -4131,9 +4109,6 @@ static int ssl_certificate_request_process( mbedtls_ssl_context* ssl )
         MBEDTLS_SSL_PROC_CHK( ssl_certificate_request_postprocess( ssl ) );
 
 #else  /* MBEDTLS_SSL_USE_MPS */
-
-        /* Make sure we can write a new message. */
-        MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_flush_output( ssl ) );
 
         /* Prepare CertificateRequest message in output buffer. */
         MBEDTLS_SSL_PROC_CHK( ssl_certificate_request_write( ssl, ssl->out_msg,

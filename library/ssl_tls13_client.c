@@ -140,9 +140,6 @@ int ssl_write_early_data_process( mbedtls_ssl_context* ssl )
         MBEDTLS_SSL_PROC_CHK( ssl_write_early_data_prepare( ssl ) );
 
 #if defined(MBEDTLS_SSL_USE_MPS)
-        /* Make sure we can write a new message. */
-        MBEDTLS_SSL_PROC_CHK( mbedtls_mps_flush( &ssl->mps.l4 ) );
-
         MBEDTLS_SSL_PROC_CHK( mbedtls_mps_write_application( &ssl->mps.l4,
                                                              &msg ) );
 
@@ -163,9 +160,6 @@ int ssl_write_early_data_process( mbedtls_ssl_context* ssl )
         MBEDTLS_SSL_PROC_CHK( ssl_write_early_data_postprocess( ssl ) );
 
 #else  /* MBEDTLS_SSL_USE_MPS */
-
-        /* Make sure we can write a new message. */
-        MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_flush_output( ssl ) );
 
         /* Write early-data to message buffer. */
         MBEDTLS_SSL_PROC_CHK( ssl_write_early_data_write( ssl, ssl->out_msg,
@@ -398,9 +392,6 @@ int ssl_write_end_of_early_data_process( mbedtls_ssl_context* ssl )
     {
 #if defined(MBEDTLS_SSL_USE_MPS)
         mbedtls_mps_handshake_out msg;
-        /* Make sure we can write a new message. */
-        MBEDTLS_SSL_PROC_CHK( mbedtls_mps_flush( &ssl->mps.l4 ) );
-
         msg.type   = MBEDTLS_SSL_HS_END_OF_EARLY_DATA;
         msg.length = MBEDTLS_MPS_SIZE_UNKNOWN;
         MBEDTLS_SSL_PROC_CHK( mbedtls_mps_write_handshake( &ssl->mps.l4,
@@ -419,9 +410,6 @@ int ssl_write_end_of_early_data_process( mbedtls_ssl_context* ssl )
         MBEDTLS_SSL_PROC_CHK( mbedtls_mps_flush( &ssl->mps.l4 ) );
 
 #else  /* MBEDTLS_SSL_USE_MPS */
-
-        /* Make sure we can write a new message. */
-        MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_flush_output( ssl ) );
 
         /* EndOfEarlyData message is empty */
 
@@ -1399,10 +1387,6 @@ static int ssl_client_hello_process( mbedtls_ssl_context* ssl )
     }
 
 #if defined(MBEDTLS_SSL_USE_MPS)
-
-    /* Make sure we can write a new message. */
-    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_flush( &ssl->mps.l4 ) );
-
     msg.type   = MBEDTLS_SSL_HS_CLIENT_HELLO;
     msg.length = MBEDTLS_MPS_SIZE_UNKNOWN;
     MBEDTLS_SSL_PROC_CHK( mbedtls_mps_write_handshake( &ssl->mps.l4,
@@ -1446,9 +1430,6 @@ static int ssl_client_hello_process( mbedtls_ssl_context* ssl )
     MBEDTLS_SSL_PROC_CHK( ssl_client_hello_postprocess( ssl ) );
 
 #else /* MBEDTLS_SSL_USE_MPS */
-
-    /* Make sure we can write a new message. */
-    MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_flush_output( ssl ) );
 
     /* Prepare ClientHello message in output buffer, up to
      * but excluding the PSK binder list (if present).
