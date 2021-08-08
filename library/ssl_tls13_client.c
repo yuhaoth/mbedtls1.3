@@ -4146,10 +4146,9 @@ static int ssl_new_session_ticket_parse( mbedtls_ssl_context* ssl,
     return( 0 );
 }
 
-static int ssl_new_session_ticket_postprocess( mbedtls_ssl_context* ssl, int ret )
+static int ssl_new_session_ticket_postprocess( mbedtls_ssl_context* ssl )
 {
-    ((void ) ssl);
-    ((void ) ret);
+    mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_HANDSHAKE_OVER );
     return( 0 );
 }
 
@@ -4161,7 +4160,7 @@ static int ssl_new_session_ticket_postprocess( mbedtls_ssl_context* ssl, int ret
 
 static int ssl_new_session_ticket_process( mbedtls_ssl_context* ssl )
 {
-    int ret;
+    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
     unsigned char* buf;
     size_t buflen;
 
@@ -4185,7 +4184,7 @@ static int ssl_new_session_ticket_process( mbedtls_ssl_context* ssl )
 
 #endif /* MBEDTLS_SSL_USE_MPS */
 
-    MBEDTLS_SSL_PROC_CHK( ssl_new_session_ticket_postprocess( ssl, ret ) );
+    MBEDTLS_SSL_PROC_CHK( ssl_new_session_ticket_postprocess( ssl ) );
 
 cleanup:
 
@@ -4407,7 +4406,6 @@ int mbedtls_ssl_handshake_client_step_tls1_3( mbedtls_ssl_context *ssl )
                 break;
             }
 
-            mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_HANDSHAKE_OVER );
             ret = MBEDTLS_ERR_SSL_RECEIVED_NEW_SESSION_TICKET;
             break;
 
