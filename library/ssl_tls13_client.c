@@ -1521,17 +1521,11 @@ cleanup:
 
 static int ssl_client_hello_postprocess( mbedtls_ssl_context* ssl )
 {
-    if( ssl->handshake->hello_retry_requests_received == 0 )
-    {
 #if defined(MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE)
-        mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_CLIENT_CCS_AFTER_CLIENT_HELLO );
+    mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_CLIENT_CCS_AFTER_CLIENT_HELLO );
 #else
-        mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_EARLY_APP_DATA );
+    mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_EARLY_APP_DATA );
 #endif /* MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE */
-    }
-    /* TODO: Reconsider the need for a SECOND_SERER_HELLO state? */
-    else
-        mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_SECOND_SERVER_HELLO );
 
     return( 0 );
 }
@@ -3827,6 +3821,14 @@ static int ssl_hrr_postprocess( mbedtls_ssl_context* ssl,
 {
     int ret = 0;
 
+    if( ssl->handshake->hello_retry_requests_received > 0 )
+    {
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "Multiple HRRs received" ) );
+        SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_LEVEL_FATAL,
+                              MBEDTLS_SSL_ALERT_MSG_HANDSHAKE_FAILURE );
+        return( MBEDTLS_ERR_SSL_HANDSHAKE_FAILURE );
+    }
+
     ssl->handshake->hello_retry_requests_received++;
 
     MBEDTLS_SSL_DEBUG_MSG( 4, ( "Compress transcript hash for stateless HRR" ) );
@@ -3845,13 +3847,10 @@ static int ssl_hrr_postprocess( mbedtls_ssl_context* ssl,
     ssl->handshake->update_checksum( ssl, orig_buf, orig_msg_len );
 #endif /* MBEDTLS_SSL_USE_MPS */
 
-    /* If we received the HRR msg then we send another ClientHello */
 #if defined(MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE)
-    /* If not offering early data, the client sends a dummy
-     * change_cipher_spec record immediately before its
-     * second flight. This may either be before its second
-     * ClientHello or before its encrypted handshake flight.
-     */
+    /* If not offering early data, the client sends a dummy CCS record
+     * immediately before its second flight. This may either be before
+     * its second ClientHello or before its encrypted handshake flight. */
     mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_CLIENT_CCS_BEFORE_2ND_CLIENT_HELLO );
 #else
     mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_CLIENT_HELLO );
@@ -4236,33 +4235,6 @@ int mbedtls_ssl_handshake_client_step_tls1_3( mbedtls_ssl_context *ssl )
         case MBEDTLS_SSL_SERVER_HELLO:
             ret = ssl_server_hello_process( ssl );
             break;
-
-        case MBEDTLS_SSL_SECOND_SERVER_HELLO:
-            /* In this state the client is expecting a ServerHello
-             * message and not the HRR anymore.
-             */
-            /* reset extensions we have seen so far */
-            ssl->handshake->extensions_present = MBEDTLS_SSL_EXT_NONE;
-            ret = ssl_server_hello_process( ssl );
-
-            if( ret != 0 )
-            {
-                MBEDTLS_SSL_DEBUG_RET( 1, "ssl_parse_server_hello", ret );
-                break;
-            }
-
-            /* if we received a second HRR we abort */
-            if( ssl->handshake->hello_retry_requests_received == 2 )
-            {
-                MBEDTLS_SSL_DEBUG_MSG( 1, ( "Multiple HRRs received" ) );
-                SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_LEVEL_FATAL,
-                                      MBEDTLS_SSL_ALERT_MSG_HANDSHAKE_FAILURE );
-                return( MBEDTLS_ERR_SSL_HANDSHAKE_FAILURE );
-            }
-            mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_ENCRYPTED_EXTENSIONS );
-            break;
-
-            /* ----- READ ENCRYPTED EXTENSIONS ----*/
 
         case MBEDTLS_SSL_ENCRYPTED_EXTENSIONS:
 
