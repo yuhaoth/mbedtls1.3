@@ -2325,12 +2325,6 @@ static int ssl_finished_out_write( mbedtls_ssl_context* ssl,
 /* Main entry point: orchestrates the other functions */
 int mbedtls_ssl_finished_in_process( mbedtls_ssl_context* ssl );
 
-#if !defined(MBEDTLS_SSL_USE_MPS)
-static int ssl_read_finished_fetch( mbedtls_ssl_context* ssl,
-                                    unsigned char** buf,
-                                    size_t* buflen );
-#endif /* MBEDTLS_SSL_USE_MPS */
-
 static int ssl_finished_in_preprocess( mbedtls_ssl_context* ssl );
 static int ssl_finished_in_postprocess( mbedtls_ssl_context* ssl );
 static int ssl_finished_in_parse( mbedtls_ssl_context* ssl,
@@ -2352,70 +2346,22 @@ int mbedtls_ssl_finished_in_process( mbedtls_ssl_context* ssl )
     /* Preprocessing step: Compute handshake digest */
     MBEDTLS_SSL_PROC_CHK( ssl_finished_in_preprocess( ssl ) );
 
-#if defined(MBEDTLS_SSL_USE_MPS)
-
     MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_fetch_handshake_msg( ssl,
                                               MBEDTLS_SSL_HS_FINISHED,
                                               &buf, &buflen ) );
-
+    MBEDTLS_SSL_PROC_CHK( ssl_finished_in_parse( ssl, buf, buflen ) );
+#if defined(MBEDTLS_SSL_USE_MPS)
     mbedtls_ssl_add_hs_msg_to_checksum(
         ssl, MBEDTLS_SSL_HS_FINISHED, buf, buflen );
-
-    /* Process the message contents */
-    MBEDTLS_SSL_PROC_CHK( ssl_finished_in_parse( ssl, buf, buflen ) );
-
     MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_mps_hs_consume_full_hs_msg( ssl ) );
-
-#else /* MBEDTLS_SSL_USE_MPS */
-
-    MBEDTLS_SSL_PROC_CHK( ssl_read_finished_fetch( ssl, &buf, &buflen ) );
-
-    MBEDTLS_SSL_PROC_CHK( ssl_finished_in_parse( ssl, buf, buflen ) );
-
 #endif /* MBEDTLS_SSL_USE_MPS */
-
-    /* Postprocessing step: Update state machine */
     MBEDTLS_SSL_PROC_CHK( ssl_finished_in_postprocess( ssl ) );
 
 cleanup:
 
-    /* In the MPS one would close the read-port here to
-     * ensure there's no overlap of reading and writing. */
-
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= parse finished" ) );
     return( ret );
 }
-
-#if !defined(MBEDTLS_SSL_USE_MPS)
-static int ssl_read_finished_fetch( mbedtls_ssl_context *ssl,
-                                    unsigned char **buf,
-                                    size_t *buflen )
-{
-    int ret;
-
-    if( ( ret = mbedtls_ssl_read_record( ssl, 0 ) ) != 0 )
-    {
-        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_read_record", ret );
-        goto cleanup;
-    }
-
-    if( ssl->in_msgtype != MBEDTLS_SSL_MSG_HANDSHAKE  ||
-        ssl->in_msg[0]  != MBEDTLS_SSL_HS_FINISHED    )
-    {
-        SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_UNEXPECTED_MESSAGE,
-                              MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE );
-        ret = MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE;
-        goto cleanup;
-    }
-
-    *buf    = ssl->in_msg   + 4;
-    *buflen = ssl->in_hslen - 4;
-
-cleanup:
-
-    return( ret );
-}
-#endif /* MBEDTLS_SSL_USE_MPS */
 
 static int ssl_finished_in_preprocess( mbedtls_ssl_context* ssl )
 {
