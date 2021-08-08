@@ -2425,12 +2425,6 @@ static int ssl_certificate_request_postprocess( mbedtls_ssl_context* ssl )
 /* Main entry point; orchestrates the other functions */
 static int ssl_encrypted_extensions_process( mbedtls_ssl_context* ssl );
 
-#if !defined(MBEDTLS_SSL_USE_MPS)
-static int ssl_encrypted_extensions_fetch( mbedtls_ssl_context* ssl,
-                                           unsigned char** buf,
-                                           size_t* buflen );
-#endif /* MBEDTLS_SSL_USE_MPS */
-
 static int ssl_encrypted_extensions_parse( mbedtls_ssl_context* ssl,
                                            const unsigned char* buf,
                                            size_t buflen );
@@ -2444,23 +2438,17 @@ static int ssl_encrypted_extensions_process( mbedtls_ssl_context* ssl )
 
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> parse encrypted extensions" ) );
 
-#if defined(MBEDTLS_SSL_USE_MPS)
-
     MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_fetch_handshake_msg( ssl,
                                              MBEDTLS_SSL_HS_ENCRYPTED_EXTENSION,
                                              &buf, &buflen ) );
 
-    mbedtls_ssl_add_hs_msg_to_checksum(
-        ssl, MBEDTLS_SSL_HS_ENCRYPTED_EXTENSION, buf, buflen );
-
     /* Process the message contents */
     MBEDTLS_SSL_PROC_CHK( ssl_encrypted_extensions_parse( ssl, buf, buflen ) );
 
+#if defined(MBEDTLS_SSL_USE_MPS)
+    mbedtls_ssl_add_hs_msg_to_checksum(
+        ssl, MBEDTLS_SSL_HS_ENCRYPTED_EXTENSION, buf, buflen );
     MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_mps_hs_consume_full_hs_msg( ssl ) );
-
-#else /* MBEDTLS_SSL_USE_MPS */
-    MBEDTLS_SSL_PROC_CHK( ssl_encrypted_extensions_fetch( ssl, &buf, &buflen ) );
-    MBEDTLS_SSL_PROC_CHK( ssl_encrypted_extensions_parse( ssl, buf, buflen ) );
 #endif /* MBEDTLS_SSL_USE_MPS */
 
     MBEDTLS_SSL_PROC_CHK( ssl_encrypted_extensions_postprocess( ssl ) );
@@ -2471,48 +2459,6 @@ cleanup:
     return( ret );
 
 }
-
-#if !defined(MBEDTLS_SSL_USE_MPS)
-static int ssl_encrypted_extensions_fetch( mbedtls_ssl_context* ssl,
-                                           unsigned char **buf,
-                                           size_t *buflen )
-{
-    int ret;
-
-    if( ( ret = mbedtls_ssl_read_record( ssl, 0 ) ) != 0 )
-    {
-        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_read_record", ret );
-        goto cleanup;
-    }
-
-    if( ssl->in_msgtype != MBEDTLS_SSL_MSG_HANDSHAKE )
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad encrypted extensions" ) );
-        SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_UNEXPECTED_MESSAGE,
-                              MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE );
-        ret = MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE;
-        goto cleanup;
-    }
-
-    if( ssl->in_msg[0] != MBEDTLS_SSL_HS_ENCRYPTED_EXTENSION )
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad encrypted extensions" ) );
-        SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_DECODE_ERROR,
-                              MBEDTLS_ERR_SSL_DECODE_ERROR );
-        ret = MBEDTLS_ERR_SSL_DECODE_ERROR;
-        goto cleanup;
-    }
-
-    *buf    = ssl->in_msg   + 4;
-    *buflen = ssl->in_hslen - 4;
-
-cleanup:
-
-    return( ret );
-}
-
-
-#endif /* MBEDTLS_SSL_USE_MPS */
 
 static int ssl_encrypted_extensions_parse( mbedtls_ssl_context* ssl,
                                            const unsigned char* buf,
