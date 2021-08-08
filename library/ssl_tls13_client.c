@@ -2904,6 +2904,8 @@ static int ssl_server_hello_process( mbedtls_ssl_context* ssl )
      * - Switch processing routine in case of HRR
      */
 
+    ssl->handshake->extensions_present = MBEDTLS_SSL_EXT_NONE;
+
 #if defined(MBEDTLS_SSL_USE_MPS)
     MBEDTLS_SSL_PROC_CHK_NEG( ssl_server_hello_coordinate( ssl, &msg,
                                                  &buf, &buflen ) );
@@ -3490,8 +3492,12 @@ static int ssl_server_hello_postprocess( mbedtls_ssl_context* ssl )
     mbedtls_ssl_set_inbound_transform( ssl, ssl->transform_handshake );
 #endif /* MBEDTLS_SSL_USE_MPS */
 
-    mbedtls_platform_zeroize( &traffic_keys, sizeof( traffic_keys ) );
+    /*
+     * State machine update
+     */
+    mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_ENCRYPTED_EXTENSIONS );
 
+    mbedtls_platform_zeroize( &traffic_keys, sizeof( traffic_keys ) );
     return( 0 );
 }
 
@@ -3838,6 +3844,18 @@ static int ssl_hrr_postprocess( mbedtls_ssl_context* ssl,
     /* Add transcript for HRR */
     ssl->handshake->update_checksum( ssl, orig_buf, orig_msg_len );
 #endif /* MBEDTLS_SSL_USE_MPS */
+
+    /* If we received the HRR msg then we send another ClientHello */
+#if defined(MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE)
+    /* If not offering early data, the client sends a dummy
+     * change_cipher_spec record immediately before its
+     * second flight. This may either be before its second
+     * ClientHello or before its encrypted handshake flight.
+     */
+    mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_CLIENT_CCS_BEFORE_2ND_CLIENT_HELLO );
+#else
+    mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_CLIENT_HELLO );
+#endif /* MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE */
 
     return( 0 );
 }
@@ -4198,114 +4216,26 @@ int mbedtls_ssl_handshake_client_step_tls1_3( mbedtls_ssl_context *ssl )
     {
         case MBEDTLS_SSL_HELLO_REQUEST:
             mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_CLIENT_HELLO );
-
-#if defined(MBEDTLS_SSL_NEW_SESSION_TICKET)
-            ssl->session_negotiate->endpoint = ssl->conf->endpoint;
-#endif /* MBEDTLS_SSL_NEW_SESSION_TICKET */
             break;
-
-            /* ----- WRITE CLIENT HELLO ----*/
 
         case MBEDTLS_SSL_CLIENT_HELLO:
-
             ret = ssl_client_hello_process( ssl );
-            if( ret != 0 )
-            {
-                MBEDTLS_SSL_DEBUG_RET( 1, "ssl_write_client_hello", ret );
-                break;
-            }
-
-#if defined(MBEDTLS_SSL_USE_MPS)
-            ret = mbedtls_mps_flush( &ssl->mps.l4 );
-            if( ret != 0 )
-                break;
-#endif /* MBEDTLS_SSL_USE_MPS */
-
             break;
-
-            /* ----- WRITE CHANGE CIPHER SPEC ----*/
 
 #if defined(MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE)
         case MBEDTLS_SSL_CLIENT_CCS_AFTER_CLIENT_HELLO:
-
+        case MBEDTLS_SSL_CLIENT_CCS_BEFORE_2ND_CLIENT_HELLO:
             ret = mbedtls_ssl_write_change_cipher_spec_process( ssl );
-            if( ret != 0 )
-            {
-                MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_write_change_cipher_spec_process", ret );
-                break;
-            }
-
             break;
 #endif /* MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE */
-
-            /* ----- WRITE EARLY DATA ----*/
 
         case MBEDTLS_SSL_EARLY_APP_DATA:
-
             ret = ssl_write_early_data_process( ssl );
-
-            if( ret != 0 )
-            {
-                MBEDTLS_SSL_DEBUG_RET( 1, "ssl_write_early_data_process", ret );
-                break;
-            }
-
             break;
-
-            /* ----- READ SERVER HELLO ----*/
 
         case MBEDTLS_SSL_SERVER_HELLO:
-            /* In this state the client is expecting a ServerHello
-             * message but the server could also return a HelloRetryRequest.
-             *
-             * Reset extensions we have seen so far.
-             */
-            ssl->handshake->extensions_present = MBEDTLS_SSL_EXT_NONE;
             ret = ssl_server_hello_process( ssl );
-
-            if( ret != 0 )
-            {
-                MBEDTLS_SSL_DEBUG_RET( 1, "ssl_server_hello_process", ret );
-                break;
-            }
-
-            if( ssl->handshake->hello_retry_requests_received > 0 )
-            {
-                /* If we received the HRR msg then we send another ClientHello */
-#if defined(MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE)
-                /* If not offering early data, the client sends a dummy
-                 * change_cipher_spec record immediately before its
-                 * second flight. This may either be before its second
-                 * ClientHello or before its encrypted handshake flight.
-                 */
-                mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_CLIENT_CCS_BEFORE_2ND_CLIENT_HELLO );
-#else
-                mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_CLIENT_HELLO );
-#endif /* MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE */
-            }
-            else
-            {
-                mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_ENCRYPTED_EXTENSIONS );
-            }
             break;
-
-            /* ----- WRITE CHANGE_CIPHER_SPEC ----*/
-
-#if defined(MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE)
-        case MBEDTLS_SSL_CLIENT_CCS_BEFORE_2ND_CLIENT_HELLO:
-
-            ret = mbedtls_ssl_write_change_cipher_spec_process( ssl );
-
-            if( ret != 0 )
-            {
-                MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_write_change_cipher_spec_process", ret );
-                break;
-            }
-
-            break;
-#endif /* MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE */
-
-            /* ----- READ 2nd SERVER HELLO ----*/
 
         case MBEDTLS_SSL_SECOND_SERVER_HELLO:
             /* In this state the client is expecting a ServerHello
