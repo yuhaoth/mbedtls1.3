@@ -159,6 +159,9 @@ int ssl_write_early_data_process( mbedtls_ssl_context* ssl )
 
         MBEDTLS_SSL_PROC_CHK( mbedtls_mps_dispatch( &ssl->mps.l4 ) );
 
+        /* Update state */
+        MBEDTLS_SSL_PROC_CHK( ssl_write_early_data_postprocess( ssl ) );
+
 #else  /* MBEDTLS_SSL_USE_MPS */
 
         /* Make sure we can write a new message. */
@@ -170,6 +173,9 @@ int ssl_write_early_data_process( mbedtls_ssl_context* ssl )
                                                           &ssl->out_msglen ) );
 
         ssl->out_msgtype = MBEDTLS_SSL_MSG_APPLICATION_DATA;
+
+        /* Update state */
+        MBEDTLS_SSL_PROC_CHK( ssl_write_early_data_postprocess( ssl ) );
 
         /* Dispatch message */
         MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_write_record( ssl, SSL_FORCE_FLUSH ) );
@@ -186,10 +192,11 @@ int ssl_write_early_data_process( mbedtls_ssl_context* ssl )
 
 #endif /* MBEDTLS_ZERO_RTT */
     }
-
-
-    /* Update state */
-    MBEDTLS_SSL_PROC_CHK( ssl_write_early_data_postprocess( ssl ) );
+    else
+    {
+        /* Update state */
+        MBEDTLS_SSL_PROC_CHK( ssl_write_early_data_postprocess( ssl ) );
+    }
 
 cleanup:
 
@@ -1367,6 +1374,7 @@ static int ssl_client_hello_write_partial( mbedtls_ssl_context* ssl,
                                            unsigned char* buf, size_t buflen,
                                            size_t* len_without_binders,
                                            size_t* len_with_binders );
+static int ssl_client_hello_postprocess( mbedtls_ssl_context* ssl );
 
 static int ssl_client_hello_process( mbedtls_ssl_context* ssl )
 {
@@ -1435,6 +1443,8 @@ static int ssl_client_hello_process( mbedtls_ssl_context* ssl )
 
     MBEDTLS_SSL_PROC_CHK( mbedtls_mps_dispatch( &ssl->mps.l4 ) );
 
+    MBEDTLS_SSL_PROC_CHK( ssl_client_hello_postprocess( ssl ) );
+
 #else /* MBEDTLS_SSL_USE_MPS */
 
     /* Make sure we can write a new message. */
@@ -1495,6 +1505,7 @@ static int ssl_client_hello_process( mbedtls_ssl_context* ssl )
 
     MBEDTLS_SSL_DEBUG_BUF( 3, "ClientHello", ssl->out_msg, ssl->out_msglen );
 
+    MBEDTLS_SSL_PROC_CHK( ssl_client_hello_postprocess( ssl ) );
 
     /* Dispatch message */
     MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_write_handshake_msg_ext(
@@ -1502,23 +1513,32 @@ static int ssl_client_hello_process( mbedtls_ssl_context* ssl )
 
 #endif /* MBEDTLS_SSL_USE_MPS */
 
-    /* NOTE: With the new messaging layer, the postprocessing
-     *       step might come after the dispatching step if the
-     *       latter doesn't send the message immediately.
-     *       At the moment, we must do the postprocessing
-     *       prior to the dispatching because if the latter
-     *       returns WANT_WRITE, we want the handshake state
-     *       to be updated in order to not enter
-     *       this function again on retry.
-     *
-     *       Further, once the two calls can be re-ordered, the two
-     *       calls can be consolidated.
-     */
-
 cleanup:
 
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= write client hello" ) );
     return( ret );
+}
+
+static int ssl_client_hello_postprocess( mbedtls_ssl_context* ssl )
+{
+    if( ssl->state == MBEDTLS_SSL_CLIENT_HELLO )
+    {
+#if defined(MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE)
+        mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_CLIENT_CCS_AFTER_CLIENT_HELLO );
+#else
+        mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_EARLY_APP_DATA );
+#endif /* MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE */
+    }
+    else if( ssl->state == MBEDTLS_SSL_SECOND_CLIENT_HELLO )
+    {
+        mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_SECOND_SERVER_HELLO );
+    }
+    else
+    {
+        return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
+    }
+
+    return( 0 );
 }
 
 static int ssl_client_hello_prepare( mbedtls_ssl_context* ssl )
@@ -4200,12 +4220,6 @@ int mbedtls_ssl_handshake_client_step_tls1_3( mbedtls_ssl_context *ssl )
                 break;
             }
 
-#if defined(MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE)
-            mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_CLIENT_CCS_AFTER_CLIENT_HELLO );
-#else
-            mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_EARLY_APP_DATA );
-#endif /* MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE */
-
 #if defined(MBEDTLS_SSL_USE_MPS)
             ret = mbedtls_mps_flush( &ssl->mps.l4 );
             if( ret != 0 )
@@ -4305,7 +4319,6 @@ int mbedtls_ssl_handshake_client_step_tls1_3( mbedtls_ssl_context *ssl )
                 MBEDTLS_SSL_DEBUG_RET( 1, "ssl_write_client_hello", ret );
                 break;
             }
-            mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_SECOND_SERVER_HELLO );
 
 #if defined(MBEDTLS_SSL_USE_MPS)
             ret = mbedtls_mps_flush( &ssl->mps.l4 );

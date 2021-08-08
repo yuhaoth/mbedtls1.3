@@ -1445,10 +1445,10 @@ static int ssl_write_new_session_ticket_process( mbedtls_ssl_context *ssl )
                                         MBEDTLS_SSL_OUT_CONTENT_LEN,
                                         &ssl->out_msglen ) );
 
-        MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_write_handshake_msg( ssl ) );
-
         MBEDTLS_SSL_PROC_CHK(
             ssl_write_new_session_ticket_postprocess( ssl ) );
+
+        MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_write_handshake_msg( ssl ) );
 
 #endif /* MBEDTLS_SSL_USE_MPS */
     }
@@ -1477,7 +1477,7 @@ static int ssl_write_new_session_ticket_coordinate( mbedtls_ssl_context* ssl )
 
 static int ssl_write_new_session_ticket_postprocess( mbedtls_ssl_context* ssl )
 {
-    mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_HANDSHAKE_OVER );
+    mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_SERVER_NEW_SESSION_TICKET_FLUSH );
     return( 0 );
 }
 
@@ -4043,10 +4043,15 @@ static int ssl_server_hello_write( mbedtls_ssl_context* ssl,
 
 static int ssl_server_hello_postprocess( mbedtls_ssl_context* ssl )
 {
-    int ret = 0;
-    ( (void ) ssl );
-
-    return( ret );
+#if defined(MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE)
+    if( ssl->handshake->ccs_sent > 1 )
+        mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_SERVER_CCS_AFTER_SERVER_HELLO );
+    else
+#endif /* MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE */
+    {
+        mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_ENCRYPTED_EXTENSIONS );
+    }
+    return( 0 );
 }
 
 /*
@@ -4389,22 +4394,9 @@ int mbedtls_ssl_handshake_server_step_tls1_3( mbedtls_ssl_context *ssl )
 
         case MBEDTLS_SSL_SERVER_HELLO:
             ret = ssl_server_hello_process( ssl );
-
             if( ret != 0 )
                 break;
 
-#if defined(MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE)
-            if( ssl->handshake->ccs_sent > 1 )
-            {
-                mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_SERVER_CCS_AFTER_SERVER_HELLO );
-            }
-            else
-            {
-                mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_ENCRYPTED_EXTENSIONS );
-            }
-#else
-            mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_ENCRYPTED_EXTENSIONS );
-#endif /* MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE */
 
             break;
 
@@ -4531,6 +4523,13 @@ int mbedtls_ssl_handshake_server_step_tls1_3( mbedtls_ssl_context *ssl )
             }
 #endif /* MBEDTLS_SSL_NEW_SESSION_TICKET */
 
+            break;
+
+        case MBEDTLS_SSL_SERVER_NEW_SESSION_TICKET_FLUSH:
+            ret = mbedtls_ssl_flush_output( ssl );
+            if( ret != 0 )
+                return( ret );
+            mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_HANDSHAKE_OVER );
             break;
 
         default:
