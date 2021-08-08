@@ -4088,10 +4088,8 @@ static int ssl_certificate_request_process( mbedtls_ssl_context* ssl )
         MBEDTLS_SSL_PROC_CHK( ssl_certificate_request_write(
                                   ssl, buf, buf_len, &msg_len ) );
 
-#if defined(MBEDTLS_SSL_USE_MPS)
         mbedtls_ssl_add_hs_msg_to_checksum( ssl, MBEDTLS_SSL_HS_CERTIFICATE_REQUEST,
                                             buf, msg_len );
-#endif
 
         /* TODO: Logically this should come at the end, but the non-MPS msg
          *       layer impl'n of mbedtls_ssl_finish_handshake_msg() can fail. */
@@ -4160,17 +4158,6 @@ static int ssl_certificate_request_write( mbedtls_ssl_context* ssl,
     unsigned char* end = buf + buflen;
 
     p = buf;
-
-#if !defined(MBEDTLS_SSL_USE_MPS)
-    /* Skip over handshake header.
-     *
-     * NOTE:
-     * Even for DTLS, we are skipping 4 bytes for the TLS handshake
-     * header. The actual DTLS handshake header is inserted in
-     * the record writing routine mbedtls_ssl_write_record( ).
-     */
-    p += 4;
-#endif /* MBEDTLS_SSL_USE_MPS */
 
     if( p + 1 + 2 > end )
     {
