@@ -3093,34 +3093,6 @@ int mbedtls_ssl_prepare_handshake_record( mbedtls_ssl_context *ssl )
         return( MBEDTLS_ERR_SSL_FEATURE_UNAVAILABLE );
     }
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
-    if( ssl->state != MBEDTLS_SSL_HANDSHAKE_OVER &&
-        ssl->handshake != NULL )
-    {
-        const char magic_hrr_string[32] = { 0xCF, 0x21, 0xAD, 0x74, 0xE5, 0x9A,
-                                            0x61, 0x11, 0xBE, 0x1D, 0x8C, 0x02,
-                                            0x1E, 0x65, 0xB8, 0x91, 0xC2, 0xA2,
-                                            0x11, 0x16, 0x7A, 0xBB, 0x8C, 0x5E,
-                                            0x07, 0x9E, 0x09, 0xE2, 0xC8, 0xA8,
-                                            0x33 ,0x9C };
-        /*
-         * If the server responds with the HRR message then a special handling
-         * with the modified transcript hash is necessary. We compute this hash later.
-         */
-        if( ssl->in_msg[0] == MBEDTLS_SSL_HS_SERVER_HELLO &&
-            memcmp( ssl->in_msg + mbedtls_ssl_hs_hdr_len( ssl ) + 2,
-                    &magic_hrr_string[0], 32 ) == 0 )
-        {
-            MBEDTLS_SSL_DEBUG_MSG( 4, ( "--- Special HRR Checksum Processing" ) );
-        }
-        else
-        {
-            MBEDTLS_SSL_DEBUG_MSG( 4, ( "--- Update Checksum ( ssl_prepare_handshake_record )" ) );
-            ssl->handshake->update_checksum( ssl, ssl->in_msg, ssl->in_hslen );
-        }
-    }
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
-
     return( 0 );
 }
 
@@ -5439,6 +5411,8 @@ static int ssl_check_new_session_ticket( mbedtls_ssl_context *ssl )
     {
         return( 0 );
     }
+
+    ssl->keep_current_message = 1;
 #endif /* MBEDTLS_SSL_USE_MPS */
 
     MBEDTLS_SSL_DEBUG_MSG( 3, ( "NewSessionTicket received" ) );
