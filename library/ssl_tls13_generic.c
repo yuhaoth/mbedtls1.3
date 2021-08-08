@@ -52,7 +52,7 @@
 #endif /* MBEDTLS_PLATFORM_C */
 
 #if defined(MBEDTLS_SSL_USE_MPS)
-int mbedtls_ssl_mps_fetch_full_hs_msg( mbedtls_ssl_context *ssl,
+int mbedtls_ssl_fetch_handshake_msg( mbedtls_ssl_context *ssl,
                                        unsigned hs_type,
                                        unsigned char **buf,
                                        size_t *buflen )
@@ -956,7 +956,7 @@ int mbedtls_ssl_read_certificate_verify_process( mbedtls_ssl_context* ssl )
 
 #if defined(MBEDTLS_SSL_USE_MPS)
 
-        MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_mps_fetch_full_hs_msg( ssl,
+        MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_fetch_handshake_msg( ssl,
                                               MBEDTLS_SSL_HS_CERTIFICATE_VERIFY,
                                               &buf, &buflen ) );
 
@@ -1571,7 +1571,7 @@ int mbedtls_ssl_read_certificate_process( mbedtls_ssl_context* ssl )
 
 #if defined(MBEDTLS_SSL_USE_MPS)
 
-        MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_mps_fetch_full_hs_msg( ssl,
+        MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_fetch_handshake_msg( ssl,
                                           MBEDTLS_SSL_HS_CERTIFICATE,
                                           &buf, &buflen ) );
 
@@ -2427,7 +2427,7 @@ int mbedtls_ssl_finished_in_process( mbedtls_ssl_context* ssl )
 
 #if defined(MBEDTLS_SSL_USE_MPS)
 
-    MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_mps_fetch_full_hs_msg( ssl,
+    MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_fetch_handshake_msg( ssl,
                                               MBEDTLS_SSL_HS_FINISHED,
                                               &buf, &buflen ) );
 

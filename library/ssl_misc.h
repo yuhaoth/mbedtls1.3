@@ -1332,7 +1332,7 @@ int mbedtls_ssl_tls13_populate_transform( mbedtls_ssl_transform *transform,
                                           mbedtls_ssl_key_set const *traffic_keys,
                                           mbedtls_ssl_context *ssl /* DEBUG ONLY */ );
 
-int mbedtls_ssl_mps_fetch_full_hs_msg( mbedtls_ssl_context *ssl,
+int mbedtls_ssl_fetch_handshake_msg( mbedtls_ssl_context *ssl,
                                        unsigned hs_type,
                                        unsigned char **buf,
                                        size_t *buflen );

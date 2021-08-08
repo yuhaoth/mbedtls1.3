@@ -2161,7 +2161,7 @@ static int ssl_certificate_request_process( mbedtls_ssl_context* ssl )
 
 #if defined(MBEDTLS_SSL_USE_MPS)
 
-        MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_mps_fetch_full_hs_msg( ssl,
+        MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_fetch_handshake_msg( ssl,
                                               MBEDTLS_SSL_HS_CERTIFICATE_REQUEST,
                                               &buf, &buflen ) );
 
@@ -2486,7 +2486,7 @@ static int ssl_encrypted_extensions_process( mbedtls_ssl_context* ssl )
 
 #if defined(MBEDTLS_SSL_USE_MPS)
 
-    MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_mps_fetch_full_hs_msg( ssl,
+    MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_fetch_handshake_msg( ssl,
                                              MBEDTLS_SSL_HS_ENCRYPTED_EXTENSION,
                                              &buf, &buflen ) );
 
@@ -4024,7 +4024,7 @@ static int ssl_new_session_ticket_process( mbedtls_ssl_context* ssl )
 
 #if defined(MBEDTLS_SSL_USE_MPS)
 
-    MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_mps_fetch_full_hs_msg( ssl,
+    MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_fetch_handshake_msg( ssl,
                                           MBEDTLS_SSL_HS_NEW_SESSION_TICKET,
                                           &buf, &buflen ) );
 

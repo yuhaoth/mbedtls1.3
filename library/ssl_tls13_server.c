@@ -2071,7 +2071,7 @@ static int ssl_client_hello_process( mbedtls_ssl_context* ssl )
 
 #if defined(MBEDTLS_SSL_USE_MPS)
 
-    MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_mps_fetch_full_hs_msg( ssl,
+    MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_fetch_handshake_msg( ssl,
                                             MBEDTLS_SSL_HS_CLIENT_HELLO,
                                             &buf, &buflen ) );
 
