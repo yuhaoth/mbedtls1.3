@@ -2123,12 +2123,6 @@ static int ssl_certificate_request_process( mbedtls_ssl_context* ssl );
 #define SSL_CERTIFICATE_REQUEST_SKIP    1
 static int ssl_certificate_request_coordinate( mbedtls_ssl_context* ssl );
 
-#if !defined(MBEDTLS_SSL_USE_MPS)
-static int ssl_certificate_request_fetch( mbedtls_ssl_context* ssl,
-                                          unsigned char** buf,
-                                          size_t* buflen );
-#endif /* MBEDTLS_SSL_USE_MPS */
-
 #if defined(MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED)
 static int ssl_certificate_request_parse( mbedtls_ssl_context* ssl,
                                           unsigned char const* buf,
@@ -2159,24 +2153,17 @@ static int ssl_certificate_request_process( mbedtls_ssl_context* ssl )
         unsigned char *buf;
         size_t buflen;
 
-#if defined(MBEDTLS_SSL_USE_MPS)
-
         MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_fetch_handshake_msg( ssl,
                                               MBEDTLS_SSL_HS_CERTIFICATE_REQUEST,
                                               &buf, &buflen ) );
 
+        MBEDTLS_SSL_PROC_CHK( ssl_certificate_request_parse( ssl, buf, buflen ) );
+
+#if defined(MBEDTLS_SSL_USE_MPS)
         mbedtls_ssl_add_hs_msg_to_checksum(
             ssl, MBEDTLS_SSL_HS_CERTIFICATE_REQUEST, buf, buflen );
-
-        /* Process the message contents */
-        MBEDTLS_SSL_PROC_CHK( ssl_certificate_request_parse( ssl, buf, buflen ) );
-
         MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_mps_hs_consume_full_hs_msg( ssl ) );
-
-#else /* MBEDTLS_SSL_USE_MPS */
-        MBEDTLS_SSL_PROC_CHK( ssl_certificate_request_fetch( ssl, &buf, &buflen ) );
-        MBEDTLS_SSL_PROC_CHK( ssl_certificate_request_parse( ssl, buf, buflen ) );
-#endif /* MBEDTLS_SSL_USE_MPS */
+#endif
     }
     else
 #endif /* MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED */
@@ -2270,33 +2257,6 @@ static int ssl_certificate_request_coordinate( mbedtls_ssl_context* ssl )
     }
 
     return( SSL_CERTIFICATE_REQUEST_SKIP );
-}
-
-static int ssl_certificate_request_fetch( mbedtls_ssl_context* ssl,
-                                          unsigned char **buf,
-                                          size_t *buflen )
-{
-    int ret;
-
-    if( ( ret = mbedtls_ssl_read_record( ssl, 0 ) ) != 0 )
-    {
-        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_read_record", ret );
-        return( ret );
-    }
-
-    if( ssl->in_msgtype != MBEDTLS_SSL_MSG_HANDSHAKE          ||
-        ssl->in_msg[0]  != MBEDTLS_SSL_HS_CERTIFICATE_REQUEST )
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad certificate request message" ) );
-        SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_UNEXPECTED_MESSAGE,
-                              MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE );
-        return( MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE );
-    }
-
-    *buf    = ssl->in_msg   + 4;
-    *buflen = ssl->in_hslen - 4;
-
-    return( 0 );
 }
 #endif /* MBEDTLS_SSL_USE_MPS */
 
