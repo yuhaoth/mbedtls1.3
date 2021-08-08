@@ -1404,50 +1404,20 @@ static int ssl_write_new_session_ticket_process( mbedtls_ssl_context *ssl )
 
     if( ret == SSL_NEW_SESSION_TICKET_WRITE )
     {
-#if defined(MBEDTLS_SSL_USE_MPS)
-        mbedtls_mps_handshake_out msg;
         unsigned char *buf;
-        mbedtls_mps_size_t buf_len, msg_len;
+        size_t buf_len, msg_len;
 
-        msg.type   = MBEDTLS_SSL_HS_NEW_SESSION_TICKET;
-        msg.length = MBEDTLS_MPS_SIZE_UNKNOWN;
-        MBEDTLS_SSL_PROC_CHK( mbedtls_mps_write_handshake( &ssl->mps.l4,
-                                                           &msg, NULL, NULL ) );
-
-        /* Request write-buffer */
-        MBEDTLS_SSL_PROC_CHK( mbedtls_writer_get( msg.handle,
-                                                  MBEDTLS_MPS_SIZE_MAX,
-                                                  &buf, &buf_len ) );
+        MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_start_handshake_msg( ssl,
+                MBEDTLS_SSL_HS_NEW_SESSION_TICKET, &buf, &buf_len ) );
 
         MBEDTLS_SSL_PROC_CHK( ssl_write_new_session_ticket_write(
                                   ssl, buf, buf_len, &msg_len ) );
 
-        /* Commit message */
-        MBEDTLS_SSL_PROC_CHK( mbedtls_writer_commit_partial( msg.handle,
-                                                             buf_len - msg_len ) );
-
-        MBEDTLS_SSL_PROC_CHK( mbedtls_mps_dispatch( &ssl->mps.l4 ) );
-
         MBEDTLS_SSL_PROC_CHK(
             ssl_write_new_session_ticket_postprocess( ssl ) );
 
-        MBEDTLS_SSL_PROC_CHK( mbedtls_mps_flush( &ssl->mps.l4 ) );
-
-#else /* MBEDTLS_SSL_USE_MPS */
-
-        ssl->out_msgtype = MBEDTLS_SSL_MSG_HANDSHAKE;
-        ssl->out_msg[0] = MBEDTLS_SSL_HS_NEW_SESSION_TICKET;
-        MBEDTLS_SSL_PROC_CHK( ssl_write_new_session_ticket_write( ssl,
-                                        ssl->out_msg,
-                                        MBEDTLS_SSL_OUT_CONTENT_LEN,
-                                        &ssl->out_msglen ) );
-
-        MBEDTLS_SSL_PROC_CHK(
-            ssl_write_new_session_ticket_postprocess( ssl ) );
-
-        MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_write_handshake_msg( ssl ) );
-
-#endif /* MBEDTLS_SSL_USE_MPS */
+        MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_finish_handshake_msg( ssl,
+                                                  buf_len, msg_len ) );
     }
     else
     {
@@ -1519,13 +1489,8 @@ static int ssl_write_new_session_ticket_write( mbedtls_ssl_context* ssl,
     int hash_length;
     unsigned char *ticket_lifetime_ptr;
 
-#if defined(MBEDTLS_SSL_USE_MPS)
     size_t const total_length = 12 + MBEDTLS_SSL_TICKET_NONCE_LENGTH;
     p = buf;
-#else
-    size_t const total_length = 16 + MBEDTLS_SSL_TICKET_NONCE_LENGTH;
-    p = buf + 4;
-#endif /* MBEDTLS_SSL_USE_MPS */
 
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> write NewSessionTicket msg" ) );
 
