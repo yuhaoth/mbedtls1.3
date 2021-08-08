@@ -4070,7 +4070,7 @@ static int ssl_certificate_request_postprocess( mbedtls_ssl_context* ssl );
 
 static int ssl_certificate_request_process( mbedtls_ssl_context* ssl )
 {
-    int ret = 0;
+    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> write certificate request" ) );
 
     /* Coordination step: Check if we need to send a CertificateRequest */
@@ -4079,75 +4079,47 @@ static int ssl_certificate_request_process( mbedtls_ssl_context* ssl )
 #if defined(MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED)
     if( ret == SSL_CERTIFICATE_REQUEST_SEND )
     {
-#if defined(MBEDTLS_SSL_USE_MPS)
-        mbedtls_mps_handshake_out msg;
         unsigned char *buf;
-        mbedtls_mps_size_t buf_len, msg_len;
+        size_t buf_len, msg_len;
 
-        msg.type   = MBEDTLS_SSL_HS_CERTIFICATE_REQUEST;
-        msg.length = MBEDTLS_MPS_SIZE_UNKNOWN;
-        MBEDTLS_SSL_PROC_CHK( mbedtls_mps_write_handshake( &ssl->mps.l4,
-                                                           &msg, NULL, NULL ) );
-
-        /* Request write-buffer */
-        MBEDTLS_SSL_PROC_CHK( mbedtls_writer_get( msg.handle, MBEDTLS_MPS_SIZE_MAX,
-                                                      &buf, &buf_len ) );
+        MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_start_handshake_msg( ssl,
+                MBEDTLS_SSL_HS_CERTIFICATE_REQUEST, &buf, &buf_len ) );
 
         MBEDTLS_SSL_PROC_CHK( ssl_certificate_request_write(
                                   ssl, buf, buf_len, &msg_len ) );
 
+#if defined(MBEDTLS_SSL_USE_MPS)
         mbedtls_ssl_add_hs_msg_to_checksum( ssl, MBEDTLS_SSL_HS_CERTIFICATE_REQUEST,
                                             buf, msg_len );
+#endif
 
-        /* Commit message */
-        MBEDTLS_SSL_PROC_CHK( mbedtls_writer_commit_partial( msg.handle,
-                                                             buf_len - msg_len ) );
-
-        MBEDTLS_SSL_PROC_CHK( mbedtls_mps_dispatch( &ssl->mps.l4 ) );
-
-        /* Update state */
+        /* TODO: Logically this should come at the end, but the non-MPS msg
+         *       layer impl'n of mbedtls_ssl_finish_handshake_msg() can fail. */
         MBEDTLS_SSL_PROC_CHK( ssl_certificate_request_postprocess( ssl ) );
-
-#else  /* MBEDTLS_SSL_USE_MPS */
-
-        /* Prepare CertificateRequest message in output buffer. */
-        MBEDTLS_SSL_PROC_CHK( ssl_certificate_request_write( ssl, ssl->out_msg,
-                                                             MBEDTLS_SSL_OUT_CONTENT_LEN,
-                                                             &ssl->out_msglen ) );
-
-        ssl->out_msgtype = MBEDTLS_SSL_MSG_HANDSHAKE;
-        ssl->out_msg[0] = MBEDTLS_SSL_HS_CERTIFICATE_REQUEST;
-
-        /* Update state */
-        MBEDTLS_SSL_PROC_CHK( ssl_certificate_request_postprocess( ssl ) );
-
-        /* Dispatch message */
-        MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_write_handshake_msg( ssl ) );
-
-#endif /* MBEDTLS_SSL_USE_MPS */
+        MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_finish_handshake_msg( ssl,
+                                                  buf_len, msg_len ) );
 
     }
     else
 #endif /* MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED */
-        if( ret == SSL_CERTIFICATE_REQUEST_SKIP )
-        {
-            MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= skip write certificate request" ) );
+    if( ret == SSL_CERTIFICATE_REQUEST_SKIP )
+    {
+        MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= skip write certificate request" ) );
 
-            /* Update state */
-            MBEDTLS_SSL_PROC_CHK( ssl_certificate_request_postprocess( ssl ) );
-        }
-        else
-        {
-            MBEDTLS_SSL_DEBUG_MSG( 1, ( "should never happen" ) );
-            return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
-        }
+        /* Update state */
+        MBEDTLS_SSL_PROC_CHK( ssl_certificate_request_postprocess( ssl ) );
+    }
+    else
+    {
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "should never happen" ) );
+        return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
+    }
 
 cleanup:
 
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= write certificate request" ) );
     return( ret );
 }
-
 
 static int ssl_certificate_request_coordinate( mbedtls_ssl_context* ssl )
 {

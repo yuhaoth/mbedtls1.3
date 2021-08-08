@@ -109,6 +109,72 @@ cleanup:
 
     return( ret );
 }
+
+int mbedtls_ssl_start_handshake_msg( mbedtls_ssl_context *ssl,
+                                     unsigned hs_type,
+                                     unsigned char **buf,
+                                     size_t *buflen )
+{
+    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
+    mbedtls_mps_handshake_out * const msg = &ssl->handshake->hs_msg_out;
+
+    msg->type   = hs_type;
+    msg->length = MBEDTLS_MPS_SIZE_UNKNOWN;
+    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_write_handshake( &ssl->mps.l4,
+                                                       msg, NULL, NULL ) );
+
+    MBEDTLS_SSL_PROC_CHK( mbedtls_writer_get( msg->handle,
+                                              MBEDTLS_MPS_SIZE_MAX,
+                                              buf, buflen ) );
+
+cleanup:
+    return( ret );
+}
+
+int mbedtls_ssl_finish_handshake_msg( mbedtls_ssl_context *ssl,
+                                      size_t buf_len,
+                                      size_t msg_len )
+{
+    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
+    mbedtls_mps_handshake_out * const msg = &ssl->handshake->hs_msg_out;
+
+    MBEDTLS_SSL_PROC_CHK( mbedtls_writer_commit_partial( msg->handle,
+                                                         buf_len - msg_len ) );
+    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_dispatch( &ssl->mps.l4 ) );
+
+cleanup:
+    return( ret );
+}
+
+#else /* MBEDTLS_SSL_USE_MPS */
+
+int mbedtls_ssl_start_handshake_msg( mbedtls_ssl_context *ssl,
+                                     unsigned hs_type,
+                                     unsigned char **buf,
+                                     size_t *buflen )
+{
+    *buf = ssl->out_msg;
+    *buflen = MBEDTLS_SSL_OUT_CONTENT_LEN;
+
+    ssl->out_msgtype = MBEDTLS_SSL_MSG_HANDSHAKE;
+    ssl->out_msg[0]  = hs_type;
+
+    return( 0 );
+}
+
+int mbedtls_ssl_finish_handshake_msg( mbedtls_ssl_context *ssl,
+                                      size_t buf_len,
+                                      size_t msg_len )
+{
+    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
+
+    ssl->out_msglen = msg_len;
+    MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_write_handshake_msg( ssl ) );
+
+cleanup:
+    return( ret );
+}
+
 #endif /* MBEDTLS_SSL_USE_MPS */
 
 void mbedtls_ssl_add_hs_msg_to_checksum( mbedtls_ssl_context *ssl,
