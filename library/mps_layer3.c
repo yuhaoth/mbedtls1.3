@@ -19,14 +19,14 @@
  *  This file is part of Mbed TLS (https://tls.mbed.org)
  */
 
-#include "mbedtls/mps/layer3.h"
-#include "../mps_trace.h"
-#include "../mps_common.h"
+#include "mps_layer3.h"
+#include "mps_trace.h"
+#include "mps_common.h"
 
 #if defined(MBEDTLS_MPS_SEPARATE_LAYERS) ||     \
     defined(MBEDTLS_MPS_TOP_TRANSLATION_UNIT)
 
-#include "layer3_internal.h"
+#include "mps_layer3_internal.h"
 
 #if defined(MBEDTLS_MPS_ENABLE_TRACE)
 static int mbedtls_mps_trace_id = MBEDTLS_MPS_TRACE_BIT_LAYER_3;

@@ -24,14 +24,12 @@
 #ifndef MBEDTLS_MPS_RECORD_LAYER_H
 #define MBEDTLS_MPS_RECORD_LAYER_H
 
-#include "layer1.h"
-#include "../library/mps_common.h"
-
-#include "reader.h"
-#include "writer.h"
-
-#include "error.h"
-#include "transform.h"
+#include "mps_layer1.h"
+#include "mps_common.h"
+#include "mps_reader.h"
+#include "mps_writer.h"
+#include "mps_error.h"
+#include "mps_transform.h"
 
 #include <stdint.h>
 

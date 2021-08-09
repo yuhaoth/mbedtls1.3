@@ -454,17 +454,20 @@ typedef uint_fast8_t mbedtls_mps_hs_type;
 
 
 /** \brief The type of epoch IDs. */
+
 #if defined(MBEDTLS_MPS_STORED_SMALL_TYPES)
 typedef int8_t mbedtls_mps_stored_epoch_id;
 #else
 typedef int mbedtls_mps_stored_epoch_id;
 #endif /* MBEDTLS_MPS_STORED_SMALL_TYPES */
 
-#if defined(MBEDTLS_MPS_INTERNAL_SMALL_TYPES)
-typedef mbedtls_mps_stored_epoch_id mbedtls_mps_epoch_id;
-#else
-typedef int_fast8_t mbedtls_mps_epoch_id;
-#endif /* MBEDTLS_MPS_INTERNAL_SMALL_TYPES */
+/* TODO: Make this configurable again */
+typedef int mbedtls_mps_epoch_id;
+/* #if defined(MBEDTLS_MPS_INTERNAL_SMALL_TYPES) */
+/* typedef mbedtls_mps_stored_epoch_id mbedtls_mps_epoch_id; */
+/* #else */
+/* typedef int_fast8_t mbedtls_mps_epoch_id; */
+/* #endif /\* MBEDTLS_MPS_INTERNAL_SMALL_TYPES *\/ */
 
 /*! The first unusable unusable epoch ID. */
 #define MBEDTLS_MPS_EPOCH_MAX ( ( mbedtls_mps_epoch_id ) 100 /* 0x7FFF */ )

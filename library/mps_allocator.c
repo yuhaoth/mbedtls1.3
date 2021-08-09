@@ -19,7 +19,7 @@
  *  This file is part of Mbed TLS (https://tls.mbed.org)
  */
 
-#include "../../include/mbedtls/mps/allocator.h"
+#include "mps_allocator.h"
 
 #if defined(MBEDTLS_PLATFORM_C)
 #include "mbedtls/platform.h"

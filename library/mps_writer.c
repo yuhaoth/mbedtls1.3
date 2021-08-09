@@ -19,9 +19,9 @@
  *  This file is part of Mbed TLS (https://tls.mbed.org)
  */
 
-#include "mbedtls/mps/writer.h"
-#include "../mps_trace.h"
-#include "mbedtls/mps/error.h"
+#include "mps_writer.h"
+#include "mps_trace.h"
+#include "mps_error.h"
 
 #if defined(MBEDTLS_MPS_SEPARATE_LAYERS) ||     \
     defined(MBEDTLS_MPS_TOP_TRANSLATION_UNIT)

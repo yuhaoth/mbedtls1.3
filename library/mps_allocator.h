@@ -25,7 +25,8 @@
 #ifndef MBEDTLS_MPS_ALLOCATOR_H
 #define MBEDTLS_MPS_ALLOCATOR_H
 
-#include "error.h"
+#include "mps_common.h"
+#include "mps_error.h"
 
 #include <stdio.h>
 #include <stdint.h>

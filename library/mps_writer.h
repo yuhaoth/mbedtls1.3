@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2006-2018, ARM Limited, All Rights Reserved
+ *  Copyright The Mbed TLS Contributors
  *  SPDX-License-Identifier: Apache-2.0
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -18,7 +18,7 @@
  */
 
 /**
- * \file writer.h
+ * \file mps_writer.h
  *
  * \brief This file defines writer objects, which together with their
  *        sibling reader objects form the basis for the communication
@@ -86,51 +86,14 @@
 #include <stdio.h>
 #include <stdint.h>
 
-#include "../library/mps_common.h"
+#include "mps_common.h"
+#include "mps_error.h"
 
 struct mbedtls_writer;
 typedef struct mbedtls_writer mbedtls_writer;
 
 struct mbedtls_writer_ext;
 typedef struct mbedtls_writer_ext mbedtls_writer_ext;
-
-/*
- * Error codes returned from the writer.
- */
-
-/** An attempt was made to reclaim a buffer from the writer,
- *  but the buffer hasn't been fully used up, yet.            */
-#define MBEDTLS_ERR_WRITER_DATA_LEFT             MBEDTLS_WRITER_MAKE_ERROR( 0x1 )
-/** The validation of input parameters failed.                */
-#define MBEDTLS_ERR_WRITER_INVALID_ARG           MBEDTLS_WRITER_MAKE_ERROR( 0x2 )
-/** The provided outgoing data buffer was not large enough to
- *  hold all queued data that's currently pending to be
- *  delivered.                                                */
-#define MBEDTLS_ERR_WRITER_NEED_MORE             MBEDTLS_WRITER_MAKE_ERROR( 0x3 )
-/** The requested operation is not possible
- *  in the current state of the writer.                       */
-#define MBEDTLS_ERR_WRITER_OPERATION_UNEXPECTED  MBEDTLS_ERR_MPS_OPERATION_UNEXPECTED
-/** The remaining amount of space for outgoing data is not
- *  sufficient to serve the user's request. The current
- *  outgoing data buffer must be reclaimed, dispatched,
- *  and a fresh outgoing data buffer must be fed to the
- *  writer.                                                   */
-#define MBEDTLS_ERR_WRITER_OUT_OF_DATA           MBEDTLS_WRITER_MAKE_ERROR( 0x5 )
-/** A write-request was issued to the extended writer that
- *  exceeds the bounds of the most recently added group.      */
-#define MBEDTLS_ERR_WRITER_BOUNDS_VIOLATION      MBEDTLS_WRITER_MAKE_ERROR( 0x9 )
-/** The extended writer has reached the maximum number of
- *  groups, and another group cannot be added.                */
-#define MBEDTLS_ERR_WRITER_TOO_MANY_GROUPS       MBEDTLS_WRITER_MAKE_ERROR( 0xa )
-
-/** The identifier to use in mbedtls_writer_reclaim() to
- *  force the reclamation of the outgoing data buffer even
- *  if there's space remaining.                               */
-#define MBEDTLS_WRITER_RECLAIM_FORCE 1
-/** The identifier to use in mbedtls_writer_reclaim() if
- *  the call should only succeed if the current outgoing data
- *  buffer has been fully used up.                            */
-#define MBEDTLS_WRITER_RECLAIM_NO_FORCE 0
 
 /** \brief The type of states for the reader.
  *

@@ -36,6 +36,7 @@
 
 #include "ssl_misc.h"
 #include "ssl_tls13_keys.h"
+#include "mps_all.h"
 
 #include "ecp_internal.h"
 
@@ -140,7 +141,7 @@ int ssl_write_early_data_process( mbedtls_ssl_context* ssl )
         MBEDTLS_SSL_PROC_CHK( ssl_write_early_data_prepare( ssl ) );
 
 #if defined(MBEDTLS_SSL_USE_MPS)
-        MBEDTLS_SSL_PROC_CHK( mbedtls_mps_write_application( &ssl->mps.l4,
+        MBEDTLS_SSL_PROC_CHK( mbedtls_mps_write_application( &ssl->mps->l4,
                                                              &msg ) );
 
         /* Request write-buffer */
@@ -154,7 +155,7 @@ int ssl_write_early_data_process( mbedtls_ssl_context* ssl )
         MBEDTLS_SSL_PROC_CHK( mbedtls_writer_commit_partial( msg,
                                                              buf_len - msg_len ) );
 
-        MBEDTLS_SSL_PROC_CHK( mbedtls_mps_dispatch( &ssl->mps.l4 ) );
+        MBEDTLS_SSL_PROC_CHK( mbedtls_mps_dispatch( &ssl->mps->l4 ) );
 
         /* Update state */
         MBEDTLS_SSL_PROC_CHK( ssl_write_early_data_postprocess( ssl ) );
@@ -274,14 +275,14 @@ static int ssl_write_early_data_prepare( mbedtls_ssl_context* ssl )
             return( ret );
 
         /* Register transform with MPS. */
-        ret = mbedtls_mps_add_key_material( &ssl->mps.l4,
+        ret = mbedtls_mps_add_key_material( &ssl->mps->l4,
                                             transform_earlydata,
                                             &ssl->epoch_earlydata );
         if( ret != 0 )
             return( ret );
 
         /* Use new transform for outgoing data. */
-        ret = mbedtls_mps_set_outgoing_keys( &ssl->mps.l4,
+        ret = mbedtls_mps_set_outgoing_keys( &ssl->mps->l4,
                                              ssl->epoch_earlydata );
         if( ret != 0 )
             return( ret );
@@ -2204,7 +2205,7 @@ static int ssl_certificate_request_coordinate( mbedtls_ssl_context* ssl )
         return( SSL_CERTIFICATE_REQUEST_SKIP );
     }
 
-    MBEDTLS_SSL_PROC_CHK_NEG( mbedtls_mps_read( &ssl->mps.l4 ) );
+    MBEDTLS_SSL_PROC_CHK_NEG( mbedtls_mps_read( &ssl->mps->l4 ) );
     if( ret != MBEDTLS_MPS_MSG_HS )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad certificate request message" ) );
@@ -2213,7 +2214,7 @@ static int ssl_certificate_request_coordinate( mbedtls_ssl_context* ssl )
         return( MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE );
     }
 
-    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read_handshake( &ssl->mps.l4, &msg ) );
+    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read_handshake( &ssl->mps->l4, &msg ) );
 
     if( msg.type == MBEDTLS_SSL_HS_CERTIFICATE_REQUEST )
         return( SSL_CERTIFICATE_REQUEST_EXPECT_REQUEST );
@@ -2685,7 +2686,7 @@ static int ssl_server_hello_process( mbedtls_ssl_context* ssl )
 
 #if defined(MBEDTLS_SSL_USE_MPS)
         MBEDTLS_SSL_PROC_CHK( mbedtls_mps_reader_commit( msg.handle ) );
-        MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read_consume( &ssl->mps.l4  ) );
+        MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read_consume( &ssl->mps->l4  ) );
 #endif /* MBEDTLS_SSL_USE_MPS */
 
         MBEDTLS_SSL_PROC_CHK( ssl_server_hello_postprocess( ssl ) );
@@ -2696,7 +2697,7 @@ static int ssl_server_hello_process( mbedtls_ssl_context* ssl )
 
 #if defined(MBEDTLS_SSL_USE_MPS)
         MBEDTLS_SSL_PROC_CHK( mbedtls_mps_reader_commit( msg.handle ) );
-        MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read_consume( &ssl->mps.l4  ) );
+        MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read_consume( &ssl->mps->l4  ) );
 #endif /* MBEDTLS_SSL_USE_MPS */
 
         MBEDTLS_SSL_PROC_CHK( ssl_hrr_postprocess( ssl, buf, buflen ) );
@@ -2752,12 +2753,12 @@ static int ssl_server_hello_coordinate( mbedtls_ssl_context* ssl,
     int ret = 0;
     unsigned char *peak;
 
-    MBEDTLS_SSL_PROC_CHK_NEG( mbedtls_mps_read( &ssl->mps.l4 ) );
+    MBEDTLS_SSL_PROC_CHK_NEG( mbedtls_mps_read( &ssl->mps->l4 ) );
 
 #if defined(MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE)
     if( ret == MBEDTLS_MPS_MSG_CCS )
     {
-        MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read_consume( &ssl->mps.l4 ) );
+        MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read_consume( &ssl->mps->l4 ) );
         return( MBEDTLS_ERR_SSL_WANT_READ );
     }
 #endif /* MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE */
@@ -2765,7 +2766,7 @@ static int ssl_server_hello_coordinate( mbedtls_ssl_context* ssl,
     if( ret != MBEDTLS_MPS_MSG_HS )
         return( MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE );
 
-    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read_handshake( &ssl->mps.l4,
+    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read_handshake( &ssl->mps->l4,
                                                       msg ) );
 
     if( msg->type != MBEDTLS_SSL_HS_SERVER_HELLO )
@@ -2778,7 +2779,7 @@ static int ssl_server_hello_coordinate( mbedtls_ssl_context* ssl,
 
     if( ret == MBEDTLS_ERR_MPS_READER_OUT_OF_DATA )
     {
-        MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read_pause( &ssl->mps.l4 ) );
+        MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read_pause( &ssl->mps->l4 ) );
         ret = MBEDTLS_ERR_SSL_WANT_READ;
     }
     else
@@ -3217,7 +3218,7 @@ static int ssl_server_hello_postprocess( mbedtls_ssl_context* ssl )
                               ssl );
 
         /* Register transform with MPS. */
-        ret = mbedtls_mps_add_key_material( &ssl->mps.l4,
+        ret = mbedtls_mps_add_key_material( &ssl->mps->l4,
                                             transform_handshake,
                                             &ssl->epoch_handshake );
         if( ret != 0 )
@@ -3230,7 +3231,7 @@ static int ssl_server_hello_postprocess( mbedtls_ssl_context* ssl )
     ssl->session_in = ssl->session_negotiate;
 
 #if defined(MBEDTLS_SSL_USE_MPS)
-    ret = mbedtls_mps_set_incoming_keys( &ssl->mps.l4,
+    ret = mbedtls_mps_set_incoming_keys( &ssl->mps->l4,
                                          ssl->epoch_handshake );
     if( ret != 0 )
         return( ret );
@@ -4036,12 +4037,12 @@ int mbedtls_ssl_handshake_client_step_tls1_3( mbedtls_ssl_context *ssl )
             MBEDTLS_SSL_DEBUG_MSG( 1, ( "Switch to application keys for outbound traffic" ) );
 
 #if defined(MBEDTLS_SSL_USE_MPS)
-            ret = mbedtls_mps_set_incoming_keys( &ssl->mps.l4,
+            ret = mbedtls_mps_set_incoming_keys( &ssl->mps->l4,
                                                  ssl->epoch_application );
             if( ret != 0 )
                 return( ret );
 
-            ret = mbedtls_mps_set_outgoing_keys( &ssl->mps.l4,
+            ret = mbedtls_mps_set_outgoing_keys( &ssl->mps->l4,
                                                  ssl->epoch_application );
             if( ret != 0 )
                 return( ret );

@@ -19,22 +19,23 @@
  *  This file is part of Mbed TLS (https://tls.mbed.org)
  */
 
-#include "../mps_common.h"
+#include "common.h"
+#include "mps_common.h"
 
 /* Embed all other MPS translation units into here
  * for release builds on constrained systems to allow
  * inlining and hence significantly smaller code size. */
 #if !defined(MBEDTLS_MPS_SEPARATE_LAYERS)
 #define MBEDTLS_MPS_TOP_TRANSLATION_UNIT
-#include "reader.c"
-#include "writer.c"
-#include "layer1.c"
-#include "layer2.c"
-#include "layer3.c"
+#include "mps_reader.c"
+#include "mps_writer.c"
+#include "mps_layer1.c"
+#include "mps_layer2.c"
+#include "mps_layer3.c"
 #endif /* MBEDTLS_MPS_SEPARATE_LAYERS */
 
-#include "mbedtls/mps/mps.h"
-#include "../mps_trace.h"
+#include "mps_trace.h"
+#include "mps.h"
 
 #include "mbedtls/platform_util.h"
 #include "mbedtls/ssl.h"

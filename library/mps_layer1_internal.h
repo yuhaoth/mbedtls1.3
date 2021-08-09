@@ -22,7 +22,7 @@
 #ifndef MBEDTLS_MPS_BUFFER_LAYER_INTERNAL_H
 #define MBEDTLS_MPS_BUFFER_LAYER_INTERNAL_H
 
-#include "mbedtls/mps/layer1.h"
+#include "mps_layer1.h"
 
 /*
  * Allocator related functions

@@ -27,9 +27,9 @@
 #include <stdio.h>
 #include <stdint.h>
 
-#include "../library/mps_common.h"
-#include "allocator.h"
-#include "error.h"
+#include "mps_common.h"
+#include "mps_allocator.h"
+#include "mps_error.h"
 
 /*
  * External interface to layer 0

@@ -35,13 +35,15 @@
 #endif
 
 #include "mbedtls/ssl.h"
-#include "ssl_misc.h"
 #include "mbedtls/debug.h"
 #include "mbedtls/error.h"
 #include "mbedtls/platform_util.h"
 #include "mbedtls/version.h"
 
 #include "ssl_invasive.h"
+#include "ssl_misc.h"
+
+#include "mps_all.h"
 
 #include <string.h>
 
@@ -2114,7 +2116,7 @@ int mbedtls_ssl_flush_output( mbedtls_ssl_context *ssl )
 {
     int ret;
 
-    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_flush( &ssl->mps.l4 ) );
+    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_flush( &ssl->mps->l4 ) );
 
 cleanup:
     /*
@@ -4927,24 +4929,24 @@ int mbedtls_ssl_send_alert_message( mbedtls_ssl_context *ssl,
 
 #if defined(MBEDTLS_SSL_USE_MPS)
 
-    ret = mbedtls_mps_flush( &ssl->mps.l4 );
+    ret = mbedtls_mps_flush( &ssl->mps->l4 );
     if( ret != 0 )
         return( ret );
 
     if( level == MBEDTLS_SSL_ALERT_LEVEL_FATAL )
     {
-        ret = mbedtls_mps_send_fatal( &ssl->mps.l4, message );
+        ret = mbedtls_mps_send_fatal( &ssl->mps->l4, message );
         if( ret != 0 )
             return( ret );
     }
     else
     {
-        ret = mbedtls_mps_write_alert( &ssl->mps.l4, message );
+        ret = mbedtls_mps_write_alert( &ssl->mps->l4, message );
         if( ret != 0 )
             return( ret );
     }
 
-    ret = mbedtls_mps_flush( &ssl->mps.l4 );
+    ret = mbedtls_mps_flush( &ssl->mps->l4 );
     if( ret != 0 )
         return( ret );
 
@@ -5399,7 +5401,7 @@ static int ssl_check_new_session_ticket( mbedtls_ssl_context *ssl )
 #if defined(MBEDTLS_SSL_USE_MPS)
     int ret;
     mbedtls_mps_handshake_in msg;
-    ret = mbedtls_mps_read_handshake( &ssl->mps.l4, &msg );
+    ret = mbedtls_mps_read_handshake( &ssl->mps->l4, &msg );
     if( ret != 0 )
         return( ret );
 
@@ -5593,7 +5595,7 @@ int mbedtls_ssl_read( mbedtls_ssl_context *ssl, unsigned char *buf, size_t len )
         }
     }
 
-    MBEDTLS_SSL_PROC_CHK_NEG( mbedtls_mps_read( &ssl->mps.l4 ) );
+    MBEDTLS_SSL_PROC_CHK_NEG( mbedtls_mps_read( &ssl->mps->l4 ) );
     msg_type = ret;
 
     if( msg_type == MBEDTLS_MPS_MSG_HS )
@@ -5608,7 +5610,7 @@ int mbedtls_ssl_read( mbedtls_ssl_context *ssl, unsigned char *buf, size_t len )
     if( msg_type == MBEDTLS_MPS_MSG_ALERT )
     {
         MBEDTLS_SSL_DEBUG_MSG( 2, ( "ignoring non-fatal non-closure alert" ) );
-        MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read_consume( &ssl->mps.l4 ) );
+        MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read_consume( &ssl->mps->l4 ) );
 
         return( MBEDTLS_ERR_SSL_WANT_READ );
     }
@@ -5616,11 +5618,11 @@ int mbedtls_ssl_read( mbedtls_ssl_context *ssl, unsigned char *buf, size_t len )
     if( msg_type != MBEDTLS_MPS_MSG_APP )
         return( MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE );
 
-    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read_application( &ssl->mps.l4, &rd ) );
+    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read_application( &ssl->mps->l4, &rd ) );
     MBEDTLS_SSL_PROC_CHK( mbedtls_mps_reader_get( rd, len, &src, &data_read ) );
     memcpy( buf, src, data_read );
     MBEDTLS_SSL_PROC_CHK( mbedtls_mps_reader_commit( rd ) );
-    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read_consume( &ssl->mps.l4 ) );
+    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read_consume( &ssl->mps->l4 ) );
     return( data_read );
 
 cleanup:
@@ -5650,9 +5652,9 @@ int mbedtls_ssl_write( mbedtls_ssl_context *ssl,
         goto cleanup;
 
     /* Make sure we can write a new message. */
-    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_flush( &ssl->mps.l4 ) );
+    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_flush( &ssl->mps->l4 ) );
 
-    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_write_application( &ssl->mps.l4,
+    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_write_application( &ssl->mps->l4,
                                                          &msg ) );
 
     /* Request write-buffer */
@@ -5668,7 +5670,7 @@ int mbedtls_ssl_write( mbedtls_ssl_context *ssl,
     MBEDTLS_SSL_PROC_CHK( mbedtls_writer_commit_partial( msg,
                                                wr_buf_len - len ) );
 
-    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_dispatch( &ssl->mps.l4 ) );
+    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_dispatch( &ssl->mps->l4 ) );
     ret = len;
 
 cleanup:
@@ -5697,7 +5699,7 @@ int mbedtls_ssl_close_notify( mbedtls_ssl_context *ssl )
 
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> write close notify" ) );
 
-    ret = mbedtls_mps_close( &ssl->mps.l4 );
+    ret = mbedtls_mps_close( &ssl->mps->l4 );
     if( ret != 0 )
         return( ret );
 
@@ -6213,7 +6215,7 @@ int mbedtls_ssl_handle_pending_alert( mbedtls_ssl_context *ssl )
                                     MBEDTLS_SSL_ALERT_LEVEL_FATAL,
                                     ssl->alert_type ) );
 
-        ret = mbedtls_mps_send_fatal( &ssl->mps.l4,
+        ret = mbedtls_mps_send_fatal( &ssl->mps->l4,
                                       ssl->alert_type );
         ssl->send_alert = 2;
 
@@ -6222,7 +6224,7 @@ int mbedtls_ssl_handle_pending_alert( mbedtls_ssl_context *ssl )
             return( ret );
     }
 
-    ret = mbedtls_mps_flush( &ssl->mps.l4 );
+    ret = mbedtls_mps_flush( &ssl->mps->l4 );
     if( ret != 0 )
         return( ret );
 

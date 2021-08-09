@@ -24,15 +24,15 @@
 #ifndef MBEDTLS_MPS_H
 #define MBEDTLS_MPS_H
 
-#include "../library/mps_common.h"
-#include "transport.h"
-#include "transform.h"
-#include "error.h"
-#include "reader.h"
-#include "writer.h"
-#include "layer3.h"
+#include "mps_common.h"
+#include "mps_transport.h"
+#include "mps_transform.h"
+#include "mps_error.h"
+#include "mps_reader.h"
+#include "mps_writer.h"
+#include "mps_layer3.h"
 
-#include "../timing.h"
+#include "mbedtls/timing.h"
 
 struct mbedtls_mps_handshake_out_internal;
 struct mbedtls_mps_retransmission_handle;

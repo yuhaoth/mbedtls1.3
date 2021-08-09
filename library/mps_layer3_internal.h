@@ -22,7 +22,7 @@
 #ifndef MBEDTLS_MPS_MESSAGE_EXTRACTION_LAYER_INTERNAL_H
 #define MBEDTLS_MPS_MESSAGE_EXTRACTION_LAYER_INTERNAL_H
 
-#include "mbedtls/mps/layer3.h"
+#include "mps_layer3.h"
 
 /*
  * Handshake header parsing/writing

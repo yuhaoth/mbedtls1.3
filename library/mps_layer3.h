@@ -26,14 +26,12 @@
 
 #include <stdint.h>
 
-#include "reader.h"
-#include "writer.h"
-
-#include "layer2.h"
-#include "../library/mps_common.h"
-
-#include "transform.h"
-#include "error.h"
+#include "mps_reader.h"
+#include "mps_writer.h"
+#include "mps_layer2.h"
+#include "mps_common.h"
+#include "mps_transform.h"
+#include "mps_error.h"
 
 /*
  * Layer 3 compile-time configuration
