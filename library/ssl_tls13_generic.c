@@ -1,11 +1,10 @@
 /*
- *  Handshake-related functions shared between the TLS/DTLS client
- *  and server ( ssl_tls13_client.c and ssl_tls13_server.c ).
+ *  TLS 1.3 functionality shared between client and server
  *
- *  Copyright (C) 2006-2015, ARM Limited, All Rights Reserved
+ *  Copyright The Mbed TLS Contributors
  *  SPDX-License-Identifier: Apache-2.0
  *
- *  Licensed under the Apache License, Version 2.0 ( the "License" ); you may
+ *  Licensed under the Apache License, Version 2.0 (the "License"); you may
  *  not use this file except in compliance with the License.
  *  You may obtain a copy of the License at
  *
@@ -16,8 +15,6 @@
  *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
- *
- *  This file is part of mbed TLS ( https://tls.mbed.org )
  */
 
 #include "common.h"
