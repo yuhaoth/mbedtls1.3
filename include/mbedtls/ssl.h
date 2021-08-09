@@ -30,14 +30,6 @@
 
 #include "mbedtls/ssl_ciphersuites.h"
 
-#if defined(MBEDTLS_SSL_USE_MPS)
-#include "mbedtls/mps/mps.h"
-#include "mbedtls/mps/layer1.h"
-#include "mbedtls/mps/layer2.h"
-#include "mbedtls/mps/layer3.h"
-#include "mbedtls/mps/allocator.h"
-#endif /* MBEDTLS_SSL_USE_MPS */
-
 #if defined(MBEDTLS_X509_CRT_PARSE_C)
 #include "mbedtls/x509_crt.h"
 #include "mbedtls/x509_crl.h"
@@ -1242,6 +1234,11 @@ typedef void mbedtls_ssl_export_keys_t( void *p_expkey,
                                         mbedtls_tls_prf_types tls_prf_type );
 #endif /* MBEDTLS_SSL_EXPORT_KEYS */
 
+#if defined(MBEDTLS_SSL_USE_MPS)
+struct mbedtls_ssl_mps;
+typedef struct mbedtls_ssl_mps mbedtls_ssl_mps;
+#endif /* MBEDTLS_SSL_USE_MPS */
+
 /**
  * SSL/TLS configuration to be shared between mbedtls_ssl_context structures.
  */
@@ -1561,29 +1558,13 @@ struct mbedtls_ssl_context
 #if defined(MBEDTLS_SSL_USE_MPS)
     /* With MPS, we only remember opaque epoch IDs from the handshake
      * layer. The transform themselves are managed by MPS. */
-    mbedtls_mps_epoch_id MBEDTLS_PRIVATE(epoch_handshake);
-    mbedtls_mps_epoch_id MBEDTLS_PRIVATE(epoch_earlydata);
-    mbedtls_mps_epoch_id MBEDTLS_PRIVATE(epoch_application);
+    int MBEDTLS_PRIVATE(epoch_handshake);
+    int MBEDTLS_PRIVATE(epoch_earlydata);
+    int MBEDTLS_PRIVATE(epoch_application);
+
+    mbedtls_ssl_mps *mps;
 #endif /* MBEDTLS_SSL_USE_MPS */
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
-
-#if defined(MBEDTLS_SSL_USE_MPS)
-    /* MPS structures */
-    struct
-    {
-        /* TODO: In a context where we use all MPS layers together,
-         *       the references between them should be inlined and
-         *       their configurations consolidated. At the moment,
-         *       we're wasting a bit of memory here. (On the other
-         *       hand, this modularity is very useful for standalone
-         *       testing of the various components). */
-        mps_alloc alloc;
-        mps_l1 l1;
-        mbedtls_mps_l2 l2;
-        mps_l3 l3;
-        mbedtls_mps l4;
-    } MBEDTLS_PRIVATE(mps);
-#endif /* MBEDTLS_SSL_USE_MPS */
 
     /*
      * Timers

@@ -1,7 +1,11 @@
-/*
- *  Message Processing Stack, Record Transformation Mechanisms
+/**
+ * \file mps.h
  *
- *  Copyright (C) 2006-2018, ARM Limited, All Rights Reserved
+ * \brief Message Processing Stack
+ */
+
+/*
+ *  Copyright The Mbed TLS Contributors
  *  SPDX-License-Identifier: Apache-2.0
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -15,14 +19,29 @@
  *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
- *
- *  This file is part of Mbed TLS (https://tls.mbed.org)
  */
 
-#include "mbedtls/mps/transform.h"
+#ifndef MBEDTLS_MPS_ALL_H
+#define MBEDTLS_MPS_ALL_H
 
-/* TODO: Use dummy default functions. */
-mbedtls_mps_transform_free_t          *mbedtls_mps_transform_free    = NULL;
-mbedtls_mps_transform_decrypt_t       *mbedtls_mps_transform_decrypt = NULL;
-mbedtls_mps_transform_encrypt_t       *mbedtls_mps_transform_encrypt = NULL;
-mbedtls_mps_transform_get_expansion_t *mbedtls_mps_transform_get_expansion = NULL;
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && defined(MBEDTLS_SSL_USE_MPS)
+
+#include "mps_common.h"
+#include "mps_allocator.h"
+#include "mps_layer1.h"
+#include "mps_layer2.h"
+#include "mps_layer3.h"
+#include "mps.h"
+
+struct mbedtls_ssl_mps
+{
+    mps_alloc alloc;
+    mps_l1 l1;
+    mbedtls_mps_l2 l2;
+    mps_l3 l3;
+    mbedtls_mps l4;
+};
+
+#endif
+
+#endif /* MBEDTLS_MPS_ALL_H */

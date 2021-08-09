@@ -1,11 +1,10 @@
 /*
- *  Handshake-related functions shared between the TLS/DTLS client
- *  and server ( ssl_tls13_client.c and ssl_tls13_server.c ).
+ *  TLS 1.3 functionality shared between client and server
  *
- *  Copyright (C) 2006-2015, ARM Limited, All Rights Reserved
+ *  Copyright The Mbed TLS Contributors
  *  SPDX-License-Identifier: Apache-2.0
  *
- *  Licensed under the Apache License, Version 2.0 ( the "License" ); you may
+ *  Licensed under the Apache License, Version 2.0 (the "License"); you may
  *  not use this file except in compliance with the License.
  *  You may obtain a copy of the License at
  *
@@ -16,8 +15,6 @@
  *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
- *
- *  This file is part of mbed TLS ( https://tls.mbed.org )
  */
 
 #include "common.h"
@@ -38,6 +35,7 @@
 
 #include "ssl_misc.h"
 #include "ssl_tls13_keys.h"
+#include "mps_all.h"
 
 #include "ecp_internal.h"
 
@@ -60,12 +58,12 @@ int mbedtls_ssl_fetch_handshake_msg( mbedtls_ssl_context *ssl,
     int ret;
     mbedtls_mps_handshake_in msg;
 
-    MBEDTLS_SSL_PROC_CHK_NEG( mbedtls_mps_read( &ssl->mps.l4 ) );
+    MBEDTLS_SSL_PROC_CHK_NEG( mbedtls_mps_read( &ssl->mps->l4 ) );
 
     if( ret != MBEDTLS_MPS_MSG_HS )
         return( MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE );
 
-    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read_handshake( &ssl->mps.l4,
+    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read_handshake( &ssl->mps->l4,
                                                       &msg ) );
 
     if( msg.type != hs_type )
@@ -78,7 +76,7 @@ int mbedtls_ssl_fetch_handshake_msg( mbedtls_ssl_context *ssl,
 
     if( ret == MBEDTLS_ERR_MPS_READER_OUT_OF_DATA )
     {
-        MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read_pause( &ssl->mps.l4 ) );
+        MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read_pause( &ssl->mps->l4 ) );
         ret = MBEDTLS_ERR_SSL_WANT_READ;
     }
     else
@@ -99,11 +97,11 @@ int mbedtls_ssl_mps_hs_consume_full_hs_msg( mbedtls_ssl_context *ssl )
     int ret;
     mbedtls_mps_handshake_in msg;
 
-    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read_handshake( &ssl->mps.l4,
+    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read_handshake( &ssl->mps->l4,
                                                       &msg ) );
 
     MBEDTLS_SSL_PROC_CHK( mbedtls_mps_reader_commit( msg.handle ) );
-    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read_consume( &ssl->mps.l4 ) );
+    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read_consume( &ssl->mps->l4 ) );
 
 cleanup:
 
@@ -120,7 +118,7 @@ int mbedtls_ssl_start_handshake_msg( mbedtls_ssl_context *ssl,
 
     msg->type   = hs_type;
     msg->length = MBEDTLS_MPS_SIZE_UNKNOWN;
-    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_write_handshake( &ssl->mps.l4,
+    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_write_handshake( &ssl->mps->l4,
                                                        msg, NULL, NULL ) );
 
     MBEDTLS_SSL_PROC_CHK( mbedtls_writer_get( msg->handle,
@@ -140,7 +138,7 @@ int mbedtls_ssl_finish_handshake_msg( mbedtls_ssl_context *ssl,
 
     MBEDTLS_SSL_PROC_CHK( mbedtls_writer_commit_partial( msg->handle,
                                                          buf_len - msg_len ) );
-    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_dispatch( &ssl->mps.l4 ) );
+    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_dispatch( &ssl->mps->l4 ) );
 
 cleanup:
     return( ret );
@@ -274,9 +272,9 @@ int mbedtls_ssl_write_change_cipher_spec_process( mbedtls_ssl_context* ssl )
     {
 #if defined(MBEDTLS_SSL_USE_MPS)
 
-        MBEDTLS_SSL_PROC_CHK( mbedtls_mps_flush( &ssl->mps.l4 ) );
-        MBEDTLS_SSL_PROC_CHK( mbedtls_mps_write_ccs( &ssl->mps.l4 ) );
-        MBEDTLS_SSL_PROC_CHK( mbedtls_mps_dispatch( &ssl->mps.l4 ) );
+        MBEDTLS_SSL_PROC_CHK( mbedtls_mps_flush( &ssl->mps->l4 ) );
+        MBEDTLS_SSL_PROC_CHK( mbedtls_mps_write_ccs( &ssl->mps->l4 ) );
+        MBEDTLS_SSL_PROC_CHK( mbedtls_mps_dispatch( &ssl->mps->l4 ) );
         MBEDTLS_SSL_PROC_CHK( ssl_write_change_cipher_spec_postprocess( ssl ) );
 
 #else /* MBEDTLS_SSL_USE_MPS */
@@ -1319,7 +1317,7 @@ static int ssl_write_certificate_coordinate( mbedtls_ssl_context* ssl )
             int ret;
 
             /* Use new transform for outgoing data. */
-            ret = mbedtls_mps_set_outgoing_keys( &ssl->mps.l4,
+            ret = mbedtls_mps_set_outgoing_keys( &ssl->mps->l4,
                                                  ssl->epoch_handshake );
             if( ret != 0 )
                 return( ret );
@@ -1594,7 +1592,7 @@ static int ssl_read_certificate_coordinate( mbedtls_ssl_context* ssl )
 #if defined(MBEDTLS_SSL_USE_MPS)
         {
             int ret;
-            ret = mbedtls_mps_set_incoming_keys( &ssl->mps.l4,
+            ret = mbedtls_mps_set_incoming_keys( &ssl->mps->l4,
                                                  ssl->epoch_handshake );
             if( ret != 0 )
                 return( ret );
@@ -2270,7 +2268,7 @@ static int ssl_finished_out_postprocess( mbedtls_ssl_context* ssl )
                          ssl );
 
             /* Register transform with MPS. */
-            ret = mbedtls_mps_add_key_material( &ssl->mps.l4,
+            ret = mbedtls_mps_add_key_material( &ssl->mps->l4,
                                                 transform_application,
                                                 &ssl->epoch_application );
             if( ret != 0 )
@@ -2467,7 +2465,7 @@ static int ssl_finished_in_postprocess_cli( mbedtls_ssl_context *ssl )
                               ssl );
 
         /* Register transform with MPS. */
-        ret = mbedtls_mps_add_key_material( &ssl->mps.l4,
+        ret = mbedtls_mps_add_key_material( &ssl->mps->l4,
                                             transform_application,
                                             &ssl->epoch_application );
         if( ret != 0 )

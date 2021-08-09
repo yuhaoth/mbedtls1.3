@@ -379,4 +379,197 @@ int mbedtls_mps_reader_get( mbedtls_mps_reader *reader,
  */
 int mbedtls_mps_reader_commit( mbedtls_mps_reader *reader );
 
+/*
+ * Interface for extended reader
+ */
+
+struct mbedtls_mps_reader_ext;
+typedef struct mbedtls_mps_reader_ext mbedtls_mps_reader_ext;
+
+#define MBEDTLS_MPS_READER_MAX_GROUPS 4
+
+struct mbedtls_mps_reader_ext
+{
+    unsigned cur_grp; /*!< The 0-based index of the currently active group.
+                       *   The group of index 0 always exists and represents
+                       *   the entire logical message buffer.                 */
+    mbedtls_mps_stored_size_t grp_end[MBEDTLS_MPS_READER_MAX_GROUPS];
+                      /*!< The offsets marking the ends of the currently
+                       *   active groups. The first cur_grp + 1 entries are
+                       *   valid and always weakly descending (subsequent
+                       *   groups are subgroups of their predecessors ones).  */
+
+    mbedtls_mps_reader *rd; /*!< Underlying writer object - may be \c NULL.       */
+    mbedtls_mps_stored_size_t ofs_fetch;
+                        /*!< The offset of the first byte of the next chunk.  */
+    mbedtls_mps_stored_size_t ofs_commit;
+                        /*!< The offset of first byte beyond
+                         *   the last committed chunk.                        */
+};
+
+/**
+ * \brief           Initialize an extended reader object
+ *
+ * \param reader    The extended reader context to initialize.
+ * \param size      The total size of the logical buffer to
+ *                  be managed by the extended reader.
+ *
+ * \return          \c 0 on success.
+ * \return          A negative \c MBEDTLS_ERR_MPS_READER_XXX error code on failure.
+ *
+ */
+int mbedtls_mps_reader_init_ext( mbedtls_mps_reader_ext *reader,
+                             mbedtls_mps_size_t size );
+
+/**
+ * \brief           Free an extended reader object
+ *
+ * \param reader    The extended reader context to be freed.
+ *
+ * \return          \c 0 on success.
+ * \return          A negative \c MBEDTLS_ERR_MPS_READER_XXX error code on failure.
+ *
+ */
+int mbedtls_mps_reader_free_ext( mbedtls_mps_reader_ext *reader );
+
+/**
+ * \brief           Fetch a data chunk from an extended reader
+ *
+ * \param reader    The extended reader to be used.
+ * \param desired   The desired amount of incoming data to be read.
+ * \param buffer    The address at which to store the address
+ *                  of the incoming data buffer on success.
+ * \param buflen    The address at which to store the actual
+ *                  size of the incoming data buffer on success.
+ *                  May be \c NULL (see below).
+ *
+ * \return          \c 0 on success. In this case, \c *buf holds the
+ *                  address of a buffer of size \c *buflen
+ *                  (if \c buflen != NULL) or \p desired
+ *                  (if \c buflen == \c NULL).
+ * \return          #MBEDTLS_ERR_MPS_READER_BOUNDS_VIOLATION if the read
+ *                  request exceeds the bounds of the current group.
+ * \return          Another negative \c MBEDTLS_ERR_MPS_READER_XXX error
+ *                  for other kinds of failure.
+ *
+ * \note            Passing \c NULL as buflen is a convenient way to
+ *                  indicate that fragmentation is not tolerated.
+ *                  It's functionally equivalent to passing a valid
+ *                  address as buflen and checking \c *buflen == \c desired
+ *                  afterwards.
+ *
+ *
+ */
+int mbedtls_mps_reader_get_ext( mbedtls_mps_reader_ext *reader,
+                            mbedtls_mps_size_t desired,
+                            unsigned char **buffer,
+                            mbedtls_mps_size_t *buflen );
+
+/**
+ * \brief           Signal that all input buffers previously obtained
+ *                  from mbedtls_mps_reader_get_ext are fully processed.
+ * \param reader    The extended reader context to use.
+ *
+ *                  This function marks the previously fetched data as fully
+ *                  processed and invalidates their respective buffers.
+ *
+ * \warning         Once this function is called, you must not use the
+ *                  pointers corresponding to the committed data anymore.
+ *
+ * \return          \c 0 on success.
+ * \return          A negative \c MBEDTLS_ERR_MPS_READER_XXX error code on failure.
+ *
+ */
+int mbedtls_mps_reader_commit_ext( mbedtls_mps_reader_ext *reader );
+
+/**
+ * \brief            Open a new logical subbuffer.
+ *
+ * \param reader     The extended reader context to use.
+ * \param group_size The offset of the end of the subbuffer
+ *                   from the end of the last successful fetch.
+ *
+ * \return          \c 0 on success.
+ * \return          #MBEDTLS_ERR_MPS_READER_BOUNDS_VIOLATION if
+ *                  the new group is not contained in the
+ *                  current group. In this case, the extended
+ *                  reader is unchanged and hence remains intact.
+ *                  This is a very important error condition that
+ *                  catches e.g. if the length field for some
+ *                  substructure (e.g. an extension within a Hello
+ *                  message) claims that substructure to be larger
+ *                  than the message itself.
+ * \return          #MBEDTLS_ERR_MPS_READER_TOO_MANY_GROUPS if the internal
+ *                  threshold for the maximum number of groups exceeded.
+ *                  This is an internal error, and it should be
+ *                  statically verifiable that it doesn't occur.
+ * \return          Another negative \c MBEDTLS_ERR_MPS_READER_XXX error
+ *                  for other kinds of failure.
+ *
+ */
+int mbedtls_mps_reader_group_open( mbedtls_mps_reader_ext *reader,
+                               mbedtls_mps_size_t group_size );
+
+/**
+ * \brief           Close the most recently opened logical subbuffer.
+ *
+ * \param reader    The extended reader context to use.
+ *
+ * \return          \c 0 on success.
+ * \return          #MBEDTLS_ERR_MPS_READER_BOUNDS_VIOLATION if
+ *                  the current logical subbuffer hasn't been
+ *                  fully fetched and committed.
+ * \return          Another negative \c MBEDTLS_ERR_MPS_READER_XXX error
+ *                  for other kinds of failure.
+ *
+ */
+int mbedtls_mps_reader_group_close( mbedtls_mps_reader_ext *reader );
+
+/**
+ * \brief            Attach a reader to an extended reader.
+ *
+ *                   Once a reader has been attached to an extended reader,
+ *                   subsequent calls to mbedtls_mps_reader_commit_ext and
+ *                   mbedtls_mps_reader_get_ext will be routed through the
+ *                   corresponding calls to mbedtls_mps_reader_commit resp.
+ *                   mbedtls_mps_reader_get after the extended reader has
+ *                   done its bounds checks.
+ *
+ * \param rd_ext     The extended reader context to use.
+ * \param rd         The reader to bind to the extended reader \p rd_ext.
+ *
+ * \return           \c 0 on succes.
+ * \return           Another negative error code on failure.
+ *
+ */
+int mbedtls_mps_reader_attach( mbedtls_mps_reader_ext *rd_ext,
+                           mbedtls_mps_reader *rd );
+
+/**
+ * \brief           Detach a reader from an extended reader.
+ *
+ * \param rd_ext    The extended reader context to use.
+ *
+ * \return          \c 0 on succes.
+ * \return          Another negative error code on failure.
+ *
+ */
+int mbedtls_mps_reader_detach( mbedtls_mps_reader_ext *rd_ext );
+
+/**
+ * \brief            Check if the extended reader is finished processing
+ *                   the logical buffer it was setup with.
+ *
+ * \param rd_ext     The extended reader context to use.
+ *
+ * \return           \c 0 if all groups opened via mbedtls_mps_reader_group_open()
+ *                   have been closed via mbedtls_mps_reader_group_close(), and
+ *                   the entire logical buffer as defined by the \c size
+ *                   argument in mbedtls_mps_reader_init_ext() has been fetched
+ *                   and committed.
+ * \return           A negative \c MBEDTLS_ERR_MPS_READER_XXX error code otherwise.
+ *
+ */
+int mbedtls_mps_reader_check_done( mbedtls_mps_reader_ext const *rd_ext );
+
 #endif /* MBEDTLS_READER_H */

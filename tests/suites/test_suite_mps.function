@@ -6,13 +6,13 @@
 /* BEGIN_HEADER */
 
 #include <stdlib.h>
-#include "../include/mbedtls/mps/allocator.h"
-#include "../include/mbedtls/mps/reader.h"
-#include "../include/mbedtls/mps/writer.h"
-#include "../include/mbedtls/mps/layer1.h"
-#include "../include/mbedtls/mps/layer2.h"
-#include "../include/mbedtls/mps/layer3.h"
-#include "../include/mbedtls/mps/mps.h"
+#include "../library/mps_allocator.h"
+#include "../library/mps_reader.h"
+#include "../library/mps_writer.h"
+#include "../library/mps_layer1.h"
+#include "../library/mps_layer2.h"
+#include "../library/mps_layer3.h"
+#include "../library/mps.h"
 
 #include "../library/ssl_misc.h"
 

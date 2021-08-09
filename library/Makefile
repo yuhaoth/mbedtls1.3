@@ -171,14 +171,14 @@ OBJS_TLS= \
 	  ssl_ticket.o \
 	  ssl_tls.o \
 	  ssl_tls13_keys.o \
-	  mps/reader.o \
-	  mps/writer.o \
-	  mps/layer1.o \
-	  mps/layer2.o \
-	  mps/layer3.o \
-	  mps/mps.o \
-	  mps/allocator.o \
-          mps/transform.o \
+	  mps_reader.o \
+	  mps_writer.o \
+	  mps_layer1.o \
+	  mps_layer2.o \
+	  mps_layer3.o \
+	  mps.o \
+	  mps_allocator.o \
+          mps_transform.o \
           # This line is intentionally left blank
 
 .SILENT:

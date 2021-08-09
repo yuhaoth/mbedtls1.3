@@ -1,7 +1,7 @@
 /*
  *  Message Processing Stack, Layer 1 implementation
  *
- *  Copyright (C) 2006-2018, ARM Limited, All Rights Reserved
+ *  Copyright The Mbed TLS Contributors
  *  SPDX-License-Identifier: Apache-2.0
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -15,17 +15,17 @@
  *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
- *
- *  This file is part of Mbed TLS (https://tls.mbed.org)
  */
 
-#include "mbedtls/mps/layer1.h"
-#include "../mps_trace.h"
+#include "common.h"
+#include "mps_common.h"
 
 #if defined(MBEDTLS_MPS_SEPARATE_LAYERS) ||     \
     defined(MBEDTLS_MPS_TOP_TRANSLATION_UNIT)
 
-#include "layer1_internal.h"
+#include "mps_trace.h"
+#include "mps_layer1.h"
+#include "mps_layer1_internal.h"
 
 #if defined(MBEDTLS_MPS_ENABLE_TRACE)
 static int mbedtls_mps_trace_id = MBEDTLS_MPS_TRACE_BIT_LAYER_1;

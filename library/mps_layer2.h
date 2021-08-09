@@ -1,9 +1,11 @@
 /**
- * \file layer2.h
+ * \file mps_layer2.h
  *
  * \brief The record layer implementation of the message processing stack.
- *
- *  Copyright (C) 2006-2015, ARM Limited, All Rights Reserved
+ */
+
+/*
+ *  Copyright The Mbed TLS Contributors
  *  SPDX-License-Identifier: Apache-2.0
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -17,21 +19,17 @@
  *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
- *
- *  This file is part of mbed TLS (https://tls.mbed.org)
  */
 
 #ifndef MBEDTLS_MPS_RECORD_LAYER_H
 #define MBEDTLS_MPS_RECORD_LAYER_H
 
-#include "layer1.h"
-#include "../library/mps_common.h"
-
-#include "reader.h"
-#include "writer.h"
-
-#include "error.h"
-#include "transform.h"
+#include "mps_layer1.h"
+#include "mps_common.h"
+#include "mps_reader.h"
+#include "mps_writer.h"
+#include "mps_error.h"
+#include "mps_transform.h"
 
 #include <stdint.h>
 

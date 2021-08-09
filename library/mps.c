@@ -1,7 +1,7 @@
 /*
  *  Message Processing Stack, (Layer 4) implementation
  *
- *  Copyright (C) 2006-2018, ARM Limited, All Rights Reserved
+ *  Copyright The Mbed TLS Contributors
  *  SPDX-License-Identifier: Apache-2.0
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -15,26 +15,25 @@
  *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
- *
- *  This file is part of Mbed TLS (https://tls.mbed.org)
  */
 
-#include "../mps_common.h"
+#include "common.h"
+#include "mps_common.h"
 
 /* Embed all other MPS translation units into here
  * for release builds on constrained systems to allow
  * inlining and hence significantly smaller code size. */
 #if !defined(MBEDTLS_MPS_SEPARATE_LAYERS)
 #define MBEDTLS_MPS_TOP_TRANSLATION_UNIT
-#include "reader.c"
-#include "writer.c"
-#include "layer1.c"
-#include "layer2.c"
-#include "layer3.c"
+#include "mps_reader.c"
+#include "mps_writer.c"
+#include "mps_layer1.c"
+#include "mps_layer2.c"
+#include "mps_layer3.c"
 #endif /* MBEDTLS_MPS_SEPARATE_LAYERS */
 
-#include "mbedtls/mps/mps.h"
-#include "../mps_trace.h"
+#include "mps_trace.h"
+#include "mps.h"
 
 #include "mbedtls/platform_util.h"
 #include "mbedtls/ssl.h"

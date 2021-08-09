@@ -1,3 +1,9 @@
+/**
+ * \file mps_trace.h
+ *
+ * \brief Tracing module for MPS
+ */
+
 /*
  *  Copyright The Mbed TLS Contributors
  *  SPDX-License-Identifier: Apache-2.0
@@ -15,12 +21,6 @@
  *  limitations under the License.
  *
  *  This file is part of mbed TLS (https://tls.mbed.org)
- */
-
-/**
- * \file mps_trace.h
- *
- * \brief Tracing module for MPS
  */
 
 #include "common.h"

@@ -51,6 +51,10 @@
 #include "mbedtls/ecjpake.h"
 #endif
 
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && defined(MBEDTLS_SSL_USE_MPS)
+#include "mps.h"
+#endif
+
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
 #include "psa/crypto.h"
 #include "mbedtls/psa_util.h"

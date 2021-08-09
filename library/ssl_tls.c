@@ -34,11 +34,13 @@
 #endif
 
 #include "mbedtls/ssl.h"
-#include "ssl_misc.h"
 #include "mbedtls/debug.h"
 #include "mbedtls/error.h"
 #include "mbedtls/platform_util.h"
 #include "mbedtls/version.h"
+
+#include "ssl_misc.h"
+#include "mps_all.h"
 
 #include <string.h>
 
@@ -3570,6 +3572,10 @@ static int ssl_mps_init( mbedtls_ssl_context *ssl )
 {
     int ret;
 
+    ssl->mps = mbedtls_calloc( 1, sizeof( *ssl->mps ) );
+    if( ssl->mps == NULL )
+        return( MBEDTLS_ERR_SSL_ALLOC_FAILED );
+
     /* Allocator */
     {
         /* TODO: At the moment, the allocator doesn't support
@@ -3582,22 +3588,22 @@ static int ssl_mps_init( mbedtls_ssl_context *ssl )
         else
             max_size = MBEDTLS_SSL_OUT_BUFFER_LEN;
 
-        ret = mps_alloc_init( &ssl->mps.alloc,
+        ret = mps_alloc_init( &ssl->mps->alloc,
                               (mbedtls_mps_size_t) max_size );
         if( ret != 0 )
             goto exit;
     }
 
     /* Layer 1 */
-    ret = mps_l1_init( &ssl->mps.l1, ssl->conf->transport,
-                       &ssl->mps.alloc,
+    ret = mps_l1_init( &ssl->mps->l1, ssl->conf->transport,
+                       &ssl->mps->alloc,
                        ssl->p_bio, ssl->f_send,
                        ssl->p_bio, ssl->f_recv );
     if( ret != 0 )
         goto exit;
 
     /* Layer 2 */
-    ret = mps_l2_init( &ssl->mps.l2, &ssl->mps.l1,
+    ret = mps_l2_init( &ssl->mps->l2, &ssl->mps->l1,
                        ssl->conf->transport,
                        /* TODO: Use suitable config option */ 4096,
                        /* TODO: Use suitable config option */ 4096,
@@ -3607,13 +3613,13 @@ static int ssl_mps_init( mbedtls_ssl_context *ssl )
         goto exit;
 
     /* Layer 3 */
-    ret = mps_l3_init( &ssl->mps.l3, &ssl->mps.l2,
+    ret = mps_l3_init( &ssl->mps->l3, &ssl->mps->l2,
                        ssl->conf->transport );
     if( ret != 0 )
         goto exit;
 
     /* Layer 4 */
-    ret = mbedtls_mps_init( &ssl->mps.l4, &ssl->mps.l3,
+    ret = mbedtls_mps_init( &ssl->mps->l4, &ssl->mps->l3,
                             ssl->conf->transport,
                             /* TODO: Use suitable config option */ 4096 );
     if( ret != 0 )
@@ -3623,7 +3629,7 @@ static int ssl_mps_init( mbedtls_ssl_context *ssl )
      *
      * TODO: In a TLS-1.3-only configuration, this could be hardcoded.
      */
-    ret = mps_l2_config_add_type( &ssl->mps.l2, MBEDTLS_MPS_MSG_HS,
+    ret = mps_l2_config_add_type( &ssl->mps->l2, MBEDTLS_MPS_MSG_HS,
                                   MBEDTLS_MPS_SPLIT_ENABLED,
                                   MBEDTLS_MPS_PACK_ENABLED,
                                   MBEDTLS_MPS_EMPTY_FORBIDDEN,
@@ -3631,7 +3637,7 @@ static int ssl_mps_init( mbedtls_ssl_context *ssl )
     if( ret != 0 )
         goto exit;
 
-    ret = mps_l2_config_add_type( &ssl->mps.l2, MBEDTLS_MPS_MSG_ALERT,
+    ret = mps_l2_config_add_type( &ssl->mps->l2, MBEDTLS_MPS_MSG_ALERT,
                                   MBEDTLS_MPS_SPLIT_DISABLED,
                                   MBEDTLS_MPS_PACK_DISABLED,
                                   MBEDTLS_MPS_EMPTY_FORBIDDEN,
@@ -3640,7 +3646,7 @@ static int ssl_mps_init( mbedtls_ssl_context *ssl )
         goto exit;
 
 #if defined(MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE)
-    ret = mps_l2_config_add_type( &ssl->mps.l2, MBEDTLS_MPS_MSG_CCS,
+    ret = mps_l2_config_add_type( &ssl->mps->l2, MBEDTLS_MPS_MSG_CCS,
                                   MBEDTLS_MPS_SPLIT_DISABLED,
                                   MBEDTLS_MPS_PACK_DISABLED,
                                   MBEDTLS_MPS_EMPTY_FORBIDDEN,
@@ -3649,7 +3655,7 @@ static int ssl_mps_init( mbedtls_ssl_context *ssl )
         goto exit;
 #endif /* MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE */
 
-    ret = mps_l2_config_add_type( &ssl->mps.l2, MBEDTLS_MPS_MSG_APP,
+    ret = mps_l2_config_add_type( &ssl->mps->l2, MBEDTLS_MPS_MSG_APP,
                                   MBEDTLS_MPS_SPLIT_ENABLED,
                                   MBEDTLS_MPS_PACK_ENABLED,
                                   MBEDTLS_MPS_EMPTY_ALLOWED,
@@ -3663,15 +3669,15 @@ static int ssl_mps_init( mbedtls_ssl_context *ssl )
      */
     {
         mbedtls_mps_epoch_id initial_epoch;
-        ret = mbedtls_mps_add_key_material( &ssl->mps.l4, NULL, &initial_epoch );
+        ret = mbedtls_mps_add_key_material( &ssl->mps->l4, NULL, &initial_epoch );
         if( ret != 0 )
             goto exit;
 
-        ret = mbedtls_mps_set_incoming_keys( &ssl->mps.l4, initial_epoch );
+        ret = mbedtls_mps_set_incoming_keys( &ssl->mps->l4, initial_epoch );
         if( ret != 0 )
             goto exit;
 
-        ret = mbedtls_mps_set_outgoing_keys( &ssl->mps.l4, initial_epoch );
+        ret = mbedtls_mps_set_outgoing_keys( &ssl->mps->l4, initial_epoch );
         if( ret != 0 )
             goto exit;
     }
@@ -3693,11 +3699,16 @@ exit:
 
 static void ssl_mps_free( mbedtls_ssl_context *ssl )
 {
-    mbedtls_mps_free( &ssl->mps.l4 );
-    mps_l3_free( &ssl->mps.l3 );
-    mps_l2_free( &ssl->mps.l2 );
-    mps_l1_free( &ssl->mps.l1 );
-    mps_alloc_free( &ssl->mps.alloc );
+    if( ssl->mps == NULL )
+        return;
+
+    mbedtls_mps_free( &ssl->mps->l4 );
+    mps_l3_free( &ssl->mps->l3 );
+    mps_l2_free( &ssl->mps->l2 );
+    mps_l1_free( &ssl->mps->l1 );
+    mps_alloc_free( &ssl->mps->alloc );
+    mbedtls_free( ssl->mps );
+    ssl->mps = NULL;
 }
 #endif /* MEDTLS_SSL_USE_MPS */
 
@@ -4125,7 +4136,7 @@ void mbedtls_ssl_set_bio( mbedtls_ssl_context *ssl,
 
 #if defined(MBEDTLS_SSL_USE_MPS)
     /* Update MPS callbacks. */
-    mps_l1_set_bio( &ssl->mps.l1,
+    mps_l1_set_bio( &ssl->mps->l1,
                     p_bio, f_send,
                     p_bio, f_recv );
 #endif /* MBEDTLS_SSL_USE_MPS */
@@ -6119,7 +6130,7 @@ int mbedtls_ssl_handshake( mbedtls_ssl_context *ssl )
 #if defined(MBEDTLS_SSL_USE_MPS)
             mbedtls_mps_blocking_reason_t blocking_reason;
             mbedtls_mps_blocking_info_t     blocking_info;
-            if( mbedtls_mps_connection_state( &ssl->mps.l4,
+            if( mbedtls_mps_connection_state( &ssl->mps->l4,
                                               &blocking_reason,
                                               &blocking_info )
                 == MBEDTLS_MPS_STATE_BLOCKED )
@@ -7064,9 +7075,7 @@ void mbedtls_ssl_free( mbedtls_ssl_context *ssl )
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> free" ) );
 
 #if defined(MBEDTLS_SSL_USE_MPS)
-
     ssl_mps_free( ssl );
-
 #else /* MBEDTLS_SSL_USE_MPS */
 
     if( ssl->out_buf != NULL )

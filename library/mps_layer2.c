@@ -1,7 +1,7 @@
 /*
  *  Message Processing Stack, Layer 2 implementation
  *
- *  Copyright (C) 2006-2018, ARM Limited, All Rights Reserved
+ *  Copyright The Mbed TLS Contributors
  *  SPDX-License-Identifier: Apache-2.0
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -15,15 +15,10 @@
  *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
- *
- *  This file is part of Mbed TLS (https://tls.mbed.org)
  */
 
-#include "mbedtls/mps/layer2.h"
-#include "../mps_trace.h"
-#include "../mps_common.h"
-
-#include "mbedtls/mps/reader.h"
+#include "common.h"
+#include "mps_common.h"
 
 #if defined(MBEDTLS_PLATFORM_C)
 #include "mbedtls/platform.h"
@@ -36,7 +31,11 @@
 #if defined(MBEDTLS_MPS_SEPARATE_LAYERS) ||     \
     defined(MBEDTLS_MPS_TOP_TRANSLATION_UNIT)
 
-#include "layer2_internal.h"
+#include "mps_layer2.h"
+#include "mps_trace.h"
+#include "mps_reader.h"
+
+#include "mps_layer2_internal.h"
 
 #if defined(MBEDTLS_MPS_ENABLE_TRACE)
 static int mbedtls_mps_trace_id = MBEDTLS_MPS_TRACE_BIT_LAYER_2;
@@ -44,7 +43,6 @@ static int mbedtls_mps_trace_id = MBEDTLS_MPS_TRACE_BIT_LAYER_2;
 
 #include <stdlib.h>
 #include <string.h>
-
 
 MBEDTLS_MPS_STATIC
 void l2_out_write_version( int major, int minor,
@@ -1868,16 +1866,16 @@ int l2_version_wire_matches_logical( uint8_t wire_version,
                                      int logical_version )
 {
 
-    /* TODO: Since MBEDTLS_MPS_L2_VERSION_UNSPECIFIED is not 
+    /* TODO: Since MBEDTLS_MPS_L2_VERSION_UNSPECIFIED is not
      * yet implemented we include this special handling.
      */
     if( wire_version == MBEDTLS_SSL_MINOR_VERSION_1 )
-    { 
+    {
         /* Backwards compatibility case */
         MBEDTLS_MPS_TRACE_COMMENT( "Record with TLS 1.1 version number received" );
         return( 1 );
     }
-        
+
     switch( logical_version )
     {
         case MBEDTLS_MPS_L2_VERSION_UNSPECIFIED:
@@ -1967,8 +1965,8 @@ int l2_in_fetch_protected_record_tls( mbedtls_mps_l2 *ctx, mps_rec *rec )
      * MBEDTLS_MPS_L2_VERSION_UNSPECIFIED.
      *
      * Also, for TLS 1.3, the wire-version is still TLS 1.2.
-     * For backwards compatibility reasons, the wire-version may also be set 
-     * to TLS 1.1 for the ClientHello.     
+     * For backwards compatibility reasons, the wire-version may also be set
+     * to TLS 1.1 for the ClientHello.
      *
      * We capture both special cases in a helper function checking whether the
      * wire-version matches the configured logical version. */
