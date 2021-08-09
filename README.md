@@ -65,8 +65,8 @@ cryptography library.  To enable libOQS, you have to set `MBEDTLS_LIBOQS_ENABLE`
 and build Mbed TLS via `cmake`. Any change in `MBEDTLS_LIBOQS_ENABLE` currently demands a re-build of the `cmake`
 makefiles. You can check that the build was successful by checking for and running the libOQS unit test `./tests/test_suite_liboqs`.
 
-The actual integration PQC KEMs and their hybrids into Mbed TLS is still ongoing. Please reach out to @brett-warren-arm
-or @hanno-arm, or open an issue, if have questions or would like to contribute.
+The actual integration PQC KEMs and their hybrids into Mbed TLS is still ongoing. Please reach out to [@brett-warren-arm](https://github.com/brett-warren-arm)
+or [@hanno-arm](https://github.com/hanno-arm), or open an issue, if have questions or would like to contribute.
 
 # Known limitations
 
