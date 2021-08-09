@@ -16,8 +16,6 @@ void dummy_test()
     unsigned char ss0[OQS_KEM_bike_l1_length_shared_secret];
     unsigned char ss1[OQS_KEM_bike_l1_length_shared_secret];
 
-    OQS_KEM_bike_l1_new();
-
     OQS_KEM_bike_l1_keypair(pk,sk);
     OQS_KEM_bike_l1_encaps(cc,ss0,pk);
     OQS_KEM_bike_l1_decaps(ss1,cc,sk);
