@@ -8,7 +8,7 @@
  */
 
 /* BEGIN_CASE */
-void dummy_test()
+void build_and_link_test()
 {
     unsigned char sk[OQS_KEM_bike_l1_length_secret_key];
     unsigned char pk[OQS_KEM_bike_l1_length_public_key];
