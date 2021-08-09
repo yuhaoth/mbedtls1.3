@@ -1,0 +1,3 @@
+Build and link test: Example run of BIKE L1
+depends_on:MBEDTLS_LIBOQS_ENABLE
+build_and_link_test

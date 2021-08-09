@@ -40,11 +40,17 @@ function(add_test_suite suite_name)
 
     add_executable(test_suite_${data_name} test_suite_${data_name}.c $<TARGET_OBJECTS:mbedtls_test>)
     target_link_libraries(test_suite_${data_name} ${libs})
+
+    if (TARGET liboqs)
+        target_link_libraries(test_suite_${data_name} ${CMAKE_BINARY_DIR}/lib/liboqs.a)
+    endif()
+
     # Include test-specific header files from ./include and private header
     # files (used by some invasive tests) from ../library. Public header
     # files are automatically included because the library targets declare
     # them as PUBLIC.
     target_include_directories(test_suite_${data_name}
+	PRIVATE ${CMAKE_BINARY_DIR}/include
         PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include
         PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../library)
 
@@ -158,6 +164,7 @@ add_test_suite(ssl)
 add_test_suite(version)
 add_test_suite(x509parse)
 add_test_suite(x509write)
+add_test_suite(liboqs)
 
 # Make scripts and data files needed for testing available in an
 # out-of-source build.
