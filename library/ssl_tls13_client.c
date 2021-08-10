@@ -1174,6 +1174,28 @@ static int ssl_write_supported_groups_ext( mbedtls_ssl_context *ssl,
  *  } KeyShare;
  */
 
+static int ssl_reset_ecdhe_share( mbedtls_ssl_context *ssl )
+{
+    mbedtls_ecdh_free( &ssl->handshake->ecdh_ctx );
+    return( 0 );
+}
+
+static int ssl_reset_key_share( mbedtls_ssl_context *ssl )
+{
+    uint16_t group_id = ssl->handshake->named_group_id;
+    if( group_id == 0 )
+        return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
+
+    if( mbedtls_ssl_named_group_is_ecdhe( group_id ) )
+        return( ssl_reset_ecdhe_share( ssl ) );
+    else if( 0 /* other KEMs? */ )
+    {
+        /* Do something */
+    }
+
+    return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
+}
+
 #if defined(MBEDTLS_ECDH_C) || defined(MBEDTLS_ECDSA_C)
 static int ssl_gen_and_write_ecdhe_share( mbedtls_ssl_context *ssl,
                                           uint16_t named_group,
@@ -3484,7 +3506,10 @@ static int ssl_hrr_parse( mbedtls_ssl_context* ssl,
                  * MUST first verify that the selected_group field corresponds to a
                  * group which was provided in the "supported_groups" extension in the
                  * original ClientHello.
-                 * The supported_group was based on the info in ssl->conf->curve_list. */
+                 * The supported_group was based on the info in ssl->conf->curve_list.
+                 *
+                 * If the server provided a key share that was not sent in the ClientHello
+                 * then the client MUST abort the handshake with an "illegal_parameter" alert. */
                 for( grp_id = ssl->conf->curve_list; *grp_id != MBEDTLS_ECP_DP_NONE; grp_id++ )
                 {
                     curve_info = mbedtls_ecp_curve_info_from_grp_id( *grp_id );
@@ -3496,10 +3521,7 @@ static int ssl_hrr_parse( mbedtls_ssl_context* ssl,
                     break;
                 }
 
-                /* If the server provided a key share that was not sent in the ClientHello
-                 * then the client MUST abort the handshake with an "illegal_parameter" alert.
-                 *
-                 * Client MUST verify that the selected_group field does not
+                /* Client MUST verify that the selected_group field does not
                  * correspond to a group which was provided in the "key_share"
                  * extension in the original ClientHello. If the server sent an
                  * HRR message with a key share already provided in the
@@ -3540,6 +3562,8 @@ static int ssl_hrr_parse( mbedtls_ssl_context* ssl,
 
 static int ssl_hrr_postprocess( mbedtls_ssl_context* ssl )
 {
+    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
+
     if( ssl->handshake->hello_retry_requests_received > 0 )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "Multiple HRRs received" ) );
@@ -3560,6 +3584,17 @@ static int ssl_hrr_postprocess( mbedtls_ssl_context* ssl )
 #endif /* MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE */
 
     mbedtls_ssl_session_reset_msg_layer( ssl, 0 );
+
+    /* Reset everything that's going to be re-generated in the new ClientHello.
+     *
+     * Currently, we're always resetting the key share, even if the server
+     * was fine with it. Once we have separated key share generation from
+     * key share writing, we can confine this to the case where the server
+     * requested a different share. */
+    ret = ssl_reset_key_share( ssl );
+    if( ret != 0 )
+        return( ret );
+
     return( 0 );
 }
 

@@ -138,6 +138,8 @@ static int ssl_key_share_encapsulate( mbedtls_ssl_context *ssl,
             MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ecdh_make_tls_13_params", ret );
             return( ret );
         }
+
+        MBEDTLS_SSL_DEBUG_ECDH( 3, &ssl->handshake->ecdh_ctx, MBEDTLS_DEBUG_ECDH_Q );
     }
     else if( 0 /* Other kinds of KEMs */ )
     {
@@ -185,8 +187,6 @@ static int ssl_write_key_shares_ext(
     /* Write key share length */
     *key_share_entry++ = ( share_len >> 8 ) & 0xFF;
     *key_share_entry++ = ( share_len >> 0 ) & 0xFF;
-
-    MBEDTLS_SSL_DEBUG_ECDH( 3, &ssl->handshake->ecdh_ctx, MBEDTLS_DEBUG_ECDH_Q );
 
     ext_len = share_len + 4;
 
@@ -3207,9 +3207,41 @@ static int ssl_write_hello_retry_request_coordinate( mbedtls_ssl_context *ssl )
     return( 0 );
 }
 
+static int ssl_reset_ecdhe_share( mbedtls_ssl_context *ssl )
+{
+    mbedtls_ecdh_free( &ssl->handshake->ecdh_ctx );
+    return( 0 );
+}
+
+static int ssl_reset_key_share( mbedtls_ssl_context *ssl )
+{
+    uint16_t group_id = ssl->handshake->named_group_id;
+
+    if( mbedtls_ssl_named_group_is_ecdhe( group_id ) )
+        return( ssl_reset_ecdhe_share( ssl ) );
+    else if( 0 /* other KEMs? */ )
+    {
+        /* Do something */
+    }
+
+    return( 0 );
+}
+
 static int ssl_write_hello_retry_request_postprocess( mbedtls_ssl_context *ssl )
 {
+    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
+
     ssl->handshake->hello_retry_requests_sent++;
+
+    /* Reset everything that's going to be re-generated in the new ClientHello.
+     *
+     * Currently, we're always resetting the key share, even if the server
+     * was fine with it. Once we have separated key share generation from
+     * key share writing, we can confine this to the case where the server
+     * requested a different share. */
+    ret = ssl_reset_key_share( ssl );
+    if( ret != 0 )
+        return( ret );
 
 #if defined(MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE)
     mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_SERVER_CCS_AFTER_HRR );
