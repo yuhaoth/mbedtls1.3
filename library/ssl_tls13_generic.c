@@ -446,7 +446,8 @@ int mbedtls_ssl_write_signature_algorithms_ext( mbedtls_ssl_context *ssl,
     /*
      * Determine length of the signature scheme list
      */
-    for ( sig_alg = ssl->conf->tls13_sig_algs; *sig_alg != SIGNATURE_NONE; sig_alg++ )
+    for ( sig_alg = ssl->conf->tls13_sig_algs;
+          *sig_alg != MBEDTLS_TLS13_SIG_NONE; sig_alg++ )
     {
         sig_alg_len += 2;
     }
@@ -467,7 +468,8 @@ int mbedtls_ssl_write_signature_algorithms_ext( mbedtls_ssl_context *ssl,
      * Write signature schemes
      */
 
-    for ( sig_alg = ssl->conf->tls13_sig_algs; *sig_alg != SIGNATURE_NONE; sig_alg++ )
+    for( sig_alg = ssl->conf->tls13_sig_algs;
+         *sig_alg != MBEDTLS_TLS13_SIG_NONE; sig_alg++ )
     {
         *sig_alg_list++ = (unsigned char)( ( *sig_alg >> 8 ) & 0xFF );
         *sig_alg_list++ = (unsigned char)( ( *sig_alg ) & 0xFF );
@@ -526,7 +528,8 @@ int mbedtls_ssl_parse_signature_algorithms_ext( mbedtls_ssl_context *ssl,
 
         MBEDTLS_SSL_DEBUG_MSG( 4, ( "received signature algorithm: 0x%x", signature_scheme ) );
 
-        for( sig_alg = ssl->conf->tls13_sig_algs; *sig_alg != SIGNATURE_NONE; sig_alg++ )
+        for( sig_alg = ssl->conf->tls13_sig_algs;
+             *sig_alg != MBEDTLS_TLS13_SIG_NONE; sig_alg++ )
         {
             if( *sig_alg == signature_scheme )
             {
@@ -545,7 +548,8 @@ int mbedtls_ssl_parse_signature_algorithms_ext( mbedtls_ssl_context *ssl,
         return( MBEDTLS_ERR_SSL_HANDSHAKE_FAILURE );
     }
 
-    ssl->handshake->received_signature_schemes_list[common_idx] = SIGNATURE_NONE;
+    ssl->handshake->received_signature_schemes_list[common_idx] =
+        MBEDTLS_TLS13_SIG_NONE;
 
     return( 0 );
 }
@@ -810,12 +814,12 @@ static int ssl_certificate_verify_write( mbedtls_ssl_context* ssl,
         switch( own_key_size)
         {
             case 256:
-                md_alg = MBEDTLS_MD_SHA256;
-                sig_alg = SIGNATURE_ECDSA_SECP256r1_SHA256;
+                md_alg  = MBEDTLS_MD_SHA256;
+                sig_alg = MBEDTLS_TLS13_SIG_ECDSA_SECP256R1_SHA256;
                 break;
             case 384:
-                md_alg =  MBEDTLS_MD_SHA384;
-                sig_alg = SIGNATURE_ECDSA_SECP384r1_SHA384;
+                md_alg  = MBEDTLS_MD_SHA384;
+                sig_alg = MBEDTLS_TLS13_SIG_ECDSA_SECP384R1_SHA384;
                 break;
             default:
                 MBEDTLS_SSL_DEBUG_MSG( 3, ( "unknown key size: %" MBEDTLS_PRINTF_SIZET " bits",
@@ -829,10 +833,10 @@ static int ssl_certificate_verify_write( mbedtls_ssl_context* ssl,
         return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
     }
 
-    signature_scheme_client = SIGNATURE_NONE;
+    signature_scheme_client = MBEDTLS_TLS13_SIG_NONE;
 
     for( sig_scheme = ssl->handshake->received_signature_schemes_list;
-        *sig_scheme != SIGNATURE_NONE; sig_scheme++ )
+        *sig_scheme != MBEDTLS_TLS13_SIG_NONE; sig_scheme++ )
     {
         if( *sig_scheme == sig_alg )
         {
@@ -841,7 +845,7 @@ static int ssl_certificate_verify_write( mbedtls_ssl_context* ssl,
         }
     }
 
-    if( signature_scheme_client == SIGNATURE_NONE )
+    if( signature_scheme_client == MBEDTLS_TLS13_SIG_NONE )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "should never happen" ) );
         return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
@@ -1075,20 +1079,20 @@ static int ssl_read_certificate_verify_parse( mbedtls_ssl_context* ssl,
     /* We currently only support ECDSA-based signatures */
     switch( signature_scheme )
     {
-        case SIGNATURE_ECDSA_SECP256r1_SHA256:
+        case MBEDTLS_TLS13_SIG_ECDSA_SECP256R1_SHA256:
             md_alg = MBEDTLS_MD_SHA256;
             sig_alg = MBEDTLS_PK_ECDSA;
             break;
-        case SIGNATURE_ECDSA_SECP384r1_SHA384:
+        case MBEDTLS_TLS13_SIG_ECDSA_SECP384R1_SHA384:
             md_alg = MBEDTLS_MD_SHA384;
             sig_alg = MBEDTLS_PK_ECDSA;
             break;
-        case SIGNATURE_ECDSA_SECP521r1_SHA512:
+        case MBEDTLS_TLS13_SIG_ECDSA_SECP521R1_SHA512:
             md_alg = MBEDTLS_MD_SHA512;
             sig_alg = MBEDTLS_PK_ECDSA;
             break;
 #if defined(MBEDTLS_X509_RSASSA_PSS_SUPPORT)
-        case SIGNATURE_RSA_PSS_RSAE_SHA256:
+        case MBEDTLS_TLS13_SIG_RSA_PSS_RSAE_SHA256:
             MBEDTLS_SSL_DEBUG_MSG( 4, ( "Certificate Verify: using RSA" ) );
             md_alg = MBEDTLS_MD_SHA256;
             sig_alg = MBEDTLS_PK_RSASSA_PSS;
