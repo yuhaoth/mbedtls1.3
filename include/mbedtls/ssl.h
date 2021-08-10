@@ -97,9 +97,9 @@
 /* Error space gap */
 /* Error space gap */
 #define MBEDTLS_ERR_SSL_BAD_CERTIFICATE                   -0x7A00  /**< Processing of the Certificate handshake message failed. */
-/**< Server needs to send a HelloRetryRequest */
+/** Server needs to send a HelloRetryRequest */
 #define MBEDTLS_ERR_SSL_HRR_REQUIRED                      -0x7A80
-/**< Received NewSessionTicket Post Handshake Message */
+/** Received NewSessionTicket Post Handshake Message */
 #define MBEDTLS_ERR_SSL_RECEIVED_NEW_SESSION_TICKET       -0x7B00
 /* Error space gap */
 /* Error space gap */
