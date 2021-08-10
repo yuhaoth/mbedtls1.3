@@ -600,18 +600,18 @@ static int my_verify( void *data, mbedtls_x509_crt *crt,
 #if defined(MBEDTLS_ECP_C) && defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
 static int ssl_tls13_sig_algs_for_test[] = {
 #if defined(MBEDTLS_SHA256_C) && defined(MBEDTLS_ECDSA_C) && defined(MBEDTLS_ECP_DP_SECP256R1_ENABLED)
-    SIGNATURE_ECDSA_SECP256r1_SHA256,
+    MBEDTLS_TLS13_SIG_ECDSA_SECP256R1_SHA256,
 #endif
 #if defined(MBEDTLS_SHA512_C) && defined(MBEDTLS_ECDSA_C) && defined(MBEDTLS_ECP_DP_SECP384R1_ENABLED)
-    SIGNATURE_ECDSA_SECP384r1_SHA384,
+    MBEDTLS_TLS13_SIG_ECDSA_SECP384R1_SHA384,
 #endif
 #if defined(MBEDTLS_SHA512_C) && defined(MBEDTLS_ECDSA_C) && defined(MBEDTLS_ECP_DP_SECP521R1_ENABLED)
-//    SIGNATURE_ECDSA_SECP521r1_SHA512,
+    MBEDTLS_TLS13_SIG_ECDSA_SECP521R1_SHA512,
 #endif
 #if defined(MBEDTLS_X509_RSASSA_PSS_SUPPORT)
-	SIGNATURE_RSA_PSS_RSAE_SHA256,
+    MBEDTLS_TLS13_SIG_RSA_PSS_RSAE_SHA256,
 #endif
-    SIGNATURE_NONE
+    MBEDTLS_TLS13_SIG_NONE
 };
 #endif /* MBEDTLS_ECP_C && MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 
@@ -1691,15 +1691,15 @@ int main( int argc, char *argv[] )
 
             if( strcmp( q, "ecdsa_secp256r1_sha256" ) == 0 )
             {
-                sig_alg_list[i++] = SIGNATURE_ECDSA_SECP256r1_SHA256;
+                sig_alg_list[i++] = MBEDTLS_TLS13_SIG_ECDSA_SECP256R1_SHA256;
             }
             else if( strcmp( q, "ecdsa_secp384r1_sha384" ) == 0 )
             {
-                sig_alg_list[i++] = SIGNATURE_ECDSA_SECP384r1_SHA384;
+                sig_alg_list[i++] = MBEDTLS_TLS13_SIG_ECDSA_SECP384R1_SHA384;
             }
             else if( strcmp( q, "ecdsa_secp521r1_sha512" ) == 0 )
             {
-                sig_alg_list[i++] = SIGNATURE_ECDSA_SECP521r1_SHA512;
+                sig_alg_list[i++] = MBEDTLS_TLS13_SIG_ECDSA_SECP521R1_SHA512;
             }
             else
             {
@@ -1728,7 +1728,7 @@ int main( int argc, char *argv[] )
             goto exit;
         }
 
-        sig_alg_list[i] = SIGNATURE_NONE;
+        sig_alg_list[i] = MBEDTLS_TLS13_SIG_NONE;
     }
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL && MBEDTLS_ECP_C */
 

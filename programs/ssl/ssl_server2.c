@@ -2409,15 +2409,15 @@ int main( int argc, char *argv[] )
 
             if( strcmp( q, "ecdsa_secp256r1_sha256" ) == 0 )
             {
-                sig_alg_list[i++] = SIGNATURE_ECDSA_SECP256r1_SHA256;
+                sig_alg_list[i++] = MBEDTLS_TLS13_SIG_ECDSA_SECP256R1_SHA256;
             }
             else if( strcmp( q, "ecdsa_secp384r1_sha384" ) == 0 )
             {
-                sig_alg_list[i++] = SIGNATURE_ECDSA_SECP384r1_SHA384;
+                sig_alg_list[i++] = MBEDTLS_TLS13_SIG_ECDSA_SECP384R1_SHA384;
             }
             else if( strcmp( q, "ecdsa_secp521r1_sha512" ) == 0 )
             {
-                sig_alg_list[i++] = SIGNATURE_ECDSA_SECP521r1_SHA512;
+                sig_alg_list[i++] = MBEDTLS_TLS13_SIG_ECDSA_SECP521R1_SHA512;
             }
             else
             {
@@ -2444,13 +2444,13 @@ int main( int argc, char *argv[] )
             goto exit;
         }
 
-        sig_alg_list[i] = SIGNATURE_NONE;
+        sig_alg_list[i] = MBEDTLS_TLS13_SIG_NONE;
     }
     else
     {
         /* Configure default signature algorithm */
-        sig_alg_list[0] = SIGNATURE_ECDSA_SECP256r1_SHA256;
-        sig_alg_list[1] = SIGNATURE_NONE;
+        sig_alg_list[0] = MBEDTLS_TLS13_SIG_ECDSA_SECP256R1_SHA256;
+        sig_alg_list[1] = MBEDTLS_TLS13_SIG_NONE;
     }
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL && MBEDTLS_ECP_C */
 
