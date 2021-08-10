@@ -138,6 +138,8 @@ static int ssl_key_share_encapsulate( mbedtls_ssl_context *ssl,
             MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ecdh_make_tls_13_params", ret );
             return( ret );
         }
+
+        MBEDTLS_SSL_DEBUG_ECDH( 3, &ssl->handshake->ecdh_ctx, MBEDTLS_DEBUG_ECDH_Q );
     }
     else if( 0 /* Other kinds of KEMs */ )
     {
@@ -185,8 +187,6 @@ static int ssl_write_key_shares_ext(
     /* Write key share length */
     *key_share_entry++ = ( share_len >> 8 ) & 0xFF;
     *key_share_entry++ = ( share_len >> 0 ) & 0xFF;
-
-    MBEDTLS_SSL_DEBUG_ECDH( 3, &ssl->handshake->ecdh_ctx, MBEDTLS_DEBUG_ECDH_Q );
 
     ext_len = share_len + 4;
 
@@ -2755,18 +2755,7 @@ static int ssl_client_hello_parse( mbedtls_ssl_context* ssl,
 #endif /* MBEDTLS_SSL_COOKIE_C */
 
     if( hrr_required == 1 )
-    {
-        /* Create stateless transcript hash for HRR */
-        MBEDTLS_SSL_DEBUG_MSG( 4, ( "Compress transcript hash for stateless HRR" ) );
-        ret = mbedtls_ssl_hash_transcript( ssl );
-        if( ret != 0 )
-        {
-            MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_hash_transcript", ret );
-            return( ret );
-        }
-
         return( SSL_CLIENT_HELLO_HRR_REQUIRED );
-    }
 
     return( 0 );
 }
@@ -2787,6 +2776,18 @@ static int ssl_client_hello_postprocess( mbedtls_ssl_context* ssl,
 
     if( hrr_required == SSL_CLIENT_HELLO_HRR_REQUIRED )
     {
+        /*
+         * Create stateless transcript hash for HRR
+         */
+        MBEDTLS_SSL_DEBUG_MSG( 4, ( "Reset transcript for HRR" ) );
+        ret = mbedtls_ssl_reset_transcript_for_hrr( ssl );
+        if( ret != 0 )
+        {
+            MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_reset_transcript_for_hrr", ret );
+            return( ret );
+        }
+        mbedtls_ssl_session_reset_msg_layer( ssl, 0 );
+
         /* Transmit Hello Retry Request */
         mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_HELLO_RETRY_REQUEST );
         return( 0 );
@@ -2803,6 +2804,8 @@ static int ssl_client_hello_postprocess( mbedtls_ssl_context* ssl,
 #if defined(MBEDTLS_ZERO_RTT)
     if( ssl->handshake->early_data == MBEDTLS_SSL_EARLY_DATA_ON )
     {
+        mbedtls_ssl_transform *transform_earlydata;
+
         MBEDTLS_SSL_DEBUG_MSG( 3, ( "Generate 0-RTT keys" ) );
 
         ret = mbedtls_ssl_tls1_3_generate_early_data_keys(
@@ -2814,9 +2817,12 @@ static int ssl_client_hello_postprocess( mbedtls_ssl_context* ssl,
             return( ret );
         }
 
-#if !defined(MBEDTLS_SSL_USE_MPS)
+        transform_earlydata = mbedtls_calloc( 1, sizeof( mbedtls_ssl_transform ) );
+        if( transform_earlydata == NULL )
+            return( MBEDTLS_ERR_SSL_ALLOC_FAILED );
+
         ret = mbedtls_ssl_tls13_populate_transform(
-            ssl->transform_earlydata, ssl->conf->endpoint,
+            transform_earlydata, ssl->conf->endpoint,
             ssl->session_negotiate->ciphersuite, &traffic_keys, ssl );
         if( ret != 0 )
         {
@@ -2824,28 +2830,15 @@ static int ssl_client_hello_postprocess( mbedtls_ssl_context* ssl,
             return( ret );
         }
 
+#if !defined(MBEDTLS_SSL_USE_MPS)
+        ssl->transform_earlydata = transform_earlydata;
 #else /* MBEDTLS_SSL_USE_MPS */
-
-        {
-            mbedtls_ssl_transform *transform_earlydata =
-                mbedtls_calloc( 1, sizeof( mbedtls_ssl_transform ) );
-            if( transform_earlydata == NULL )
-                return( MBEDTLS_ERR_SSL_ALLOC_FAILED );
-
-            ret = mbedtls_ssl_tls13_populate_transform(
-                                  transform_earlydata,
-                                  ssl->conf->endpoint,
-                                  ssl->session_negotiate->ciphersuite,
-                                  &traffic_keys,
-                                  ssl );
-
-            /* Register transform with MPS. */
-            ret = mbedtls_mps_add_key_material( &ssl->mps->l4,
-                                                transform_earlydata,
-                                                &ssl->epoch_earlydata );
-            if( ret != 0 )
-                return( ret );
-        }
+        /* Register transform with MPS. */
+        ret = mbedtls_mps_add_key_material( &ssl->mps->l4,
+                                            transform_earlydata,
+                                            &ssl->epoch_earlydata );
+        if( ret != 0 )
+            return( ret );
 #endif /* MBEDTLS_SSL_USE_MPS */
     }
 
@@ -2868,7 +2861,7 @@ static int ssl_write_max_fragment_length_ext( mbedtls_ssl_context *ssl,
     unsigned char *p = buf;
 
     *olen = 0;
-	
+
     if( ( ssl->handshake->extensions_present & MAX_FRAGMENT_LENGTH_EXTENSION )
         == 0 )
     {
@@ -3013,6 +3006,7 @@ static int ssl_encrypted_extensions_prepare( mbedtls_ssl_context* ssl )
 {
     int ret;
     mbedtls_ssl_key_set traffic_keys;
+    mbedtls_ssl_transform *transform_handshake;
 
     /* Compute handshake secret */
     ret = mbedtls_ssl_tls1_3_key_schedule_stage_handshake( ssl );
@@ -3031,11 +3025,13 @@ static int ssl_encrypted_extensions_prepare( mbedtls_ssl_context* ssl )
         return( ret );
     }
 
-#if !defined(MBEDTLS_SSL_USE_MPS)
+    transform_handshake = mbedtls_calloc( 1, sizeof( mbedtls_ssl_transform ) );
+    if( transform_handshake == NULL )
+        return( MBEDTLS_ERR_SSL_ALLOC_FAILED );
 
     /* Setup transform from handshake key material */
     ret = mbedtls_ssl_tls13_populate_transform(
-                               ssl->transform_handshake,
+                               transform_handshake,
                                ssl->conf->endpoint,
                                ssl->session_negotiate->ciphersuite,
                                &traffic_keys,
@@ -3046,39 +3042,22 @@ static int ssl_encrypted_extensions_prepare( mbedtls_ssl_context* ssl )
         return( ret );
     }
 
+#if !defined(MBEDTLS_SSL_USE_MPS)
+    ssl->transform_handshake = transform_handshake;
     mbedtls_ssl_set_outbound_transform( ssl, ssl->transform_handshake );
-
 #else /* MBEDTLS_SSL_USE_MPS */
+    /* Register transform with MPS. */
+    ret = mbedtls_mps_add_key_material( &ssl->mps->l4,
+                                        transform_handshake,
+                                        &ssl->epoch_handshake );
+    if( ret != 0 )
+        return( ret );
 
-    /* We're not yet using MPS for all outgoing encrypted handshake messages,
-     * so we cannot yet remove the old transform generation code in case
-     * MBEDTLS_SSL_USE_MPS is set. */
-    {
-        mbedtls_ssl_transform *transform_handshake =
-            mbedtls_calloc( 1, sizeof( mbedtls_ssl_transform ) );
-        if( transform_handshake == NULL )
-            return( MBEDTLS_ERR_SSL_ALLOC_FAILED );
-
-        ret = mbedtls_ssl_tls13_populate_transform(
-                                transform_handshake,
-                                ssl->conf->endpoint,
-                                ssl->session_negotiate->ciphersuite,
-                                &traffic_keys,
-                                ssl );
-
-        /* Register transform with MPS. */
-        ret = mbedtls_mps_add_key_material( &ssl->mps->l4,
-                                            transform_handshake,
-                                            &ssl->epoch_handshake );
-        if( ret != 0 )
-            return( ret );
-
-        /* Use new transform for outgoing data. */
-        ret = mbedtls_mps_set_outgoing_keys( &ssl->mps->l4,
-                                             ssl->epoch_handshake );
-        if( ret != 0 )
-            return( ret );
-    }
+    /* Use new transform for outgoing data. */
+    ret = mbedtls_mps_set_outgoing_keys( &ssl->mps->l4,
+                                         ssl->epoch_handshake );
+    if( ret != 0 )
+        return( ret );
 #endif /* MBEDTLS_SSL_USE_MPS */
 
     /*
@@ -3228,9 +3207,41 @@ static int ssl_write_hello_retry_request_coordinate( mbedtls_ssl_context *ssl )
     return( 0 );
 }
 
+static int ssl_reset_ecdhe_share( mbedtls_ssl_context *ssl )
+{
+    mbedtls_ecdh_free( &ssl->handshake->ecdh_ctx );
+    return( 0 );
+}
+
+static int ssl_reset_key_share( mbedtls_ssl_context *ssl )
+{
+    uint16_t group_id = ssl->handshake->named_group_id;
+
+    if( mbedtls_ssl_named_group_is_ecdhe( group_id ) )
+        return( ssl_reset_ecdhe_share( ssl ) );
+    else if( 0 /* other KEMs? */ )
+    {
+        /* Do something */
+    }
+
+    return( 0 );
+}
+
 static int ssl_write_hello_retry_request_postprocess( mbedtls_ssl_context *ssl )
 {
+    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
+
     ssl->handshake->hello_retry_requests_sent++;
+
+    /* Reset everything that's going to be re-generated in the new ClientHello.
+     *
+     * Currently, we're always resetting the key share, even if the server
+     * was fine with it. Once we have separated key share generation from
+     * key share writing, we can confine this to the case where the server
+     * requested a different share. */
+    ret = ssl_reset_key_share( ssl );
+    if( ret != 0 )
+        return( ret );
 
 #if defined(MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE)
     mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_SERVER_CCS_AFTER_HRR );

@@ -676,80 +676,57 @@ static int ssl_hash_transcript_core( mbedtls_ssl_context *ssl,
     return( 0 );
 }
 
-#if defined(MBEDTLS_SHA256_C)
-static int ssl_hash_transcript_sha256( mbedtls_ssl_context *ssl )
+/* Reset SSL context and update hash for handling HRR.
+ *
+ * Replace Transcript-Hash(X) by
+ * Transcript-Hash( message_hash     ||
+ *                 00 00 Hash.length ||
+ *                 X )
+ * A few states of the handshake are preserved, including:
+ *   - session ID
+ *   - session ticket
+ *   - negotiated ciphersuite
+ */
+int mbedtls_ssl_reset_transcript_for_hrr( mbedtls_ssl_context *ssl )
 {
-    int ret;
-    unsigned char transcript[ 32 + 4 ];
-    size_t olen;
+    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
+    unsigned char hash_transcript[ MBEDTLS_MD_MAX_SIZE + 4 ];
+    size_t hash_olen;
 
+    MBEDTLS_SSL_DEBUG_MSG( 3, ( "Reset SSL session for HRR" ) );
+
+#if defined(MBEDTLS_SHA256_C)
     ret = ssl_hash_transcript_core( ssl, MBEDTLS_MD_SHA256,
-                                    transcript,
-                                    sizeof( transcript ),
-                                    &olen );
+                                    hash_transcript,
+                                    sizeof( hash_transcript ),
+                                    &hash_olen );
     if( ret != 0 )
     {
         MBEDTLS_SSL_DEBUG_RET( 4, "ssl_hash_transcript_core", ret );
         return( ret );
     }
-
     MBEDTLS_SSL_DEBUG_BUF( 4, "Truncated SHA-256 handshake transcript",
-                           transcript, olen );
+                           hash_transcript, hash_olen );
 
     mbedtls_sha256_starts( &ssl->handshake->fin_sha256, 0 );
-    ssl_update_checksum_sha256( ssl, transcript, olen );
-
-    return( 0 );
-}
+    ssl_update_checksum_sha256( ssl, hash_transcript, hash_olen );
 #endif /* MBEDTLS_SHA256_C */
 
 #if defined(MBEDTLS_SHA512_C)
-static int ssl_hash_transcript_sha384( mbedtls_ssl_context *ssl )
-{
-    int ret;
-    unsigned char transcript[ 48 + 4 ];
-    size_t olen;
-
     ret = ssl_hash_transcript_core( ssl, MBEDTLS_MD_SHA384,
-                                    transcript,
-                                    sizeof( transcript ),
-                                    &olen );
+                                    hash_transcript,
+                                    sizeof( hash_transcript ),
+                                    &hash_olen );
     if( ret != 0 )
+    {
+        MBEDTLS_SSL_DEBUG_RET( 4, "ssl_hash_transcript_core", ret );
         return( ret );
-
+    }
     MBEDTLS_SSL_DEBUG_BUF( 4, "Truncated SHA-384 handshake transcript",
-                           transcript, olen );
-
-    mbedtls_sha512_starts( &ssl->handshake->fin_sha512, 1 );
-    ssl_update_checksum_sha384( ssl, transcript, olen );
-
-    return( 0 );
-}
+                           hash_transcript, hash_olen );
 #endif /* MBEDTLS_SHA512_C */
 
-/* Replace Transcript-Hash(X) by
- * Transcript-Hash( message_hash     ||
- *                 00 00 Hash.length ||
- *                 X )
- */
-int mbedtls_ssl_hash_transcript( mbedtls_ssl_context *ssl )
-{
-    int ret = 0;
-
-#if defined(MBEDTLS_SHA256_C)
-    ret = ssl_hash_transcript_sha256( ssl );
-    if( ret != 0 )
-        goto exit;
-#endif /* MBEDTLS_SHA256_C */
-
-#if defined(MBEDTLS_SHA512_C)
-    ret = ssl_hash_transcript_sha384( ssl );
-    if( ret != 0 )
-        goto exit;
-#endif /* MBEDTLS_SHA512_C */
-
-exit:
-    return( 0 );
+    return( ret );
 }
 
 int mbedtls_ssl_get_handshake_transcript( mbedtls_ssl_context *ssl,
@@ -3433,13 +3410,6 @@ static int ssl_handshake_init( mbedtls_ssl_context *ssl )
     }
 #endif /* MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER */
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && \
-    !defined(MBEDTLS_SSL_USE_MPS)
-    ssl->transform_handshake   = mbedtls_calloc( 1, sizeof(mbedtls_ssl_transform) );
-    ssl->transform_earlydata   = mbedtls_calloc( 1, sizeof(mbedtls_ssl_transform) );
-    ssl->transform_application = mbedtls_calloc( 1, sizeof(mbedtls_ssl_transform) );
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
-
     if( ssl->session_negotiate == NULL )
     {
         ssl->session_negotiate = mbedtls_calloc( 1, sizeof(mbedtls_ssl_session) );
@@ -3461,12 +3431,6 @@ static int ssl_handshake_init( mbedtls_ssl_context *ssl )
 #if defined(MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER)
         ssl->transform_negotiate == NULL ||
 #endif
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && \
-    !defined(MBEDTLS_SSL_USE_MPS)
-        ssl->transform_handshake   == NULL ||
-        ssl->transform_earlydata   == NULL ||
-        ssl->transform_application == NULL ||
-#endif
         ssl->session_negotiate   == NULL )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "alloc() of ssl sub-contexts failed" ) );
@@ -3477,19 +3441,6 @@ static int ssl_handshake_init( mbedtls_ssl_context *ssl )
 #if defined(MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER)
         mbedtls_free( ssl->transform_negotiate );
         ssl->transform_negotiate = NULL;
-#endif
-
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && \
-    !defined(MBEDTLS_SSL_USE_MPS)
-        mbedtls_ssl_transform_free( ssl->transform_handshake   );
-        mbedtls_ssl_transform_free( ssl->transform_earlydata   );
-        mbedtls_ssl_transform_free( ssl->transform_application );
-        mbedtls_free( ssl->transform_handshake   );
-        mbedtls_free( ssl->transform_earlydata   );
-        mbedtls_free( ssl->transform_application );
-        ssl->transform_handshake   = NULL;
-        ssl->transform_earlydata   = NULL;
-        ssl->transform_application = NULL;
 #endif
 
         mbedtls_free( ssl->session_negotiate );
@@ -3504,13 +3455,6 @@ static int ssl_handshake_init( mbedtls_ssl_context *ssl )
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER)
     mbedtls_ssl_transform_init( ssl->transform_negotiate );
-#endif
-
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && \
-    !defined(MBEDTLS_SSL_USE_MPS)
-    mbedtls_ssl_transform_init( ssl->transform_handshake   );
-    mbedtls_ssl_transform_init( ssl->transform_earlydata   );
-    mbedtls_ssl_transform_init( ssl->transform_application );
 #endif
 
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
@@ -3900,11 +3844,12 @@ error:
  * If partial is non-zero, keep data in the input buffer and client ID.
  * (Use when a DTLS client reconnects from the same port.)
  */
-int mbedtls_ssl_session_reset_int( mbedtls_ssl_context *ssl, int partial )
+void mbedtls_ssl_session_reset_msg_layer( mbedtls_ssl_context *ssl,
+                                          int partial )
 {
-    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
+    /* TODO: Runtime dispatch depending on the TLS version in use */
 
-#if !defined(MBEDTLS_SSL_USE_MPS)
+#if defined(MBEDTLS_SSL_LEGACY_MSG_LAYER_REQUIRED)
 #if defined(MBEDTLS_SSL_VARIABLE_BUFFER_LENGTH)
     size_t in_buf_len = ssl->in_buf_len;
     size_t out_buf_len = ssl->out_buf_len;
@@ -3912,84 +3857,61 @@ int mbedtls_ssl_session_reset_int( mbedtls_ssl_context *ssl, int partial )
     size_t in_buf_len = MBEDTLS_SSL_IN_BUFFER_LEN;
     size_t out_buf_len = MBEDTLS_SSL_OUT_BUFFER_LEN;
 #endif
-#endif /* !MBEDTLS_SSL_USE_MPS */
 
-#if !defined(MBEDTLS_SSL_DTLS_CLIENT_PORT_REUSE) ||     \
-    !defined(MBEDTLS_SSL_SRV_C)
-    ((void) partial);
+#if !defined(MBEDTLS_SSL_DTLS_CLIENT_PORT_REUSE) || !defined(MBEDTLS_SSL_SRV_C)
+    partial = 0;
 #endif
-
-    ssl->state = MBEDTLS_SSL_HELLO_REQUEST;
 
     /* Cancel any possibly running timer */
     mbedtls_ssl_set_timer( ssl, 0 );
 
-#if defined(MBEDTLS_SSL_RENEGOTIATION)
-    ssl->renego_status = MBEDTLS_SSL_INITIAL_HANDSHAKE;
-    ssl->renego_records_seen = 0;
-
-    ssl->verify_data_len = 0;
-    memset( ssl->own_verify_data, 0, MBEDTLS_SSL_VERIFY_DATA_MAX_LEN );
-    memset( ssl->peer_verify_data, 0, MBEDTLS_SSL_VERIFY_DATA_MAX_LEN );
-#endif
-    ssl->secure_renegotiation = MBEDTLS_SSL_LEGACY_RENEGOTIATION;
-
-#if !defined(MBEDTLS_SSL_USE_MPS)
-    ssl->in_offt = NULL;
-
-#if defined(MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER)
     mbedtls_ssl_reset_in_out_pointers( ssl );
-#else   /* defined(MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER) */
-    ssl->out_msg = ssl->out_buf + 13;
-    ssl->in_msg = ssl->in_buf + 13;
-#endif /* !defined(MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER) */
 
+    /* Reset incoming message parsing */
+    ssl->in_offt    = NULL;
+    ssl->nb_zero    = 0;
     ssl->in_msgtype = 0;
-    ssl->in_msglen = 0;
+    ssl->in_msglen  = 0;
+    ssl->in_hslen   = 0;
+    ssl->keep_current_message = 0;
+    ssl->transform_in  = NULL;
+
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
     ssl->next_record_offset = 0;
     ssl->in_epoch = 0;
 #endif
-#if defined(MBEDTLS_SSL_DTLS_ANTI_REPLAY)
-    mbedtls_ssl_dtls_replay_reset( ssl );
-#endif
 
-    ssl->in_hslen = 0;
-    ssl->nb_zero = 0;
-
-    ssl->keep_current_message = 0;
-
-    ssl->out_msgtype = 0;
-    ssl->out_msglen = 0;
-    ssl->out_left = 0;
-
-    memset( ssl->cur_out_ctr, 0, sizeof( ssl->cur_out_ctr ) );
-
-    memset( ssl->out_buf, 0, out_buf_len );
-
-#if defined(MBEDTLS_SSL_DTLS_CLIENT_PORT_REUSE) && defined(MBEDTLS_SSL_SRV_C)
+    /* Keep current datagram if partial == 1 */
     if( partial == 0 )
-#endif /* MBEDTLS_SSL_DTLS_CLIENT_PORT_REUSE && MBEDTLS_SSL_SRV_C */
     {
         ssl->in_left = 0;
         memset( ssl->in_buf, 0, in_buf_len );
     }
-#endif /* !MBEDTLS_SSL_USE_MPS */
 
-    ssl->transform_in = NULL;
+    /* Reset outgoing message writing */
+    ssl->out_msgtype = 0;
+    ssl->out_msglen  = 0;
+    ssl->out_left    = 0;
+    memset( ssl->out_buf, 0, out_buf_len );
+    memset( ssl->cur_out_ctr, 0, sizeof( ssl->cur_out_ctr ) );
     ssl->transform_out = NULL;
 
-    ssl->session_in = NULL;
-    ssl->session_out = NULL;
+#if defined(MBEDTLS_SSL_DTLS_ANTI_REPLAY)
+    mbedtls_ssl_dtls_replay_reset( ssl );
+#endif
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER)
+#if defined(MBEDTLS_SSL_PROTO_TLS1_2)
     if( ssl->transform )
     {
         mbedtls_ssl_transform_free( ssl->transform );
         mbedtls_free( ssl->transform );
         ssl->transform = NULL;
     }
-#endif /* MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER */
+#endif /* MBEDTLS_SSL_PROTO_TLS1_2 */
+
+#else
+    ((void) partial);
+#endif /* MBEDTLS_SSL_LEGACY_MSG_LAYER_REQUIRED */
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
 #if !defined(MBEDTLS_SSL_USE_MPS)
@@ -4011,9 +3933,32 @@ int mbedtls_ssl_session_reset_int( mbedtls_ssl_context *ssl, int partial )
     ssl->early_data_buf = NULL;
     ssl->early_data_len = 0;
 #endif /* MBEDTLS_ZERO_RTT && MBEDTLS_SSL_CLI_C */
-
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+}
 
+int mbedtls_ssl_session_reset_int( mbedtls_ssl_context *ssl, int partial )
+{
+    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
+#if !defined(MBEDTLS_SSL_DTLS_CLIENT_PORT_REUSE) || !defined(MBEDTLS_SSL_SRV_C)
+    partial = 0;
+#endif
+
+    ssl->state = MBEDTLS_SSL_HELLO_REQUEST;
+
+    mbedtls_ssl_session_reset_msg_layer( ssl, partial );
+
+#if defined(MBEDTLS_SSL_RENEGOTIATION)
+    ssl->renego_status = MBEDTLS_SSL_INITIAL_HANDSHAKE;
+    ssl->renego_records_seen = 0;
+
+    ssl->verify_data_len = 0;
+    memset( ssl->own_verify_data, 0, MBEDTLS_SSL_VERIFY_DATA_MAX_LEN );
+    memset( ssl->peer_verify_data, 0, MBEDTLS_SSL_VERIFY_DATA_MAX_LEN );
+#endif
+    ssl->secure_renegotiation = MBEDTLS_SSL_LEGACY_RENEGOTIATION;
+
+    ssl->session_in = NULL;
+    ssl->session_out = NULL;
     if( ssl->session )
     {
         mbedtls_ssl_session_free( ssl->session );

@@ -65,6 +65,11 @@
 #define inline __inline
 #endif
 
+#if defined(MBEDTLS_SSL_PROTO_TLS1_2) || \
+    ( defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && !defined(MBEDTLS_SSL_USE_MPS) )
+#define MBEDTLS_SSL_LEGACY_MSG_LAYER_REQUIRED
+#endif
+
 /* Legacy minor version numbers as defined by:
  * - RFC 2246: ProtocolVersion version = { 3, 1 };     // TLS v1.0
  * - RFC 4346: ProtocolVersion version = { 3, 2 };     // TLS v1.1
@@ -1359,7 +1364,7 @@ void mbedtls_ssl_add_hs_hdr_to_checksum( mbedtls_ssl_context *ssl,
                                          unsigned hs_type,
                                          size_t total_hs_len );
 
-int mbedtls_ssl_hash_transcript( mbedtls_ssl_context *ssl );
+int mbedtls_ssl_reset_transcript_for_hrr( mbedtls_ssl_context *ssl );
 
 void mbedtls_ssl_set_inbound_transform( mbedtls_ssl_context *ssl,
                                         mbedtls_ssl_transform *transform );
@@ -1766,6 +1771,7 @@ void mbedtls_ssl_update_out_pointers( mbedtls_ssl_context *ssl,
 void mbedtls_ssl_update_in_pointers( mbedtls_ssl_context *ssl );
 
 int mbedtls_ssl_session_reset_int( mbedtls_ssl_context *ssl, int partial );
+void mbedtls_ssl_session_reset_msg_layer( mbedtls_ssl_context *ssl, int partial );
 
 #if defined(MBEDTLS_SSL_DTLS_ANTI_REPLAY)
 void mbedtls_ssl_dtls_replay_reset( mbedtls_ssl_context *ssl );

@@ -217,6 +217,8 @@ static int ssl_write_early_data_prepare( mbedtls_ssl_context* ssl )
     const unsigned char *psk_identity;
     size_t psk_identity_len;
 
+    mbedtls_ssl_transform *transform_earlydata;
+
     /* From RFC 8446:
      * "The PSK used to encrypt the
      *  early data MUST be the first PSK listed in the client's
@@ -256,52 +258,38 @@ static int ssl_write_early_data_prepare( mbedtls_ssl_context* ssl )
         return( ret );
     }
 
-#if defined(MBEDTLS_SSL_USE_MPS)
-    {
-        mbedtls_ssl_transform *transform_earlydata =
-            mbedtls_calloc( 1, sizeof( mbedtls_ssl_transform ) );
-        if( transform_earlydata == NULL )
-            return( MBEDTLS_ERR_SSL_ALLOC_FAILED );
-
-        ret = mbedtls_ssl_tls13_populate_transform(
-                              transform_earlydata,
-                              ssl->conf->endpoint,
-                              ssl->session_negotiate->ciphersuite,
-                              &traffic_keys,
-                              ssl );
-        if( ret != 0 )
-            return( ret );
-
-        /* Register transform with MPS. */
-        ret = mbedtls_mps_add_key_material( &ssl->mps->l4,
-                                            transform_earlydata,
-                                            &ssl->epoch_earlydata );
-        if( ret != 0 )
-            return( ret );
-
-        /* Use new transform for outgoing data. */
-        ret = mbedtls_mps_set_outgoing_keys( &ssl->mps->l4,
-                                             ssl->epoch_earlydata );
-        if( ret != 0 )
-            return( ret );
-    }
-
-#else /* MBEDTLS_SSL_USE_MPS */
+    transform_earlydata =
+        mbedtls_calloc( 1, sizeof( mbedtls_ssl_transform ) );
+    if( transform_earlydata == NULL )
+        return( MBEDTLS_ERR_SSL_ALLOC_FAILED );
 
     ret = mbedtls_ssl_tls13_populate_transform(
-                              ssl->transform_earlydata,
-                              ssl->conf->endpoint,
-                              ssl->session_negotiate->ciphersuite,
-                              &traffic_keys,
-                              ssl );
+                          transform_earlydata,
+                          ssl->conf->endpoint,
+                          ssl->session_negotiate->ciphersuite,
+                          &traffic_keys,
+                          ssl );
     if( ret != 0 )
-    {
-        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_tls13_populate_transform", ret );
         return( ret );
-    }
+
+#if defined(MBEDTLS_SSL_USE_MPS)
+    /* Register transform with MPS. */
+    ret = mbedtls_mps_add_key_material( &ssl->mps->l4,
+                                        transform_earlydata,
+                                        &ssl->epoch_earlydata );
+    if( ret != 0 )
+        return( ret );
+
+    /* Use new transform for outgoing data. */
+    ret = mbedtls_mps_set_outgoing_keys( &ssl->mps->l4,
+                                         ssl->epoch_earlydata );
+    if( ret != 0 )
+        return( ret );
+#else /* MBEDTLS_SSL_USE_MPS */
 
     /* Activate transform */
     MBEDTLS_SSL_DEBUG_MSG( 1, ( "Switch to 0-RTT keys for outbound traffic" ) );
+    ssl->transform_earlydata = transform_earlydata;
     mbedtls_ssl_set_outbound_transform( ssl, ssl->transform_earlydata );
 
 #endif /* MBEDTLS_SSL_USE_MPS */
@@ -1186,6 +1174,28 @@ static int ssl_write_supported_groups_ext( mbedtls_ssl_context *ssl,
  *  } KeyShare;
  */
 
+static int ssl_reset_ecdhe_share( mbedtls_ssl_context *ssl )
+{
+    mbedtls_ecdh_free( &ssl->handshake->ecdh_ctx );
+    return( 0 );
+}
+
+static int ssl_reset_key_share( mbedtls_ssl_context *ssl )
+{
+    uint16_t group_id = ssl->handshake->named_group_id;
+    if( group_id == 0 )
+        return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
+
+    if( mbedtls_ssl_named_group_is_ecdhe( group_id ) )
+        return( ssl_reset_ecdhe_share( ssl ) );
+    else if( 0 /* other KEMs? */ )
+    {
+        /* Do something */
+    }
+
+    return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
+}
+
 #if defined(MBEDTLS_ECDH_C) || defined(MBEDTLS_ECDSA_C)
 static int ssl_gen_and_write_ecdhe_share( mbedtls_ssl_context *ssl,
                                           uint16_t named_group,
@@ -1663,7 +1673,7 @@ static int ssl_client_hello_write_partial( mbedtls_ssl_context* ssl,
 
 #if defined(MBEDTLS_SSL_MAX_FRAGMENT_LENGTH)
     if( ( ret = ssl_write_max_fragment_length_ext( ssl, buf,
-                                                   (size_t)( end - buf ), 
+                                                   (size_t)( end - buf ),
                                                    &cur_ext_len )  ) != 0 )
     {
         MBEDTLS_SSL_DEBUG_RET( 1, "ssl_write_max_fragment_length_ext", ret );
@@ -2641,9 +2651,7 @@ static int ssl_hrr_parse( mbedtls_ssl_context* ssl,
                           const unsigned char* buf,
                           size_t buflen );
 
-static int ssl_hrr_postprocess( mbedtls_ssl_context* ssl,
-                                const unsigned char* buf,
-                                size_t buflen );
+static int ssl_hrr_postprocess( mbedtls_ssl_context* ssl );
 
 /*
  * Implementation
@@ -2699,13 +2707,17 @@ static int ssl_server_hello_process( mbedtls_ssl_context* ssl )
     else
     {
         MBEDTLS_SSL_PROC_CHK( ssl_hrr_parse( ssl, buf, buflen ) );
+        MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_reset_transcript_for_hrr( ssl ) );
+
+        mbedtls_ssl_add_hs_msg_to_checksum( ssl, MBEDTLS_SSL_HS_SERVER_HELLO,
+                                            buf, buflen );
 
 #if defined(MBEDTLS_SSL_USE_MPS)
         MBEDTLS_SSL_PROC_CHK( mbedtls_mps_reader_commit( msg.handle ) );
         MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read_consume( &ssl->mps->l4  ) );
 #endif /* MBEDTLS_SSL_USE_MPS */
 
-        MBEDTLS_SSL_PROC_CHK( ssl_hrr_postprocess( ssl, buf, buflen ) );
+        MBEDTLS_SSL_PROC_CHK( ssl_hrr_postprocess( ssl ) );
     }
 
 
@@ -3133,6 +3145,7 @@ static int ssl_server_hello_postprocess( mbedtls_ssl_context* ssl )
 {
     int ret;
     mbedtls_ssl_key_set traffic_keys;
+    mbedtls_ssl_transform *transform_handshake;
 
     /* We need to set the key exchange algorithm based on the
      * following rules:
@@ -3193,10 +3206,13 @@ static int ssl_server_hello_postprocess( mbedtls_ssl_context* ssl )
         return( ret );
     }
 
-#if !defined(MBEDTLS_SSL_USE_MPS)
+    transform_handshake =
+        mbedtls_calloc( 1, sizeof( mbedtls_ssl_transform ) );
+    if( transform_handshake == NULL )
+        return( MBEDTLS_ERR_SSL_ALLOC_FAILED );
 
     ret = mbedtls_ssl_tls13_populate_transform(
-                              ssl->transform_handshake,
+                              transform_handshake,
                               ssl->conf->endpoint,
                               ssl->session_negotiate->ciphersuite,
                               &traffic_keys,
@@ -3207,42 +3223,24 @@ static int ssl_server_hello_postprocess( mbedtls_ssl_context* ssl )
         return( ret );
     }
 
+#if !defined(MBEDTLS_SSL_USE_MPS)
+    ssl->transform_handshake = transform_handshake;
+    mbedtls_ssl_set_inbound_transform( ssl, ssl->transform_handshake );
 #else /* MBEDTLS_SSL_USE_MPS */
+    ret = mbedtls_mps_add_key_material( &ssl->mps->l4,
+                                        transform_handshake,
+                                        &ssl->epoch_handshake );
+    if( ret != 0 )
+        return( ret );
 
-    {
-        mbedtls_ssl_transform *transform_handshake =
-            mbedtls_calloc( 1, sizeof( mbedtls_ssl_transform ) );
-        if( transform_handshake == NULL )
-            return( MBEDTLS_ERR_SSL_ALLOC_FAILED );
-
-        ret = mbedtls_ssl_tls13_populate_transform(
-                              transform_handshake,
-                              ssl->conf->endpoint,
-                              ssl->session_negotiate->ciphersuite,
-                              &traffic_keys,
-                              ssl );
-
-        /* Register transform with MPS. */
-        ret = mbedtls_mps_add_key_material( &ssl->mps->l4,
-                                            transform_handshake,
-                                            &ssl->epoch_handshake );
-        if( ret != 0 )
-            return( ret );
-    }
-#endif /* MBEDTLS_SSL_USE_MPS */
-
-    /* Switch to new keys for inbound traffic. */
-    MBEDTLS_SSL_DEBUG_MSG( 1, ( "Switch to handshake keys for inbound traffic" ) );
-    ssl->session_in = ssl->session_negotiate;
-
-#if defined(MBEDTLS_SSL_USE_MPS)
     ret = mbedtls_mps_set_incoming_keys( &ssl->mps->l4,
                                          ssl->epoch_handshake );
     if( ret != 0 )
         return( ret );
-#else
-    mbedtls_ssl_set_inbound_transform( ssl, ssl->transform_handshake );
 #endif /* MBEDTLS_SSL_USE_MPS */
+
+    MBEDTLS_SSL_DEBUG_MSG( 1, ( "Switch to handshake keys for inbound traffic" ) );
+    ssl->session_in = ssl->session_negotiate;
 
     /*
      * State machine update
@@ -3508,7 +3506,10 @@ static int ssl_hrr_parse( mbedtls_ssl_context* ssl,
                  * MUST first verify that the selected_group field corresponds to a
                  * group which was provided in the "supported_groups" extension in the
                  * original ClientHello.
-                 * The supported_group was based on the info in ssl->conf->curve_list. */
+                 * The supported_group was based on the info in ssl->conf->curve_list.
+                 *
+                 * If the server provided a key share that was not sent in the ClientHello
+                 * then the client MUST abort the handshake with an "illegal_parameter" alert. */
                 for( grp_id = ssl->conf->curve_list; *grp_id != MBEDTLS_ECP_DP_NONE; grp_id++ )
                 {
                     curve_info = mbedtls_ecp_curve_info_from_grp_id( *grp_id );
@@ -3520,10 +3521,7 @@ static int ssl_hrr_parse( mbedtls_ssl_context* ssl,
                     break;
                 }
 
-                /* If the server provided a key share that was not sent in the ClientHello
-                 * then the client MUST abort the handshake with an "illegal_parameter" alert.
-                 *
-                 * Client MUST verify that the selected_group field does not
+                /* Client MUST verify that the selected_group field does not
                  * correspond to a group which was provided in the "key_share"
                  * extension in the original ClientHello. If the server sent an
                  * HRR message with a key share already provided in the
@@ -3562,11 +3560,9 @@ static int ssl_hrr_parse( mbedtls_ssl_context* ssl,
     return( 0 );
 }
 
-static int ssl_hrr_postprocess( mbedtls_ssl_context* ssl,
-                                const unsigned char* orig_buf,
-                                size_t orig_msg_len )
+static int ssl_hrr_postprocess( mbedtls_ssl_context* ssl )
 {
-    int ret = 0;
+    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
 
     if( ssl->handshake->hello_retry_requests_received > 0 )
     {
@@ -3578,17 +3574,6 @@ static int ssl_hrr_postprocess( mbedtls_ssl_context* ssl,
 
     ssl->handshake->hello_retry_requests_received++;
 
-    MBEDTLS_SSL_DEBUG_MSG( 4, ( "Compress transcript hash for stateless HRR" ) );
-    ret = mbedtls_ssl_hash_transcript( ssl );
-    if( ret != 0 )
-    {
-        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_hash_transcript", ret );
-        return( ret );
-    }
-
-    mbedtls_ssl_add_hs_msg_to_checksum( ssl, MBEDTLS_SSL_HS_SERVER_HELLO,
-                                        orig_buf, orig_msg_len );
-
 #if defined(MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE)
     /* If not offering early data, the client sends a dummy CCS record
      * immediately before its second flight. This may either be before
@@ -3597,6 +3582,18 @@ static int ssl_hrr_postprocess( mbedtls_ssl_context* ssl,
 #else
     mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_CLIENT_HELLO );
 #endif /* MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE */
+
+    mbedtls_ssl_session_reset_msg_layer( ssl, 0 );
+
+    /* Reset everything that's going to be re-generated in the new ClientHello.
+     *
+     * Currently, we're always resetting the key share, even if the server
+     * was fine with it. Once we have separated key share generation from
+     * key share writing, we can confine this to the case where the server
+     * requested a different share. */
+    ret = ssl_reset_key_share( ssl );
+    if( ret != 0 )
+        return( ret );
 
     return( 0 );
 }
