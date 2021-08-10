@@ -1606,15 +1606,11 @@ struct mbedtls_ssl_context
 #endif /* defined(MBEDTLS_SSL_PROTO_TLS1_2) */
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
-    mbedtls_ssl_transform *MBEDTLS_PRIVATE(transform_handshake);
-    mbedtls_ssl_transform *MBEDTLS_PRIVATE(transform_earlydata);
     mbedtls_ssl_transform *MBEDTLS_PRIVATE(transform_application);
 
 #if defined(MBEDTLS_SSL_USE_MPS)
     /* With MPS, we only remember opaque epoch IDs from the handshake
      * layer. The transform themselves are managed by MPS. */
-    int MBEDTLS_PRIVATE(epoch_handshake);
-    int MBEDTLS_PRIVATE(epoch_earlydata);
     int MBEDTLS_PRIVATE(epoch_application);
 
     mbedtls_ssl_mps *mps;

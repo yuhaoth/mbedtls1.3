@@ -3914,14 +3914,8 @@ void mbedtls_ssl_session_reset_msg_layer( mbedtls_ssl_context *ssl,
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
 #if !defined(MBEDTLS_SSL_USE_MPS)
-    mbedtls_ssl_transform_free( ssl->transform_handshake   );
-    mbedtls_ssl_transform_free( ssl->transform_earlydata   );
     mbedtls_ssl_transform_free( ssl->transform_application );
-    mbedtls_free( ssl->transform_handshake   );
-    mbedtls_free( ssl->transform_earlydata   );
     mbedtls_free( ssl->transform_application );
-    ssl->transform_handshake   = NULL;
-    ssl->transform_earlydata   = NULL;
     ssl->transform_application = NULL;
 #else
     ssl_mps_free( ssl );
@@ -6438,6 +6432,13 @@ void mbedtls_ssl_handshake_free( mbedtls_ssl_context *ssl )
     handle_buffer_resizing( ssl, 1, mbedtls_ssl_get_input_buflen( ssl ),
                                     mbedtls_ssl_get_output_buflen( ssl ) );
 #endif
+
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+    mbedtls_free( handshake->transform_earlydata );
+    mbedtls_free( handshake->transform_handshake );
+    handshake->transform_earlydata = NULL;
+    handshake->transform_handshake = NULL;
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 }
 
 void mbedtls_ssl_session_free( mbedtls_ssl_session *session )
@@ -7137,14 +7138,8 @@ void mbedtls_ssl_free( mbedtls_ssl_context *ssl )
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && \
     !defined(MBEDTLS_SSL_USE_MPS)
-    mbedtls_ssl_transform_free( ssl->transform_handshake   );
-    mbedtls_ssl_transform_free( ssl->transform_earlydata   );
     mbedtls_ssl_transform_free( ssl->transform_application );
-    mbedtls_free( ssl->transform_handshake   );
-    mbedtls_free( ssl->transform_earlydata   );
     mbedtls_free( ssl->transform_application );
-    ssl->transform_handshake   = NULL;
-    ssl->transform_earlydata   = NULL;
     ssl->transform_application = NULL;
 #endif
 
