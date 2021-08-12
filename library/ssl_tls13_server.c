@@ -32,7 +32,9 @@
 
 #include "ssl_misc.h"
 #include "ssl_tls13_keys.h"
+#if defined(MBEDTLS_SSL_USE_MPS)
 #include "mps_all.h"
+#endif /* MBEDTLS_SSL_USE_MPS */
 
 #include <string.h>
 
