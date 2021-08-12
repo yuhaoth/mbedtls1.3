@@ -7317,7 +7317,7 @@ static int ssl_preset_suiteb_signature_algorithms[] = {
 
     /* RSA algorithms */
 #if defined(MBEDTLS_X509_RSASSA_PSS_SUPPORT)
-    MBEDTLS_TLS13_SIG_IGNATURE_RSA_PSS_RSAE_SHA256,
+    MBEDTLS_TLS13_SIG_RSA_PSS_RSAE_SHA256,
 #endif
 
     MBEDTLS_TLS13_SIG_NONE
