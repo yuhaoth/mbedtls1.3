@@ -178,10 +178,12 @@ int ssl_write_early_data_process( mbedtls_ssl_context* ssl )
 #endif /* MBEDTLS_SSL_USE_MPS */
 
 #else /* MBEDTLS_ZERO_RTT */
+#if defined(MBEDTLS_SSL_USE_MPS)
         ((void) buf);
         ((void) buf_len);
         ((void) msg);
         ((void) msg_len);
+#endif
         /* Should never happen */
         return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
 
