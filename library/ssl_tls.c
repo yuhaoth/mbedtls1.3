@@ -40,7 +40,9 @@
 #include "mbedtls/version.h"
 
 #include "ssl_misc.h"
+#if defined(MBEDTLS_SSL_USE_MPS)
 #include "mps_all.h"
+#endif /* MEDTLS_SSL_USE_MPS */
 
 #include <string.h>
 
