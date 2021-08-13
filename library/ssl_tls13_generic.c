@@ -1324,12 +1324,12 @@ static int ssl_write_certificate_coordinate( mbedtls_ssl_context* ssl )
 
             /* Use new transform for outgoing data. */
             ret = mbedtls_mps_set_outgoing_keys( &ssl->mps->l4,
-                                                 ssl->epoch_handshake );
+                                                 ssl->handshake->epoch_handshake );
             if( ret != 0 )
                 return( ret );
         }
 #else
-        mbedtls_ssl_set_outbound_transform( ssl, ssl->transform_handshake );
+        mbedtls_ssl_set_outbound_transform( ssl, ssl->handshake->transform_handshake );
 #endif /* MBEDTLS_SSL_USE_MPS */
     }
 #endif /* MBEDTLS_SSL_CLI_C */
@@ -1599,12 +1599,12 @@ static int ssl_read_certificate_coordinate( mbedtls_ssl_context* ssl )
         {
             int ret;
             ret = mbedtls_mps_set_incoming_keys( &ssl->mps->l4,
-                                                 ssl->epoch_handshake );
+                                                 ssl->handshake->epoch_handshake );
             if( ret != 0 )
                 return( ret );
         }
 #else
-        mbedtls_ssl_set_inbound_transform( ssl, ssl->transform_handshake );
+        mbedtls_ssl_set_inbound_transform( ssl, ssl->handshake->transform_handshake );
 #endif /* MBEDTLS_SSL_USE_MPS */
     }
 #endif /* MBEDTLS_SSL_SRV_C */

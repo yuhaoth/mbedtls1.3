@@ -1941,7 +1941,7 @@ static int ssl_read_early_data_coordinate( mbedtls_ssl_context* ssl )
 
 #if defined(MBEDTLS_SSL_USE_MPS)
     MBEDTLS_SSL_PROC_CHK( mbedtls_mps_set_incoming_keys( &ssl->mps->l4,
-                                                   ssl->epoch_earlydata ) );
+                                                   ssl->handshake->epoch_earlydata ) );
 
     MBEDTLS_SSL_PROC_CHK_NEG( mbedtls_mps_read( &ssl->mps->l4 ) );
     if( ret != MBEDTLS_MPS_MSG_APP )
@@ -1955,7 +1955,7 @@ cleanup:
 
 #else /* MBEDTLS_SSL_USE_MPS */
 
-    mbedtls_ssl_set_inbound_transform( ssl, ssl->transform_earlydata );
+    mbedtls_ssl_set_inbound_transform( ssl, ssl->handshake->transform_earlydata );
 
     /* Fetching step */
     if( ( ret = mbedtls_ssl_read_record( ssl, 0 ) ) != 0 )
@@ -2833,12 +2833,12 @@ static int ssl_client_hello_postprocess( mbedtls_ssl_context* ssl,
         }
 
 #if !defined(MBEDTLS_SSL_USE_MPS)
-        ssl->transform_earlydata = transform_earlydata;
+        ssl->handshake->transform_earlydata = transform_earlydata;
 #else /* MBEDTLS_SSL_USE_MPS */
         /* Register transform with MPS. */
         ret = mbedtls_mps_add_key_material( &ssl->mps->l4,
                                             transform_earlydata,
-                                            &ssl->epoch_earlydata );
+                                            &ssl->handshake->epoch_earlydata );
         if( ret != 0 )
             return( ret );
 #endif /* MBEDTLS_SSL_USE_MPS */
@@ -3045,19 +3045,19 @@ static int ssl_encrypted_extensions_prepare( mbedtls_ssl_context* ssl )
     }
 
 #if !defined(MBEDTLS_SSL_USE_MPS)
-    ssl->transform_handshake = transform_handshake;
-    mbedtls_ssl_set_outbound_transform( ssl, ssl->transform_handshake );
+    ssl->handshake->transform_handshake = transform_handshake;
+    mbedtls_ssl_set_outbound_transform( ssl, ssl->handshake->transform_handshake );
 #else /* MBEDTLS_SSL_USE_MPS */
     /* Register transform with MPS. */
     ret = mbedtls_mps_add_key_material( &ssl->mps->l4,
                                         transform_handshake,
-                                        &ssl->epoch_handshake );
+                                        &ssl->handshake->epoch_handshake );
     if( ret != 0 )
         return( ret );
 
     /* Use new transform for outgoing data. */
     ret = mbedtls_mps_set_outgoing_keys( &ssl->mps->l4,
-                                         ssl->epoch_handshake );
+                                         ssl->handshake->epoch_handshake );
     if( ret != 0 )
         return( ret );
 #endif /* MBEDTLS_SSL_USE_MPS */
