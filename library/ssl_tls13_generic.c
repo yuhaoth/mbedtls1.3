@@ -2463,8 +2463,8 @@ static int ssl_finished_in_postprocess_cli( mbedtls_ssl_context *ssl )
 
 static int ssl_finished_in_postprocess( mbedtls_ssl_context* ssl )
 {
-    int ret;
 #if defined(MBEDTLS_SSL_SRV_C)
+    int ret;
     if( ssl->conf->endpoint == MBEDTLS_SSL_IS_SERVER )
     {
         /* Compute resumption_master_secret */
