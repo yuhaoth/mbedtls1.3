@@ -3919,6 +3919,18 @@ void mbedtls_ssl_session_reset_msg_layer( mbedtls_ssl_context *ssl,
     mbedtls_ssl_transform_free( ssl->transform_application );
     mbedtls_free( ssl->transform_application );
     ssl->transform_application = NULL;
+
+    if( ssl->handshake != NULL )
+    {
+        mbedtls_ssl_transform_free( ssl->handshake->transform_earlydata );
+        mbedtls_free( ssl->handshake->transform_earlydata );
+        ssl->handshake->transform_earlydata = NULL;
+
+        mbedtls_ssl_transform_free( ssl->handshake->transform_handshake );
+        mbedtls_free( ssl->handshake->transform_handshake );
+        ssl->handshake->transform_handshake = NULL;
+    }
+
 #else
     ssl_mps_free( ssl );
     ssl_mps_init( ssl );
