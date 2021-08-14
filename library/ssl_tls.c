@@ -6423,9 +6423,6 @@ void mbedtls_ssl_handshake_free( mbedtls_ssl_context *ssl )
     psa_destroy_key( handshake->ecdh_psa_privkey );
 #endif /* MBEDTLS_ECDH_C && MBEDTLS_USE_PSA_CRYPTO */
 
-    mbedtls_platform_zeroize( handshake,
-                              sizeof( mbedtls_ssl_handshake_params ) );
-
 #if defined(MBEDTLS_SSL_VARIABLE_BUFFER_LENGTH)
     /* If the buffers are too big - reallocate. Because of the way Mbed TLS
      * processes datagrams and the fact that a datagram is allowed to have
@@ -6441,6 +6438,9 @@ void mbedtls_ssl_handshake_free( mbedtls_ssl_context *ssl )
     handshake->transform_earlydata = NULL;
     handshake->transform_handshake = NULL;
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+
+    mbedtls_platform_zeroize( handshake,
+                              sizeof( mbedtls_ssl_handshake_params ) );
 }
 
 void mbedtls_ssl_session_free( mbedtls_ssl_session *session )
