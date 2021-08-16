@@ -5911,7 +5911,7 @@ static size_t ssl_session_load_tls13( mbedtls_ssl_session *session,
     session->key_len = *p++;
 
     if( session->key_len > (size_t)( end - p ) ||
-        session->key_len > sizeof(session->key) )
+        session->key_len > sizeof( session->key ) )
         return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
 
     memcpy( session->key, p, session->key_len );
