@@ -1803,16 +1803,16 @@ static int ssl_early_data_fetch( mbedtls_ssl_context* ssl,
                                  size_t* buflen );
 #endif /* MBEDTLS_SSL_USE_MPS */
 #endif /* MBEDTLS_ZERO_RTT */
-
+#if defined(MBEDTLS_TLS13_EARLY_DATA)
 static int ssl_read_early_data_coordinate( mbedtls_ssl_context* ssl );
-
+#endif
 #if defined(MBEDTLS_ZERO_RTT)
 /* Parse early data send by the peer. */
 static int ssl_read_early_data_parse( mbedtls_ssl_context* ssl,
     unsigned char const* buf,
     size_t buflen );
 #endif /* MBEDTLS_ZERO_RTT */
-
+#if defined(MBEDTLS_TLS13_EARLY_DATA)
 /* Update the state after handling the incoming early data message. */
 static int ssl_read_early_data_postprocess( mbedtls_ssl_context* ssl );
 
@@ -1873,6 +1873,7 @@ cleanup:
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= parse early data" ) );
     return( ret );
 }
+#endif
 
 #if defined(MBEDTLS_ZERO_RTT)
 #if defined(MBEDTLS_SSL_USE_MPS)
@@ -1923,11 +1924,13 @@ cleanup:
 #endif /* MBEDTLS_ZERO_RTT */
 
 #if !defined(MBEDTLS_ZERO_RTT)
+#if defined(MBEDTLS_TLS13_EARLY_DATA)
 static int ssl_read_early_data_coordinate( mbedtls_ssl_context* ssl )
 {
     ((void) ssl);
     return( SSL_EARLY_DATA_SKIP );
 }
+#endif
 #else /* MBEDTLS_ZERO_RTT */
 static int ssl_read_early_data_coordinate( mbedtls_ssl_context* ssl )
 {
@@ -2002,11 +2005,13 @@ static int ssl_read_early_data_parse( mbedtls_ssl_context* ssl,
 }
 #endif /* MBEDTLS_ZERO_RTT */
 
+#if defined(MBEDTLS_TLS13_EARLY_DATA)
 static int ssl_read_early_data_postprocess( mbedtls_ssl_context* ssl )
 {
     mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_END_OF_EARLY_DATA );
     return ( 0 );
 }
+#endif /* MBEDTLS_TLS13_EARLY_DATA */
 
 
 /*
@@ -3931,6 +3936,7 @@ int mbedtls_ssl_handshake_server_step_tls1_3( mbedtls_ssl_context *ssl )
 
             break;
 
+#if defined(MBEDTLS_TLS13_EARLY_DATA)
             /* ----- WRITE EARLY APP DATA  ----*/
         case MBEDTLS_SSL_EARLY_APP_DATA:
 
@@ -3940,9 +3946,11 @@ int mbedtls_ssl_handshake_server_step_tls1_3( mbedtls_ssl_context *ssl )
                 MBEDTLS_SSL_DEBUG_RET( 1, "ssl_read_early_data_process", ret );
                 return ( ret );
             }
-
             break;
-
+        case MBEDTLS_SSL_END_OF_EARLY_DATA:
+            ret = ssl_read_end_of_early_data_process( ssl );
+            break;
+#endif
             /* ----- WRITE HELLO RETRY REQUEST ----*/
 
         case MBEDTLS_SSL_HELLO_RETRY_REQUEST:
@@ -4062,10 +4070,6 @@ int mbedtls_ssl_handshake_server_step_tls1_3( mbedtls_ssl_context *ssl )
 
         case MBEDTLS_SSL_CLIENT_CERTIFICATE_VERIFY:
             ret = mbedtls_ssl_read_certificate_verify_process( ssl );
-            break;
-
-        case MBEDTLS_SSL_END_OF_EARLY_DATA:
-            ret = ssl_read_end_of_early_data_process( ssl );
             break;
 
             /* ----- READ FINISHED ----*/

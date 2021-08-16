@@ -1408,8 +1408,10 @@ static int ssl_client_hello_postprocess( mbedtls_ssl_context* ssl )
 {
 #if defined(MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE)
     mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_CLIENT_CCS_AFTER_CLIENT_HELLO );
-#else
+#elif defined(MBEDTLS_TLS13_EARLY_DATA)
     mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_EARLY_APP_DATA );
+#else
+    mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_SERVER_HELLO );
 #endif /* MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE */
 
     return( 0 );
@@ -3947,10 +3949,20 @@ int mbedtls_ssl_handshake_client_step_tls1_3( mbedtls_ssl_context *ssl )
             ret = ssl_client_hello_process( ssl );
             break;
 
+#if defined(MBEDTLS_TLS13_EARLY_DATA)
         case MBEDTLS_SSL_EARLY_APP_DATA:
             ret = ssl_write_early_data_process( ssl );
             break;
-
+        /*
+         *  ==>   (EndOfEarlyData)
+         *        (Certificate)
+         *        (CertificateVerify)
+         *        (Finished)
+         */
+        case MBEDTLS_SSL_END_OF_EARLY_DATA:
+            ret = ssl_write_end_of_early_data_process( ssl );
+            break;
+#endif /* MBEDTLS_TLS13_EARLY_DATA */
         /*
          *  <==   ServerHello / HelloRetryRequest
          *        EncryptedExtensions
@@ -3981,16 +3993,6 @@ int mbedtls_ssl_handshake_client_step_tls1_3( mbedtls_ssl_context *ssl )
 
         case MBEDTLS_SSL_SERVER_FINISHED:
             ret = mbedtls_ssl_finished_in_process( ssl );
-            break;
-
-        /*
-         *  ==>   (EndOfEarlyData)
-         *        (Certificate)
-         *        (CertificateVerify)
-         *        (Finished)
-         */
-        case MBEDTLS_SSL_END_OF_EARLY_DATA:
-            ret = ssl_write_end_of_early_data_process( ssl );
             break;
 
         case MBEDTLS_SSL_CLIENT_CERTIFICATE:
