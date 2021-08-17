@@ -4099,22 +4099,22 @@ int mbedtls_ssl_handshake_server_step_tls1_3( mbedtls_ssl_context *ssl )
 #endif /* MBEDTLS_SSL_USE_MPS */
 
             mbedtls_ssl_handshake_wrapup_tls13( ssl );
+#if defined(MBEDTLS_SSL_NEW_SESSION_TICKET)
             mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_SERVER_NEW_SESSION_TICKET );
+#else
+            mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_HANDSHAKE_OVER );
+#endif
 
             break;
 
-        case MBEDTLS_SSL_SERVER_NEW_SESSION_TICKET:
-
 #if defined(MBEDTLS_SSL_NEW_SESSION_TICKET)
-
+        case MBEDTLS_SSL_SERVER_NEW_SESSION_TICKET:
             ret = ssl_write_new_session_ticket_process( ssl );
             if( ret != 0 )
             {
                 MBEDTLS_SSL_DEBUG_RET( 1, "ssl_write_new_session_ticket ", ret );
                 return( ret );
             }
-#endif /* MBEDTLS_SSL_NEW_SESSION_TICKET */
-
             break;
 
         case MBEDTLS_SSL_SERVER_NEW_SESSION_TICKET_FLUSH:
@@ -4123,6 +4123,7 @@ int mbedtls_ssl_handshake_server_step_tls1_3( mbedtls_ssl_context *ssl )
                 return( ret );
             mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_HANDSHAKE_OVER );
             break;
+#endif /* MBEDTLS_SSL_NEW_SESSION_TICKET */
 
         default:
             MBEDTLS_SSL_DEBUG_MSG( 1, ( "invalid state %d", ssl->state ) );

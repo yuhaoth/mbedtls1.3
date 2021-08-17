@@ -4007,6 +4007,7 @@ int mbedtls_ssl_handshake_client_step_tls1_3( mbedtls_ssl_context *ssl )
             ret = mbedtls_ssl_finished_out_process( ssl );
             break;
 
+#if defined(MBEDTLS_SSL_NEW_SESSION_TICKET)
         /*
          *  <==   NewSessionTicket
          */
@@ -4018,7 +4019,7 @@ int mbedtls_ssl_handshake_client_step_tls1_3( mbedtls_ssl_context *ssl )
 
             ret = MBEDTLS_ERR_SSL_RECEIVED_NEW_SESSION_TICKET;
             break;
-
+#endif /* MBEDTLS_SSL_NEW_SESSION_TICKET */
         /*
          * Injection of dummy-CCS's for middlebox compatibility
          */

@@ -1474,6 +1474,7 @@ static inline int mbedtls_ssl_get_psk_to_offer( const mbedtls_ssl_context *ssl,
         ptrs_present = 1;
     }
 
+#if defined(MBEDTLS_SSL_NEW_SESSION_TICKET)
     /* Check if a ticket has been configured. */
     if( ssl->session_negotiate != NULL         &&
         ssl->session_negotiate->ticket != NULL )
@@ -1487,6 +1488,7 @@ static inline int mbedtls_ssl_get_psk_to_offer( const mbedtls_ssl_context *ssl,
         }
         return( 0 );
     }
+#endif /* MBEDTLS_SSL_NEW_SESSION_TICKET */
 
     /* Check if an external PSK has been configured. */
     if( ssl->conf->psk != NULL )
