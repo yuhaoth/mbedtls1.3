@@ -6445,7 +6445,9 @@ void mbedtls_ssl_handshake_free( mbedtls_ssl_context *ssl )
 #endif
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+    mbedtls_ssl_transform_free( handshake->transform_earlydata );
     mbedtls_free( handshake->transform_earlydata );
+    mbedtls_ssl_transform_free( handshake->transform_handshake );
     mbedtls_free( handshake->transform_handshake );
     handshake->transform_earlydata = NULL;
     handshake->transform_handshake = NULL;
