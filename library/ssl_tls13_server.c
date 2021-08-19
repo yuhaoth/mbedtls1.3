@@ -4121,7 +4121,6 @@ int mbedtls_ssl_handshake_server_step_tls1_3( mbedtls_ssl_context *ssl )
 #else
             mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_HANDSHAKE_OVER );
 #endif
-
             break;
 
 #if defined(MBEDTLS_SSL_NEW_SESSION_TICKET)
