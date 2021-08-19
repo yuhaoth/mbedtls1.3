@@ -1762,42 +1762,6 @@ static int ssl_client_hello_write_partial( mbedtls_ssl_context* ssl,
     buf += cur_ext_len;
 #endif /* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED */
 
-#if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
-    /* The supported_groups and the key_share extensions are
-     * REQUIRED for ECDHE ciphersuites.
-     */
-    ret = ssl_write_supported_groups_ext( ssl, buf, end, &cur_ext_len );
-    if( ret != 0 )
-        return( ret );
-
-    total_ext_len += cur_ext_len;
-    buf += cur_ext_len;
-
-    /* The supported_signature_algorithms extension is REQUIRED for
-     * certificate authenticated ciphersuites. */
-    ret = mbedtls_ssl_write_signature_algorithms_ext( ssl, buf, end, &cur_ext_len );
-    if( ret != 0 )
-        return( ret );
-
-    total_ext_len += cur_ext_len;
-    buf += cur_ext_len;
-
-    /* We need to send the key shares under three conditions:
-     * 1 ) A certificate-based ciphersuite is being offered. In this case
-     *    supported_groups and supported_signature extensions have been successfully added.
-     * 2 ) A PSK-based ciphersuite with ECDHE is offered. In this case the
-     *    psk_key_exchange_modes has been added as the last extension.
-     * 3 ) Or, in case all ciphers are supported ( which includes #1 and #2 from above )
-     */
-
-    ret = ssl_write_key_shares_ext( ssl, buf, end, &cur_ext_len );
-    if( ret != 0 )
-        return( ret );
-
-    total_ext_len += cur_ext_len;
-    buf += cur_ext_len;
-#endif /* MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED */
-
 #if defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
     {
         size_t bytes_written;
