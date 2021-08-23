@@ -3085,14 +3085,31 @@ static int ssl_encrypted_extensions_write( mbedtls_ssl_context* ssl,
                                            size_t buflen,
                                            size_t* olen )
 {
+
+    
+    size_t enc_ext_len;
+    unsigned char *p,  *len;
+
+#if defined(MBEDTLS_SSL_SERVER_NAME_INDICATION) || \
+    defined(MBEDTLS_SSL_ALPN)                   || \
+    defined(MBEDTLS_SSL_MAX_FRAGMENT_LENGTH)    || \
+    defined(MBEDTLS_ZERO_RTT)
     int ret;
-    size_t n, enc_ext_len;
-    unsigned char *p, *end, *len;
+    size_t n;
+    unsigned char *end;
+    end = buf + buflen;
+#else
+    ((void) ssl);
+    ((void) buflen);
+#endif /* MBEDTLS_SSL_SERVER_NAME_INDICATION ||
+          MBEDTLS_SSL_ALPN                   ||
+          MBEDTLS_SSL_MAX_FRAGMENT_LENGTH    ||
+          MBEDTLS_ZERO_RTT  */
 
     /* If all extensions are disabled then olen is 0. */
     *olen = 0;
 
-    end = buf + buflen;
+    
     p = buf;
 
     /*
