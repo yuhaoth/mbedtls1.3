@@ -3916,7 +3916,7 @@ void ssl_tls1_3_derive_resumption_secrets( int hash_alg,
 }
 /* END_CASE */
 
-/* BEGIN_CASE depends_on:MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+/* BEGIN_CASE depends_on:MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL:MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED */
 void ssl_tls1_3_create_psk_binder( int hash_alg,
                                    data_t *psk,
                                    int psk_type,
