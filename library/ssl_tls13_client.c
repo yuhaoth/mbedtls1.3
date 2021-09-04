@@ -341,9 +341,10 @@ static int ssl_write_early_data_coordinate( mbedtls_ssl_context* ssl )
 
 static int ssl_write_early_data_postprocess( mbedtls_ssl_context* ssl )
 {
+#if defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
     /* Clear PSK we've used for the 0-RTT. */
     mbedtls_ssl_remove_hs_psk( ssl );
-
+#endif
     mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_SERVER_HELLO );
     return ( 0 );
 }
@@ -2466,7 +2467,7 @@ static int ssl_encrypted_extensions_process( mbedtls_ssl_context* ssl )
     MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_fetch_handshake_msg( ssl,
                                              MBEDTLS_SSL_HS_ENCRYPTED_EXTENSION,
                                              &buf, &buflen ) );
-
+    MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> parse encrypted extensions" ) );
     /* Process the message contents */
     MBEDTLS_SSL_PROC_CHK( ssl_encrypted_extensions_parse( ssl, buf, buflen ) );
 

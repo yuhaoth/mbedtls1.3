@@ -2733,6 +2733,7 @@ static int ssl_client_hello_parse( mbedtls_ssl_context* ssl,
         return( ret );
 #endif /* MBEDTLS_ZERO_RTT */
 
+#if defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
     /* If we've settled on a PSK-based exchange, parse PSK identity ext */
     if( mbedtls_ssl_tls13_kex_with_psk( ssl ) )
     {
@@ -2746,7 +2747,7 @@ static int ssl_client_hello_parse( mbedtls_ssl_context* ssl,
             return( ret );
         }
     }
-
+#endif 
 #if defined(MBEDTLS_SSL_COOKIE_C)
     /* If we failed to see a cookie extension, and we required it through the
      * configuration settings ( rr_config ), then we need to send a HRR msg.
