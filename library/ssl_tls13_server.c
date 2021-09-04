@@ -2262,13 +2262,15 @@ static int ssl_client_hello_parse( mbedtls_ssl_context* ssl,
     int ret;
     size_t i, j;
     size_t comp_len, sess_len;
-    size_t ciph_len, ext_len, ext_len_psk_ext = 0;
+    size_t ciph_len, ext_len;
     unsigned char *orig_buf, *end = buf + buflen;
     unsigned char *ciph_offset;
     unsigned char *p = NULL;
     unsigned char *ext = NULL;
     unsigned char *ext_psk_ptr = NULL;
-
+#if defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
+    size_t ext_len_psk_ext = 0;
+#endif
     const int* ciphersuites;
     const mbedtls_ssl_ciphersuite_t* ciphersuite_info;
 
