@@ -708,7 +708,7 @@ int mbedtls_ssl_parse_client_psk_identity_ext(
                     if( diff > MBEDTLS_SSL_TICKET_AGE_TOLERANCE )
                     {
                         MBEDTLS_SSL_DEBUG_MSG( 3,
-                            ( "Ticket age outside tolerance window ( diff=%lld )",
+                            ( "Ticket age outside tolerance window ( diff=%ld )",
                               diff ) );
                         ret = MBEDTLS_ERR_SSL_SESSION_TICKET_EXPIRED;
                     }
@@ -724,7 +724,7 @@ int mbedtls_ssl_parse_client_psk_identity_ext(
                         else
                         {
                             MBEDTLS_SSL_DEBUG_MSG( 3,
-                            ( "0-RTT is disabled ( diff=%lld exceeds "\
+                            ( "0-RTT is disabled ( diff=%ld exceeds "\
                               "MBEDTLS_SSL_EARLY_DATA_MAX_DELAY )", diff ) );
                             ssl->session_negotiate->process_early_data =
                                 MBEDTLS_SSL_EARLY_DATA_DISABLED;
