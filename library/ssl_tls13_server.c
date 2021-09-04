@@ -3351,7 +3351,7 @@ static int ssl_write_hello_retry_request_write( mbedtls_ssl_context* ssl,
     int ret;
     unsigned char *p = buf;
     unsigned char *end = buf + buflen;
-    unsigned char *ext_len_byte;
+
     size_t ext_length;
     size_t total_ext_len = 0;
     unsigned char *extension_start;
@@ -3421,7 +3421,7 @@ static int ssl_write_hello_retry_request_write( mbedtls_ssl_context* ssl,
      * } Cookie;
      *
      */
-
+    unsigned char *ext_len_byte;
     /* Write extension header */
     *p++ = (unsigned char)( ( MBEDTLS_TLS_EXT_COOKIE >> 8 ) & 0xFF );
     *p++ = (unsigned char)( ( MBEDTLS_TLS_EXT_COOKIE >> 0 ) & 0xFF );
