@@ -70,27 +70,6 @@ extern const struct mbedtls_ssl_tls1_3_labels_struct mbedtls_ssl_tls1_3_labels;
 #define MBEDTLS_SSL_TLS1_3_KEY_SCHEDULE_MAX_CONTEXT_LEN  \
     MBEDTLS_MD_MAX_SIZE
 
-typedef struct
-{
-    unsigned char binder_key                  [ MBEDTLS_MD_MAX_SIZE ];
-    unsigned char client_early_traffic_secret [ MBEDTLS_MD_MAX_SIZE ];
-    unsigned char early_exporter_master_secret[ MBEDTLS_MD_MAX_SIZE ];
-} mbedtls_ssl_tls1_3_early_secrets;
-
-typedef struct
-{
-    unsigned char client_handshake_traffic_secret[ MBEDTLS_MD_MAX_SIZE ];
-    unsigned char server_handshake_traffic_secret[ MBEDTLS_MD_MAX_SIZE ];
-} mbedtls_ssl_tls1_3_handshake_secrets;
-
-typedef struct
-{
-    unsigned char client_application_traffic_secret_N[ MBEDTLS_MD_MAX_SIZE ];
-    unsigned char server_application_traffic_secret_N[ MBEDTLS_MD_MAX_SIZE ];
-    unsigned char exporter_master_secret             [ MBEDTLS_MD_MAX_SIZE ];
-    unsigned char resumption_master_secret           [ MBEDTLS_MD_MAX_SIZE ];
-} mbedtls_ssl_tls1_3_application_secrets;
-
 /* Maximum desired length for expanded key material generated
  * by HKDF-Expand-Label.
  *
@@ -552,5 +531,66 @@ int mbedtls_ssl_tls13_populate_transform( mbedtls_ssl_transform *transform,
  * \returns    A negative error code on failure.
  */
 int mbedtls_ssl_tls1_3_key_schedule_stage_early( mbedtls_ssl_context *ssl );
+
+/**
+ * \brief Transition into application stage of TLS 1.3 key schedule.
+ *
+ *        The TLS 1.3 key schedule can be viewed as a simple state machine
+ *        with states Initial -> Early -> Handshake -> Application, and
+ *        this function represents the Handshake -> Application transition.
+ *
+ *        In the handshake stage, mbedtls_ssl_tls1_3_generate_application_keys()
+ *        can be used to derive the handshake traffic keys.
+ *
+ * \param ssl  The SSL context to operate on. This must be in key schedule
+ *             stage \c Handshake.
+ *
+ * \returns    \c 0 on success.
+ * \returns    A negative error code on failure.
+ */
+int mbedtls_ssl_tls1_3_key_schedule_stage_application(
+    mbedtls_ssl_context *ssl );
+
+/**
+ * \brief Compute TLS 1.3 application traffic keys.
+ *
+ * \param ssl  The SSL context to operate on. This must be in
+ *             key schedule stage \c Application, see
+ *             mbedtls_ssl_tls1_3_key_schedule_stage_application().
+ * \param traffic_keys The address at which to store the application traffic key
+ *                     keys. This must be writable but may be uninitialized.
+ *
+ * \returns    \c 0 on success.
+ * \returns    A negative error code on failure.
+ */
+int mbedtls_ssl_tls1_3_generate_application_keys(
+    mbedtls_ssl_context* ssl, mbedtls_ssl_key_set *traffic_keys );
+
+/**
+ * \brief Calculate content of TLS 1.3 Finished message.
+ *
+ * \param ssl  The SSL context to operate on. This must be in
+ *             key schedule stage \c Handshake, see
+ *             mbedtls_ssl_tls1_3_key_schedule_stage_application().
+ * \param dst        The address at which to write the Finished content.
+ * \param dst_len    The size of \p dst in bytes.
+ * \param actual_len The address at which to store the amount of data
+ *                   actually written to \p dst upon success.
+ * \param from       The endpoint the Finished message originates from:
+ *                   - #MBEDTLS_SSL_IS_CLIENT for the Client's Finished message
+ *                   - #MBEDTLS_SSL_IS_SERVER for the Server's Finished message
+ *
+ * \note       Both client and server call this function twice, once to
+ *             generate their own Finished message, and once to verify the
+ *             peer's Finished message.
+
+ * \returns    \c 0 on success.
+ * \returns    A negative error code on failure.
+ */
+int mbedtls_ssl_tls1_3_calc_finished( mbedtls_ssl_context *ssl,
+                                      unsigned char *dst,
+                                      size_t dst_len,
+                                      size_t *actual_len,
+                                      int from );
 
 #endif /* MBEDTLS_SSL_TLS1_3_KEYS_H */
