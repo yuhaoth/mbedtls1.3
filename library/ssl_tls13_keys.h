@@ -592,5 +592,17 @@ int mbedtls_ssl_tls1_3_calc_finished( mbedtls_ssl_context *ssl,
                                       size_t dst_len,
                                       size_t *actual_len,
                                       int from );
+/**
+ * \brief Compute TLS 1.3 resumption master secret.
+ *
+ * \param ssl  The SSL context to operate on. This must be in
+ *             key schedule stage \c Application, see
+ *             mbedtls_ssl_tls1_3_key_schedule_stage_application().
+ *
+ * \returns    \c 0 on success.
+ * \returns    A negative error code on failure.
+ */
+int mbedtls_ssl_tls1_3_generate_resumption_master_secret(
+    mbedtls_ssl_context *ssl );
 
 #endif /* MBEDTLS_SSL_TLS1_3_KEYS_H */
