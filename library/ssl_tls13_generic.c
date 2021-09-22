@@ -312,6 +312,9 @@ cleanup:
 
 static int ssl_write_change_cipher_spec_coordinate( mbedtls_ssl_context* ssl )
 {
+#if !defined(MBEDTLS_SSL_SRV_C)
+    ( ( void ) ssl );
+#endif /* !MBEDTLS_SSL_SRV_C */
     int ret = SSL_WRITE_CCS_NEEDED;
 
 #if defined(MBEDTLS_SSL_SRV_C)
@@ -2501,6 +2504,7 @@ void mbedtls_ssl_conf_early_data( mbedtls_ssl_config* conf, int early_data,
                                                              size_t ) )
 {
 #if !defined(MBEDTLS_SSL_SRV_C)
+    ( ( void ) max_early_data );
     ( ( void ) early_data_callback );
 #endif /* !MBEDTLS_SSL_SRV_C */
     conf->early_data_enabled = early_data;
