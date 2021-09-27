@@ -593,6 +593,9 @@ union mbedtls_ssl_premaster_secret
 
 #define MBEDTLS_PREMASTER_SIZE     sizeof( union mbedtls_ssl_premaster_secret )
 
+/* Length of in_ctr buffer in mbedtls_ssl_session */
+#define MBEDTLS_SSL_IN_CTR_LEN 8
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -623,6 +626,7 @@ typedef enum
     MBEDTLS_SSL_SERVER_HELLO_VERIFY_REQUEST_SENT,
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
     MBEDTLS_SSL_ENCRYPTED_EXTENSIONS,
+    MBEDTLS_SSL_CLIENT_CERTIFICATE_VERIFY,
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 }
 mbedtls_ssl_states;
