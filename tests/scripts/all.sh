@@ -2087,25 +2087,61 @@ component_test_tls13_no_mps () {
 component_test_tls13_client_only () {
     msg "build: TLS 1.3 client-only (ASanDbg) "
     scripts/config.py   set MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+    scripts/config.py   set MBEDTLS_SSL_USE_MPS
     scripts/config.py unset MBEDTLS_SSL_SRV_C
     scripts/config.py   set MBEDTLS_SSL_CLI_C
+    scripts/config.py   set MBEDTLS_RSA_C
+    scripts/config.py   set MBEDTLS_X509_RSASSA_PSS_SUPPORT
     cmake CC=gcc CMAKE_BUILD_TYPE=ASanDbg .
     make
 
-    msg "test: TLS 1.3 client-only, compat.sh"
-    if_build_succeeded tests/compat.sh -m tls1_3 -t ECDSA
+    msg "test: TLS 1.3 client-only, ssl-opt.sh"
+    if_build_succeeded tests/ssl-opt.sh -f "TLS 1.3"
+}
+
+component_test_tls13_client_only_no_mps () {
+    msg "build: TLS 1.3 client-only (ASanDbg) "
+    scripts/config.py   set MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+    scripts/config.py unset MBEDTLS_SSL_USE_MPS
+    scripts/config.py unset MBEDTLS_SSL_SRV_C
+    scripts/config.py   set MBEDTLS_SSL_CLI_C
+    scripts/config.py   set MBEDTLS_RSA_C
+    scripts/config.py   set MBEDTLS_X509_RSASSA_PSS_SUPPORT
+    cmake CC=gcc CMAKE_BUILD_TYPE=ASanDbg .
+    make
+
+    msg "test: TLS 1.3 client-only, ssl-opt.sh"
+    if_build_succeeded tests/ssl-opt.sh -f "TLS 1.3"
 }
 
 component_test_tls13_server_only () {
     msg "build: TLS 1.3 server-only (ASanDbg) "
     scripts/config.py   set MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+    scripts/config.py   set MBEDTLS_SSL_USE_MPS
     scripts/config.py   set MBEDTLS_SSL_SRV_C
     scripts/config.py unset MBEDTLS_SSL_CLI_C
+    scripts/config.py   set MBEDTLS_RSA_C
+    scripts/config.py   set MBEDTLS_X509_RSASSA_PSS_SUPPORT
     cmake CC=gcc CMAKE_BUILD_TYPE=ASanDbg .
     make
 
-    msg "test: compat.sh"
-    if_build_succeeded tests/compat.sh -m tls1_3 -t ECDSA
+    msg "test: TLS 1.3 server-only, ssl-opt.sh"
+    if_build_succeeded tests/ssl-opt.sh -f "TLS 1.3"
+}
+
+component_test_tls13_server_only_no_mps () {
+    msg "build: TLS 1.3 server-only (ASanDbg) "
+    scripts/config.py   set MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+    scripts/config.py unset MBEDTLS_SSL_USE_MPS
+    scripts/config.py   set MBEDTLS_SSL_SRV_C
+    scripts/config.py unset MBEDTLS_SSL_CLI_C
+    scripts/config.py   set MBEDTLS_RSA_C
+    scripts/config.py   set MBEDTLS_X509_RSASSA_PSS_SUPPORT
+    cmake CC=gcc CMAKE_BUILD_TYPE=ASanDbg .
+    make
+
+    msg "test: TLS 1.3 server-only, ssl-opt.sh"
+    if_build_succeeded tests/ssl-opt.sh -f "TLS 1.3"
 }
 
 component_test_aes_fewer_tables () {
@@ -2490,15 +2526,6 @@ component_build_armcc () {
 
     # ARM Compiler 6 - Target ARMv8-A - AArch64
     armc6_build_test "--target=aarch64-arm-none-eabi -march=armv8.2-a"
-}
-
-component_test_tls13_experimental () {
-    msg "build: default config with MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL enabled"
-    scripts/config.pl set MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
-    CC=gcc cmake -D CMAKE_BUILD_TYPE:String=Asan .
-    make
-    msg "test: default config with MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL enabled"
-    make test
 }
 
 component_build_mingw () {
