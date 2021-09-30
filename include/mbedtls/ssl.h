@@ -3938,7 +3938,7 @@ int mbedtls_ssl_conf_max_frag_len( mbedtls_ssl_config *conf, unsigned char mfl_c
 void mbedtls_ssl_conf_preference_order( mbedtls_ssl_config *conf, int order );
 #endif /* MBEDTLS_SSL_SRV_C */
 
-#if ((defined(MBEDTLS_SSL_SESSION_TICKETS) || (defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && defined (MBEDTLS_SSL_NEW_SESSION_TICKET) )) && defined(MBEDTLS_SSL_CLI_C))
+#if ( defined(MBEDTLS_SSL_SESSION_TICKETS) && defined(MBEDTLS_SSL_CLI_C) ) || defined(MBEDTLS_SSL_NEW_SESSION_TICKET)
 /**
  * \brief          Enable / Disable session tickets (client only).
  *                 (Default: MBEDTLS_SSL_SESSION_TICKETS_ENABLED.)
@@ -3950,7 +3950,7 @@ void mbedtls_ssl_conf_preference_order( mbedtls_ssl_config *conf, int order );
  *                                         MBEDTLS_SSL_SESSION_TICKETS_DISABLED)
  */
 void mbedtls_ssl_conf_session_tickets( mbedtls_ssl_config *conf, int use_tickets );
-#endif /* (MBEDTLS_SSL_SESSION_TICKETS || (MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL && MBEDTLS_SSL_NEW_SESSION_TICKET)) && MBEDTLS_SSL_CLI_C */
+#endif /* ( MBEDTLS_SSL_SESSION_TICKETS && MBEDTLS_SSL_CLI_C ) || MBEDTLS_SSL_NEW_SESSION_TICKET */
 
 #if defined(MBEDTLS_SSL_RENEGOTIATION)
 /**
