@@ -80,6 +80,7 @@ fi
 
 if [ -n "${GNUTLS_NEXT_SERV:-}" ]; then
     G_NEXT_SRV="$GNUTLS_NEXT_SERV --x509certfile data_files/server5.crt --x509keyfile data_files/server5.key"
+    G_NEXT_SRV_RSA="$GNUTLS_NEXT_SERV --x509certfile data_files/server2.crt --x509keyfile data_files/server2.key"
 else
     G_NEXT_SRV=false
 fi
@@ -1258,6 +1259,7 @@ fi
 
 if [ -n "${GNUTLS_NEXT_SERV:-}" ]; then
     G_NEXT_SRV="$G_NEXT_SRV -p $SRV_PORT"
+    G_NEXT_SRV_RSA="$G_NEXT_SRV_RSA -p $SRV_PORT"
 fi
 
 if [ -n "${GNUTLS_NEXT_CLI:-}" ]; then
