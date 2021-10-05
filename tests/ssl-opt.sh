@@ -1285,9 +1285,9 @@ run_test    "TLS 1.3, default suite, PSK" \
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_SSL_CLI_C
-requires_config_disabled MBEDTLS_RSA_C
 run_test    "TLS 1.3, default suite, ECDHE-ECDSA, SRV auth" \
-            "$P_SRV nbio=2 debug_level=5 force_version=tls1_3 key_exchange_modes=ecdhe_ecdsa" \
+            "$P_SRV crt_file=data_files/server5.crt key_file=data_files/server5.key \
+                    nbio=2 debug_level=5 force_version=tls1_3 key_exchange_modes=ecdhe_ecdsa" \
             "$P_CLI nbio=2 debug_level=5 force_version=tls1_3 server_name=localhost key_exchange_modes=ecdhe_ecdsa" \
             0 \
             -s "Certificate verification was skipped"               \
@@ -1348,9 +1348,9 @@ run_test    "TLS 1.3, TLS1-3-AES-128-CCM-SHA256, PSK-ECDHE" \
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_SSL_CLI_C
-requires_config_disabled MBEDTLS_RSA_C
 run_test    "TLS 1.3, TLS1-3-AES-128-GCM-SHA256, PSK-ECDHE" \
-            "$P_SRV nbio=2 debug_level=5 force_version=tls1_3 psk=010203 psk_identity=0a0b0c key_exchange_modes=psk_dhe" \
+            "$P_SRV crt_file=data_files/server5.crt key_file=data_files/server5.key \
+                    nbio=2 debug_level=5 force_version=tls1_3 psk=010203 psk_identity=0a0b0c key_exchange_modes=psk_dhe" \
             "$P_CLI nbio=2 debug_level=5 force_version=tls1_3 force_ciphersuite=TLS1-3-AES-128-GCM-SHA256 psk=010203 psk_identity=0a0b0c key_exchange_modes=psk_dhe" \
             0 \
             -s "Protocol is TLSv1.3" \
@@ -1379,9 +1379,9 @@ run_test    "TLS 1.3, TLS1-3-AES-256-GCM-SHA384, PSK-ECDHE" \
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_SSL_CLI_C
-requires_config_disabled MBEDTLS_RSA_C
 run_test    "TLS 1.3, TLS1-3-AES-128-CCM-SHA256, ECDHE-ECDSA, SRV auth" \
-            "$P_SRV nbio=2 debug_level=5 force_version=tls1_3 key_exchange_modes=ecdhe_ecdsa" \
+            "$P_SRV crt_file=data_files/server5.crt key_file=data_files/server5.key \
+                    nbio=2 debug_level=5 force_version=tls1_3 key_exchange_modes=ecdhe_ecdsa" \
             "$P_CLI nbio=2 debug_level=5 force_version=tls1_3 server_name=localhost force_ciphersuite=TLS1-3-AES-128-CCM-SHA256 key_exchange_modes=ecdhe_ecdsa" \
             0 \
 	    -s "Certificate verification was skipped"               \
@@ -1393,9 +1393,9 @@ run_test    "TLS 1.3, TLS1-3-AES-128-CCM-SHA256, ECDHE-ECDSA, SRV auth" \
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_SSL_CLI_C
-requires_config_disabled MBEDTLS_RSA_C
 run_test    "TLS 1.3, TLS1-3-AES-128-GCM-SHA256, ECDHE-ECDSA, SRV auth" \
-            "$P_SRV nbio=2 debug_level=5 force_version=tls1_3 key_exchange_modes=ecdhe_ecdsa" \
+            "$P_SRV crt_file=data_files/server5.crt key_file=data_files/server5.key \
+                    nbio=2 debug_level=5 force_version=tls1_3 key_exchange_modes=ecdhe_ecdsa" \
             "$P_CLI nbio=2 debug_level=5 force_version=tls1_3 server_name=localhost force_ciphersuite=TLS1-3-AES-128-GCM-SHA256 key_exchange_modes=ecdhe_ecdsa" \
             0                                                       \
 	    -s "Certificate verification was skipped"               \
@@ -1407,9 +1407,9 @@ run_test    "TLS 1.3, TLS1-3-AES-128-GCM-SHA256, ECDHE-ECDSA, SRV auth" \
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_SSL_CLI_C
-requires_config_disabled MBEDTLS_RSA_C
 run_test    "TLS 1.3, TLS1-3-AES-128-CCM-8-SHA256, ECDHE-ECDSA, SRV auth" \
-            "$P_SRV nbio=2 debug_level=5 force_version=tls1_3 key_exchange_modes=ecdhe_ecdsa" \
+            "$P_SRV crt_file=data_files/server5.crt key_file=data_files/server5.key \
+                    nbio=2 debug_level=5 force_version=tls1_3 key_exchange_modes=ecdhe_ecdsa" \
             "$P_CLI nbio=2 debug_level=5 force_version=tls1_3 server_name=localhost force_ciphersuite=TLS1-3-AES-128-CCM-8-SHA256 key_exchange_modes=ecdhe_ecdsa" \
             0 \
 	    -s "Certificate verification was skipped"               \
@@ -1421,9 +1421,9 @@ run_test    "TLS 1.3, TLS1-3-AES-128-CCM-8-SHA256, ECDHE-ECDSA, SRV auth" \
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_SSL_CLI_C
-requires_config_disabled MBEDTLS_RSA_C
 run_test    "TLS 1.3, TLS1-3-AES-256-GCM-SHA384, ECDHE-ECDSA, SRV auth" \
-            "$P_SRV nbio=2 debug_level=5 force_version=tls1_3 key_exchange_modes=ecdhe_ecdsa" \
+            "$P_SRV crt_file=data_files/server5.crt key_file=data_files/server5.key \
+                    nbio=2 debug_level=5 force_version=tls1_3 key_exchange_modes=ecdhe_ecdsa" \
             "$P_CLI nbio=2 debug_level=5 force_version=tls1_3 server_name=localhost force_ciphersuite=TLS1-3-AES-256-GCM-SHA384 key_exchange_modes=ecdhe_ecdsa" \
             0 \
 	    -s "Certificate verification was skipped"               \
@@ -1435,10 +1435,11 @@ run_test    "TLS 1.3, TLS1-3-AES-256-GCM-SHA384, ECDHE-ECDSA, SRV auth" \
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_SSL_CLI_C
-requires_config_disabled MBEDTLS_RSA_C
 run_test    "TLS 1.3, TLS1-3-AES-128-CCM-SHA256, ECDHE-ECDSA, CLI+SRV auth" \
-            "$P_SRV nbio=2 debug_level=5 force_version=tls1_3 auth_mode=required key_exchange_modes=ecdhe_ecdsa" \
-            "$P_CLI nbio=2 debug_level=5 force_version=tls1_3 server_name=localhost force_ciphersuite=TLS1-3-AES-128-CCM-SHA256 key_exchange_modes=ecdhe_ecdsa" \
+            "$P_SRV crt_file=data_files/server5.crt key_file=data_files/server5.key \
+                    nbio=2 debug_level=5 force_version=tls1_3 auth_mode=required key_exchange_modes=ecdhe_ecdsa" \
+            "$P_CLI crt_file=data_files/cli2.crt key_file=data_files/cli2.key \
+                    nbio=2 debug_level=5 force_version=tls1_3 server_name=localhost force_ciphersuite=TLS1-3-AES-128-CCM-SHA256 key_exchange_modes=ecdhe_ecdsa" \
             0 \
 	    -s "Verifying peer X.509 certificate... ok"                          \
 	    -s "subject name      : C=NL, O=PolarSSL, CN=PolarSSL Test Client 2" \
@@ -1450,10 +1451,11 @@ run_test    "TLS 1.3, TLS1-3-AES-128-CCM-SHA256, ECDHE-ECDSA, CLI+SRV auth" \
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_SSL_CLI_C
-requires_config_disabled MBEDTLS_RSA_C
 run_test    "TLS 1.3, TLS1-3-AES-128-GCM-SHA256, ECDHE-ECDSA, CLI+SRV auth" \
-            "$P_SRV nbio=2 debug_level=5 force_version=tls1_3 auth_mode=required key_exchange_modes=ecdhe_ecdsa" \
-            "$P_CLI nbio=2 debug_level=5 force_version=tls1_3 server_name=localhost force_ciphersuite=TLS1-3-AES-128-GCM-SHA256 key_exchange_modes=ecdhe_ecdsa" \
+            "$P_SRV crt_file=data_files/server5.crt key_file=data_files/server5.key \
+                    nbio=2 debug_level=5 force_version=tls1_3 auth_mode=required key_exchange_modes=ecdhe_ecdsa" \
+            "$P_CLI crt_file=data_files/cli2.crt key_file=data_files/cli2.key \
+                    nbio=2 debug_level=5 force_version=tls1_3 server_name=localhost force_ciphersuite=TLS1-3-AES-128-GCM-SHA256 key_exchange_modes=ecdhe_ecdsa" \
             0 \
 	    -s "Verifying peer X.509 certificate... ok"                          \
 	    -s "subject name      : C=NL, O=PolarSSL, CN=PolarSSL Test Client 2" \
@@ -1465,10 +1467,11 @@ run_test    "TLS 1.3, TLS1-3-AES-128-GCM-SHA256, ECDHE-ECDSA, CLI+SRV auth" \
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_SSL_CLI_C
-requires_config_disabled MBEDTLS_RSA_C
 run_test    "TLS 1.3, TLS1-3-AES-128-CCM-8-SHA256, ECDHE-ECDSA, CLI+SRV auth" \
-            "$P_SRV nbio=2 debug_level=5 force_version=tls1_3 auth_mode=required key_exchange_modes=ecdhe_ecdsa" \
-            "$P_CLI nbio=2 debug_level=5 force_version=tls1_3 server_name=localhost force_ciphersuite=TLS1-3-AES-128-CCM-8-SHA256 key_exchange_modes=ecdhe_ecdsa" \
+            "$P_SRV crt_file=data_files/server5.crt key_file=data_files/server5.key \
+                    nbio=2 debug_level=5 force_version=tls1_3 auth_mode=required key_exchange_modes=ecdhe_ecdsa" \
+            "$P_CLI crt_file=data_files/cli2.crt key_file=data_files/cli2.key \
+                    nbio=2 debug_level=5 force_version=tls1_3 server_name=localhost force_ciphersuite=TLS1-3-AES-128-CCM-8-SHA256 key_exchange_modes=ecdhe_ecdsa" \
             0 \
 	    -s "Verifying peer X.509 certificate... ok"                          \
 	    -s "subject name      : C=NL, O=PolarSSL, CN=PolarSSL Test Client 2" \
@@ -1497,9 +1500,9 @@ requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
 requires_config_enabled MBEDTLS_DEBUG_C
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_SSL_CLI_C
-requires_config_disabled MBEDTLS_RSA_C
 run_test    "TLS 1.3, TLS1-3-AES-128-GCM-SHA256, ECDHE-ECDSA, empty client certificate, accepted" \
-            "$P_SRV nbio=2 debug_level=5 force_version=tls1_3 auth_mode=optional key_exchange_modes=ecdhe_ecdsa" \
+            "$P_SRV crt_file=data_files/server5.crt key_file=data_files/server5.key \
+                    nbio=2 debug_level=5 force_version=tls1_3 auth_mode=optional key_exchange_modes=ecdhe_ecdsa" \
             "$P_CLI nbio=2 debug_level=5 force_version=tls1_3 server_name=localhost force_ciphersuite=TLS1-3-AES-128-GCM-SHA256 key_exchange_modes=ecdhe_ecdsa auth_mode=none" \
             0 \
 	    -s "client has no certificate"                          \
@@ -1514,9 +1517,9 @@ requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
 requires_config_enabled MBEDTLS_DEBUG_C
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_SSL_CLI_C
-requires_config_disabled MBEDTLS_RSA_C
 run_test    "TLS 1.3, TLS1-3-AES-128-CCM-SHA256, ECDHE-ECDSA, empty client certificate, rejected" \
-            "$P_SRV nbio=2 debug_level=5 force_version=tls1_3 auth_mode=required key_exchange_modes=ecdhe_ecdsa" \
+            "$P_SRV crt_file=data_files/server5.crt key_file=data_files/server5.key \
+                    nbio=2 debug_level=5 force_version=tls1_3 auth_mode=required key_exchange_modes=ecdhe_ecdsa" \
             "$P_CLI debug_level=5 force_version=tls1_3 server_name=localhost force_ciphersuite=TLS1-3-AES-128-CCM-SHA256 key_exchange_modes=ecdhe_ecdsa auth_mode=none" \
             1 \
 	    -s "empty certificate message received"                 \
@@ -1526,9 +1529,9 @@ run_test    "TLS 1.3, TLS1-3-AES-128-CCM-SHA256, ECDHE-ECDSA, empty client certi
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_SSL_CLI_C
-requires_config_disabled MBEDTLS_RSA_C
-run_test    "TLS 1.3 TLS1-3-AES-256-GCM-SHA384, ECDHE-ECDSA, SRV auth" \
-            "$P_SRV nbio=2 debug_level=5 force_version=tls1_3 key_exchange_modes=ecdhe_ecdsa" \
+run_test    "TLS 1.3, TLS1-3-AES-256-GCM-SHA384, ECDHE-ECDSA, SRV auth" \
+            "$P_SRV crt_file=data_files/server5.crt key_file=data_files/server5.key \
+                    nbio=2 debug_level=5 force_version=tls1_3 key_exchange_modes=ecdhe_ecdsa" \
             "$P_CLI nbio=2 debug_level=5 force_version=tls1_3 server_name=localhost force_ciphersuite=TLS1-3-AES-256-GCM-SHA384 key_exchange_modes=ecdhe_ecdsa" \
             0 \
 	    -s "Verifying peer X.509 certificate... failed"            \
@@ -1542,10 +1545,11 @@ requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
 requires_config_enabled MBEDTLS_DEBUG_C
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_SSL_CLI_C
-requires_config_disabled MBEDTLS_RSA_C
 run_test    "TLS 1.3, TLS1-3-AES-128-CCM-SHA256, ECDHE-ECDSA, CLI+SRV auth, with ticket" \
-            "$P_SRV nbio=2 debug_level=5 force_version=tls1_3 auth_mode=required key_exchange_modes=all tickets=1" \
-            "$P_CLI nbio=2 debug_level=5 force_version=tls1_3 server_name=localhost force_ciphersuite=TLS1-3-AES-128-CCM-SHA256 key_exchange_modes=all reconnect=1 tickets=1" \
+            "$P_SRV crt_file=data_files/server5.crt key_file=data_files/server5.key \
+                    nbio=2 debug_level=5 force_version=tls1_3 auth_mode=required key_exchange_modes=all tickets=1" \
+            "$P_CLI crt_file=data_files/cli2.crt key_file=data_files/cli2.key \
+                    nbio=2 debug_level=5 force_version=tls1_3 server_name=localhost force_ciphersuite=TLS1-3-AES-128-CCM-SHA256 key_exchange_modes=all reconnect=1 tickets=1" \
             0 \
 	    -s "Verifying peer X.509 certificate... ok"                          \
 	    -s "subject name      : C=NL, O=PolarSSL, CN=PolarSSL Test Client 2" \
@@ -1563,10 +1567,11 @@ requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
 requires_config_enabled MBEDTLS_DEBUG_C
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_SSL_CLI_C
-requires_config_disabled MBEDTLS_RSA_C
 run_test    "TLS 1.3, TLS1-3-AES-128-GCM-SHA256, ECDHE-ECDSA, CLI+SRV auth, with ticket" \
-            "$P_SRV nbio=2 debug_level=5 force_version=tls1_3 auth_mode=required key_exchange_modes=all tickets=1" \
-            "$P_CLI nbio=2 debug_level=5 force_version=tls1_3 server_name=localhost force_ciphersuite=TLS1-3-AES-128-GCM-SHA256 key_exchange_modes=all reconnect=1 tickets=1" \
+            "$P_SRV crt_file=data_files/server5.crt key_file=data_files/server5.key \
+                    nbio=2 debug_level=5 force_version=tls1_3 auth_mode=required key_exchange_modes=all tickets=1" \
+            "$P_CLI crt_file=data_files/cli2.crt key_file=data_files/cli2.key \
+                    nbio=2 debug_level=5 force_version=tls1_3 server_name=localhost force_ciphersuite=TLS1-3-AES-128-GCM-SHA256 key_exchange_modes=all reconnect=1 tickets=1" \
             0 \
 	    -s "Verifying peer X.509 certificate... ok"                          \
 	    -s "subject name      : C=NL, O=PolarSSL, CN=PolarSSL Test Client 2" \
@@ -1584,10 +1589,11 @@ requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
 requires_config_enabled MBEDTLS_DEBUG_C
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_SSL_CLI_C
-requires_config_disabled MBEDTLS_RSA_C
 run_test    "TLS 1.3, TLS1-3-AES-128-CCM-8-SHA256, ECDHE-ECDSA, CLI+SRV auth, with ticket" \
-            "$P_SRV nbio=2 debug_level=5 force_version=tls1_3 auth_mode=required key_exchange_modes=all tickets=1" \
-            "$P_CLI nbio=2 debug_level=5 force_version=tls1_3 server_name=localhost force_ciphersuite=TLS1-3-AES-128-CCM-8-SHA256 key_exchange_modes=all reconnect=1 tickets=1" \
+            "$P_SRV crt_file=data_files/server5.crt key_file=data_files/server5.key \
+                    nbio=2 debug_level=5 force_version=tls1_3 auth_mode=required key_exchange_modes=all tickets=1" \
+            "$P_CLI crt_file=data_files/cli2.crt key_file=data_files/cli2.key \
+                    nbio=2 debug_level=5 force_version=tls1_3 server_name=localhost force_ciphersuite=TLS1-3-AES-128-CCM-8-SHA256 key_exchange_modes=all reconnect=1 tickets=1" \
             0 \
 	    -s "Verifying peer X.509 certificate... ok"                          \
 	    -s "subject name      : C=NL, O=PolarSSL, CN=PolarSSL Test Client 2" \
@@ -1605,10 +1611,11 @@ requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
 requires_config_enabled MBEDTLS_DEBUG_C
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_SSL_CLI_C
-requires_config_disabled MBEDTLS_RSA_C
 run_test    "TLS 1.3, TLS1-3-AES-256-GCM-SHA384, ECDHE-ECDSA, CLI+SRV auth, with ticket" \
-            "$P_SRV nbio=2 debug_level=5 force_version=tls1_3 auth_mode=required key_exchange_modes=all tickets=1" \
-            "$P_CLI nbio=2 debug_level=5 force_version=tls1_3 server_name=localhost force_ciphersuite=TLS1-3-AES-256-GCM-SHA384 key_exchange_modes=all reconnect=1 tickets=1" \
+            "$P_SRV crt_file=data_files/server5.crt key_file=data_files/server5.key \
+                    nbio=2 debug_level=5 force_version=tls1_3 auth_mode=required key_exchange_modes=all tickets=1" \
+            "$P_CLI crt_file=data_files/cli2.crt key_file=data_files/cli2.key \
+                    nbio=2 debug_level=5 force_version=tls1_3 server_name=localhost force_ciphersuite=TLS1-3-AES-256-GCM-SHA384 key_exchange_modes=all reconnect=1 tickets=1" \
             0 \
 	    -s "Verifying peer X.509 certificate... ok"                          \
 	    -s "subject name      : C=NL, O=PolarSSL, CN=PolarSSL Test Client 2" \
@@ -1626,9 +1633,9 @@ requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
 requires_config_enabled MBEDTLS_DEBUG_C
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_SSL_CLI_C
-requires_config_disabled MBEDTLS_RSA_C
 run_test    "TLS 1.3, TLS1-3-AES-256-GCM-SHA384 with ECDHE-ECDSA (server auth only) with ticket" \
-            "$P_SRV nbio=2 debug_level=5 force_version=tls1_3 key_exchange_modes=all tickets=1" \
+            "$P_SRV crt_file=data_files/server5.crt key_file=data_files/server5.key \
+                    nbio=2 debug_level=5 force_version=tls1_3 key_exchange_modes=all tickets=1" \
             "$P_CLI nbio=2 debug_level=5 force_version=tls1_3 server_name=localhost force_ciphersuite=TLS1-3-AES-256-GCM-SHA384 key_exchange_modes=all reconnect=1 tickets=1" \
             0 \
 	    -s "Verifying peer X.509 certificate... failed"             \
@@ -1723,10 +1730,10 @@ requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
 requires_config_enabled MBEDTLS_DEBUG_C
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_SSL_CLI_C
-requires_config_disabled MBEDTLS_RSA_C
 requires_config_enabled MBEDTLS_ZERO_RTT
 run_test    "TLS 1.3, TLS1-3-AES-256-GCM-SHA384, ECDHE-ECDSA, client tries early data without PSK, and falls back to 1-RTT" \
-            "$P_SRV nbio=2 debug_level=4 force_version=tls1_3" \
+            "$P_SRV crt_file=data_files/server5.crt key_file=data_files/server5.key \
+                    nbio=2 debug_level=4 force_version=tls1_3" \
             "$P_CLI nbio=2 debug_level=4 force_version=tls1_3 force_ciphersuite=TLS1-3-AES-256-GCM-SHA384 early_data=1" \
             0 \
       -s "Protocol is TLSv1.3"                                        \
@@ -1739,10 +1746,11 @@ requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
 requires_config_enabled MBEDTLS_DEBUG_C
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_SSL_CLI_C
-requires_config_disabled MBEDTLS_RSA_C
 run_test    "TLS 1.3, TLS1-3-AES-128-CCM-8-SHA256, ECDHE-ECDSA, CLI+SRV auth, HRR enforcing cookie" \
-            "$P_SRV nbio=2 debug_level=5 force_version=tls1_3 auth_mode=required key_exchange_modes=ecdhe_ecdsa tickets=0 cookies=2" \
-            "$P_CLI nbio=2 debug_level=5 force_version=tls1_3 server_name=localhost force_ciphersuite=TLS1-3-AES-128-CCM-8-SHA256 key_exchange_modes=ecdhe_ecdsa" \
+            "$P_SRV crt_file=data_files/server5.crt key_file=data_files/server5.key \
+                    nbio=2 debug_level=5 force_version=tls1_3 auth_mode=required key_exchange_modes=ecdhe_ecdsa tickets=0 cookies=2" \
+            "$P_CLI crt_file=data_files/cli2.crt key_file=data_files/cli2.key \
+                    nbio=2 debug_level=5 force_version=tls1_3 server_name=localhost force_ciphersuite=TLS1-3-AES-128-CCM-8-SHA256 key_exchange_modes=ecdhe_ecdsa" \
             0 \
 	    -s "Cookie extension missing. Need to send a HRR."                   \
             -s "Skip key_share extension in HRR"                                 \
@@ -1761,9 +1769,9 @@ requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
 requires_config_enabled MBEDTLS_DEBUG_C
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_SSL_CLI_C
-requires_config_disabled MBEDTLS_RSA_C
 run_test    "TLS 1.3, TLS1-3-AES-128-CCM-SHA256 with ECDHE-ECDSA, SRV auth, HRR enforcing group" \
-            "$P_SRV nbio=2 debug_level=5 force_version=tls1_3 key_exchange_modes=ecdhe_ecdsa named_groups=secp256r1 cookies=1 tickets=0" \
+            "$P_SRV crt_file=data_files/server5.crt key_file=data_files/server5.key \
+                    nbio=2 debug_level=5 force_version=tls1_3 key_exchange_modes=ecdhe_ecdsa named_groups=secp256r1 cookies=1 tickets=0" \
             "$P_CLI nbio=2 debug_level=5 force_version=tls1_3 server_name=localhost force_ciphersuite=TLS1-3-AES-128-CCM-SHA256 key_exchange_modes=ecdhe_ecdsa named_groups=secp384r1,secp256r1" \
             0 \
             -s "no matching key share"                    \
