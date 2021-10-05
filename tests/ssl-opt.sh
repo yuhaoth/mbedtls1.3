@@ -1274,6 +1274,8 @@ trap cleanup INT TERM HUP
 #
 
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+requires_config_enabled MBEDTLS_SSL_SRV_C
+requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_disabled MBEDTLS_RSA_C
 run_test    "TLS 1.3, default suite, PSK" \
             "$P_SRV nbio=2 debug_level=5 force_version=tls1_3 psk=010203 psk_identity=0a0b0c key_exchange_modes=psk" \
@@ -1282,6 +1284,8 @@ run_test    "TLS 1.3, default suite, PSK" \
             -s "Protocol is TLSv1.3"
 
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+requires_config_enabled MBEDTLS_SSL_SRV_C
+requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_disabled MBEDTLS_RSA_C
 run_test    "TLS 1.3, default suite, ECDHE-ECDSA, SRV auth" \
             "$P_SRV nbio=2 debug_level=5 force_version=tls1_3 key_exchange_modes=ecdhe_ecdsa" \
@@ -1293,6 +1297,8 @@ run_test    "TLS 1.3, default suite, ECDHE-ECDSA, SRV auth" \
 	    -c "Verifying peer X.509 certificate... ok"
 
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+requires_config_enabled MBEDTLS_SSL_SRV_C
+requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_disabled MBEDTLS_RSA_C
 run_test    "TLS 1.3, TLS1-3-AES-128-CCM-SHA256, PSK" \
             "$P_SRV nbio=2 debug_level=5 force_version=tls1_3 psk=010203 psk_identity=0a0b0c key_exchange_modes=psk" \
@@ -1302,6 +1308,8 @@ run_test    "TLS 1.3, TLS1-3-AES-128-CCM-SHA256, PSK" \
             -s "Ciphersuite is TLS1-3-AES-128-CCM-SHA256"
 
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+requires_config_enabled MBEDTLS_SSL_SRV_C
+requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_disabled MBEDTLS_RSA_C
 run_test    "TLS 1.3, TLS1-3-AES-128-GCM-SHA256, PSK" \
             "$P_SRV nbio=2 debug_level=5 force_version=tls1_3 psk=010203 psk_identity=0a0b0c key_exchange_modes=psk" \
@@ -1311,6 +1319,8 @@ run_test    "TLS 1.3, TLS1-3-AES-128-GCM-SHA256, PSK" \
             -s "Ciphersuite is TLS1-3-AES-128-GCM-SHA256"
 
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+requires_config_enabled MBEDTLS_SSL_SRV_C
+requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_disabled MBEDTLS_RSA_C
 run_test    "TLS 1.3, TLS1-3-AES-128-CCM-8-SHA256, PSK" \
             "$P_SRV nbio=2 debug_level=5 force_version=tls1_3 psk=010203 psk_identity=0a0b0c key_exchange_modes=psk" \
@@ -1320,6 +1330,8 @@ run_test    "TLS 1.3, TLS1-3-AES-128-CCM-8-SHA256, PSK" \
             -s "Ciphersuite is TLS1-3-AES-128-CCM-8-SHA256"
 
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+requires_config_enabled MBEDTLS_SSL_SRV_C
+requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_disabled MBEDTLS_RSA_C
 run_test    "TLS 1.3, TLS1-3-AES-256-GCM-SHA384, PSK" \
             "$P_SRV nbio=2 debug_level=5 force_version=tls1_3 psk=010203 psk_identity=0a0b0c key_exchange_modes=psk" \
@@ -1329,6 +1341,8 @@ run_test    "TLS 1.3, TLS1-3-AES-256-GCM-SHA384, PSK" \
             -s "Ciphersuite is TLS1-3-AES-256-GCM-SHA384"
 
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+requires_config_enabled MBEDTLS_SSL_SRV_C
+requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_disabled MBEDTLS_RSA_C
 run_test    "TLS 1.3, TLS1-3-AES-128-CCM-SHA256, PSK-ECDHE" \
             "$P_SRV nbio=2 debug_level=5 force_version=tls1_3 psk=010203 psk_identity=0a0b0c key_exchange_modes=psk_dhe" \
@@ -1338,6 +1352,8 @@ run_test    "TLS 1.3, TLS1-3-AES-128-CCM-SHA256, PSK-ECDHE" \
             -s "Ciphersuite is TLS1-3-AES-128-CCM-SHA256"
 
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+requires_config_enabled MBEDTLS_SSL_SRV_C
+requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_disabled MBEDTLS_RSA_C
 run_test    "TLS 1.3, TLS1-3-AES-128-GCM-SHA256, PSK-ECDHE" \
             "$P_SRV nbio=2 debug_level=5 force_version=tls1_3 psk=010203 psk_identity=0a0b0c key_exchange_modes=psk_dhe" \
@@ -1347,6 +1363,8 @@ run_test    "TLS 1.3, TLS1-3-AES-128-GCM-SHA256, PSK-ECDHE" \
             -s "Ciphersuite is TLS1-3-AES-128-GCM-SHA256"
 
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+requires_config_enabled MBEDTLS_SSL_SRV_C
+requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_disabled MBEDTLS_RSA_C
 run_test    "TLS 1.3, TLS1-3-AES-128-CCM-8-SHA256, PSK-ECDHE" \
             "$P_SRV nbio=2 debug_level=5 force_version=tls1_3 psk=010203 psk_identity=0a0b0c key_exchange_modes=psk_dhe" \
@@ -1356,6 +1374,8 @@ run_test    "TLS 1.3, TLS1-3-AES-128-CCM-8-SHA256, PSK-ECDHE" \
             -s "Ciphersuite is TLS1-3-AES-128-CCM-8-SHA256"
 
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+requires_config_enabled MBEDTLS_SSL_SRV_C
+requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_disabled MBEDTLS_RSA_C
 run_test    "TLS 1.3, TLS1-3-AES-256-GCM-SHA384, PSK-ECDHE" \
             "$P_SRV nbio=2 debug_level=5 force_version=tls1_3 psk=010203 psk_identity=0a0b0c key_exchange_modes=psk_dhe" \
@@ -1365,6 +1385,8 @@ run_test    "TLS 1.3, TLS1-3-AES-256-GCM-SHA384, PSK-ECDHE" \
             -s "Ciphersuite is TLS1-3-AES-256-GCM-SHA384"
 
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+requires_config_enabled MBEDTLS_SSL_SRV_C
+requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_disabled MBEDTLS_RSA_C
 run_test    "TLS 1.3, TLS1-3-AES-128-CCM-SHA256, ECDHE-ECDSA, SRV auth" \
             "$P_SRV nbio=2 debug_level=5 force_version=tls1_3 key_exchange_modes=ecdhe_ecdsa" \
@@ -1377,6 +1399,8 @@ run_test    "TLS 1.3, TLS1-3-AES-128-CCM-SHA256, ECDHE-ECDSA, SRV auth" \
 	    -c "Verifying peer X.509 certificate... ok"
 
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+requires_config_enabled MBEDTLS_SSL_SRV_C
+requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_disabled MBEDTLS_RSA_C
 run_test    "TLS 1.3, TLS1-3-AES-128-GCM-SHA256, ECDHE-ECDSA, SRV auth" \
             "$P_SRV nbio=2 debug_level=5 force_version=tls1_3 key_exchange_modes=ecdhe_ecdsa" \
@@ -1389,6 +1413,8 @@ run_test    "TLS 1.3, TLS1-3-AES-128-GCM-SHA256, ECDHE-ECDSA, SRV auth" \
 	    -c "Verifying peer X.509 certificate... ok"
 
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+requires_config_enabled MBEDTLS_SSL_SRV_C
+requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_disabled MBEDTLS_RSA_C
 run_test    "TLS 1.3, TLS1-3-AES-128-CCM-8-SHA256, ECDHE-ECDSA, SRV auth" \
             "$P_SRV nbio=2 debug_level=5 force_version=tls1_3 key_exchange_modes=ecdhe_ecdsa" \
@@ -1401,6 +1427,8 @@ run_test    "TLS 1.3, TLS1-3-AES-128-CCM-8-SHA256, ECDHE-ECDSA, SRV auth" \
 	    -c "Verifying peer X.509 certificate... ok"
 
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+requires_config_enabled MBEDTLS_SSL_SRV_C
+requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_disabled MBEDTLS_RSA_C
 run_test    "TLS 1.3, TLS1-3-AES-256-GCM-SHA384, ECDHE-ECDSA, SRV auth" \
             "$P_SRV nbio=2 debug_level=5 force_version=tls1_3 key_exchange_modes=ecdhe_ecdsa" \
@@ -1413,6 +1441,8 @@ run_test    "TLS 1.3, TLS1-3-AES-256-GCM-SHA384, ECDHE-ECDSA, SRV auth" \
 	    -c "Verifying peer X.509 certificate... ok"
 
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+requires_config_enabled MBEDTLS_SSL_SRV_C
+requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_disabled MBEDTLS_RSA_C
 run_test    "TLS 1.3, TLS1-3-AES-128-CCM-SHA256, ECDHE-ECDSA, CLI+SRV auth" \
             "$P_SRV nbio=2 debug_level=5 force_version=tls1_3 auth_mode=required key_exchange_modes=ecdhe_ecdsa" \
@@ -1426,6 +1456,8 @@ run_test    "TLS 1.3, TLS1-3-AES-128-CCM-SHA256, ECDHE-ECDSA, CLI+SRV auth" \
 	    -c "Verifying peer X.509 certificate... ok"
 
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+requires_config_enabled MBEDTLS_SSL_SRV_C
+requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_disabled MBEDTLS_RSA_C
 run_test    "TLS 1.3, TLS1-3-AES-128-GCM-SHA256, ECDHE-ECDSA, CLI+SRV auth" \
             "$P_SRV nbio=2 debug_level=5 force_version=tls1_3 auth_mode=required key_exchange_modes=ecdhe_ecdsa" \
@@ -1439,6 +1471,8 @@ run_test    "TLS 1.3, TLS1-3-AES-128-GCM-SHA256, ECDHE-ECDSA, CLI+SRV auth" \
 	    -c "Verifying peer X.509 certificate... ok"
 
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+requires_config_enabled MBEDTLS_SSL_SRV_C
+requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_disabled MBEDTLS_RSA_C
 run_test    "TLS 1.3, TLS1-3-AES-128-CCM-8-SHA256, ECDHE-ECDSA, CLI+SRV auth" \
             "$P_SRV nbio=2 debug_level=5 force_version=tls1_3 auth_mode=required key_exchange_modes=ecdhe_ecdsa" \
@@ -1452,6 +1486,8 @@ run_test    "TLS 1.3, TLS1-3-AES-128-CCM-8-SHA256, ECDHE-ECDSA, CLI+SRV auth" \
 	    -c "Verifying peer X.509 certificate... ok"
 
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+requires_config_enabled MBEDTLS_SSL_SRV_C
+requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_disabled MBEDTLS_RSA_C
 run_test    "TLS1-3-AES-256-GCM-SHA384 with ECDHE-ECDSA (mutual auth)" \
             "$P_SRV nbio=2 debug_level=5 force_version=tls1_3 auth_mode=required key_exchange_modes=ecdhe_ecdsa" \
@@ -1468,6 +1504,8 @@ run_test    "TLS1-3-AES-256-GCM-SHA384 with ECDHE-ECDSA (mutual auth)" \
 # client responds with empty certificate
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_SRV_C
+requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_disabled MBEDTLS_RSA_C
 run_test    "TLS 1.3, TLS1-3-AES-128-GCM-SHA256, ECDHE-ECDSA, empty client certificate, accepted" \
             "$P_SRV nbio=2 debug_level=5 force_version=tls1_3 auth_mode=optional key_exchange_modes=ecdhe_ecdsa" \
@@ -1483,6 +1521,8 @@ run_test    "TLS 1.3, TLS1-3-AES-128-GCM-SHA256, ECDHE-ECDSA, empty client certi
 # - Server does NOT accept the lack of client authentication
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_SRV_C
+requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_disabled MBEDTLS_RSA_C
 run_test    "TLS 1.3, TLS1-3-AES-128-CCM-SHA256, ECDHE-ECDSA, empty client certificate, rejected" \
             "$P_SRV nbio=2 debug_level=5 force_version=tls1_3 auth_mode=required key_exchange_modes=ecdhe_ecdsa" \
@@ -1493,6 +1533,8 @@ run_test    "TLS 1.3, TLS1-3-AES-128-CCM-SHA256, ECDHE-ECDSA, empty client certi
 	    -c "write empty client certificate"
 
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+requires_config_enabled MBEDTLS_SSL_SRV_C
+requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_disabled MBEDTLS_RSA_C
 run_test    "TLS 1.3 TLS1-3-AES-256-GCM-SHA384, ECDHE-ECDSA, SRV auth" \
             "$P_SRV nbio=2 debug_level=5 force_version=tls1_3 key_exchange_modes=ecdhe_ecdsa" \
@@ -1507,6 +1549,8 @@ run_test    "TLS 1.3 TLS1-3-AES-256-GCM-SHA384, ECDHE-ECDSA, SRV auth" \
 
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_SRV_C
+requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_disabled MBEDTLS_RSA_C
 run_test    "TLS 1.3, TLS1-3-AES-128-CCM-SHA256, ECDHE-ECDSA, CLI+SRV auth, with ticket" \
             "$P_SRV nbio=2 debug_level=5 force_version=tls1_3 auth_mode=required key_exchange_modes=all tickets=1" \
@@ -1526,6 +1570,8 @@ run_test    "TLS 1.3, TLS1-3-AES-128-CCM-SHA256, ECDHE-ECDSA, CLI+SRV auth, with
 
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_SRV_C
+requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_disabled MBEDTLS_RSA_C
 run_test    "TLS 1.3, TLS1-3-AES-128-GCM-SHA256, ECDHE-ECDSA, CLI+SRV auth, with ticket" \
             "$P_SRV nbio=2 debug_level=5 force_version=tls1_3 auth_mode=required key_exchange_modes=all tickets=1" \
@@ -1545,6 +1591,8 @@ run_test    "TLS 1.3, TLS1-3-AES-128-GCM-SHA256, ECDHE-ECDSA, CLI+SRV auth, with
 
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_SRV_C
+requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_disabled MBEDTLS_RSA_C
 run_test    "TLS 1.3, TLS1-3-AES-128-CCM-8-SHA256, ECDHE-ECDSA, CLI+SRV auth, with ticket" \
             "$P_SRV nbio=2 debug_level=5 force_version=tls1_3 auth_mode=required key_exchange_modes=all tickets=1" \
@@ -1564,6 +1612,8 @@ run_test    "TLS 1.3, TLS1-3-AES-128-CCM-8-SHA256, ECDHE-ECDSA, CLI+SRV auth, wi
 
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_SRV_C
+requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_disabled MBEDTLS_RSA_C
 run_test    "TLS 1.3, TLS1-3-AES-256-GCM-SHA384, ECDHE-ECDSA, CLI+SRV auth, with ticket" \
             "$P_SRV nbio=2 debug_level=5 force_version=tls1_3 auth_mode=required key_exchange_modes=all tickets=1" \
@@ -1583,6 +1633,8 @@ run_test    "TLS 1.3, TLS1-3-AES-256-GCM-SHA384, ECDHE-ECDSA, CLI+SRV auth, with
 
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_SRV_C
+requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_disabled MBEDTLS_RSA_C
 run_test    "TLS 1.3, TLS1-3-AES-256-GCM-SHA384 with ECDHE-ECDSA (server auth only) with ticket" \
             "$P_SRV nbio=2 debug_level=5 force_version=tls1_3 key_exchange_modes=all tickets=1" \
@@ -1602,6 +1654,8 @@ run_test    "TLS 1.3, TLS1-3-AES-256-GCM-SHA384 with ECDHE-ECDSA (server auth on
 
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_SRV_C
+requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_disabled MBEDTLS_RSA_C
 requires_config_enabled MBEDTLS_ZERO_RTT
 run_test    "TLS 1.3, TLS1-3-AES-256-GCM-SHA384, ext PSK, early data" \
@@ -1620,6 +1674,8 @@ run_test    "TLS 1.3, TLS1-3-AES-256-GCM-SHA384, ext PSK, early data" \
 
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_SRV_C
+requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_disabled MBEDTLS_RSA_C
 requires_config_enabled MBEDTLS_ZERO_RTT
 run_test    "TLS 1.3, TLS1-3-AES-128-CCM-SHA256, ext PSK, early data" \
@@ -1638,6 +1694,8 @@ run_test    "TLS 1.3, TLS1-3-AES-128-CCM-SHA256, ext PSK, early data" \
 
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_SRV_C
+requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_disabled MBEDTLS_RSA_C
 requires_config_enabled MBEDTLS_ZERO_RTT
 run_test    "TLS 1.3, TLS1-3-AES-128-GCM-SHA256, ext PSK, early data" \
@@ -1656,6 +1714,8 @@ run_test    "TLS 1.3, TLS1-3-AES-128-GCM-SHA256, ext PSK, early data" \
 
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_SRV_C
+requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_disabled MBEDTLS_RSA_C
 requires_config_enabled MBEDTLS_ZERO_RTT
 run_test    "TLS 1.3, TLS1-3-AES-128-CCM-8-SHA256, ext PSK, early data" \
@@ -1674,6 +1734,8 @@ run_test    "TLS 1.3, TLS1-3-AES-128-CCM-8-SHA256, ext PSK, early data" \
 
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_SRV_C
+requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_disabled MBEDTLS_RSA_C
 requires_config_enabled MBEDTLS_ZERO_RTT
 run_test    "TLS 1.3, TLS1-3-AES-256-GCM-SHA384, ECDHE-ECDSA, client tries early data without PSK, and falls back to 1-RTT" \
@@ -1688,6 +1750,8 @@ run_test    "TLS 1.3, TLS1-3-AES-256-GCM-SHA384, ECDHE-ECDSA, client tries early
 
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_SRV_C
+requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_disabled MBEDTLS_RSA_C
 run_test    "TLS 1.3, TLS1-3-AES-128-CCM-8-SHA256, ECDHE-ECDSA, CLI+SRV auth, HRR enforcing cookie" \
             "$P_SRV nbio=2 debug_level=5 force_version=tls1_3 auth_mode=required key_exchange_modes=ecdhe_ecdsa tickets=0 cookies=2" \
@@ -1708,6 +1772,8 @@ run_test    "TLS 1.3, TLS1-3-AES-128-CCM-8-SHA256, ECDHE-ECDSA, CLI+SRV auth, HR
 # configure client to initially sent incorrect group, which will be corrected with HRR from the server
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_SRV_C
+requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_disabled MBEDTLS_RSA_C
 run_test    "TLS 1.3, TLS1-3-AES-128-CCM-SHA256 with ECDHE-ECDSA, SRV auth, HRR enforcing group" \
             "$P_SRV nbio=2 debug_level=5 force_version=tls1_3 key_exchange_modes=ecdhe_ecdsa named_groups=secp256r1 cookies=1 tickets=0" \
@@ -1725,6 +1791,8 @@ run_test    "TLS 1.3, TLS1-3-AES-128-CCM-SHA256 with ECDHE-ECDSA, SRV auth, HRR 
 # test early data status - not sent
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_SRV_C
+requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_ZERO_RTT
 requires_config_disabled MBEDTLS_RSA_C
 run_test    "TLS 1.3, TLS1-3-AES-256-GCM-SHA384, ext PSK, early data status - not sent" \
@@ -1736,6 +1804,8 @@ run_test    "TLS 1.3, TLS1-3-AES-256-GCM-SHA384, ext PSK, early data status - no
 # test early data status - accepted
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_SRV_C
+requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_ZERO_RTT
 requires_config_disabled MBEDTLS_RSA_C
 run_test    "TLS 1.3, TLS1-3-AES-256-GCM-SHA384, ext PSK, early data status - accepted" \
@@ -1746,6 +1816,8 @@ run_test    "TLS 1.3, TLS1-3-AES-256-GCM-SHA384, ext PSK, early data status - ac
 
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_SRV_C
+requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_disabled MBEDTLS_RSA_C
 run_test    "TLS 1.3, TLS1-3-AES-128-CCM-8-SHA256, ClientHello message misses mandatory extensions" \
             "$P_SRV nbio=2 debug_level=5 force_version=tls1_3 key_exchange_modes=psk" \
@@ -1758,6 +1830,7 @@ run_test    "TLS 1.3, TLS1-3-AES-128-CCM-8-SHA256, ClientHello message misses ma
 
 # Test OpenSSL server using RSA certificate
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
 requires_openssl
 run_test    "TLS 1.3, TLS1-3-AES-128-GCM-SHA256, RSA-certificate, OpenSSL server" \
@@ -1769,6 +1842,7 @@ run_test    "TLS 1.3, TLS1-3-AES-128-GCM-SHA256, RSA-certificate, OpenSSL server
 # Test OpenSSL server with resumption
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_openssl_with_tls1_3
 run_test    "TLS 1.3, TLS1-3-AES-128-GCM-SHA256, resumption, OpenSSL server" \
             "$O_SRV" \
@@ -1784,6 +1858,7 @@ run_test    "TLS 1.3, TLS1-3-AES-128-GCM-SHA256, resumption, OpenSSL server" \
 # Test OpenSSL server with resumption and reject early data
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_openssl_with_tls1_3
 run_test    "TLS 1.3, TLS1-3-AES-128-GCM-SHA256, reject early data, OpenSSL server"    \
             "$O_SRV"                                                                   \
@@ -1798,6 +1873,8 @@ run_test    "TLS 1.3, TLS1-3-AES-128-GCM-SHA256, reject early data, OpenSSL serv
 
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_SRV_C
+requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_SSL_ALPN
 run_test    "TLS 1.3, ALPN" \
             "$P_SRV nbio=2 debug_level=5 force_version=tls1_3 psk=010203 psk_identity=0a0b0c key_exchange_modes=psk alpn=abc,1234" \
@@ -1810,6 +1887,8 @@ run_test    "TLS 1.3, ALPN" \
             -s "Application Layer Protocol is 1234"
 
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+requires_config_enabled MBEDTLS_SSL_SRV_C
+requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_disabled MBEDTLS_RSA_C
 run_test    "TLS 1.3, TLS1-3-AES-128-CCM-SHA256, ECDHE-ECDSA, mismatched sig_algs" \
             "$P_SRV nbio=2 debug_level=4 force_version=tls1_3 key_exchange_modes=ecdhe_ecdsa sig_algs=ecdsa_secp384r1_sha384" \
