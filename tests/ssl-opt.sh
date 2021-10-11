@@ -1284,6 +1284,533 @@ trap cleanup INT TERM HUP
 # TLS 1.3 specific tests
 #
 
+# ===================================================================== #
+# == TLS 1.3 tests, all possible ciphersuites against OpenSSL server == #
+# == Key exhange: ECDHE-ECDSA curve x25519                           == #
+# == Client and server authentication with ECDSA-SECP256R1-SHA256    == #
+# ===================================================================== #
+
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_CLI_C
+requires_openssl_with_tls1_3
+run_test    "TLS 1.3 m->O AES_128_GCM_SHA256      , ECDSA_SECP256R1_SHA256" \
+            "$O_SRV -ciphersuites TLS_AES_128_GCM_SHA256 -CAfile data_files/test-ca_cat12.crt -Verify 10" \
+            "$P_CLI key_file=data_files/cli2.key crt_file=data_files/cli2.crt debug_level=4 force_version=tls1_3 server_name=localhost force_ciphersuite=TLS1-3-AES-128-GCM-SHA256" \
+            0 \
+            -c "ECDH curve: x25519" \
+            -c "server hello, chosen ciphersuite: ( 1301 ) - TLS1-3-AES-128-GCM-SHA256" \
+            -c "Certificate Verify: Signature algorithm ( 0403 )" \
+            -c "Verifying peer X.509 certificate... ok" \
+            -c "got a certificate request"
+
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_CLI_C
+requires_openssl_with_tls1_3
+run_test    "TLS 1.3 m->O AES_256_GCM_SHA384      , ECDSA_SECP256R1_SHA256" \
+            "$O_SRV -ciphersuites TLS_AES_256_GCM_SHA384 -CAfile data_files/test-ca_cat12.crt -Verify 10" \
+            "$P_CLI key_file=data_files/cli2.key crt_file=data_files/cli2.crt debug_level=4 force_version=tls1_3 server_name=localhost force_ciphersuite=TLS1-3-AES-256-GCM-SHA384" \
+            0 \
+            -c "ECDH curve: x25519" \
+            -c "server hello, chosen ciphersuite: ( 1302 ) - TLS1-3-AES-256-GCM-SHA384" \
+            -c "Certificate Verify: Signature algorithm ( 0403 )" \
+            -c "Verifying peer X.509 certificate... ok" \
+            -c "got a certificate request"
+
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_CLI_C
+requires_openssl_with_tls1_3
+run_test    "TLS 1.3 m->O CHACHA20_POLY1305_SHA256, ECDSA_SECP256R1_SHA256" \
+            "$O_SRV -ciphersuites TLS_CHACHA20_POLY1305_SHA256 -CAfile data_files/test-ca_cat12.crt -Verify 10" \
+            "$P_CLI key_file=data_files/cli2.key crt_file=data_files/cli2.crt debug_level=4 force_version=tls1_3 server_name=localhost force_ciphersuite=TLS1-3-CHACHA20-POLY1305-SHA256" \
+            0 \
+            -c "ECDH curve: x25519" \
+            -c "server hello, chosen ciphersuite: ( 1303 ) - TLS1-3-CHACHA20-POLY1305-SHA256" \
+            -c "Certificate Verify: Signature algorithm ( 0403 )" \
+            -c "Verifying peer X.509 certificate... ok" \
+            -c "got a certificate request"
+
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_CLI_C
+requires_openssl_with_tls1_3
+run_test    "TLS 1.3 m->O AES_128_CCM_SHA256      , ECDSA_SECP256R1_SHA256" \
+            "$O_SRV -ciphersuites TLS_AES_128_CCM_SHA256 -CAfile data_files/test-ca_cat12.crt -Verify 10" \
+            "$P_CLI key_file=data_files/cli2.key crt_file=data_files/cli2.crt debug_level=4 force_version=tls1_3 server_name=localhost force_ciphersuite=TLS1-3-AES-128-CCM-SHA256" \
+            0 \
+            -c "ECDH curve: x25519" \
+            -c "server hello, chosen ciphersuite: ( 1304 ) - TLS1-3-AES-128-CCM-SHA256" \
+            -c "Certificate Verify: Signature algorithm ( 0403 )" \
+            -c "Verifying peer X.509 certificate... ok" \
+            -c "got a certificate request"
+
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_CLI_C
+requires_openssl_with_tls1_3
+run_test    "TLS 1.3 m->O AES_128_CCM_8_SHA256    , ECDSA_SECP256R1_SHA256" \
+            "$O_SRV -ciphersuites TLS_AES_128_CCM_8_SHA256 -CAfile data_files/test-ca_cat12.crt -Verify 10" \
+            "$P_CLI key_file=data_files/cli2.key crt_file=data_files/cli2.crt debug_level=4 force_version=tls1_3 server_name=localhost force_ciphersuite=TLS1-3-AES-128-CCM-8-SHA256" \
+            0 \
+            -c "ECDH curve: x25519" \
+            -c "server hello, chosen ciphersuite: ( 1305 ) - TLS1-3-AES-128-CCM-8-SHA256" \
+            -c "Certificate Verify: Signature algorithm ( 0403 )" \
+            -c "Verifying peer X.509 certificate... ok" \
+            -c "got a certificate request"
+
+# ===================================================================== #
+# == TLS 1.3 tests, all possible ciphersuites against OpenSSL server == #
+# == Key exhange: ECDHE-ECDSA curve x25519                           == #
+# == Server authentication with RSA_PSS_RSAE_SHA256                  == #
+# == No client authentication (not supported)                        == #
+# ===================================================================== #
+
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_CLI_C
+requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
+requires_openssl_with_tls1_3
+run_test    "TLS 1.3 m->O AES_128_GCM_SHA256      , RSA_PSS_RSAE_SHA256" \
+            "$O_SRV_RSA -ciphersuites TLS_AES_128_GCM_SHA256" \
+            "$P_CLI debug_level=4 force_version=tls1_3 server_name=localhost force_ciphersuite=TLS1-3-AES-128-GCM-SHA256" \
+            0 \
+            -c "ECDH curve: x25519" \
+            -c "server hello, chosen ciphersuite: ( 1301 ) - TLS1-3-AES-128-GCM-SHA256" \
+            -c "Certificate Verify: Signature algorithm ( 0804 )" \
+            -c "Verifying peer X.509 certificate... ok"
+
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_CLI_C
+requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
+requires_openssl_with_tls1_3
+run_test    "TLS 1.3 m->O AES_256_GCM_SHA384      , RSA_PSS_RSAE_SHA256" \
+            "$O_SRV_RSA -ciphersuites TLS_AES_256_GCM_SHA384" \
+            "$P_CLI debug_level=4 force_version=tls1_3 server_name=localhost force_ciphersuite=TLS1-3-AES-256-GCM-SHA384" \
+            0 \
+            -c "ECDH curve: x25519" \
+            -c "server hello, chosen ciphersuite: ( 1302 ) - TLS1-3-AES-256-GCM-SHA384" \
+            -c "Certificate Verify: Signature algorithm ( 0804 )" \
+            -c "Verifying peer X.509 certificate... ok"
+
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_CLI_C
+requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
+requires_openssl_with_tls1_3
+run_test    "TLS 1.3 m->O CHACHA20_POLY1305_SHA256, RSA_PSS_RSAE_SHA256" \
+            "$O_SRV_RSA -ciphersuites TLS_CHACHA20_POLY1305_SHA256" \
+            "$P_CLI  debug_level=4 force_version=tls1_3 server_name=localhost force_ciphersuite=TLS1-3-CHACHA20-POLY1305-SHA256" \
+            0 \
+            -c "ECDH curve: x25519" \
+            -c "server hello, chosen ciphersuite: ( 1303 ) - TLS1-3-CHACHA20-POLY1305-SHA256" \
+            -c "Certificate Verify: Signature algorithm ( 0804 )" \
+            -c "Verifying peer X.509 certificate... ok"
+
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_CLI_C
+requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
+requires_openssl_with_tls1_3
+run_test    "TLS 1.3 m->O AES_128_CCM_SHA256      , RSA_PSS_RSAE_SHA256" \
+            "$O_SRV_RSA -ciphersuites TLS_AES_128_CCM_SHA256" \
+            "$P_CLI  debug_level=4 force_version=tls1_3 server_name=localhost force_ciphersuite=TLS1-3-AES-128-CCM-SHA256" \
+            0 \
+            -c "ECDH curve: x25519" \
+            -c "server hello, chosen ciphersuite: ( 1304 ) - TLS1-3-AES-128-CCM-SHA256" \
+            -c "Certificate Verify: Signature algorithm ( 0804 )" \
+            -c "Verifying peer X.509 certificate... ok"
+
+# Test OpenSSL server TLS_AES_128_CCM_8_SHA256 + ECDSA-SECP256R1-SHA256
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_CLI_C
+requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
+requires_openssl_with_tls1_3
+run_test    "TLS 1.3 m->O AES_128_CCM_8_SHA256    , RSA_PSS_RSAE_SHA256" \
+            "$O_SRV_RSA -ciphersuites TLS_AES_128_CCM_8_SHA256" \
+            "$P_CLI  debug_level=4 force_version=tls1_3 server_name=localhost force_ciphersuite=TLS1-3-AES-128-CCM-8-SHA256" \
+            0 \
+            -c "ECDH curve: x25519" \
+            -c "server hello, chosen ciphersuite: ( 1305 ) - TLS1-3-AES-128-CCM-8-SHA256" \
+            -c "Certificate Verify: Signature algorithm ( 0804 )" \
+            -c "Verifying peer X.509 certificate... ok"
+
+#==========================================================================#
+#= TLS 1.3 server tests, all possible ciphersuites against OpenSSL client =#
+#= Key exhange: ECDHE-ECDSA curve x25519                                  =#
+#= Client and server authentication with ECDSA-SECP256R1-SHA256           =#
+#==========================================================================#
+
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_SRV_C
+requires_openssl_with_tls1_3
+run_test    "TLS 1.3 O->m AES_128_GCM_SHA256      , ECDSA_SECP256R1_SHA256" \
+            "$P_SRV ca_file=data_files/test-ca_cat12.crt auth_mode=required \
+                    crt_file=data_files/server5.crt key_file=data_files/server5.key \
+                    debug_level=4 force_version=tls1_3 force_ciphersuite=TLS1-3-AES-128-GCM-SHA256" \
+            "$O_CLI -ciphersuites TLS_AES_128_GCM_SHA256 \
+                    -cert data_files/cli2.crt -key data_files/cli2.key" \
+            0 \
+            -s "ECDH curve: x25519" \
+            -s "selected ciphersuite: TLS1-3-AES-128-GCM-SHA256" \
+            -s "Certificate Verify: Signature algorithm ( 0403 )" \
+            -s "Verifying peer X.509 certificate... ok"
+
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_SRV_C
+requires_openssl_with_tls1_3
+run_test    "TLS 1.3 O->m AES_256_GCM_SHA384      , ECDSA_SECP256R1_SHA256" \
+            "$P_SRV ca_file=data_files/test-ca_cat12.crt auth_mode=required \
+                    crt_file=data_files/server5.crt key_file=data_files/server5.key \
+                    debug_level=4 force_version=tls1_3 force_ciphersuite=TLS1-3-AES-256-GCM-SHA384" \
+            "$O_CLI -ciphersuites TLS_AES_256_GCM_SHA384 \
+                    -cert data_files/cli2.crt -key data_files/cli2.key" \
+            0 \
+            -s "ECDH curve: x25519" \
+            -s "selected ciphersuite: TLS1-3-AES-256-GCM-SHA384" \
+            -s "Certificate Verify: Signature algorithm ( 0403 )" \
+            -s "Verifying peer X.509 certificate... ok"
+
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_SRV_C
+requires_openssl_with_tls1_3
+run_test    "TLS 1.3 O->m CHACHA20_POLY1305_SHA256, ECDSA_SECP256R1_SHA256" \
+            "$P_SRV ca_file=data_files/test-ca_cat12.crt auth_mode=required \
+                    crt_file=data_files/server5.crt key_file=data_files/server5.key \
+                    debug_level=4 force_version=tls1_3 force_ciphersuite=TLS1-3-CHACHA20-POLY1305-SHA256" \
+            "$O_CLI -ciphersuites TLS_CHACHA20_POLY1305_SHA256 \
+                    -cert data_files/cli2.crt -key data_files/cli2.key" \
+            0 \
+            -s "ECDH curve: x25519" \
+            -s "selected ciphersuite: TLS1-3-CHACHA20-POLY1305-SHA256" \
+            -s "Certificate Verify: Signature algorithm ( 0403 )" \
+            -s "Verifying peer X.509 certificate... ok"
+
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_SRV_C
+requires_openssl_with_tls1_3
+run_test    "TLS 1.3 O->m AES_128_CCM_SHA256      , ECDSA_SECP256R1_SHA256" \
+            "$P_SRV ca_file=data_files/test-ca_cat12.crt auth_mode=required \
+                    crt_file=data_files/server5.crt key_file=data_files/server5.key \
+                    debug_level=4 force_version=tls1_3 force_ciphersuite=TLS1-3-AES-128-CCM-SHA256" \
+            "$O_CLI -ciphersuites TLS_AES_128_CCM_SHA256 \
+                    -cert data_files/cli2.crt -key data_files/cli2.key" \
+            0 \
+            -s "ECDH curve: x25519" \
+            -s "selected ciphersuite: TLS1-3-AES-128-CCM-SHA256" \
+            -s "Certificate Verify: Signature algorithm ( 0403 )" \
+            -s "Verifying peer X.509 certificate... ok"
+
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_SRV_C
+requires_openssl_with_tls1_3
+run_test    "TLS 1.3 O->m AES_128_CCM_8_SHA256    , ECDSA_SECP256R1_SHA256" \
+            "$P_SRV ca_file=data_files/test-ca_cat12.crt auth_mode=required \
+                    crt_file=data_files/server5.crt key_file=data_files/server5.key \
+                    debug_level=4 force_version=tls1_3 force_ciphersuite=TLS1-3-AES-128-CCM-8-SHA256" \
+            "$O_CLI -ciphersuites TLS_AES_128_CCM_8_SHA256 \
+                    -cert data_files/cli2.crt -key data_files/cli2.key" \
+            0 \
+            -s "ECDH curve: x25519" \
+            -s "selected ciphersuite: TLS1-3-AES-128-CCM-8-SHA256" \
+            -s "Certificate Verify: Signature algorithm ( 0403 )" \
+            -s "Verifying peer X.509 certificate... ok"
+
+#==============================================================================#
+#= TLS 1.3 client tests, all possible ciphersuites against GnuTLS next server =#
+#= Key exhange: ECDHE-ECDSA curve SECP256R1                                   =#
+#= Client and server authentication with ECDSA-SECP256R1-SHA256               =#
+#==============================================================================#
+
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_CLI_C
+requires_gnutls_next
+run_test    "TLS 1.3 m->G AES_128_GCM_SHA256      , ECDSA_SECP256R1_SHA256" \
+            "$G_NEXT_SRV --priority=NONE:+AES-128-GCM:+SHA256:+GROUP-SECP256R1:+ECDHE-ECDSA:+AEAD:+SIGN-ECDSA-SECP256R1-SHA256:+VERS-TLS1.3" \
+            "$P_CLI debug_level=4 key_file=data_files/cli2.key crt_file=data_files/cli2.crt force_version=tls1_3 server_name=localhost force_ciphersuite=TLS1-3-AES-128-GCM-SHA256" \
+            0 \
+            -s "Ephemeral EC Diffie-Hellman parameters" \
+            -s "Using curve: SECP256R1" \
+            -s "Version: TLS1.3" \
+            -s "Cipher: AES-128-GCM" \
+            -s "Client Signature: ECDSA-SECP256R1-SHA256" \
+            -s "Server Signature: ECDSA-SECP256R1-SHA256" \
+            -c "ECDH curve: secp256r1" \
+            -c "server hello, chosen ciphersuite: ( 1301 ) - TLS1-3-AES-128-GCM-SHA256" \
+            -c "Certificate Verify: Signature algorithm ( 0403 )" \
+            -c "Verifying peer X.509 certificate... ok" \
+            -c "got a certificate request"
+
+# Use the NORMAL priority for the GnuTLS here as when trying to define
+# TLS_AES_256_GCM_SHA384 as the only ciphersuite supported by the GnuTLS
+# server, the connection fails.
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_CLI_C
+requires_gnutls_next
+run_test    "TLS 1.3 m->G AES_256_GCM_SHA384      , ECDSA_SECP256R1_SHA256" \
+            "$G_NEXT_SRV --debug 5 --priority=NORMAL" \
+            "$P_CLI debug_level=4 key_file=data_files/cli2.key crt_file=data_files/cli2.crt debug_level=5 force_version=tls1_3 server_name=localhost force_ciphersuite=TLS1-3-AES-256-GCM-SHA384" \
+            0 \
+            -s "Ephemeral EC Diffie-Hellman parameters" \
+            -s "Using curve: X25519" \
+            -s "Version: TLS1.3" \
+            -s "Cipher: AES-256-GCM" \
+            -s "Client Signature: ECDSA-SECP256R1-SHA256" \
+            -s "Server Signature: ECDSA-SECP256R1-SHA256" \
+            -c "ECDH curve: x25519" \
+            -c "server hello, chosen ciphersuite: ( 1302 ) - TLS1-3-AES-256-GCM-SHA384" \
+            -c "Certificate Verify: Signature algorithm ( 0403 )" \
+            -c "Verifying peer X.509 certificate... ok" \
+            -c "got a certificate request"
+
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_CLI_C
+requires_gnutls_next
+run_test    "TLS 1.3 m->G CHACHA20_POLY1305_SHA256, ECDSA_SECP256R1_SHA256" \
+            "$G_NEXT_SRV --priority=NONE:+CHACHA20-POLY1305:+SHA256:+GROUP-SECP256R1:+ECDHE-ECDSA:+AEAD:+SIGN-ECDSA-SECP256R1-SHA256:+VERS-TLS1.3" \
+            "$P_CLI debug_level=4 key_file=data_files/cli2.key crt_file=data_files/cli2.crt force_version=tls1_3 server_name=localhost force_ciphersuite=TLS1-3-CHACHA20-POLY1305-SHA256" \
+            0 \
+            -s "Using curve: SECP256R1" \
+            -s "Version: TLS1.3" \
+            -s "Cipher: CHACHA20-POLY1305" \
+            -s "Client Signature: ECDSA-SECP256R1-SHA256" \
+            -s "Server Signature: ECDSA-SECP256R1-SHA256" \
+            -c "ECDH curve: secp256r1" \
+            -c "server hello, chosen ciphersuite: ( 1303 ) - TLS1-3-CHACHA20-POLY1305-SHA256" \
+            -c "Certificate Verify: Signature algorithm ( 0403 )" \
+            -c "Verifying peer X.509 certificate... ok" \
+            -c "got a certificate request"
+
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_CLI_C
+requires_gnutls_next
+run_test    "TLS 1.3 m->G AES_128_CCM_SHA256      , ECDSA_SECP256R1_SHA256" \
+            "$G_NEXT_SRV --priority=NONE:+AES-128-CCM:+SHA256:+GROUP-SECP256R1:+ECDHE-ECDSA:+AEAD:+SIGN-ECDSA-SECP256R1-SHA256:+VERS-TLS1.3" \
+            "$P_CLI debug_level=4 key_file=data_files/cli2.key crt_file=data_files/cli2.crt force_version=tls1_3 server_name=localhost force_ciphersuite=TLS1-3-AES-128-CCM-SHA256" \
+            0 \
+            -s "Using curve: SECP256R1" \
+            -s "Version: TLS1.3" \
+            -s "Cipher: AES-128-CCM" \
+            -s "Client Signature: ECDSA-SECP256R1-SHA256" \
+            -s "Server Signature: ECDSA-SECP256R1-SHA256" \
+            -c "ECDH curve: secp256r1" \
+            -c "server hello, chosen ciphersuite: ( 1304 ) - TLS1-3-AES-128-CCM-SHA256" \
+            -c "Certificate Verify: Signature algorithm ( 0403 )" \
+            -c "Verifying peer X.509 certificate... ok" \
+            -c "got a certificate request"
+
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_CLI_C
+requires_gnutls_next
+run_test    "TLS 1.3 m->G AES_128_CCM_8_SHA256    , ECDSA_SECP256R1_SHA256" \
+            "$G_NEXT_SRV --priority=NONE:+AES-128-CCM-8:+SHA256:+GROUP-SECP256R1:+ECDHE-ECDSA:+AEAD:+SIGN-ECDSA-SECP256R1-SHA256:+VERS-TLS1.3" \
+            "$P_CLI debug_level=4 key_file=data_files/cli2.key crt_file=data_files/cli2.crt force_version=tls1_3 server_name=localhost force_ciphersuite=TLS1-3-AES-128-CCM-8-SHA256" \
+            0 \
+            -s "Using curve: SECP256R1" \
+            -s "Version: TLS1.3" \
+            -s "Cipher: AES-128-CCM-8" \
+            -s "Client Signature: ECDSA-SECP256R1-SHA256" \
+            -s "Server Signature: ECDSA-SECP256R1-SHA256" \
+            -c "ECDH curve: secp256r1" \
+            -c "server hello, chosen ciphersuite: ( 1305 ) - TLS1-3-AES-128-CCM-8-SHA256" \
+            -c "Certificate Verify: Signature algorithm ( 0403 )" \
+            -c "Verifying peer X.509 certificate... ok" \
+            -c "got a certificate request"
+
+# ========================================================================= #
+# == TLS 1.3 tests, all possible ciphersuites against GnuTLS next server == #
+# == Key exhange: ECDHE-ECDSA curve SECP256R1                            == #
+# == Server authentication with RSA_PSS_RSAE_SHA256                      == #
+# == No client authentication (not supported)                            == #
+# ========================================================================= #
+
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_CLI_C
+requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
+requires_gnutls_next
+run_test    "TLS 1.3 m->G AES_128_GCM_SHA256      , RSA_PSS_RSAE_SHA256" \
+            "$G_NEXT_SRV_RSA --disable-client-cert --priority=NONE:+AES-128-GCM:+SHA256:+GROUP-SECP256R1:+ECDHE-ECDSA:+AEAD:+SIGN-RSA-PSS-RSAE-SHA256:+VERS-TLS1.3" \
+            "$P_CLI debug_level=4 force_version=tls1_3 server_name=localhost force_ciphersuite=TLS1-3-AES-128-GCM-SHA256" \
+            0 \
+            -s "Ephemeral EC Diffie-Hellman parameters" \
+            -s "Using curve: SECP256R1" \
+            -s "Version: TLS1.3" \
+            -s "Cipher: AES-128-GCM" \
+            -S "Client Signature:" \
+            -s "Server Signature: RSA-PSS-RSAE-SHA256" \
+            -c "ECDH curve: secp256r1" \
+            -c "server hello, chosen ciphersuite: ( 1301 ) - TLS1-3-AES-128-GCM-SHA256" \
+            -c "Certificate Verify: Signature algorithm ( 0804 )" \
+            -c "Verifying peer X.509 certificate... ok"
+
+# Use the NORMAL priority for the GnuTLS here as when trying to define
+# TLS_AES_256_GCM_SHA384 as the only ciphersuite supported by the GnuTLS
+# server, the connection fails.
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_CLI_C
+requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
+requires_gnutls_next
+run_test    "TLS 1.3 m->G AES_256_GCM_SHA384      , RSA_PSS_RSAE_SHA256" \
+            "$G_NEXT_SRV_RSA --disable-client-cert --priority=NORMAL" \
+            "$P_CLI debug_level=4 force_version=tls1_3 server_name=localhost force_ciphersuite=TLS1-3-AES-256-GCM-SHA384" \
+            0 \
+            -s "Ephemeral EC Diffie-Hellman parameters" \
+            -s "Using curve: X25519" \
+            -s "Version: TLS1.3" \
+            -s "Cipher: AES-256-GCM" \
+            -S "Client Signature:" \
+            -s "Server Signature: RSA-PSS-RSAE-SHA256" \
+            -c "ECDH curve: x25519" \
+            -c "server hello, chosen ciphersuite: ( 1302 ) - TLS1-3-AES-256-GCM-SHA384" \
+            -c "Certificate Verify: Signature algorithm ( 0804 )" \
+            -c "Verifying peer X.509 certificate... ok"
+
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_CLI_C
+requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
+requires_gnutls_next
+run_test    "TLS 1.3 m->G CHACHA20_POLY1305_SHA256, RSA_PSS_RSAE_SHA256" \
+            "$G_NEXT_SRV_RSA --disable-client-cert --priority=NONE:+CHACHA20-POLY1305:+SHA256:+GROUP-SECP256R1:+ECDHE-ECDSA:+AEAD:+SIGN-RSA-PSS-RSAE-SHA256:+VERS-TLS1.3" \
+            "$P_CLI debug_level=4 force_version=tls1_3 server_name=localhost force_ciphersuite=TLS1-3-CHACHA20-POLY1305-SHA256" \
+            0 \
+            -s "Using curve: SECP256R1" \
+            -s "Version: TLS1.3" \
+            -s "Cipher: CHACHA20-POLY1305" \
+            -S "Client Signature:" \
+            -s "Server Signature: RSA-PSS-RSAE-SHA256" \
+            -c "ECDH curve: secp256r1" \
+            -c "server hello, chosen ciphersuite: ( 1303 ) - TLS1-3-CHACHA20-POLY1305-SHA256" \
+            -c "Certificate Verify: Signature algorithm ( 0804 )" \
+            -c "Verifying peer X.509 certificate... ok"
+
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_CLI_C
+requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
+requires_gnutls_next
+run_test    "TLS 1.3 m->G AES_128_CCM_SHA256      , RSA_PSS_RSAE_SHA256" \
+            "$G_NEXT_SRV_RSA --disable-client-cert --priority=NONE:+AES-128-CCM:+SHA256:+GROUP-SECP256R1:+ECDHE-ECDSA:+AEAD:+SIGN-RSA-PSS-RSAE-SHA256:+VERS-TLS1.3" \
+            "$P_CLI debug_level=4 force_version=tls1_3 server_name=localhost force_ciphersuite=TLS1-3-AES-128-CCM-SHA256" \
+            0 \
+            -s "Using curve: SECP256R1" \
+            -s "Version: TLS1.3" \
+            -s "Cipher: AES-128-CCM" \
+            -S "Client Signature:" \
+            -s "Server Signature: RSA-PSS-RSAE-SHA256" \
+            -c "ECDH curve: secp256r1" \
+            -c "server hello, chosen ciphersuite: ( 1304 ) - TLS1-3-AES-128-CCM-SHA256" \
+            -c "Certificate Verify: Signature algorithm ( 0804 )" \
+            -c "Verifying peer X.509 certificate... ok"
+
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_CLI_C
+requires_config_enabled MBEDTLS_X509_RSASSA_PSS_SUPPORT
+requires_gnutls_next
+run_test    "TLS 1.3 m->G AES_128_CCM_8_SHA256    , RSA_PSS_RSAE_SHA256" \
+            "$G_NEXT_SRV_RSA --disable-client-cert --priority=NONE:+AES-128-CCM-8:+SHA256:+GROUP-SECP256R1:+ECDHE-ECDSA:+AEAD:+SIGN-RSA-PSS-RSAE-SHA256:+VERS-TLS1.3" \
+            "$P_CLI debug_level=4 force_version=tls1_3 server_name=localhost force_ciphersuite=TLS1-3-AES-128-CCM-8-SHA256" \
+            0 \
+            -s "Using curve: SECP256R1" \
+            -s "Version: TLS1.3" \
+            -s "Cipher: AES-128-CCM-8" \
+            -S "Client Signature:" \
+            -s "Server Signature: RSA-PSS-RSAE-SHA256" \
+            -c "ECDH curve: secp256r1" \
+            -c "server hello, chosen ciphersuite: ( 1305 ) - TLS1-3-AES-128-CCM-8-SHA256" \
+            -c "Certificate Verify: Signature algorithm ( 0804 )" \
+            -c "Verifying peer X.509 certificate... ok"
+
+#==============================================================================#
+#= TLS 1.3 server tests, all possible ciphersuites against GnuTLS next client =#
+#= Key exhange: ECDHE-ECDSA curve SECP256R1                                   =#
+#= Client and server authentication with ECDSA-SECP256R1-SHA256               =#
+#==============================================================================#
+
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_SRV_C
+requires_gnutls_next
+run_test    "TLS 1.3 G->m AES_128_GCM_SHA256      , ECDSA_SECP256R1_SHA256" \
+            "$P_SRV ca_file=data_files/test-ca_cat12.crt auth_mode=required crt_file=data_files/server5.crt key_file=data_files/server5.key debug_level=4 force_version=tls1_3 force_ciphersuite=TLS1-3-AES-128-GCM-SHA256" \
+            "$G_NEXT_CLI --x509certfile data_files/cli2.crt --x509keyfile data_files/cli2.key --priority NONE:+AES-128-GCM:+SHA256:+GROUP-SECP256R1:+ECDHE-ECDSA:+AEAD:+SIGN-ECDSA-SECP256R1-SHA256:+VERS-TLS1.3 localhost" \
+            0 \
+            -s "ECDH curve: secp256r1" \
+            -s "selected ciphersuite: TLS1-3-AES-128-GCM-SHA256" \
+            -s "Certificate Verify: Signature algorithm ( 0403 )" \
+            -s "Verifying peer X.509 certificate... ok"
+
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_SRV_C
+requires_gnutls_next
+run_test    "TLS 1.3 G->m AES_256_GCM_SHA384      , ECDSA_SECP256R1_SHA256" \
+            "$P_SRV ca_file=data_files/test-ca_cat12.crt auth_mode=required crt_file=data_files/server5.crt key_file=data_files/server5.key debug_level=4 force_version=tls1_3 force_ciphersuite=TLS1-3-AES-256-GCM-SHA384" \
+            "$G_NEXT_CLI --x509certfile data_files/cli2.crt --x509keyfile data_files/cli2.key --priority NONE:+AES-256-GCM:+SHA384:+GROUP-SECP256R1:+ECDHE-ECDSA:+AEAD:+SIGN-ECDSA-SECP256R1-SHA256:+VERS-TLS1.3 localhost" \
+            0 \
+            -s "ECDH curve: secp256r1" \
+            -s "selected ciphersuite: TLS1-3-AES-256-GCM-SHA384" \
+            -s "Certificate Verify: Signature algorithm ( 0403 )" \
+            -s "Verifying peer X.509 certificate... ok"
+
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_SRV_C
+requires_gnutls_next
+run_test    "TLS 1.3 G->m CHACHA20_POLY1305_SHA256, ECDSA_SECP256R1_SHA256" \
+            "$P_SRV ca_file=data_files/test-ca_cat12.crt auth_mode=required crt_file=data_files/server5.crt key_file=data_files/server5.key debug_level=4 force_version=tls1_3 force_ciphersuite=TLS1-3-CHACHA20-POLY1305-SHA256" \
+            "$G_NEXT_CLI --x509certfile data_files/cli2.crt --x509keyfile data_files/cli2.key --priority NONE:+CHACHA20-POLY1305:+SHA256:+GROUP-SECP256R1:+ECDHE-ECDSA:+AEAD:+SIGN-ECDSA-SECP256R1-SHA256:+VERS-TLS1.3 localhost" \
+            0 \
+            -s "ECDH curve: secp256r1" \
+            -s "selected ciphersuite: TLS1-3-CHACHA20-POLY1305-SHA256" \
+            -s "Certificate Verify: Signature algorithm ( 0403 )" \
+            -s "Verifying peer X.509 certificate... ok"
+
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_SRV_C
+requires_gnutls_next
+run_test    "TLS 1.3 G->m AES_128_CCM_SHA256      , ECDSA_SECP256R1_SHA256" \
+            "$P_SRV ca_file=data_files/test-ca_cat12.crt auth_mode=required crt_file=data_files/server5.crt key_file=data_files/server5.key debug_level=4 force_version=tls1_3 force_ciphersuite=TLS1-3-AES-128-CCM-SHA256" \
+            "$G_NEXT_CLI --x509certfile data_files/cli2.crt --x509keyfile data_files/cli2.key --priority NONE:+AES-128-CCM:+SHA256:+GROUP-SECP256R1:+ECDHE-ECDSA:+AEAD:+SIGN-ECDSA-SECP256R1-SHA256:+VERS-TLS1.3 localhost" \
+            0 \
+            -s "ECDH curve: secp256r1" \
+            -s "selected ciphersuite: TLS1-3-AES-128-CCM-SHA256" \
+            -s "Certificate Verify: Signature algorithm ( 0403 )" \
+            -s "Verifying peer X.509 certificate... ok"
+
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_SRV_C
+requires_gnutls_next
+run_test    "TLS 1.3 G->m AES_128_CCM_8_SHA256    , ECDSA_SECP256R1_SHA256" \
+            "$P_SRV ca_file=data_files/test-ca_cat12.crt auth_mode=required crt_file=data_files/server5.crt key_file=data_files/server5.key debug_level=4 force_version=tls1_3 force_ciphersuite=TLS1-3-AES-128-CCM-8-SHA256" \
+            "$G_NEXT_CLI --x509certfile data_files/cli2.crt --x509keyfile data_files/cli2.key --priority NONE:+AES-128-CCM-8:+SHA256:+GROUP-SECP256R1:+ECDHE-ECDSA:+AEAD:+SIGN-ECDSA-SECP256R1-SHA256:+VERS-TLS1.3 localhost" \
+            0 \
+            -s "ECDH curve: secp256r1" \
+            -s "selected ciphersuite: TLS1-3-AES-128-CCM-8-SHA256" \
+            -s "Certificate Verify: Signature algorithm ( 0403 )" \
+            -s "Verifying peer X.509 certificate... ok"
+
+# =========================================================================== #
+# =========================================================================== #
+
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_SSL_CLI_C
