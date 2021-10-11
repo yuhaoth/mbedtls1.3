@@ -218,7 +218,10 @@ get_config_value_or_default() {
     #
     # Note that if the configuration is not defined or is defined to nothing,
     # the output of this function will be an empty string.
-    ${P_SRV} "query_config=${1}"
+    case $CONFIGS_ENABLED in
+        *" MBEDTLS_SSL_CLI_C "*) ${P_CLI} "query_config=${1}" ;;
+        *) ${P_SRV} "query_config=${1}" ;;
+    esac
 }
 
 requires_config_value_at_least() {
@@ -256,9 +259,15 @@ requires_config_value_equals() {
 
 # Space-separated list of ciphersuites supported by this build of
 # Mbed TLS.
-P_CIPHERSUITES=" $($P_CLI --help 2>/dev/null |
+case $CONFIGS_ENABLED in
+    *" MBEDTLS_SSL_CLI_C "*) CMD=$P_CLI ;;
+    *) CMD=$P_SRV ;;
+esac
+P_CIPHERSUITES=" $($CMD --help 2>/dev/null |
                    grep 'TLS-\|TLS1-3' |
                    tr -s ' \n' ' ')"
+unset CMD
+
 requires_ciphersuite_enabled() {
     case $P_CIPHERSUITES in
         *" $1 "*) :;;
