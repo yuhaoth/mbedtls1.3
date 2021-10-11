@@ -1284,7 +1284,7 @@ run_test    "TLS 1.3, default suite, PSK" \
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
 requires_config_disabled MBEDTLS_RSA_C
 run_test    "TLS 1.3, default suite, ECDHE-ECDSA, SRV auth" \
-            "$P_SRV nbio=2 debug_level=5 force_version=tls1_3  key_exchange_modes=ecdhe_ecdsa" \
+            "$P_SRV nbio=2 debug_level=5 force_version=tls1_3 key_exchange_modes=ecdhe_ecdsa" \
             "$P_CLI nbio=2 debug_level=5 force_version=tls1_3 server_name=localhost key_exchange_modes=ecdhe_ecdsa" \
             0 \
             -s "Certificate verification was skipped"               \
@@ -1367,13 +1367,13 @@ run_test    "TLS 1.3, TLS1-3-AES-256-GCM-SHA384, PSK-ECDHE" \
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
 requires_config_disabled MBEDTLS_RSA_C
 run_test    "TLS 1.3, TLS1-3-AES-128-CCM-SHA256, ECDHE-ECDSA, SRV auth" \
-            "$P_SRV nbio=2 debug_level=5 force_version=tls1_3  key_exchange_modes=ecdhe_ecdsa" \
+            "$P_SRV nbio=2 debug_level=5 force_version=tls1_3 key_exchange_modes=ecdhe_ecdsa" \
             "$P_CLI nbio=2 debug_level=5 force_version=tls1_3 server_name=localhost force_ciphersuite=TLS1-3-AES-128-CCM-SHA256 key_exchange_modes=ecdhe_ecdsa" \
             0 \
 	    -s "Certificate verification was skipped"               \
 	    -c "subject name      : C=NL, O=PolarSSL, CN=localhost" \
             -c "Protocol is TLSv1.3"                                \
-            -c "Ciphersuite is TLS1-3-AES-128-CCM-SHA256"              \
+            -c "Ciphersuite is TLS1-3-AES-128-CCM-SHA256"           \
 	    -c "Verifying peer X.509 certificate... ok"
 
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
@@ -1391,13 +1391,13 @@ run_test    "TLS 1.3, TLS1-3-AES-128-GCM-256, ECDHE-ECDSA, SRV auth" \
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
 requires_config_disabled MBEDTLS_RSA_C
 run_test    "TLS 1.3, TLS1-3-AES-128-CCM-8-SHA256, ECDHE-ECDSA, SRV auth" \
-            "$P_SRV nbio=2 debug_level=5 force_version=tls1_3  key_exchange_modes=ecdhe_ecdsa" \
+            "$P_SRV nbio=2 debug_level=5 force_version=tls1_3 key_exchange_modes=ecdhe_ecdsa" \
             "$P_CLI nbio=2 debug_level=5 force_version=tls1_3 server_name=localhost force_ciphersuite=TLS1-3-AES-128-CCM-8-SHA256 key_exchange_modes=ecdhe_ecdsa" \
             0 \
 	    -s "Certificate verification was skipped"               \
 	    -c "subject name      : C=NL, O=PolarSSL, CN=localhost" \
             -c "Protocol is TLSv1.3"                                \
-            -c "Ciphersuite is TLS1-3-AES-128-CCM-8-SHA256"            \
+            -c "Ciphersuite is TLS1-3-AES-128-CCM-8-SHA256"         \
 	    -c "Verifying peer X.509 certificate... ok"
 
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
@@ -1409,7 +1409,7 @@ run_test    "TLS 1.3, TLS1-3-AES-256-GCM-SHA384, ECDHE-ECDSA, SRV auth" \
 	    -s "Certificate verification was skipped"               \
 	    -c "subject name      : C=NL, O=PolarSSL, CN=localhost" \
             -c "Protocol is TLSv1.3"                                \
-            -c "Ciphersuite is TLS1-3-AES-256-GCM-SHA384"              \
+            -c "Ciphersuite is TLS1-3-AES-256-GCM-SHA384"           \
 	    -c "Verifying peer X.509 certificate... ok"
 
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
@@ -1422,7 +1422,7 @@ run_test    "TLS 1.3, TLS1-3-AES-128-CCM-SHA256, ECDHE-ECDSA, CLI+SRV auth" \
 	    -s "subject name      : C=NL, O=PolarSSL, CN=PolarSSL Test Client 2" \
 	    -c "subject name      : C=NL, O=PolarSSL, CN=localhost"              \
             -c "Protocol is TLSv1.3"                                             \
-            -c "Ciphersuite is TLS1-3-AES-128-CCM-SHA256"                           \
+            -c "Ciphersuite is TLS1-3-AES-128-CCM-SHA256"                        \
 	    -c "Verifying peer X.509 certificate... ok"
 
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
@@ -1448,7 +1448,7 @@ run_test    "TLS 1.3, TLS1-3-AES-128-CCM-8-SHA256, ECDHE-ECDSA, CLI+SRV auth" \
 	    -s "subject name      : C=NL, O=PolarSSL, CN=PolarSSL Test Client 2" \
 	    -c "subject name      : C=NL, O=PolarSSL, CN=localhost"              \
             -c "Protocol is TLSv1.3"                                             \
-            -c "Ciphersuite is TLS1-3-AES-128-CCM-8-SHA256"                         \
+            -c "Ciphersuite is TLS1-3-AES-128-CCM-8-SHA256"                      \
 	    -c "Verifying peer X.509 certificate... ok"
 
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
@@ -1461,7 +1461,7 @@ run_test    "TLS1-3-AES-256-GCM-SHA384 with ECDHE-ECDSA (mutual auth)" \
 	    -s "subject name      : C=NL, O=PolarSSL, CN=PolarSSL Test Client 2" \
 	    -c "subject name      : C=NL, O=PolarSSL, CN=localhost"              \
             -c "Protocol is TLSv1.3"                                             \
-            -c "Ciphersuite is TLS1-3-AES-256-GCM-SHA384"                           \
+            -c "Ciphersuite is TLS1-3-AES-256-GCM-SHA384"                        \
 	    -c "Verifying peer X.509 certificate... ok"
 
 # Server asks client for authentication with certificate request message,
@@ -1498,11 +1498,11 @@ run_test    "TLS 1.3 TLS1-3-AES-256-GCM-SHA384, ECDHE-ECDSA, SRV auth" \
             "$P_SRV nbio=2 debug_level=5 force_version=tls1_3 key_exchange_modes=ecdhe_ecdsa" \
             "$P_CLI nbio=2 debug_level=5 force_version=tls1_3 server_name=localhost force_ciphersuite=TLS1-3-AES-256-GCM-SHA384 key_exchange_modes=ecdhe_ecdsa" \
             0 \
-	    -s "Verifying peer X.509 certificate... failed"                                        \
-	    -s "Certificate verification was skipped"                                              \
-            -c "Protocol is TLSv1.3"                                                               \
-            -c "Ciphersuite is TLS1-3-AES-256-GCM-SHA384"                                             \
-	    -c "Verifying peer X.509 certificate... ok"                                            \
+	    -s "Verifying peer X.509 certificate... failed"            \
+	    -s "Certificate verification was skipped"                  \
+            -c "Protocol is TLSv1.3"                                   \
+            -c "Ciphersuite is TLS1-3-AES-256-GCM-SHA384"              \
+	    -c "Verifying peer X.509 certificate... ok"                \
 	    -c "subject name      : C=NL, O=PolarSSL, CN=localhost"
 
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
@@ -1516,7 +1516,7 @@ run_test    "TLS 1.3, TLS1-3-AES-128-CCM-SHA256, ECDHE-ECDSA, CLI+SRV auth, with
 	    -s "subject name      : C=NL, O=PolarSSL, CN=PolarSSL Test Client 2" \
 	    -c "subject name      : C=NL, O=PolarSSL, CN=localhost"              \
             -c "Protocol is TLSv1.3"                                             \
-            -c "Ciphersuite is TLS1-3-AES-128-CCM-SHA256"                           \
+            -c "Ciphersuite is TLS1-3-AES-128-CCM-SHA256"                        \
 	    -c "Verifying peer X.509 certificate... ok"                          \
 	    -c "got ticket"                                                      \
 	    -c "client hello, adding psk_key_exchange_modes extension"           \
@@ -1554,7 +1554,7 @@ run_test    "TLS 1.3, TLS1-3-AES-128-CCM-8-SHA256, ECDHE-ECDSA, CLI+SRV auth, wi
 	    -s "subject name      : C=NL, O=PolarSSL, CN=PolarSSL Test Client 2" \
 	    -c "subject name      : C=NL, O=PolarSSL, CN=localhost"              \
             -c "Protocol is TLSv1.3"                                             \
-            -c "Ciphersuite is TLS1-3-AES-128-CCM-8-SHA256"                         \
+            -c "Ciphersuite is TLS1-3-AES-128-CCM-8-SHA256"                      \
 	    -c "Verifying peer X.509 certificate... ok"                          \
 	    -c "got ticket"                                                      \
 	    -c "client hello, adding psk_key_exchange_modes extension"           \
@@ -1573,7 +1573,7 @@ run_test    "TLS 1.3, TLS1-3-AES-256-GCM-SHA384, ECDHE-ECDSA, CLI+SRV auth, with
 	    -s "subject name      : C=NL, O=PolarSSL, CN=PolarSSL Test Client 2" \
 	    -c "subject name      : C=NL, O=PolarSSL, CN=localhost"              \
             -c "Protocol is TLSv1.3"                                             \
-            -c "Ciphersuite is TLS1-3-AES-256-GCM-SHA384"                           \
+            -c "Ciphersuite is TLS1-3-AES-256-GCM-SHA384"                        \
 	    -c "Verifying peer X.509 certificate... ok"                          \
 	    -c "got ticket"                                                      \
 	    -c "client hello, adding psk_key_exchange_modes extension"           \
@@ -1588,16 +1588,16 @@ run_test    "TLS 1.3, TLS1-3-AES-256-GCM-SHA384 with ECDHE-ECDSA (server auth on
             "$P_SRV nbio=2 debug_level=5 force_version=tls1_3 key_exchange_modes=all tickets=1" \
             "$P_CLI nbio=2 debug_level=5 force_version=tls1_3 server_name=localhost force_ciphersuite=TLS1-3-AES-256-GCM-SHA384 key_exchange_modes=all reconnect=1 tickets=1" \
             0 \
-	    -s "Verifying peer X.509 certificate... failed"                                        \
-	    -s "Certificate verification was skipped"                                              \
-            -c "Protocol is TLSv1.3"                                                               \
-            -c "Ciphersuite is TLS1-3-AES-256-GCM-SHA384"                                             \
-	    -c "Verifying peer X.509 certificate... ok"                                            \
-	    -c "subject name      : C=NL, O=PolarSSL, CN=localhost"                                \
-	    -c "got ticket"                                                                        \
-	    -c "client hello, adding psk_key_exchange_modes extension"                             \
-	    -c "client hello, adding pre_shared_key extension"                                     \
-	    -c "found pre_shared_key extension"                                                    \
+	    -s "Verifying peer X.509 certificate... failed"             \
+	    -s "Certificate verification was skipped"                   \
+            -c "Protocol is TLSv1.3"                                    \
+            -c "Ciphersuite is TLS1-3-AES-256-GCM-SHA384"               \
+	    -c "Verifying peer X.509 certificate... ok"                 \
+	    -c "subject name      : C=NL, O=PolarSSL, CN=localhost"     \
+	    -c "got ticket"                                             \
+	    -c "client hello, adding psk_key_exchange_modes extension"  \
+	    -c "client hello, adding pre_shared_key extension"          \
+	    -c "found pre_shared_key extension"                         \
 	    -s "<= write new session ticket"
 
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
@@ -1612,7 +1612,7 @@ run_test    "TLS 1.3, TLS1-3-AES-256-GCM-SHA384, ext PSK, early data" \
 	    -s "Derive Early Secret with 'ext binder'"      \
 	    -c "client hello, adding early_data extension"  \
             -c "Protocol is TLSv1.3"                        \
-            -c "Ciphersuite is TLS1-3-AES-256-GCM-SHA384"      \
+            -c "Ciphersuite is TLS1-3-AES-256-GCM-SHA384"   \
 	    -c "Derive Early Secret with 'ext binder'"      \
 	    -c "<= write EndOfEarlyData"                    \
 	    -s "<= parse early data"                        \
@@ -1630,7 +1630,7 @@ run_test    "TLS 1.3, TLS1-3-AES-128-CCM-SHA256, ext PSK, early data" \
 	    -s "Derive Early Secret with 'ext binder'"      \
 	    -c "client hello, adding early_data extension"  \
             -c "Protocol is TLSv1.3"                        \
-            -c "Ciphersuite is TLS1-3-AES-128-CCM-SHA256"      \
+            -c "Ciphersuite is TLS1-3-AES-128-CCM-SHA256"   \
 	    -c "Derive Early Secret with 'ext binder'"      \
 	    -c "<= write EndOfEarlyData"                    \
 	    -s "<= parse early data"                        \
@@ -1666,7 +1666,7 @@ run_test    "TLS 1.3, TLS1-3-AES-128-CCM-8-SHA256, ext PSK, early data" \
 	    -s "Derive Early Secret with 'ext binder'"      \
 	    -c "client hello, adding early_data extension"  \
             -c "Protocol is TLSv1.3"                        \
-            -c "Ciphersuite is TLS1-3-AES-128-CCM-8-SHA256"    \
+            -c "Ciphersuite is TLS1-3-AES-128-CCM-8-SHA256" \
 	    -c "Derive Early Secret with 'ext binder'"      \
 	    -c "<= write EndOfEarlyData"                    \
 	    -s "<= parse early data"                        \
@@ -1683,7 +1683,7 @@ run_test    "TLS 1.3, TLS1-3-AES-256-GCM-SHA384, ECDHE-ECDSA, client tries early
       -s "Protocol is TLSv1.3"                                        \
       -c "<= skip write early_data extension"                         \
       -c "Protocol is TLSv1.3"                                        \
-      -c "Ciphersuite is TLS1-3-AES-256-GCM-SHA384"                      \
+      -c "Ciphersuite is TLS1-3-AES-256-GCM-SHA384"                   \
       -c "early data status = 0"
 
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
@@ -1701,7 +1701,7 @@ run_test    "TLS 1.3, TLS1-3-AES-128-CCM-8-SHA256, ECDHE-ECDSA, CLI+SRV auth, HR
 	    -s "subject name      : C=NL, O=PolarSSL, CN=PolarSSL Test Client 2" \
 	    -c "subject name      : C=NL, O=PolarSSL, CN=localhost"              \
             -c "Protocol is TLSv1.3"                                             \
-            -c "Ciphersuite is TLS1-3-AES-128-CCM-8-SHA256"                         \
+            -c "Ciphersuite is TLS1-3-AES-128-CCM-8-SHA256"                      \
 	    -c "Verifying peer X.509 certificate... ok"
 
 
@@ -1713,13 +1713,13 @@ run_test    "TLS 1.3, TLS1-3-AES-128-CCM-SHA256 with ECDHE-ECDSA, SRV auth, HRR 
             "$P_SRV nbio=2 debug_level=5 force_version=tls1_3 key_exchange_modes=ecdhe_ecdsa named_groups=secp256r1 cookies=1 tickets=0" \
             "$P_CLI nbio=2 debug_level=5 force_version=tls1_3 server_name=localhost force_ciphersuite=TLS1-3-AES-128-CCM-SHA256 key_exchange_modes=ecdhe_ecdsa named_groups=secp384r1,secp256r1" \
             0 \
-            -s "no matching key share"                  \
-            -s "write hello retry request"              \
-            -s "NamedGroup in HRR: secp256r1"           \
-            -s "ECDH curve: secp256r1"                  \
-            -c "received HelloRetryRequest message"     \
-            -c "Protocol is TLSv1.3"                    \
-            -c "Ciphersuite is TLS1-3-AES-128-CCM-SHA256"  \
+            -s "no matching key share"                    \
+            -s "write hello retry request"                \
+            -s "NamedGroup in HRR: secp256r1"             \
+            -s "ECDH curve: secp256r1"                    \
+            -c "received HelloRetryRequest message"       \
+            -c "Protocol is TLSv1.3"                      \
+            -c "Ciphersuite is TLS1-3-AES-128-CCM-SHA256" \
             -c "Verifying peer X.509 certificate... ok"
 
 # test early data status - not sent
@@ -1751,9 +1751,9 @@ run_test    "TLS 1.3, TLS1-3-AES-128-CCM-8-SHA256, ClientHello message misses ma
             "$P_SRV nbio=2 debug_level=5 force_version=tls1_3 key_exchange_modes=psk" \
             "$P_CLI nbio=2 debug_level=5 force_version=tls1_3 server_name=localhost force_ciphersuite=TLS1-3-AES-128-CCM-8-SHA256 key_exchange_modes=psk" \
             1 \
-	    -s "ClientHello message misses mandatory extensions."                 \
-	    -s "send alert message"                                               \
-	    -C "received HelloRetryRequest message"                               \
+	    -s "ClientHello message misses mandatory extensions."  \
+	    -s "send alert message"                                \
+	    -C "received HelloRetryRequest message"                \
             -c "got an alert message, type: \\[2:109]"
 
 # Test OpenSSL server using RSA certificate
@@ -1774,11 +1774,11 @@ run_test    "TLS 1.3, TLS1-3-AES-128-GCM-256, resumption, OpenSSL server" \
             "$O_SRV" \
             "$P_CLI  debug_level=5 force_version=tls1_3 server_name=localhost force_ciphersuite=TLS1-3-AES-128-GCM-256 reconnect=1 tickets=1" \
             0 \
-            -c "Verifying peer X.509 certificate... ok"                          \
-            -c "got ticket"                                                      \
-            -c "client hello, adding psk_key_exchange_modes extension"           \
-            -c "client hello, adding pre_shared_key extension"                   \
-            -c "found pre_shared_key extension"                                  \
+            -c "Verifying peer X.509 certificate... ok"                      \
+            -c "got ticket"                                                  \
+            -c "client hello, adding psk_key_exchange_modes extension"       \
+            -c "client hello, adding pre_shared_key extension"               \
+            -c "found pre_shared_key extension"                              \
             -c "skip parse certificate$"
 
 # Test OpenSSL server with resumption and reject early data
@@ -1812,7 +1812,7 @@ run_test    "TLS 1.3, ALPN" \
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
 requires_config_disabled MBEDTLS_RSA_C
 run_test    "TLS 1.3, TLS_AES_128_CCM_SHA256, ECDHE-ECDSA, mismatched sig_algs" \
-            "$P_SRV nbio=2 debug_level=4 force_version=tls1_3  key_exchange_modes=ecdhe_ecdsa sig_algs=ecdsa_secp384r1_sha384" \
+            "$P_SRV nbio=2 debug_level=4 force_version=tls1_3 key_exchange_modes=ecdhe_ecdsa sig_algs=ecdsa_secp384r1_sha384" \
             "$P_CLI nbio=2 debug_level=4 force_version=tls1_3 server_name=localhost force_ciphersuite=TLS_AES_128_CCM_SHA256 key_exchange_modes=ecdhe_ecdsa sig_algs=ecdsa_secp256r1_sha256" \
             1 \
             -s "found signature_algorithms extension" \
