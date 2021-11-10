@@ -869,7 +869,7 @@ setup_arguments()
     then
         O_SERVER_ARGS="-accept $PORT -ciphersuites TLS_AES_128_GCM_SHA256:TLS_AES_256_GCM_SHA384:TLS_CHACHA20_POLY1305_SHA256:TLS_AES_128_CCM_SHA256:TLS_AES_128_CCM_8_SHA256 --$MODE"
         M_SERVER_ARGS="server_port=$PORT server_addr=0.0.0.0 force_version=$MODE"
-        G_SERVER_PRIO="NONE:${G_PRIO_CCM}+SHA256:+SHA384:+COMP-NULL:+GROUP-SECP256R1:+GROUP-SECP384R1:+CTYPE-ALL:+ECDHE-ECDSA:+CIPHER-ALL:+MAC-ALL:-SHA1:-AES-128-CBC:+SIGN-ECDSA-SECP384R1-SHA384:+SIGN-ECDSA-SECP256R1-SHA256:+ECDHE-ECDSA:${G_PRIO_MODE}"
+        G_SERVER_PRIO="NORMAL:${G_PRIO_CCM}${G_PRIO_MODE}"
     else
         M_SERVER_ARGS="server_port=$PORT server_addr=0.0.0.0 force_version=$MODE"
         O_SERVER_ARGS="-accept $PORT -cipher NULL,ALL -$MODE"
@@ -1402,11 +1402,11 @@ for VERIFY in $VERIFIES; do
                     if [ `minor_ver "$MODE"` -ge 4 ]
                     then
                         M_CIPHERS="$M_CIPHERS               \
-                            TLS_AES_128_GCM_SHA256          \
-                            TLS_AES_256_GCM_SHA384          \
-                            TLS_AES_128_CCM_SHA256          \
-                            TLS_AES_128_CCM_8_SHA256        \
-                            TLS_CHACHA20_POLY1305_SHA256    \
+                            TLS1-3-AES-128-GCM-SHA256       \
+                            TLS1-3-AES-256-GCM-SHA384       \
+                            TLS1-3-AES-128-CCM-SHA256       \
+                            TLS1-3-AES-128-CCM-8-SHA256     \
+                            TLS1-3-CHACHA20-POLY1305-SHA256 \
                             "
                         O_CIPHERS="$O_CIPHERS               \
                             TLS_AES_128_GCM_SHA256          \
