@@ -1,5 +1,5 @@
 /*
- *  TLS 1.3 server-side functionality
+ *  TLS 1.3 server-side functions
  *
  *  Copyright The Mbed TLS Contributors
  *  SPDX-License-Identifier: Apache-2.0
