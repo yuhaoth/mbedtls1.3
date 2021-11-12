@@ -656,6 +656,8 @@ struct mbedtls_ssl_handshake_params
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
     int epoch_handshake;
     int epoch_earlydata;
+    /*! TLS 1.3 transforms for 0-RTT and encrypted handshake messages.
+     *  Those pointers own the transforms they reference. */
     mbedtls_ssl_transform *transform_handshake;
     mbedtls_ssl_transform *transform_earlydata;
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
