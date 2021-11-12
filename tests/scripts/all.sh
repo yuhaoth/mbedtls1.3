@@ -2058,6 +2058,7 @@ component_test_tls13 () {
     scripts/config.py   set MBEDTLS_SSL_USE_MPS
     scripts/config.py   set MBEDTLS_RSA_C
     scripts/config.py   set MBEDTLS_X509_RSASSA_PSS_SUPPORT
+    scripts/config.pl   set MBEDTLS_SSL_CID_TLS1_3_PADDING_GRANULARITY 1
     cmake CC=gcc CMAKE_BUILD_TYPE=ASanDbg .
     make
 
@@ -2074,6 +2075,41 @@ component_test_tls13_no_mps () {
     scripts/config.py unset MBEDTLS_SSL_USE_MPS
     scripts/config.py   set MBEDTLS_RSA_C
     scripts/config.py   set MBEDTLS_X509_RSASSA_PSS_SUPPORT
+    scripts/config.pl   set MBEDTLS_SSL_CID_TLS1_3_PADDING_GRANULARITY 1
+    cmake CC=gcc CMAKE_BUILD_TYPE=ASanDbg .
+    make
+
+    msg "test: TLS 1.3 without MPS compat.sh"
+    if_build_succeeded tests/compat.sh -m tls1_3 -t ECDSA
+
+    msg "test: TLS 1.3 without MPS ssl-opt.sh"
+    if_build_succeeded tests/ssl-opt.sh -f "TLS 1.3"
+}
+
+component_test_tls13_with_padding () {
+    msg "build: TLS 1.3 (ASanDbg) "
+    scripts/config.py   set MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+    scripts/config.py   set MBEDTLS_SSL_USE_MPS
+    scripts/config.py   set MBEDTLS_RSA_C
+    scripts/config.py   set MBEDTLS_X509_RSASSA_PSS_SUPPORT
+    scripts/config.pl   set MBEDTLS_SSL_CID_TLS1_3_PADDING_GRANULARITY 16
+    cmake CC=gcc CMAKE_BUILD_TYPE=ASanDbg .
+    make
+
+    msg "test: TLS 1.3 compat.sh"
+    if_build_succeeded tests/compat.sh -m tls1_3 -t ECDSA
+
+    msg "test: TLS 1.3 ssl-opt.sh"
+    if_build_succeeded tests/ssl-opt.sh -f "TLS 1.3"
+}
+
+component_test_tls13_no_mps_with_padding () {
+    msg "build: TLS 1.3 without MPS (ASanDbg) "
+    scripts/config.py   set MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+    scripts/config.py unset MBEDTLS_SSL_USE_MPS
+    scripts/config.py   set MBEDTLS_RSA_C
+    scripts/config.py   set MBEDTLS_X509_RSASSA_PSS_SUPPORT
+    scripts/config.pl   set MBEDTLS_SSL_CID_TLS1_3_PADDING_GRANULARITY 1
     cmake CC=gcc CMAKE_BUILD_TYPE=ASanDbg .
     make
 
@@ -2526,26 +2562,6 @@ component_build_armcc () {
 
     # ARM Compiler 6 - Target ARMv8-A - AArch64
     armc6_build_test "--target=aarch64-arm-none-eabi -march=armv8.2-a"
-}
-
-component_test_tls13_experimental () {
-    msg "build: default config with MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL enabled, without padding"
-    scripts/config.pl set MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
-    scripts/config.pl set MBEDTLS_SSL_CID_TLS1_3_PADDING_GRANULARITY 1
-    CC=gcc cmake -D CMAKE_BUILD_TYPE:String=Asan .
-    make
-    msg "test: default config with MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL enabled, without padding"
-    make test
-}
-
-component_test_tls13_experimental_with_padding () {
-    msg "build: default config with MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL enabled, with padding"
-    scripts/config.pl set MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
-    scripts/config.pl set MBEDTLS_SSL_CID_TLS1_3_PADDING_GRANULARITY 16
-    CC=gcc cmake -D CMAKE_BUILD_TYPE:String=Asan .
-    make
-    msg "test: default config with MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL enabled, with padding"
-    make test
 }
 
 component_build_mingw () {
