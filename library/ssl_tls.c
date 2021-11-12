@@ -4588,8 +4588,7 @@ void mbedtls_ssl_conf_dhm_min_bitlen( mbedtls_ssl_config *conf,
 }
 #endif /* MBEDTLS_DHM_C && MBEDTLS_SSL_CLI_C */
 
-#if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED) \
-    && defined(MBEDTLS_SSL_PROTO_TLS1_2)
+#if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
 /*
  * Set allowed/preferred hashes for handshake signatures
  */
@@ -4598,8 +4597,16 @@ void mbedtls_ssl_conf_sig_hashes( mbedtls_ssl_config *conf,
 {
     conf->sig_hashes = hashes;
 }
-#endif /* MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED \
-          && MBEDTLS_SSL_PROTO_TLS1_2 */
+
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+/* Configure allowed signature algorithms for use in TLS 1.3 */
+void mbedtls_ssl_conf_sig_algs( mbedtls_ssl_config *conf,
+                                const uint16_t* sig_algs )
+{
+    conf->tls13_sig_algs = sig_algs;
+}
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+#endif /* MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED */
 
 #if defined(MBEDTLS_ECP_C)
 /*
@@ -7283,8 +7290,7 @@ void mbedtls_ssl_config_init( mbedtls_ssl_config *conf )
     memset( conf, 0, sizeof( mbedtls_ssl_config ) );
 }
 
-#if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED) && \
-    defined(MBEDTLS_SSL_PROTO_TLS1_2)
+#if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
 /* The selection should be the same as mbedtls_x509_crt_profile_default in
  * x509_crt.c. Here, the order matters. Currently we favor stronger hashes,
  * for no fundamental reason.
@@ -7302,7 +7308,7 @@ static int ssl_preset_default_hashes[] = {
 #endif
     MBEDTLS_MD_NONE
 };
-#endif /* MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED && MBEDTLS_SSL_PROTO_TLS1_2 */
+#endif /* MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED */
 
 #if defined(MBEDTLS_ECP_C)
 /* The selection should be the same as mbedtls_x509_crt_profile_default in
@@ -7366,19 +7372,14 @@ static int ssl_preset_suiteb_ciphersuites[] = {
 
 #if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1) || defined(MBEDTLS_SSL_PROTO_TLS1_1) || \
-    defined(MBEDTLS_SSL_PROTO_TLS1_2)
 static int ssl_preset_suiteb_hashes[] = {
     MBEDTLS_MD_SHA256,
     MBEDTLS_MD_SHA384,
     MBEDTLS_MD_NONE
 };
-#endif /* MBEDTLS_SSL_PROTO_TLS1 || MBEDTLS_SSL_PROTO_TLS1_1 || \
-          MBEDTLS_SSL_PROTO_TLS1_2 */
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
-
-static int ssl_preset_suiteb_signature_algorithms[] = {
+static uint16_t ssl_preset_default_sig_algs[] = {
     /* ECDSA algorithms */
 #if defined(MBEDTLS_ECDSA_C)
 #if defined(MBEDTLS_SHA256_C) && defined(MBEDTLS_ECP_DP_SECP256R1_ENABLED)
@@ -7399,9 +7400,21 @@ static int ssl_preset_suiteb_signature_algorithms[] = {
 
     MBEDTLS_TLS13_SIG_NONE
 };
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 
-#endif /* MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED */
+static uint16_t ssl_preset_suiteb_sig_algs[] = {
+    /* ECDSA algorithms */
+#if defined(MBEDTLS_ECDSA_C)
+#if defined(MBEDTLS_SHA256_C) && defined(MBEDTLS_ECP_DP_SECP256R1_ENABLED)
+    MBEDTLS_TLS13_SIG_ECDSA_SECP256R1_SHA256,
+#endif /* MBEDTLS_SHA256_C && MBEDTLS_ECP_DP_SECP256R1_ENABLED */
+#if defined(MBEDTLS_SHA512_C) && defined(MBEDTLS_ECP_DP_SECP384R1_ENABLED)
+    MBEDTLS_TLS13_SIG_ECDSA_SECP384R1_SHA384,
+#endif /* MBEDTLS_SHA512_C && MBEDTLS_ECP_DP_SECP384R1_ENABLED */
+#endif /* MBEDTLS_ECDSA_C */
+    MBEDTLS_TLS13_SIG_NONE
+};
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+#endif
 
 #if defined(MBEDTLS_ECP_C)
 static mbedtls_ecp_group_id ssl_preset_suiteb_curves[] = {
@@ -7514,22 +7527,11 @@ int mbedtls_ssl_config_defaults( mbedtls_ssl_config *conf,
 #endif
 
 #if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
-
-
+            conf->sig_hashes = ssl_preset_suiteb_hashes;
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
-    /**
-     * TLS 1.3 replaces SignatureAndHashAlgorithm with SignatureScheme.
-     * - rfc8446 section-4.2.3
-     * - rfc5246 section-7.4.1.4.1
-     */
-    conf->tls13_sig_algs = ssl_preset_suiteb_signature_algorithms;
+            conf->tls13_sig_algs = ssl_preset_suiteb_sig_algs;
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
-
-#if  defined(MBEDTLS_SSL_PROTO_TLS1_2)
-    conf->sig_hashes = ssl_preset_suiteb_hashes;
-#endif /* MBEDTLS_SSL_PROTO_TLS1_2 */
-
-#endif /* MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED */
+#endif
 
 #if defined(MBEDTLS_ECP_C)
             conf->curve_list = ssl_preset_suiteb_curves;
@@ -7562,20 +7564,10 @@ int mbedtls_ssl_config_defaults( mbedtls_ssl_config *conf,
 #endif
 
 #if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
-
+            conf->sig_hashes = ssl_preset_default_hashes;
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
-        /**
-         * TLS 1.3 replaces SignatureAndHashAlgorithm with SignatureScheme.
-         * - rfc8446 section-4.2.3
-         * - rfc5246 section-7.4.1.4.1
-         */
-        conf->tls13_sig_algs = ssl_preset_suiteb_signature_algorithms;
+            conf->tls13_sig_algs = ssl_preset_default_sig_algs;
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
-
-#if defined(MBEDTLS_SSL_PROTO_TLS1_2)
-        conf->sig_hashes = ssl_preset_default_hashes;
-#endif /* MBEDTLS_SSL_PROTO_TLS1_2 */
-
 #endif /* MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED */
 
 #if defined(MBEDTLS_ECP_C)

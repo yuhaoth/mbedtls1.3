@@ -431,7 +431,7 @@ int mbedtls_ssl_write_signature_algorithms_ext( mbedtls_ssl_context *ssl,
 {
     unsigned char *p = buf;
     size_t sig_alg_len = 0;
-    const int *sig_alg;
+    const uint16_t *sig_alg;
     unsigned char *sig_alg_list = buf + 6;
 
     *olen = 0;
@@ -507,7 +507,7 @@ int mbedtls_ssl_parse_signature_algorithms_ext( mbedtls_ssl_context *ssl,
     size_t sig_alg_list_size; /* size of receive signature algorithms list */
     const unsigned char *p; /* pointer to individual signature algorithm */
     const unsigned char *end = buf + buf_len; /* end of buffer */
-    const int *sig_alg; /* iterate through configured signature schemes */
+    const uint16_t *sig_alg; /* iterate through configured signature schemes */
     int signature_scheme; /* store received signature algorithm scheme */
     uint32_t common_idx = 0; /* iterate through received_signature_schemes_list */
 
@@ -2423,7 +2423,7 @@ void mbedtls_ssl_conf_early_data( mbedtls_ssl_config* conf, int early_data,
 
 #if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
 void mbedtls_ssl_conf_signature_algorithms( mbedtls_ssl_config *conf,
-                     const int* sig_algs )
+                     const uint16_t* sig_algs )
 {
     /* TODO: Add available algorithm check */
     conf->tls13_sig_algs = sig_algs;
