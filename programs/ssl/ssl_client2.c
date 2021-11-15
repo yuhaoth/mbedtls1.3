@@ -60,13 +60,13 @@ int main( void )
 #define DFL_KEY_OPAQUE          0
 #define DFL_KEY_PWD             ""
 #define DFL_PSK                 ""
-#define DFL_KEY_EXCHANGE_MODES  MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_ALL
 #define DFL_EARLY_DATA          MBEDTLS_SSL_EARLY_DATA_DISABLED
 #define DFL_PSK_OPAQUE          0
 #define DFL_PSK_IDENTITY        "Client_identity"
 #define DFL_ECJPAKE_PW          NULL
 #define DFL_EC_MAX_OPS          -1
 #define DFL_FORCE_CIPHER        0
+#define DFL_TLS13_KEX_MODES     MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_ALL
 #define DFL_RENEGOTIATION       MBEDTLS_SSL_RENEGOTIATION_DISABLED
 #define DFL_ALLOW_LEGACY        -2
 #define DFL_RENEGOTIATE         0
@@ -168,14 +168,6 @@ int main( void )
 #else /* MBEDTLS_SSL_DTLS_CONNECTION_ID */
 #define USAGE_CID ""
 #endif /* MBEDTLS_SSL_DTLS_CONNECTION_ID */
-
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
-#define USAGE_KEX_MODES \
-    "    key_exchange_modes=%%s   default: all\n"     \
-    "                             options: psk, psk_dhe, ecdhe_ecdsa, psk_all, all\n"
-#else
-#define USAGE_KEX_MODES ""
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 
 #if defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
 #define USAGE_PSK_RAW                                               \
@@ -386,6 +378,14 @@ int main( void )
 #define USAGE_NAMED_GROUP ""
 #endif /* MBEDTLS_ECP_C && MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+#define USAGE_TLS13_KEX_MODES \
+    "    tls13_kex_modes=%%s   default: all\n"     \
+    "                          options: psk, psk_ephemeral, ephemeral, ephemeral_all, psk_all, all\n"
+#else
+#define USAGE_TLS13_KEX_MODES ""
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+
 /* USAGE is arbitrarily split to stay under the portable string literal
  * length limit: 4095 bytes in C99. */
 #define USAGE1 \
@@ -446,7 +446,6 @@ int main( void )
     USAGE_CURVES                                            \
     USAGE_SIG_ALGS                                          \
     USAGE_EARLY_DATA                                        \
-    USAGE_KEX_MODES                                         \
     USAGE_NAMED_GROUP                                       \
     USAGE_DHMLEN                                            \
     "\n"
@@ -458,17 +457,18 @@ int main( void )
 #endif /* !MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 
 #define USAGE4 \
-    "    allow_sha1=%%d       default: 0\n"                             \
-    "    min_version=%%s      default: (library default: tls1_2)\n"       \
-    "    max_version=%%s      default: (library default: tls1_2)\n"     \
-    USAGE_FORCE_VERSION                                             \
-    "\n"                                                    \
-    "    force_ciphersuite=<name>    default: all enabled\n"\
-    "    query_config=<name>         return 0 if the specified\n"       \
+    "    allow_sha1=%%d       default: 0\n"                                   \
+    "    min_version=%%s      default: (library default: tls1_2)\n"           \
+    "    max_version=%%s      default: (library default: tls1_2)\n"           \
+    USAGE_FORCE_VERSION                                                       \
+    "\n"                                                                      \
+    "    force_ciphersuite=<name>    default: all enabled\n"                  \
+    USAGE_TLS13_KEX_MODES                                                     \
+    "    query_config=<name>         return 0 if the specified\n"             \
     "                                configuration macro is defined and 1\n"  \
     "                                otherwise. The expansion of the macro\n" \
-    "                                is printed if it is defined\n"     \
-    USAGE_SERIALIZATION                                     \
+    "                                is printed if it is defined\n"           \
+    USAGE_SERIALIZATION                                                       \
     " acceptable ciphersuite names:\n"
 
 #define ALPN_LIST_SIZE    10
@@ -508,6 +508,9 @@ struct options
     const char *ecjpake_pw;     /* the EC J-PAKE password                   */
     int ec_max_ops;             /* EC consecutive operations limit          */
     int force_ciphersuite[2];   /* protocol/ciphersuite to use, or all      */
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+    int tls13_kex_modes;        /* supported TLS 1.3 key exchange modes     */
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
     int renegotiation;          /* enable / disable renegotiation           */
     int allow_legacy;           /* allow legacy renegotiation               */
     int renegotiate;            /* attempt renegotiation?                   */
@@ -555,7 +558,6 @@ struct options
     int skip_close_notify;      /* skip sending the close_notify alert      */
     const char *named_groups_string;           /* list of named groups      */
     const char *key_share_named_groups_string; /* list of named groups      */
-    int key_exchange_modes;     /* supported key exchange modes             */
     int early_data;             /* support for early data                   */
     int query_config_mode;      /* whether to read config                   */
     int use_srtp;               /* Support SRTP                             */
@@ -914,7 +916,6 @@ int main( int argc, char *argv[] )
     opt.key_opaque          = DFL_KEY_OPAQUE;
     opt.key_pwd             = DFL_KEY_PWD;
     opt.psk                 = DFL_PSK;
-    opt.key_exchange_modes  = DFL_KEY_EXCHANGE_MODES;
     opt.sig_algs            = DFL_SIG_ALGS;
     opt.early_data          = DFL_EARLY_DATA;
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
@@ -927,6 +928,9 @@ int main( int argc, char *argv[] )
     opt.ecjpake_pw          = DFL_ECJPAKE_PW;
     opt.ec_max_ops          = DFL_EC_MAX_OPS;
     opt.force_ciphersuite[0]= DFL_FORCE_CIPHER;
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+    opt.tls13_kex_modes     = DFL_TLS13_KEX_MODES;
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
     opt.renegotiation       = DFL_RENEGOTIATION;
     opt.allow_legacy        = DFL_ALLOW_LEGACY;
     opt.renegotiate         = DFL_RENEGOTIATE;
@@ -1192,7 +1196,6 @@ int main( int argc, char *argv[] )
             }
         }
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
-
 #if defined(MBEDTLS_ZERO_RTT)
         else if( strcmp( p, "early_data" ) == 0 )
         {
@@ -1215,19 +1218,20 @@ int main( int argc, char *argv[] )
         else if( strcmp( p, "key_share_named_groups" ) == 0 )
             opt.key_share_named_groups_string = q;
 #endif /* MBEDTLS_ECP_C */
-
-        else if( strcmp( p, "key_exchange_modes" ) == 0 )
+        else if( strcmp( p, "tls13_kex_modes" ) == 0 )
         {
             if( strcmp( q, "psk" ) == 0 )
-                opt.key_exchange_modes = MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_KE;
-            else if( strcmp(q, "psk_dhe" ) == 0 )
-                opt.key_exchange_modes = MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_DHE_KE;
-            else if( strcmp(q, "ecdhe_ecdsa" ) == 0 )
-                opt.key_exchange_modes = MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_ECDHE_ECDSA;
+                opt.tls13_kex_modes = MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK;
+            else if( strcmp(q, "psk_ephemeral" ) == 0 )
+                opt.tls13_kex_modes = MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_EPHEMERAL;
+            else if( strcmp(q, "ephemeral" ) == 0 )
+                opt.tls13_kex_modes = MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_EPHEMERAL;
+            else if( strcmp(q, "ephemeral_all" ) == 0 )
+                opt.tls13_kex_modes = MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_EPHEMERAL_ALL;
             else if( strcmp( q, "psk_all" ) == 0 )
-                opt.key_exchange_modes = MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_ALL;
+                opt.tls13_kex_modes = MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_ALL;
             else if( strcmp( q, "all" ) == 0 )
-                opt.key_exchange_modes = MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_ALL;
+                opt.tls13_kex_modes = MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_ALL;
             else goto usage;
         }
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
@@ -2053,10 +2057,6 @@ int main( int argc, char *argv[] )
         mbedtls_ssl_conf_encrypt_then_mac( &conf, opt.etm );
 #endif
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
-    mbedtls_ssl_conf_tls13_key_exchange( &conf, opt.key_exchange_modes );
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
-
 #if defined(MBEDTLS_DHM_C)
     if( opt.dhmlen != DFL_DHMLEN )
         mbedtls_ssl_conf_dhm_min_bitlen( &conf, opt.dhmlen );
@@ -2093,6 +2093,10 @@ int main( int argc, char *argv[] )
 
     if( opt.force_ciphersuite[0] != DFL_FORCE_CIPHER )
         mbedtls_ssl_conf_ciphersuites( &conf, opt.force_ciphersuite );
+
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+    mbedtls_ssl_conf_tls13_key_exchange_modes( &conf, opt.tls13_kex_modes );
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 
     if( opt.allow_legacy != DFL_ALLOW_LEGACY )
         mbedtls_ssl_conf_legacy_renegotiation( &conf, opt.allow_legacy );
@@ -3262,14 +3266,9 @@ reconnect:
         }
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
-        // Configure key exchange mode to use PSK-ECDHE
-        if( ( ret = mbedtls_ssl_conf_tls13_key_exchange( &conf,
-                            MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_DHE_KE ) )  != 0 )
-        {
-            mbedtls_printf( " failed\n  ! mbedtls_ssl_conf_tls13_key_exchange returned -0x%x\n\n",
-                            (unsigned int) -ret );
-            goto exit;
-        }
+        // Configure key exchange mode to use PSK-ephemeral
+        mbedtls_ssl_conf_tls13_key_exchange_modes(
+            &conf, MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_EPHEMERAL );
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && defined(MBEDTLS_ZERO_RTT)

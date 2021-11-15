@@ -1147,39 +1147,39 @@ static int ssl_parse_key_exchange_modes_ext( mbedtls_ssl_context *ssl,
                                              const unsigned char *buf,
                                              size_t len )
 {
-    size_t psk_mode_list_len;
-    unsigned psk_key_exchange_modes = 0;
+    size_t ke_modes_len;
+    unsigned ke_modes = 0;
 
     /* Read PSK mode list length (1 Byte) */
-    psk_mode_list_len = *buf++;
+    ke_modes_len = *buf++;
     len--;
 
     /* There's no content after the PSK mode list, to its length
      * must match the total length of the extension. */
-    if( psk_mode_list_len != len )
+    if( ke_modes_len != len )
         return( MBEDTLS_ERR_SSL_DECODE_ERROR );
 
     /* Currently, there are only two PSK modes, so even without looking
      * at the content, something's wrong if the list has more than 2 items. */
-    if( psk_mode_list_len > 2 )
+    if( ke_modes_len > 2 )
         return( MBEDTLS_ERR_SSL_HANDSHAKE_FAILURE );
 
-    while( psk_mode_list_len-- != 0 )
+    while( ke_modes_len-- != 0 )
     {
         switch( *buf )
         {
         case MBEDTLS_SSL_TLS13_PSK_MODE_PURE:
-            psk_key_exchange_modes |= MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_KE;
+            ke_modes |= MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK;
             break;
         case MBEDTLS_SSL_TLS13_PSK_MODE_ECDHE:
-            psk_key_exchange_modes |= MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_DHE_KE;
+            ke_modes |= MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_EPHEMERAL;
             break;
         default:
             return( MBEDTLS_ERR_SSL_ILLEGAL_PARAMETER );
         }
     }
 
-    ssl->handshake->key_exchange_modes = psk_key_exchange_modes;
+    ssl->handshake->tls13_kex_modes = ke_modes;
     return( 0 );
 }
 #endif /* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED */
@@ -2168,19 +2168,19 @@ static int ssl_client_hello_has_cert_extensions( mbedtls_ssl_context *ssl )
 static int ssl_client_hello_allows_psk_mode( mbedtls_ssl_context *ssl,
                                              unsigned psk_mode )
 {
-    return( ( ssl->handshake->key_exchange_modes & psk_mode ) != 0 );
+    return( ( ssl->handshake->tls13_kex_modes & psk_mode ) != 0 );
 }
 
-static int ssl_client_hello_allows_pure_psk( mbedtls_ssl_context *ssl )
+static int ssl_client_hello_allows_psk( mbedtls_ssl_context *ssl )
 {
     return( ssl_client_hello_allows_psk_mode( ssl,
-                           MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_KE ) );
+                           MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK ) );
 }
 
-static int ssl_client_hello_allows_psk_ecdhe( mbedtls_ssl_context *ssl )
+static int ssl_client_hello_allows_psk_ephemeral( mbedtls_ssl_context *ssl )
 {
     return( ssl_client_hello_allows_psk_mode( ssl,
-                           MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_DHE_KE ) );
+                           MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_EPHEMERAL ) );
 }
 
 static int ssl_check_psk_key_exchange( mbedtls_ssl_context *ssl )
@@ -2189,21 +2189,21 @@ static int ssl_check_psk_key_exchange( mbedtls_ssl_context *ssl )
         return( 0 );
 
     /* Test whether pure PSK is offered by client and supported by us. */
-    if( mbedtls_ssl_conf_tls13_pure_psk_enabled( ssl ) &&
-        ssl_client_hello_allows_pure_psk( ssl ) )
+    if( mbedtls_ssl_conf_tls13_psk_enabled( ssl ) &&
+        ssl_client_hello_allows_psk( ssl ) )
     {
         MBEDTLS_SSL_DEBUG_MSG( 3, ( "Using a PSK key exchange" ) );
-        ssl->handshake->key_exchange = MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_KE;
+        ssl->handshake->key_exchange = MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK;
         return( 1 );
     }
 
-    /* Test whether PSK-ECDHE is offered by client and supported by us. */
-    if( mbedtls_ssl_conf_tls13_psk_ecdhe_enabled( ssl ) &&
-        ssl_client_hello_allows_psk_ecdhe( ssl )        &&
+    /* Test whether PSK-ephemeral is offered by client and supported by us. */
+    if( mbedtls_ssl_conf_tls13_psk_ephemeral_enabled( ssl ) &&
+        ssl_client_hello_allows_psk_ephemeral( ssl ) &&
         ssl_client_hello_has_key_share_extensions( ssl ) )
     {
         MBEDTLS_SSL_DEBUG_MSG( 3, ( "Using a ECDHE-PSK key exchange" ) );
-        ssl->handshake->key_exchange = MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_DHE_KE;
+        ssl->handshake->key_exchange = MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_EPHEMERAL;
         return( 1 );
     }
 
@@ -2213,13 +2213,13 @@ static int ssl_check_psk_key_exchange( mbedtls_ssl_context *ssl )
 
 static int ssl_check_certificate_key_exchange( mbedtls_ssl_context *ssl )
 {
-    if( !mbedtls_ssl_conf_tls13_pure_ecdhe_enabled( ssl ) )
+    if( !mbedtls_ssl_conf_tls13_ephemeral_enabled( ssl ) )
         return( 0 );
 
     if( !ssl_client_hello_has_cert_extensions( ssl ) )
         return( 0 );
 
-    ssl->handshake->key_exchange = MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_ECDHE_ECDSA;
+    ssl->handshake->key_exchange = MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_EPHEMERAL;
     return( 1 );
 }
 
@@ -3279,7 +3279,7 @@ static int ssl_write_hrr_key_share_ext( mbedtls_ssl_context *ssl,
     *olen = 0;
 
     /* For a pure PSK-based ciphersuite there is no key share to declare. */
-    if( mbedtls_ssl_tls13_kex_with_ecdhe( ssl ) == 0 )
+    if( !mbedtls_ssl_tls13_kex_with_ephemeral( ssl ) )
         return( 0 );
 
     /* We should only send the key_share extension if the client's initial
@@ -3657,7 +3657,7 @@ static int ssl_server_hello_write( mbedtls_ssl_context* ssl,
 #endif /* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED */
 
 #if ( defined(MBEDTLS_ECDH_C) || defined(MBEDTLS_ECDSA_C) )
-    if( mbedtls_ssl_tls13_kex_with_ecdhe( ssl ) )
+    if( mbedtls_ssl_tls13_kex_with_ephemeral( ssl ) )
     {
         if( ( ret = ssl_write_key_shares_ext( ssl, buf, end, &cur_ext_len ) ) != 0 )
         {

@@ -454,7 +454,7 @@ static void ssl_write_hostname_ext( mbedtls_ssl_context *ssl,
 
     *olen = 0;
 
-    if( !mbedtls_ssl_conf_tls13_pure_ecdhe_enabled( ssl ) )
+    if( !mbedtls_ssl_conf_tls13_ephemeral_enabled( ssl ) )
         return;
 
     if( ssl->hostname == NULL )
@@ -719,7 +719,7 @@ static int ssl_write_psk_key_exchange_modes_ext( mbedtls_ssl_context *ssl,
     /* Skip extension length (2 byte) and PSK mode list length (1 byte) for now. */
     p = buf + 5;
 
-    if( mbedtls_ssl_conf_tls13_pure_psk_enabled( ssl ) )
+    if( mbedtls_ssl_conf_tls13_psk_enabled( ssl ) )
     {
         *p++ = MBEDTLS_SSL_TLS13_PSK_MODE_PURE;
         num_modes++;
@@ -727,7 +727,7 @@ static int ssl_write_psk_key_exchange_modes_ext( mbedtls_ssl_context *ssl,
         MBEDTLS_SSL_DEBUG_MSG( 4, ( "Adding pure PSK key exchange mode" ) );
     }
 
-    if( mbedtls_ssl_conf_tls13_psk_ecdhe_enabled( ssl ) )
+    if( mbedtls_ssl_conf_tls13_psk_ephemeral_enabled( ssl ) )
     {
         *p++ = MBEDTLS_SSL_TLS13_PSK_MODE_ECDHE;
         num_modes++;
@@ -1083,7 +1083,7 @@ static int ssl_write_supported_groups_ext( mbedtls_ssl_context *ssl,
 
     *olen = 0;
 
-    if( !mbedtls_ssl_conf_tls13_some_ecdhe_enabled( ssl ) )
+    if( !mbedtls_ssl_conf_tls13_some_ephemeral_enabled( ssl ) )
         return( 0 );
 
 #if defined(MBEDTLS_ECP_C)
@@ -1281,7 +1281,7 @@ static int ssl_write_key_shares_ext( mbedtls_ssl_context *ssl,
 
     MBEDTLS_SSL_DEBUG_MSG( 3, ( "client hello, adding key share extension" ) );
 
-    if( !mbedtls_ssl_conf_tls13_some_ecdhe_enabled( ssl ) )
+    if( !mbedtls_ssl_conf_tls13_some_ephemeral_enabled( ssl ) )
         return( 0 );
 
     /* By default, offer topmost entry in the curve list, but an HRR
@@ -3166,12 +3166,12 @@ static int ssl_server_hello_postprocess( mbedtls_ssl_context* ssl )
     if( ssl->handshake->extensions_present & MBEDTLS_SSL_EXT_PRE_SHARED_KEY )
     {
         if( ssl->handshake->extensions_present & MBEDTLS_SSL_EXT_KEY_SHARE )
-            ssl->handshake->key_exchange = MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_DHE_KE;
+            ssl->handshake->key_exchange = MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_EPHEMERAL;
         else
-            ssl->handshake->key_exchange = MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_KE;
+            ssl->handshake->key_exchange = MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK;
     }
     else if( ssl->handshake->extensions_present & MBEDTLS_SSL_EXT_KEY_SHARE )
-        ssl->handshake->key_exchange = MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_ECDHE_ECDSA;
+        ssl->handshake->key_exchange = MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_EPHEMERAL;
     else
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "Unknown key exchange." ) );

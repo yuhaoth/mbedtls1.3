@@ -941,7 +941,7 @@ static int ssl_tls1_3_complete_ephemeral_secret( mbedtls_ssl_context *ssl,
      * Compute ECDHE secret for second stage of secret evolution.
      */
 #if defined(MBEDTLS_KEY_EXCHANGE_SOME_ECDHE_ENABLED)
-    if( mbedtls_ssl_tls13_kex_with_ecdhe( ssl ) )
+    if( mbedtls_ssl_tls13_kex_with_ephemeral( ssl ) )
     {
         ret = mbedtls_ecdh_calc_secret(
                    &ssl->handshake->ecdh_ctx,
