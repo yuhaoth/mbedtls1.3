@@ -173,6 +173,7 @@ OBJS_TLS= \
 	  ssl_tls13_keys.o \
 	  ssl_tls13_client.o \
 	  ssl_tls13_server.o \
+	  ssl_tls13_generic.o \
 	  mps_reader.o \
 	  mps_writer.o \
 	  mps_layer1.o \
