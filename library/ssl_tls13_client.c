@@ -3224,7 +3224,7 @@ static int ssl_server_hello_postprocess( mbedtls_ssl_context* ssl )
         MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_tls13_populate_transform", ret );
         return( ret );
     }
-
+    MBEDTLS_SSL_DEBUG_MSG( 1, ( "Switch to handshake keys for inbound traffic" ) );
 #if !defined(MBEDTLS_SSL_USE_MPS)
     ssl->handshake->transform_handshake = transform_handshake;
     mbedtls_ssl_set_inbound_transform( ssl, ssl->handshake->transform_handshake );
@@ -3241,7 +3241,21 @@ static int ssl_server_hello_postprocess( mbedtls_ssl_context* ssl )
         return( ret );
 #endif /* MBEDTLS_SSL_USE_MPS */
 
-    MBEDTLS_SSL_DEBUG_MSG( 1, ( "Switch to handshake keys for inbound traffic" ) );
+    MBEDTLS_SSL_DEBUG_MSG( 1, ( "Switch to handshake keys for outbound traffic" ) );
+#if defined(MBEDTLS_SSL_USE_MPS)
+        {
+            int ret;
+
+            /* Use new transform for outgoing data. */
+            ret = mbedtls_mps_set_outgoing_keys( &ssl->mps->l4,
+                                                 ssl->handshake->epoch_handshake );
+            if( ret != 0 )
+                return( ret );
+        }
+#else
+        mbedtls_ssl_set_outbound_transform( ssl, ssl->handshake->transform_handshake );
+#endif /* MBEDTLS_SSL_USE_MPS */
+
     ssl->session_in = ssl->session_negotiate;
 
     /*
