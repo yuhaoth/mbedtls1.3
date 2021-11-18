@@ -834,6 +834,15 @@ struct mbedtls_ssl_handshake_params
 
     /* End of state-local variables. */
 
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+    uint16_t offered_group_id; /* The NamedGroup value for the group
+                                * that is being used for ephemeral
+                                * key exchange.
+                                *
+                                * On the client: Defaults to the first
+                                * entry in the client's group list,
+                                * but can be overwritten by the HRR. */
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 
     mbedtls_ssl_ciphersuite_t const *ciphersuite_info;
 
@@ -845,14 +854,6 @@ struct mbedtls_ssl_handshake_params
     unsigned char certificate_request_context_len;
     unsigned char* certificate_request_context;
 #endif
-
-    uint16_t named_group_id; /* The NamedGroup value for the group
-                              * that is being used for ephemeral
-                              * key exchange.
-                              *
-                              * On the client: Defaults to the first
-                              * entry in the client's group list,
-                              * but can be overwritten by the HRR. */
 
 #if defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
     // pointer to the pre_shared_key extension
@@ -1333,59 +1334,6 @@ int ssl_parse_encrypted_extensions_early_data_ext( mbedtls_ssl_context *ssl,
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
 
 /*
- * Helper functions around key exchange modes.
- */
-static inline unsigned mbedtls_ssl_conf_tls13_kex_modes_check( mbedtls_ssl_context *ssl,
-                                                               int kex_mode_mask )
-{
-    return( ( ssl->conf->tls13_kex_modes & kex_mode_mask ) != 0 );
-}
-
-static inline int mbedtls_ssl_conf_tls13_psk_enabled( mbedtls_ssl_context *ssl )
-{
-    return( mbedtls_ssl_conf_tls13_kex_modes_check( ssl,
-                   MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK ) );
-}
-static inline int mbedtls_ssl_conf_tls13_psk_ephemeral_enabled( mbedtls_ssl_context *ssl )
-{
-    return( mbedtls_ssl_conf_tls13_kex_modes_check( ssl,
-                   MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_EPHEMERAL ) );
-}
-static inline int mbedtls_ssl_conf_tls13_some_ephemeral_enabled( mbedtls_ssl_context *ssl )
-{
-    return( mbedtls_ssl_conf_tls13_kex_modes_check( ssl,
-                   MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_EPHEMERAL_ALL ) );
-}
-static inline int mbedtls_ssl_conf_tls13_some_psk_enabled( mbedtls_ssl_context *ssl )
-{
-    return( mbedtls_ssl_conf_tls13_kex_modes_check( ssl,
-                   MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_ALL ) );
-}
-static inline int mbedtls_ssl_conf_tls13_ephemeral_enabled( mbedtls_ssl_context *ssl )
-{
-    return( mbedtls_ssl_conf_tls13_kex_modes_check( ssl,
-                   MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_EPHEMERAL ) );
-}
-
-static inline int mbedtls_ssl_tls13_kex_check( mbedtls_ssl_context *ssl,
-                                      int kex_mask )
-{
-    return( ( ssl->handshake->key_exchange & kex_mask ) != 0 );
-}
-
-static inline int mbedtls_ssl_tls13_kex_with_psk( mbedtls_ssl_context *ssl )
-{
-    return( mbedtls_ssl_tls13_kex_check( ssl,
-                   MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_ALL ) );
-}
-
-static inline int mbedtls_ssl_tls13_kex_with_ephemeral( mbedtls_ssl_context *ssl )
-{
-    return( mbedtls_ssl_tls13_kex_check( ssl,
-                   MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_EPHEMERAL_ALL ) );
-}
-
-/*
  * Helper functions around EarlyData
  */
 static inline int mbedtls_ssl_conf_tls13_0rtt_enabled( mbedtls_ssl_context *ssl )
@@ -1726,25 +1674,6 @@ int mbedtls_ssl_dtls_replay_check( mbedtls_ssl_context const *ssl );
 void mbedtls_ssl_dtls_replay_update( mbedtls_ssl_context *ssl );
 #endif
 
-static inline void mbedtls_ssl_handshake_set_state(mbedtls_ssl_context* ssl,
-    int state)
-{
-    ssl->state = state;
-
-    /* Note:
-     * This only works as long as all state-local struct members
-     * of mbedtls_ssl_hanshake_params::state_local can be initialized
-     * through zeroization.
-     * Exceptions must be manually checked for here.
-     */
-    if (state != MBEDTLS_SSL_HANDSHAKE_WRAPUP &&
-        state != MBEDTLS_SSL_HANDSHAKE_OVER &&
-        state != MBEDTLS_SSL_FLUSH_BUFFERS)
-    {
-        mbedtls_platform_zeroize(&ssl->handshake->state_local, sizeof(ssl->handshake->state_local));
-    }
-}
-
 int mbedtls_ssl_session_copy( mbedtls_ssl_session *dst,
                               const mbedtls_ssl_session *src );
 
@@ -2021,6 +1950,63 @@ int mbedtls_ecp_tls_13_write_group( const mbedtls_ecp_group *grp,
                                  size_t *olen,
                                  unsigned char *buf, size_t blen );
 #endif /* MBEDTLS_ECP_C */
+
+/*
+ * Helper functions around key exchange modes.
+ */
+static inline unsigned mbedtls_ssl_conf_tls13_check_kex_modes( mbedtls_ssl_context *ssl,
+                                                               int kex_mode_mask )
+{
+    return( ( ssl->conf->tls13_kex_modes & kex_mode_mask ) != 0 );
+}
+
+static inline int mbedtls_ssl_conf_tls13_psk_enabled( mbedtls_ssl_context *ssl )
+{
+    return( mbedtls_ssl_conf_tls13_check_kex_modes( ssl,
+                   MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK ) );
+}
+
+static inline int mbedtls_ssl_conf_tls13_psk_ephemeral_enabled( mbedtls_ssl_context *ssl )
+{
+    return( mbedtls_ssl_conf_tls13_check_kex_modes( ssl,
+                   MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_EPHEMERAL ) );
+}
+
+static inline int mbedtls_ssl_conf_tls13_ephemeral_enabled( mbedtls_ssl_context *ssl )
+{
+    return( mbedtls_ssl_conf_tls13_check_kex_modes( ssl,
+                   MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_EPHEMERAL ) );
+}
+
+static inline int mbedtls_ssl_conf_tls13_some_ephemeral_enabled( mbedtls_ssl_context *ssl )
+{
+    return( mbedtls_ssl_conf_tls13_check_kex_modes( ssl,
+                   MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_EPHEMERAL_ALL ) );
+}
+
+static inline int mbedtls_ssl_conf_tls13_some_psk_enabled( mbedtls_ssl_context *ssl )
+{
+    return( mbedtls_ssl_conf_tls13_check_kex_modes( ssl,
+                   MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_ALL ) );
+}
+
+static inline int mbedtls_ssl_tls13_kex_check( mbedtls_ssl_context *ssl,
+                                      int kex_mask )
+{
+    return( ( ssl->handshake->key_exchange & kex_mask ) != 0 );
+}
+
+static inline int mbedtls_ssl_tls13_kex_with_psk( mbedtls_ssl_context *ssl )
+{
+    return( mbedtls_ssl_tls13_kex_check( ssl,
+                   MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_ALL ) );
+}
+
+static inline int mbedtls_ssl_tls13_kex_with_ephemeral( mbedtls_ssl_context *ssl )
+{
+    return( mbedtls_ssl_tls13_kex_check( ssl,
+                   MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_EPHEMERAL_ALL ) );
+}
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 
 /**
@@ -2070,26 +2056,43 @@ static inline int mbedtls_ssl_conf_is_hybrid_tls12_tls13( const mbedtls_ssl_conf
 #endif /* MBEDTLS_SSL_PROTO_TLS1_2 && MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL*/
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
-/* From RF 8446
- *    enum {
- *         // Elliptic Curve Groups (ECDHE)
- *         secp256r1(0x0017), secp384r1(0x0018), secp521r1(0x0019),
- *         x25519(0x001D), x448(0x001E),
- *         // Finite Field Groups (DHE)
- *         ffdhe2048(0x0100), ffdhe3072(0x0101), ffdhe4096(0x0102),
- *         ffdhe6144(0x0103), ffdhe8192(0x0104),
- *         // Reserved Code Points
- *         ffdhe_private_use(0x01FC..0x01FF),
- *         ecdhe_private_use(0xFE00..0xFEFF),
- *         (0xFFFF)
- *     } NamedGroup; */
-static inline int mbedtls_ssl_named_group_is_ecdhe( uint16_t named_group )
+
+/*
+ * Helper functions for NamedGroup.
+ */
+static inline int mbedtls_ssl_tls13_named_group_is_ecdhe( uint16_t named_group )
 {
-    return( named_group == MBEDTLS_SSL_TLS13_NAMED_GROUP_SEC256R1 ||
-            named_group == MBEDTLS_SSL_TLS13_NAMED_GROUP_SEC384R1 ||
-            named_group == MBEDTLS_SSL_TLS13_NAMED_GROUP_SEC521R1 ||
-            named_group == MBEDTLS_SSL_TLS13_NAMED_GROUP_X25519   ||
+    return( named_group == MBEDTLS_SSL_TLS13_NAMED_GROUP_SECP256R1 ||
+            named_group == MBEDTLS_SSL_TLS13_NAMED_GROUP_SECP384R1 ||
+            named_group == MBEDTLS_SSL_TLS13_NAMED_GROUP_SECP521R1 ||
+            named_group == MBEDTLS_SSL_TLS13_NAMED_GROUP_X25519    ||
             named_group == MBEDTLS_SSL_TLS13_NAMED_GROUP_X448 );
+}
+
+static inline int mbedtls_ssl_tls13_named_group_is_dhe( uint16_t named_group )
+{
+    return( named_group >= MBEDTLS_SSL_TLS13_NAMED_GROUP_FFDHE2048 &&
+            named_group <= MBEDTLS_SSL_TLS13_NAMED_GROUP_FFDHE8192 );
+}
+
+static inline void mbedtls_ssl_handshake_set_state( mbedtls_ssl_context *ssl,
+                                                    int state )
+{
+    ssl->state = state;
+
+    /* Note:
+     * This only works as long as all state-local struct members
+     * of mbedtls_ssl_hanshake_params::state_local can be initialized
+     * through zeroization.
+     * Exceptions must be manually checked for here.
+     */
+    if (state != MBEDTLS_SSL_HANDSHAKE_WRAPUP &&
+        state != MBEDTLS_SSL_HANDSHAKE_OVER &&
+        state != MBEDTLS_SSL_FLUSH_BUFFERS)
+    {
+        mbedtls_platform_zeroize( &ssl->handshake->state_local,
+                                  sizeof( ssl->handshake->state_local ) );
+    }
 }
 
 /*
@@ -2127,6 +2130,7 @@ int mbedtls_ssl_tls13_write_sig_alg_ext( mbedtls_ssl_context *ssl,
                                          unsigned char *buf,
                                          unsigned char *end,
                                          size_t *olen);
+
 #endif /* MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED */
 
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */

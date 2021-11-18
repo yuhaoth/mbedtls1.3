@@ -131,7 +131,7 @@ static int ssl_key_share_encapsulate( mbedtls_ssl_context *ssl,
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
 
-    if( mbedtls_ssl_named_group_is_ecdhe( named_group ) )
+    if( mbedtls_ssl_tls13_named_group_is_ecdhe( named_group ) )
     {
         ret = mbedtls_ecdh_make_tls_13_params( &ssl->handshake->ecdh_ctx,
                  olen, buf, end - buf, ssl->conf->f_rng, ssl->conf->p_rng );
@@ -178,14 +178,14 @@ static int ssl_write_key_shares_ext(
 
     /* When we introduce PQC-ECDHE hybrids, we'll want to call this
      * function multiple times. */
-    ret = ssl_key_share_encapsulate( ssl, ssl->handshake->named_group_id,
+    ret = ssl_key_share_encapsulate( ssl, ssl->handshake->offered_group_id,
                                      key_share, end, &share_len );
     if( ret != 0 )
         return( ret );
 
     /* Write group ID */
-    *key_share_entry++ = ( ssl->handshake->named_group_id >> 8 ) & 0xFF;
-    *key_share_entry++ = ( ssl->handshake->named_group_id >> 0 ) & 0xFF;
+    *key_share_entry++ = ( ssl->handshake->offered_group_id >> 8 ) & 0xFF;
+    *key_share_entry++ = ( ssl->handshake->offered_group_id >> 0 ) & 0xFF;
     /* Write key share length */
     *key_share_entry++ = ( share_len >> 8 ) & 0xFF;
     *key_share_entry++ = ( share_len >> 0 ) & 0xFF;
@@ -352,7 +352,7 @@ static int ssl_parse_key_shares_ext( mbedtls_ssl_context *ssl,
         return( MBEDTLS_ERR_SSL_DECODE_ERROR );
     }
 
-    ssl->handshake->named_group_id = 0;
+    ssl->handshake->offered_group_id = 0;
 
     /* We try to find a suitable key share entry and copy it to the
      * handshake context. Later, we have to find out whether we can do
@@ -457,7 +457,7 @@ static int ssl_parse_key_shares_ext( mbedtls_ssl_context *ssl,
             return( ret );
         }
 
-        ssl->handshake->named_group_id = their_group;
+        ssl->handshake->offered_group_id = their_group;
     }
 
     if( match_found == 0 )
@@ -3217,9 +3217,9 @@ static int ssl_reset_ecdhe_share( mbedtls_ssl_context *ssl )
 
 static int ssl_reset_key_share( mbedtls_ssl_context *ssl )
 {
-    uint16_t group_id = ssl->handshake->named_group_id;
+    uint16_t group_id = ssl->handshake->offered_group_id;
 
-    if( mbedtls_ssl_named_group_is_ecdhe( group_id ) )
+    if( mbedtls_ssl_tls13_named_group_is_ecdhe( group_id ) )
         return( ssl_reset_ecdhe_share( ssl ) );
     else if( 0 /* other KEMs? */ )
     {
@@ -3284,7 +3284,7 @@ static int ssl_write_hrr_key_share_ext( mbedtls_ssl_context *ssl,
 
     /* We should only send the key_share extension if the client's initial
      * key share was not acceptable. */
-    if( ssl->handshake->named_group_id != 0 )
+    if( ssl->handshake->offered_group_id != 0 )
     {
         MBEDTLS_SSL_DEBUG_MSG( 4, ( "Skip key_share extension in HRR" ) );
         return( 0 );
