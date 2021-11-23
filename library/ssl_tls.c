@@ -857,14 +857,14 @@ typedef int ssl_tls_prf_t(const unsigned char *, size_t, const char *,
  *        - MBEDTLS_SSL_EXPORT_KEYS: ssl->conf->{f,p}_export_keys
  *        - MBEDTLS_DEBUG_C: ssl->conf->{f,p}_dbg
  */
-static int ssl_populate_transform( mbedtls_ssl_transform *transform,
+static int ssl_tls12_populate_transform( mbedtls_ssl_transform *transform,
                                    int ciphersuite,
                                    const unsigned char master[48],
-#if defined(MBEDTLS_SSL_SOME_SUITES_USE_MAC)
-#if defined(MBEDTLS_SSL_ENCRYPT_THEN_MAC)
+#if defined(MBEDTLS_SSL_SOME_SUITES_USE_MAC) && \
+    defined(MBEDTLS_SSL_ENCRYPT_THEN_MAC)
                                    int encrypt_then_mac,
-#endif /* MBEDTLS_SSL_ENCRYPT_THEN_MAC */
-#endif /* MBEDTLS_SSL_SOME_SUITES_USE_MAC */
+#endif /* MBEDTLS_SSL_ENCRYPT_THEN_MAC &&
+          MBEDTLS_SSL_SOME_SUITES_USE_MAC */
                                    ssl_tls_prf_t tls_prf,
                                    const unsigned char randbytes[64],
                                    int minor_ver,
@@ -905,6 +905,15 @@ static int ssl_populate_transform( mbedtls_ssl_transform *transform,
 #if defined(MBEDTLS_SSL_CONTEXT_SERIALIZATION)
     memcpy( transform->randbytes, randbytes, sizeof( transform->randbytes ) );
 #endif
+
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+    if( minor_ver == MBEDTLS_SSL_MINOR_VERSION_4 )
+    {
+        /* At the moment, we keep TLS <= 1.2 and TLS 1.3 transform
+         * generation separate. This should never happen. */
+        return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
+    }
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 
     /*
      * Get various info structures
@@ -998,19 +1007,10 @@ static int ssl_populate_transform( mbedtls_ssl_transform *transform,
          *   sequence number).
          */
         transform->ivlen = 12;
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
-        if( minor_ver == MBEDTLS_SSL_MINOR_VERSION_4 )
-        {
+        if( cipher_info->mode == MBEDTLS_MODE_CHACHAPOLY )
             transform->fixed_ivlen = 12;
-        }
         else
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
-        {
-            if( cipher_info->mode == MBEDTLS_MODE_CHACHAPOLY )
-                transform->fixed_ivlen = 12;
-            else
-                transform->fixed_ivlen = 4;
-        }
+            transform->fixed_ivlen = 4;
 
         /* Minimum length of encrypted record */
         explicit_ivlen = transform->ivlen - transform->fixed_ivlen;
@@ -1520,22 +1520,22 @@ int mbedtls_ssl_derive_keys( mbedtls_ssl_context *ssl )
     }
 
     /* Populate transform structure */
-    ret = ssl_populate_transform( ssl->transform_negotiate,
-                                  ssl->session_negotiate->ciphersuite,
-                                  ssl->session_negotiate->master,
-#if defined(MBEDTLS_SSL_SOME_SUITES_USE_MAC)
-#if defined(MBEDTLS_SSL_ENCRYPT_THEN_MAC)
-                                  ssl->session_negotiate->encrypt_then_mac,
-#endif /* MBEDTLS_SSL_ENCRYPT_THEN_MAC */
-#endif /* MBEDTLS_SSL_SOME_SUITES_USE_MAC */
-                                  ssl->handshake->tls_prf,
-                                  ssl->handshake->randbytes,
-                                  ssl->minor_ver,
-                                  ssl->conf->endpoint,
-                                  ssl );
+    ret = ssl_tls12_populate_transform( ssl->transform_negotiate,
+                                        ssl->session_negotiate->ciphersuite,
+                                        ssl->session_negotiate->master,
+#if defined(MBEDTLS_SSL_SOME_SUITES_USE_MAC) && \
+    defined(MBEDTLS_SSL_ENCRYPT_THEN_MAC)
+                                        ssl->session_negotiate->encrypt_then_mac,
+#endif /* MBEDTLS_SSL_ENCRYPT_THEN_MAC &&
+          MBEDTLS_SSL_SOME_SUITES_USE_MAC */
+                                        ssl->handshake->tls_prf,
+                                        ssl->handshake->randbytes,
+                                        ssl->minor_ver,
+                                        ssl->conf->endpoint,
+                                        ssl );
     if( ret != 0 )
     {
-        MBEDTLS_SSL_DEBUG_RET( 1, "ssl_populate_transform", ret );
+        MBEDTLS_SSL_DEBUG_RET( 1, "ssl_tls12_populate_transform", ret );
         return( ret );
     }
 
@@ -4194,6 +4194,14 @@ void mbedtls_ssl_conf_ciphersuites( mbedtls_ssl_config *conf,
     conf->ciphersuite_list = ciphersuites;
 }
 
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+void mbedtls_ssl_conf_tls13_key_exchange_modes( mbedtls_ssl_config *conf,
+                                                const int kex_modes )
+{
+    conf->tls13_kex_modes = kex_modes & MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_ALL;
+}
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+
 #if defined(MBEDTLS_X509_CRT_PARSE_C)
 void mbedtls_ssl_conf_cert_profile( mbedtls_ssl_config *conf,
                                     const mbedtls_x509_crt_profile *profile )
@@ -4436,18 +4444,6 @@ int mbedtls_ssl_conf_psk( mbedtls_ssl_config *conf,
     return( ret );
 }
 
-
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
-/* mbedtls_ssl_conf_tls13_key_exchange( ) allows to set the key exchange mode. */
-int mbedtls_ssl_conf_tls13_key_exchange( mbedtls_ssl_config* conf,
-    const int key_exchange_mode )
-{
-    conf->key_exchange_modes = key_exchange_mode;
-    return 0;
-}
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
-
-
 void mbedtls_ssl_remove_hs_psk( mbedtls_ssl_context* ssl )
 {
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
@@ -4588,8 +4584,7 @@ void mbedtls_ssl_conf_dhm_min_bitlen( mbedtls_ssl_config *conf,
 }
 #endif /* MBEDTLS_DHM_C && MBEDTLS_SSL_CLI_C */
 
-#if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED) \
-    && defined(MBEDTLS_SSL_PROTO_TLS1_2)
+#if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
 /*
  * Set allowed/preferred hashes for handshake signatures
  */
@@ -4598,8 +4593,16 @@ void mbedtls_ssl_conf_sig_hashes( mbedtls_ssl_config *conf,
 {
     conf->sig_hashes = hashes;
 }
-#endif /* MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED \
-          && MBEDTLS_SSL_PROTO_TLS1_2 */
+
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+/* Configure allowed signature algorithms for use in TLS 1.3 */
+void mbedtls_ssl_conf_sig_algs( mbedtls_ssl_config *conf,
+                                const uint16_t* sig_algs )
+{
+    conf->tls13_sig_algs = sig_algs;
+}
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+#endif /* MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED */
 
 #if defined(MBEDTLS_ECP_C)
 /*
@@ -6096,12 +6099,40 @@ int mbedtls_ssl_mps_remap_error( int ret )
 /*
  * Perform a single step of the SSL handshake
  */
+static int ssl_prepare_handshake_step( mbedtls_ssl_context *ssl )
+{
+    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
+
+    if( ( ret = mbedtls_ssl_flush_output( ssl ) ) != 0 )
+        return( ret );
+
+#if defined(MBEDTLS_SSL_PROTO_DTLS)
+    if( ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_DATAGRAM &&
+        ssl->handshake->retransmit_state == MBEDTLS_SSL_RETRANS_SENDING )
+    {
+        if( ( ret = mbedtls_ssl_flight_transmit( ssl ) ) != 0 )
+            return( ret );
+    }
+#endif /* MBEDTLS_SSL_PROTO_DTLS */
+
+    return( ret );
+}
+
 int mbedtls_ssl_handshake_step( mbedtls_ssl_context *ssl )
 {
-    int ret = MBEDTLS_ERR_SSL_FEATURE_UNAVAILABLE;
+    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
 
-    if( ssl == NULL || ssl->conf == NULL )
+    if( ssl            == NULL                       ||
+        ssl->conf      == NULL                       ||
+        ssl->handshake == NULL                       ||
+        ssl->state     == MBEDTLS_SSL_HANDSHAKE_OVER )
+    {
         return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
+    }
+
+    ret = ssl_prepare_handshake_step( ssl );
+    if( ret != 0 )
+        return( ret );
 
     ret = mbedtls_ssl_handle_pending_alert( ssl );
     if( ret != 0 )
@@ -6484,8 +6515,6 @@ void mbedtls_ssl_handshake_free( mbedtls_ssl_context *ssl )
     mbedtls_free( handshake->transform_earlydata );
     mbedtls_ssl_transform_free( handshake->transform_handshake );
     mbedtls_free( handshake->transform_handshake );
-    handshake->transform_earlydata = NULL;
-    handshake->transform_handshake = NULL;
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 
     mbedtls_platform_zeroize( handshake,
@@ -6952,14 +6981,14 @@ static int ssl_context_load( mbedtls_ssl_context *ssl,
     if( (size_t)( end - p ) < sizeof( ssl->transform->randbytes ) )
         return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
 
-    ret = ssl_populate_transform( ssl->transform,
+    ret = ssl_tls12_populate_transform( ssl->transform,
                   ssl->session->ciphersuite,
                   ssl->session->master,
-#if defined(MBEDTLS_SSL_SOME_SUITES_USE_MAC)
-#if defined(MBEDTLS_SSL_ENCRYPT_THEN_MAC)
+#if defined(MBEDTLS_SSL_SOME_SUITES_USE_MAC) && \
+    defined(MBEDTLS_SSL_ENCRYPT_THEN_MAC)
                   ssl->session->encrypt_then_mac,
-#endif
-#endif /* MBEDTLS_SSL_SOME_SUITES_USE_MAC */
+#endif /* MBEDTLS_SSL_ENCRYPT_THEN_MAC &&
+          MBEDTLS_SSL_SOME_SUITES_USE_MAC */
                   ssl_tls12prf_from_cs( ssl->session->ciphersuite ),
                   p, /* currently pointing to randbytes */
                   MBEDTLS_SSL_MINOR_VERSION_3, /* (D)TLS 1.2 is forced */
@@ -7208,6 +7237,11 @@ void mbedtls_ssl_free( mbedtls_ssl_context *ssl )
         mbedtls_free( ssl->session_negotiate );
     }
 
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+    mbedtls_ssl_transform_free( ssl->transform_application );
+    mbedtls_free( ssl->transform_application );
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+
     if( ssl->session )
     {
         mbedtls_ssl_session_free( ssl->session );
@@ -7252,8 +7286,7 @@ void mbedtls_ssl_config_init( mbedtls_ssl_config *conf )
     memset( conf, 0, sizeof( mbedtls_ssl_config ) );
 }
 
-#if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED) && \
-    defined(MBEDTLS_SSL_PROTO_TLS1_2)
+#if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
 /* The selection should be the same as mbedtls_x509_crt_profile_default in
  * x509_crt.c. Here, the order matters. Currently we favor stronger hashes,
  * for no fundamental reason.
@@ -7271,7 +7304,7 @@ static int ssl_preset_default_hashes[] = {
 #endif
     MBEDTLS_MD_NONE
 };
-#endif /* MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED && MBEDTLS_SSL_PROTO_TLS1_2 */
+#endif /* MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED */
 
 #if defined(MBEDTLS_ECP_C)
 /* The selection should be the same as mbedtls_x509_crt_profile_default in
@@ -7335,19 +7368,14 @@ static int ssl_preset_suiteb_ciphersuites[] = {
 
 #if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1) || defined(MBEDTLS_SSL_PROTO_TLS1_1) || \
-    defined(MBEDTLS_SSL_PROTO_TLS1_2)
 static int ssl_preset_suiteb_hashes[] = {
     MBEDTLS_MD_SHA256,
     MBEDTLS_MD_SHA384,
     MBEDTLS_MD_NONE
 };
-#endif /* MBEDTLS_SSL_PROTO_TLS1 || MBEDTLS_SSL_PROTO_TLS1_1 || \
-          MBEDTLS_SSL_PROTO_TLS1_2 */
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
-
-static int ssl_preset_suiteb_signature_algorithms[] = {
+static uint16_t ssl_preset_default_sig_algs[] = {
     /* ECDSA algorithms */
 #if defined(MBEDTLS_ECDSA_C)
 #if defined(MBEDTLS_SHA256_C) && defined(MBEDTLS_ECP_DP_SECP256R1_ENABLED)
@@ -7368,9 +7396,21 @@ static int ssl_preset_suiteb_signature_algorithms[] = {
 
     MBEDTLS_TLS13_SIG_NONE
 };
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 
-#endif /* MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED */
+static uint16_t ssl_preset_suiteb_sig_algs[] = {
+    /* ECDSA algorithms */
+#if defined(MBEDTLS_ECDSA_C)
+#if defined(MBEDTLS_SHA256_C) && defined(MBEDTLS_ECP_DP_SECP256R1_ENABLED)
+    MBEDTLS_TLS13_SIG_ECDSA_SECP256R1_SHA256,
+#endif /* MBEDTLS_SHA256_C && MBEDTLS_ECP_DP_SECP256R1_ENABLED */
+#if defined(MBEDTLS_SHA512_C) && defined(MBEDTLS_ECP_DP_SECP384R1_ENABLED)
+    MBEDTLS_TLS13_SIG_ECDSA_SECP384R1_SHA384,
+#endif /* MBEDTLS_SHA512_C && MBEDTLS_ECP_DP_SECP384R1_ENABLED */
+#endif /* MBEDTLS_ECDSA_C */
+    MBEDTLS_TLS13_SIG_NONE
+};
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+#endif
 
 #if defined(MBEDTLS_ECP_C)
 static mbedtls_ecp_group_id ssl_preset_suiteb_curves[] = {
@@ -7446,21 +7486,28 @@ int mbedtls_ssl_config_defaults( mbedtls_ssl_config *conf,
 #endif
 
 #if defined(MBEDTLS_DHM_C) && defined(MBEDTLS_SSL_SRV_C)
-            if( endpoint == MBEDTLS_SSL_IS_SERVER )
-            {
-                const unsigned char dhm_p[] =
-                    MBEDTLS_DHM_RFC3526_MODP_2048_P_BIN;
-                const unsigned char dhm_g[] =
-                    MBEDTLS_DHM_RFC3526_MODP_2048_G_BIN;
+    if( endpoint == MBEDTLS_SSL_IS_SERVER )
+    {
+        const unsigned char dhm_p[] =
+            MBEDTLS_DHM_RFC3526_MODP_2048_P_BIN;
+        const unsigned char dhm_g[] =
+            MBEDTLS_DHM_RFC3526_MODP_2048_G_BIN;
 
-                if ( ( ret = mbedtls_ssl_conf_dh_param_bin( conf,
-                                               dhm_p, sizeof( dhm_p ),
-                                               dhm_g, sizeof( dhm_g ) ) ) != 0 )
-                {
-                    return( ret );
-                }
-            }
+        if ( ( ret = mbedtls_ssl_conf_dh_param_bin( conf,
+                                                    dhm_p, sizeof( dhm_p ),
+                                                    dhm_g, sizeof( dhm_g ) ) ) != 0 )
+        {
+            return( ret );
+        }
+    }
 #endif
+
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+    /*
+     * Allow all TLS 1.3 key exchange modes by default.
+     */
+    conf->tls13_kex_modes = MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_ALL;
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 
     /*
      * Preset-specific defaults
@@ -7483,22 +7530,11 @@ int mbedtls_ssl_config_defaults( mbedtls_ssl_config *conf,
 #endif
 
 #if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
-
-
+            conf->sig_hashes = ssl_preset_suiteb_hashes;
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
-    /**
-     * TLS 1.3 replaces SignatureAndHashAlgorithm with SignatureScheme.
-     * - rfc8446 section-4.2.3
-     * - rfc5246 section-7.4.1.4.1
-     */
-    conf->tls13_sig_algs = ssl_preset_suiteb_signature_algorithms;
+            conf->tls13_sig_algs = ssl_preset_suiteb_sig_algs;
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
-
-#if  defined(MBEDTLS_SSL_PROTO_TLS1_2)
-    conf->sig_hashes = ssl_preset_suiteb_hashes;
-#endif /* MBEDTLS_SSL_PROTO_TLS1_2 */
-
-#endif /* MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED */
+#endif
 
 #if defined(MBEDTLS_ECP_C)
             conf->curve_list = ssl_preset_suiteb_curves;
@@ -7531,20 +7567,10 @@ int mbedtls_ssl_config_defaults( mbedtls_ssl_config *conf,
 #endif
 
 #if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
-
+            conf->sig_hashes = ssl_preset_default_hashes;
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
-        /**
-         * TLS 1.3 replaces SignatureAndHashAlgorithm with SignatureScheme.
-         * - rfc8446 section-4.2.3
-         * - rfc5246 section-7.4.1.4.1
-         */
-        conf->tls13_sig_algs = ssl_preset_suiteb_signature_algorithms;
+            conf->tls13_sig_algs = ssl_preset_default_sig_algs;
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
-
-#if defined(MBEDTLS_SSL_PROTO_TLS1_2)
-        conf->sig_hashes = ssl_preset_default_hashes;
-#endif /* MBEDTLS_SSL_PROTO_TLS1_2 */
-
 #endif /* MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED */
 
 #if defined(MBEDTLS_ECP_C)

@@ -431,7 +431,7 @@ int mbedtls_ssl_write_signature_algorithms_ext( mbedtls_ssl_context *ssl,
 {
     unsigned char *p = buf;
     size_t sig_alg_len = 0;
-    const int *sig_alg;
+    const uint16_t *sig_alg;
     unsigned char *sig_alg_list = buf + 6;
 
     *olen = 0;
@@ -440,7 +440,7 @@ int mbedtls_ssl_write_signature_algorithms_ext( mbedtls_ssl_context *ssl,
      * are PSK-based. */
 #if defined(MBEDTLS_SSL_CLI_C)
     if( ssl->conf->endpoint == MBEDTLS_SSL_IS_CLIENT &&
-        !mbedtls_ssl_conf_tls13_some_ecdhe_enabled( ssl ) )
+        !mbedtls_ssl_conf_tls13_some_ephemeral_enabled( ssl ) )
     {
         return( 0 );
     }
@@ -507,7 +507,7 @@ int mbedtls_ssl_parse_signature_algorithms_ext( mbedtls_ssl_context *ssl,
     size_t sig_alg_list_size; /* size of receive signature algorithms list */
     const unsigned char *p; /* pointer to individual signature algorithm */
     const unsigned char *end = buf + buf_len; /* end of buffer */
-    const int *sig_alg; /* iterate through configured signature schemes */
+    const uint16_t *sig_alg; /* iterate through configured signature schemes */
     int signature_scheme; /* store received signature algorithm scheme */
     uint32_t common_idx = 0; /* iterate through received_signature_schemes_list */
 
@@ -1998,114 +1998,6 @@ static int ssl_read_certificate_postprocess( mbedtls_ssl_context* ssl )
     return( 0 );
 }
 
-int mbedtls_ssl_tls13_populate_transform( mbedtls_ssl_transform *transform,
-                                          int endpoint,
-                                          int ciphersuite,
-                                          mbedtls_ssl_key_set const *traffic_keys,
-                                          mbedtls_ssl_context *ssl /* DEBUG ONLY */ )
-{
-    int ret;
-    mbedtls_cipher_info_t const *cipher_info;
-    const mbedtls_ssl_ciphersuite_t *ciphersuite_info;
-    unsigned char const *key_enc;
-    unsigned char const *iv_enc;
-    unsigned char const *key_dec;
-    unsigned char const *iv_dec;
-
-#if !defined(MBEDTLS_DEBUG_C)
-    ssl = NULL; /* make sure we don't use it except for those cases */
-    (void) ssl;
-#endif
-
-    ciphersuite_info = mbedtls_ssl_ciphersuite_from_id( ciphersuite );
-
-    cipher_info = mbedtls_cipher_info_from_type( ciphersuite_info->cipher );
-    if( cipher_info == NULL )
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "should never happen" ) );
-        return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
-    }
-
-    /*
-     * Setup cipher contexts in target transform
-     */
-
-    if( ( ret = mbedtls_cipher_setup( &transform->cipher_ctx_enc,
-                                      cipher_info ) ) != 0 )
-    {
-        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_cipher_setup", ret );
-        return( ret );
-    }
-
-    if( ( ret = mbedtls_cipher_setup( &transform->cipher_ctx_dec,
-                                      cipher_info ) ) != 0 )
-    {
-        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_cipher_setup", ret );
-        return( ret );
-    }
-
-#if defined(MBEDTLS_SSL_SRV_C)
-    if( endpoint == MBEDTLS_SSL_IS_SERVER )
-    {
-        key_enc = traffic_keys->server_write_key;
-        key_dec = traffic_keys->client_write_key;
-        iv_enc = traffic_keys->server_write_iv;
-        iv_dec = traffic_keys->client_write_iv;
-    }
-    else
-#endif /* MBEDTLS_SSL_SRV_C */
-#if defined(MBEDTLS_SSL_CLI_C)
-    if( endpoint == MBEDTLS_SSL_IS_CLIENT )
-    {
-        key_enc = traffic_keys->client_write_key;
-        key_dec = traffic_keys->server_write_key;
-        iv_enc = traffic_keys->client_write_iv;
-        iv_dec = traffic_keys->server_write_iv;
-    }
-    else
-#endif /* MBEDTLS_SSL_CLI_C */
-    {
-        /* should not happen */
-        return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
-    }
-
-    memcpy( transform->iv_enc, iv_enc, traffic_keys->iv_len );
-    memcpy( transform->iv_dec, iv_dec, traffic_keys->iv_len );
-
-    if( ( ret = mbedtls_cipher_setkey( &transform->cipher_ctx_enc,
-                                       key_enc, cipher_info->key_bitlen,
-                                       MBEDTLS_ENCRYPT ) ) != 0 )
-    {
-        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_cipher_setkey", ret );
-        return( ret );
-    }
-
-    if( ( ret = mbedtls_cipher_setkey( &transform->cipher_ctx_dec,
-                                       key_dec, cipher_info->key_bitlen,
-                                       MBEDTLS_DECRYPT ) ) != 0 )
-    {
-        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_cipher_setkey", ret );
-        return( ret );
-    }
-
-    /*
-     * Setup other fields in SSL transform
-     */
-
-    if( ( ciphersuite_info->flags & MBEDTLS_CIPHERSUITE_SHORT_TAG ) != 0 )
-        transform->taglen  = 8;
-    else
-        transform->taglen  = 16;
-
-    transform->ivlen       = traffic_keys->iv_len;
-    transform->maclen      = 0;
-    transform->fixed_ivlen = transform->ivlen;
-    transform->minlen      = transform->taglen + 1;
-    transform->minor_ver   = MBEDTLS_SSL_MINOR_VERSION_4;
-
-    return( 0 );
-}
-
 void mbedtls_ssl_handshake_wrapup_tls13( mbedtls_ssl_context *ssl )
 {
 
@@ -2531,7 +2423,7 @@ void mbedtls_ssl_conf_early_data( mbedtls_ssl_config* conf, int early_data,
 
 #if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
 void mbedtls_ssl_conf_signature_algorithms( mbedtls_ssl_config *conf,
-                     const int* sig_algs )
+                     const uint16_t* sig_algs )
 {
     /* TODO: Add available algorithm check */
     conf->tls13_sig_algs = sig_algs;
@@ -2580,8 +2472,8 @@ int mbedtls_ssl_write_early_data_ext( mbedtls_ssl_context *ssl,
         if( ( ssl->handshake->extensions_present & MBEDTLS_SSL_EXT_EARLY_DATA ) == 0 )
             return( 0 );
 
-        if( ssl->conf->key_exchange_modes !=
-                   MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_KE ||
+        if( ssl->conf->tls13_kex_modes !=
+                   MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK ||
             ssl->conf->early_data_enabled == MBEDTLS_SSL_EARLY_DATA_DISABLED )
         {
             MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= skip write early_data extension" ) );

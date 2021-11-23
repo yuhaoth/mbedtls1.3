@@ -256,24 +256,13 @@ extern "C" {
 #define MBEDTLS_TLS_DHE_PSK_WITH_CHACHA20_POLY1305_SHA256     0xCCAD /**< TLS 1.2 */
 #define MBEDTLS_TLS_RSA_PSK_WITH_CHACHA20_POLY1305_SHA256     0xCCAE /**< TLS 1.2 */
 
-/*
- * Supported ciphersuites (Official IANA names) for TLS / DTLS 1.3
- */
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
-#define MBEDTLS_TLS1_3_AES_128_GCM_SHA256                                0x1301
-#define MBEDTLS_TLS1_3_AES_256_GCM_SHA384                                0x1302
-#define MBEDTLS_TLS1_3_CHACHA20_POLY1305_SHA256                          0x1303
-#define MBEDTLS_TLS1_3_AES_128_CCM_SHA256                                0x1304
-#define MBEDTLS_TLS1_3_AES_128_CCM_8_SHA256                              0x1305
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+/* RFC 8446, Appendix B.4 */
+#define MBEDTLS_TLS1_3_AES_128_GCM_SHA256                     0x1301 /**< TLS 1.3 */
+#define MBEDTLS_TLS1_3_AES_256_GCM_SHA384                     0x1302 /**< TLS 1.3 */
+#define MBEDTLS_TLS1_3_CHACHA20_POLY1305_SHA256               0x1303 /**< TLS 1.3 */
+#define MBEDTLS_TLS1_3_AES_128_CCM_SHA256                     0x1304 /**< TLS 1.3 */
+#define MBEDTLS_TLS1_3_AES_128_CCM_8_SHA256                   0x1305 /**< TLS 1.3 */
 
-/* Key Exchange Types in TLS 1.3
- *
- * Note: When adding a new key exchange algorithm a
- *       new value needs to be added to the enum list
- *       below and also the mbedtls_ssl_premaster_secret
- *       needs to be updated.
- */
 /* Reminder: update mbedtls_ssl_premaster_secret when adding a new key exchange.
  * Reminder: update MBEDTLS_KEY_EXCHANGE__xxx below
  */
