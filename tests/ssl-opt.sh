@@ -1191,6 +1191,8 @@ run_test() {
     rm -f $SRV_OUT $CLI_OUT $PXY_OUT
 }
 
+# test_cases: ON
+
 run_test_psa() {
     requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
     run_test    "PSA-supported ciphersuite: $1" \
@@ -1293,6 +1295,8 @@ run_test_tls13_compat()
 {
     eval "$(scripts/generate_tls13_compat_tests.py -a)"
 }
+
+# test_cases: OFF
 
 cleanup() {
     rm -f $CLI_OUT $SRV_OUT $PXY_OUT $SESSION
@@ -1453,7 +1457,7 @@ SKIP_NEXT="NO"
 trap cleanup INT TERM HUP
 
 # Basic test
-
+# test_cases : ON
 # Checks that:
 # - things work with all ciphersuites active (used with config-full in all.sh)
 # - the expected parameters are selected
@@ -9004,6 +9008,7 @@ requires_config_enabled MBEDTLS_SSL_MAX_FRAGMENT_LENGTH
 requires_max_content_len 16384
 run_tests_memory_after_hanshake
 
+# test_cases : TAIL
 # Final report
 
 echo "------------------------------------------------------------------------"
