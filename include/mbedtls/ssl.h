@@ -172,22 +172,6 @@
 
 #define MBEDTLS_ERR_LAST 0x7F80 /**< This definition points to the last error code to have a correct parsing in error.c */
 
- /* List of extensions used in ssl_internal.h / extensions_present in mbedtls_ssl_handshake_params */
-#define MBEDTLS_SSL_EXT_NONE                      0
-#define MBEDTLS_SSL_EXT_PRE_SHARED_KEY            1
-#define MBEDTLS_SSL_EXT_KEY_SHARE                 2
-#define MBEDTLS_SSL_EXT_SIGNATURE_ALGORITHM       4
-#define MBEDTLS_SSL_EXT_SUPPORTED_GROUPS          8
-#define MBEDTLS_SSL_EXT_MAX_FRAGMENT_LENGTH       16
-#define MBEDTLS_SSL_EXT_ALPN                      32
-#define MBEDTLS_SSL_EXT_SUPPORTED_VERSION         64
-#define MBEDTLS_SSL_EXT_PSK_KEY_EXCHANGE_MODES    128
-#define MBEDTLS_SSL_EXT_EARLY_DATA                256
-#define MBEDTLS_SSL_EXT_SERVERNAME                512
-#define MBEDTLS_SSL_EXT_COOKIE                    1024
-#define MBEDTLS_SSL_EXT_CID                       2048
-
-
 /*
  * TLS 1.3 NamedGroup values
  */
@@ -581,35 +565,48 @@
 #define MBEDTLS_TLS_EXT_MAX_FRAGMENT_LENGTH          1
 
 #define MBEDTLS_TLS_EXT_TRUNCATED_HMAC               4
+#define MBEDTLS_TLS_EXT_STATUS_REQUEST               5 /* RFC 6066 TLS 1.2 and 1.3 */
 
 #define MBEDTLS_TLS_EXT_SUPPORTED_ELLIPTIC_CURVES   10
-#define MBEDTLS_TLS_EXT_SUPPORTED_GROUPS   10 // Renamed in TLS 1.3
-
+#define MBEDTLS_TLS_EXT_SUPPORTED_GROUPS            10 /* RFC 8422,7919 TLS 1.2 and 1.3 */
 #define MBEDTLS_TLS_EXT_SUPPORTED_POINT_FORMATS     11
 
-#define MBEDTLS_TLS_EXT_SIG_ALG                     13
-
+#define MBEDTLS_TLS_EXT_SIG_ALG                     13 /* RFC 8446 TLS 1.3 */
 #define MBEDTLS_TLS_EXT_USE_SRTP                    14
-
+#define MBEDTLS_TLS_EXT_HEARTBEAT                   15 /* RFC 6520 TLS 1.2 and 1.3 */
 #define MBEDTLS_TLS_EXT_ALPN                        16
 
+#define MBEDTLS_TLS_EXT_SCT                         18 /* RFC 6962 TLS 1.2 and 1.3 */
+#define MBEDTLS_TLS_EXT_CLI_CERT_TYPE               19 /* RFC 7250 TLS 1.2 and 1.3 */
+#define MBEDTLS_TLS_EXT_SERV_CERT_TYPE              20 /* RFC 7250 TLS 1.2 and 1.3 */
+#define MBEDTLS_TLS_EXT_PADDING                     21 /* RFC 7685 TLS 1.2 and 1.3 */
 #define MBEDTLS_TLS_EXT_ENCRYPT_THEN_MAC            22 /* 0x16 */
 #define MBEDTLS_TLS_EXT_EXTENDED_MASTER_SECRET  0x0017 /* 23 */
 
 #define MBEDTLS_TLS_EXT_SESSION_TICKET              35
 
- /* TLS 1.3 */
-#define MBEDTLS_TLS_EXT_KEY_SHARES                 51
-#define MBEDTLS_TLS_EXT_PRE_SHARED_KEY             41
-#define MBEDTLS_TLS_EXT_EARLY_DATA                 42
-#define MBEDTLS_TLS_EXT_SUPPORTED_VERSIONS         43
-#define MBEDTLS_TLS_EXT_COOKIE                     44
-#define MBEDTLS_TLS_EXT_PSK_KEY_EXCHANGE_MODES     45
+#define MBEDTLS_TLS_EXT_PRE_SHARED_KEY              41 /* RFC 8446 TLS 1.3 */
+#define MBEDTLS_TLS_EXT_EARLY_DATA                  42 /* RFC 8446 TLS 1.3 */
+#define MBEDTLS_TLS_EXT_SUPPORTED_VERSIONS          43 /* RFC 8446 TLS 1.3 */
+#define MBEDTLS_TLS_EXT_COOKIE                      44 /* RFC 8446 TLS 1.3 */
+#define MBEDTLS_TLS_EXT_PSK_KEY_EXCHANGE_MODES      45 /* RFC 8446 TLS 1.3 */
+
+#define MBEDTLS_TLS_EXT_CERT_AUTH                   47 /* RFC 8446 TLS 1.3 */
+#define MBEDTLS_TLS_EXT_OID_FILTERS                 48 /* RFC 8446 TLS 1.3 */
+#define MBEDTLS_TLS_EXT_POST_HANDSHAKE_AUTH         49 /* RFC 8446 TLS 1.3 */
+#define MBEDTLS_TLS_EXT_SIG_ALG_CERT                50 /* RFC 8446 TLS 1.3 */
+#define MBEDTLS_TLS_EXT_KEY_SHARE                   51 /* RFC 8446 TLS 1.3 */
 
 /* The value of the CID extension is still TBD as of
  * draft-ietf-tls-dtls-connection-id-05
- * (https://tools.ietf.org/html/draft-ietf-tls-dtls-connection-id-05) */
+ * (https://tools.ietf.org/html/draft-ietf-tls-dtls-connection-id-05).
+ *
+ * A future minor revision of Mbed TLS may change the default value of
+ * this option to match evolving standards and usage.
+ */
+#if !defined(MBEDTLS_TLS_EXT_CID)
 #define MBEDTLS_TLS_EXT_CID                        254 /* TBD */
+#endif
 
 #define MBEDTLS_TLS_EXT_ECJPAKE_KKPP               256 /* experimental */
 
@@ -741,10 +738,11 @@ typedef int mbedtls_ssl_send_t( void *ctx,
  * \param buf      Buffer to write the received data to
  * \param len      Length of the receive buffer
  *
- * \return         The callback must return the number of bytes received,
- *                 or a non-zero error code.
- *                 If performing non-blocking I/O, \c MBEDTLS_ERR_SSL_WANT_READ
+ * \returns        If data has been received, the positive number of bytes received.
+ * \returns        \c 0 if the connection has been closed.
+ * \returns        If performing non-blocking I/O, \c MBEDTLS_ERR_SSL_WANT_READ
  *                 must be returned when the operation would block.
+ * \returns        Another negative error code on other kinds of failures.
  *
  * \note           The callback may receive fewer bytes than the length of the
  *                 buffer. It must always return the number of bytes actually
@@ -764,7 +762,7 @@ typedef int mbedtls_ssl_recv_t( void *ctx,
  * \param ctx      Context for the receive callback (typically a file descriptor)
  * \param buf      Buffer to write the received data to
  * \param len      Length of the receive buffer
- * \param timeout  Maximum nomber of millisecondes to wait for data
+ * \param timeout  Maximum number of milliseconds to wait for data
  *                 0 means no timeout (potentially waiting forever)
  *
  * \return         The callback must return the number of bytes received,

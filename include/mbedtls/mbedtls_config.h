@@ -3282,6 +3282,17 @@
 
 #define MBEDTLS_SSL_TICKET_AGE_TOLERANCE 6000 /**< Tolerance window for ticket lifetime */
 
+/** \def MBEDTLS_TLS_EXT_CID
+ *
+ * At the time of writing, the CID extension has not been assigned its
+ * final value. Set this configuration option to make Mbed TLS use a
+ * different value.
+ *
+ * A future minor revision of Mbed TLS may change the default value of
+ * this option to match evolving standards and usage.
+ */
+//#define MBEDTLS_TLS_EXT_CID                        254
+
 /**
  * Complete list of ciphersuites to use, in order of preference.
  *
