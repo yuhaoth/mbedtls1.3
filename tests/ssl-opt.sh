@@ -50,7 +50,7 @@ fi
 : ${GNUTLS_CLI:=gnutls-cli}
 : ${GNUTLS_SERV:=gnutls-serv}
 : ${PERL:=perl}
-: ${SUBDIRECTORY:=opt-refactor}
+: ${SUBDIRECTORY:=opt-testcases}
 
 guess_config_name() {
     if git diff --quiet ../include/mbedtls/mbedtls_config.h 2>/dev/null; then
