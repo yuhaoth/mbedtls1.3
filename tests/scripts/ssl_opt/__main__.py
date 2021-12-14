@@ -47,4 +47,10 @@ generators=[(i,GenerateTestCases(i)) for i in sys.argv[1:]]
 base_file, base_result = generators[0][0],generators[0][1]()
 for k, r in generators[1:]:
     result = r()
-    assert result == base_result, '{} - {} = {}'.format(k,base_file,result)
+    if result != base_result:
+        for i in result - base_result:
+            print('{}:{} {}'.format(i._filename, i._lineno, i))
+        for i in base_result - result:
+            print('{}:{} {}'.format(i._filename, i._lineno, i))
+        sys.exit(1)
+sys.exit(0)
