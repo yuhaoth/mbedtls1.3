@@ -865,8 +865,6 @@ component_check_test_cases () {
         opt=''
     fi
     tests/scripts/check_test_cases.py $opt
-
-    PYTHONPATH=tests/scripts/ python -m ssl_opt tests/ssl-opt.sh tests/ssl-opt-refactor.sh
     unset opt
 }
 
