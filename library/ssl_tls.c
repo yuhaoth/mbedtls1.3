@@ -6157,17 +6157,17 @@ int mbedtls_ssl_handshake_step( mbedtls_ssl_context *ssl )
 
     if( ret != 0 )
     {
-        int alert_ret;
-        alert_ret = mbedtls_ssl_handle_pending_alert( ssl );
-        if( alert_ret != 0 )
+        /* handshake_step return error. And it is same
+         * with alert_reason.
+         */
+        if( ssl->send_alert )
         {
-            ret = alert_ret;
+            ret = mbedtls_ssl_handle_pending_alert( ssl );
             goto cleanup;
         }
     }
 
 cleanup:
-
 #if defined(MBEDTLS_SSL_USE_MPS)
     /*
      * Remap MPS error codes

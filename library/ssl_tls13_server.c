@@ -1285,8 +1285,8 @@ static int ssl_parse_supported_versions_ext( mbedtls_ssl_context *ssl,
 
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "TLS 1.3 is not supported by the client" ) );
 
-        SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_PROTOCOL_VERSION,
-                              MBEDTLS_ERR_SSL_BAD_PROTOCOL_VERSION );
+        MBEDTLS_SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_PROTOCOL_VERSION,
+                                      MBEDTLS_ERR_SSL_BAD_PROTOCOL_VERSION );
         return( MBEDTLS_ERR_SSL_BAD_PROTOCOL_VERSION );
     }
 
@@ -1366,8 +1366,8 @@ static int ssl_parse_alpn_ext( mbedtls_ssl_context *ssl,
     }
 
     /* If we get hhere, no match was found */
-    SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_LEVEL_FATAL,
-                          MBEDTLS_SSL_ALERT_MSG_NO_APPLICATION_PROTOCOL );
+    MBEDTLS_SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_LEVEL_FATAL,
+                                  MBEDTLS_SSL_ALERT_MSG_NO_APPLICATION_PROTOCOL );
     return( MBEDTLS_ERR_SSL_NO_APPLICATION_PROTOCOL );
 }
 #endif /* MBEDTLS_SSL_ALPN */
@@ -1741,8 +1741,8 @@ static int ssl_end_of_early_data_fetch( mbedtls_ssl_context *ssl )
         ssl->in_msg[0]  != MBEDTLS_SSL_HS_END_OF_EARLY_DATA ||
         ssl->in_hslen   != 4 )
     {
-        SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_UNEXPECTED_MESSAGE,
-                              MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE );
+        MBEDTLS_SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_UNEXPECTED_MESSAGE,
+                                      MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE );
         ret = MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE;
         goto cleanup;
     }
@@ -1906,8 +1906,8 @@ static int ssl_early_data_fetch( mbedtls_ssl_context *ssl,
 
     if( ssl->in_msgtype != MBEDTLS_SSL_MSG_APPLICATION_DATA )
     {
-        SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_UNEXPECTED_MESSAGE,
-                              MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE );
+        MBEDTLS_SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_UNEXPECTED_MESSAGE,
+                                      MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE );
         ret = MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE;
         goto cleanup;
     }
@@ -2717,8 +2717,8 @@ static int ssl_client_hello_parse( mbedtls_ssl_context* ssl,
         !ssl_check_certificate_key_exchange( ssl ) )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "ClientHello message misses mandatory extensions." ) );
-        SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_MISSING_EXTENSION ,
-                              MBEDTLS_ERR_SSL_ILLEGAL_PARAMETER );
+        MBEDTLS_SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_MISSING_EXTENSION ,
+                                      MBEDTLS_ERR_SSL_ILLEGAL_PARAMETER );
         return( MBEDTLS_ERR_SSL_ILLEGAL_PARAMETER );
     }
 
@@ -3982,8 +3982,8 @@ int mbedtls_ssl_tls13_handshake_server_step( mbedtls_ssl_context *ssl )
                     mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_SERVER_HELLO );
                     break;
                 case MBEDTLS_ERR_SSL_BAD_PROTOCOL_VERSION:
-                    SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_PROTOCOL_VERSION,
-                                          MBEDTLS_ERR_SSL_BAD_PROTOCOL_VERSION );
+                    MBEDTLS_SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_PROTOCOL_VERSION,
+                                                  MBEDTLS_ERR_SSL_BAD_PROTOCOL_VERSION );
                     break;
                 case MBEDTLS_ERR_SSL_CONTINUE_PROCESSING:
                     /* Stay in this state */

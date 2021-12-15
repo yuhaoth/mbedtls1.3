@@ -6182,8 +6182,6 @@ void mbedtls_ssl_transform_free( mbedtls_ssl_transform *transform )
     mbedtls_platform_zeroize( transform, sizeof( mbedtls_ssl_transform ) );
 }
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
-
 #if defined(MBEDTLS_SSL_USE_MPS)
 
 /*
@@ -6223,28 +6221,49 @@ int mbedtls_ssl_handle_pending_alert( mbedtls_ssl_context *ssl )
 #else /* MBEDTLS_SSL_USE_MPS */
 
 /*
- * Send pending fatal alerts or warnings.
+ * Send pending fatal alert.
+ * 0,   No alert message.
+ * !0,  if mbedtls_ssl_send_alert_message() returned in error, the error code it
+ *      returned, ssl->alert_reason otherwise.
  */
 int mbedtls_ssl_handle_pending_alert( mbedtls_ssl_context *ssl )
 {
     int ret;
 
-    /* Send alert if requested */
-    if( ssl->send_alert != 0 )
+    /* No pending alert, return success*/
+    if( ssl->send_alert == 0 )
+        return( 0 );
+
+    ret = mbedtls_ssl_send_alert_message( ssl,
+                                MBEDTLS_SSL_ALERT_LEVEL_FATAL,
+                                ssl->alert_type );
+
+    /* If mbedtls_ssl_send_alert_message() returned with MBEDTLS_ERR_SSL_WANT_WRITE,
+     * do not clear the alert to be able to send it later.
+     */
+    if( ret != MBEDTLS_ERR_SSL_WANT_WRITE )
     {
-        ret = mbedtls_ssl_send_alert_message( ssl,
-                                 MBEDTLS_SSL_ALERT_LEVEL_FATAL,
-                                 ssl->alert_type );
-        if( ret != 0 )
-            return( ret );
+        ssl->send_alert = 0;
     }
 
-    ssl->send_alert = 0;
-    ssl->alert_type = 0;
-    return( 0 );
+    if( ret != 0 )
+        return( ret );
+
+    return( ssl->alert_reason );
 }
+
 #endif /* MBEDTLS_SSL_USE_MPS */
 
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+/*
+ * Set pending fatal alert flag.
+ */
+void mbedtls_ssl_pend_fatal_alert( mbedtls_ssl_context *ssl,
+                                   unsigned char alert_type,
+                                   int alert_reason )
+{
+    ssl->send_alert = 1;
+    ssl->alert_type = alert_type;
+    ssl->alert_reason = alert_reason;
+}
 
 #endif /* MBEDTLS_SSL_TLS_C */
