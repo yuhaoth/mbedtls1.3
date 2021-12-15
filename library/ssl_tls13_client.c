@@ -1816,6 +1816,7 @@ static int ssl_tls13_prepare_client_hello( mbedtls_ssl_context* ssl )
 
 /*
  * Write ClientHello handshake message.
+ * Handler for MBEDTLS_SSL_CLIENT_HELLO
  */
 static int ssl_tls13_write_client_hello( mbedtls_ssl_context *ssl )
 {
@@ -2206,7 +2207,7 @@ static int ssl_parse_alpn_ext( mbedtls_ssl_context *ssl,
 
 /*
  *
- * STATE HANDLING: CertificateRequest
+ * Handler for MBEDTLS_SSL_SERVER_HELLO
  *
  */
 
@@ -2215,500 +2216,7 @@ static int ssl_parse_alpn_ext( mbedtls_ssl_context *ssl,
  */
 
 /* Main entry point; orchestrates the other functions */
-static int ssl_certificate_request_process( mbedtls_ssl_context* ssl );
-
-/* Coordination:
- * Deals with the ambiguity of not knowing if a CertificateRequest
- * will be sent. Returns a negative code on failure, or
- * - SSL_CERTIFICATE_REQUEST_EXPECT_REQUEST
- * - SSL_CERTIFICATE_REQUEST_SKIP
- * indicating if a Certificate Request is expected or not.
- */
-#define SSL_CERTIFICATE_REQUEST_EXPECT_REQUEST 0
-#define SSL_CERTIFICATE_REQUEST_SKIP    1
-static int ssl_certificate_request_coordinate( mbedtls_ssl_context* ssl );
-
-#if defined(MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED)
-static int ssl_certificate_request_parse( mbedtls_ssl_context* ssl,
-                                          unsigned char const* buf,
-                                          size_t buflen );
-#endif /* MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED */
-static int ssl_certificate_request_postprocess( mbedtls_ssl_context* ssl );
-
-/*
- * Implementation
- */
-
-/* Main entry point; orchestrates the other functions */
-static int ssl_certificate_request_process( mbedtls_ssl_context* ssl )
-{
-    int ret = 0;
-
-    MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> parse certificate request" ) );
-
-    /* Coordination step
-     * - Fetch record
-     * - Make sure it's either a CertificateRequest or a ServerHelloDone
-     */
-    MBEDTLS_SSL_PROC_CHK_NEG( ssl_certificate_request_coordinate( ssl ) );
-
-#if defined(MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED)
-    if( ret == SSL_CERTIFICATE_REQUEST_EXPECT_REQUEST )
-    {
-        unsigned char *buf;
-        size_t buflen;
-
-        MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_fetch_handshake_msg( ssl,
-                                              MBEDTLS_SSL_HS_CERTIFICATE_REQUEST,
-                                              &buf, &buflen ) );
-
-        MBEDTLS_SSL_PROC_CHK( ssl_certificate_request_parse( ssl, buf, buflen ) );
-
-        mbedtls_ssl_tls13_add_hs_msg_to_checksum(
-            ssl, MBEDTLS_SSL_HS_CERTIFICATE_REQUEST, buf, buflen );
-#if defined(MBEDTLS_SSL_USE_MPS)
-        MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_mps_hs_consume_full_hs_msg( ssl ) );
-#endif
-    }
-    else
-#endif /* MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED */
-    if( ret == SSL_CERTIFICATE_REQUEST_SKIP )
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= skip parse certificate request" ) );
-    }
-    else
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "should never happen" ) );
-        return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
-    }
-
-    /* Update state */
-    MBEDTLS_SSL_PROC_CHK( ssl_certificate_request_postprocess( ssl ) );
-
-    MBEDTLS_SSL_DEBUG_MSG( 3, ( "got %s certificate request",
-                                ssl->client_auth ? "a" : "no" ) );
-
-cleanup:
-
-    /* In the MPS one would close the read-port here to
-     * ensure there's no overlap of reading and writing. */
-
-    MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= parse certificate request" ) );
-    return( ret );
-}
-
-#if defined(MBEDTLS_SSL_USE_MPS)
-static int ssl_certificate_request_coordinate( mbedtls_ssl_context* ssl )
-{
-    int ret;
-    mbedtls_mps_handshake_in msg;
-
-    if( mbedtls_ssl_tls13_kex_with_psk( ssl ) )
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 3, ( "<= skip parse certificate request" ) );
-        return( SSL_CERTIFICATE_REQUEST_SKIP );
-    }
-
-    MBEDTLS_SSL_PROC_CHK_NEG( mbedtls_mps_read( &ssl->mps->l4 ) );
-    if( ret != MBEDTLS_MPS_MSG_HS )
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad certificate request message" ) );
-        MBEDTLS_SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_UNEXPECTED_MESSAGE,
-                                      MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE );
-        return( MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE );
-    }
-
-    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read_handshake( &ssl->mps->l4, &msg ) );
-
-    if( msg.type == MBEDTLS_SSL_HS_CERTIFICATE_REQUEST )
-        return( SSL_CERTIFICATE_REQUEST_EXPECT_REQUEST );
-
-    return( SSL_CERTIFICATE_REQUEST_SKIP );
-
-cleanup:
-    return( ret);
-}
-
-#else /* MBEDTLS_SSL_USE_MPS */
-
-static int ssl_certificate_request_coordinate( mbedtls_ssl_context* ssl )
-{
-    int ret;
-
-    if( mbedtls_ssl_tls13_kex_with_psk( ssl ) )
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 3, ( "<= skip parse certificate request" ) );
-        return( SSL_CERTIFICATE_REQUEST_SKIP );
-    }
-
-    if( ( ret = mbedtls_ssl_read_record( ssl, 0 ) ) != 0 )
-    {
-        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_read_record", ret );
-        return( ret );
-    }
-    ssl->keep_current_message = 1;
-
-    if( ssl->in_msgtype != MBEDTLS_SSL_MSG_HANDSHAKE )
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad certificate request message" ) );
-        MBEDTLS_SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_UNEXPECTED_MESSAGE,
-                                      MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE );
-        return( MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE );
-    }
-
-    if( ssl->in_msg[0] == MBEDTLS_SSL_HS_CERTIFICATE_REQUEST )
-    {
-        return( SSL_CERTIFICATE_REQUEST_EXPECT_REQUEST );
-    }
-
-    return( SSL_CERTIFICATE_REQUEST_SKIP );
-}
-#endif /* MBEDTLS_SSL_USE_MPS */
-
-#if defined(MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED)
-static int ssl_certificate_request_parse( mbedtls_ssl_context* ssl,
-                                          const unsigned char* buf,
-                                          size_t buflen )
-{
-    int ret;
-    const unsigned char* p;
-    const unsigned char* ext;
-    size_t ext_len = 0;
-    size_t context_len = 0;
-
-    if( buflen < 1 )
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad certificate request message" ) );
-        MBEDTLS_SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_DECODE_ERROR,
-                                      MBEDTLS_ERR_SSL_DECODE_ERROR );
-        return( MBEDTLS_ERR_SSL_DECODE_ERROR );
-    }
-
-    /*
-     * struct {
-     *   opaque certificate_request_context<0..2^8-1>;
-     *   Extension extensions<2..2^16-1>;
-     * } CertificateRequest;
-     */
-
-    p = buf;
-
-    /*
-     * Parse certificate_request_context
-     */
-    context_len = (size_t) p[0];
-
-    /* skip context_len */
-    p++;
-
-    /* Fixed length fields are:
-     *  - 1 for length of context
-     *  - 2 for length of extensions
-     * -----
-     *    3 bytes
-     */
-
-    if( buflen < (size_t) ( 3 + context_len ) )
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad certificate request message" ) );
-        MBEDTLS_SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_DECODE_ERROR,
-                                      MBEDTLS_ERR_SSL_DECODE_ERROR );
-        return( MBEDTLS_ERR_SSL_DECODE_ERROR );
-    }
-
-    /* store context ( if necessary ) */
-    if( context_len > 0 )
-    {
-        MBEDTLS_SSL_DEBUG_BUF( 3, "Certificate Request Context",
-            p, context_len );
-
-        ssl->handshake->certificate_request_context =
-          mbedtls_calloc( context_len, 1 );
-        if( ssl->handshake->certificate_request_context == NULL )
-        {
-            MBEDTLS_SSL_DEBUG_MSG( 1, ( "buffer too small" ) );
-            return ( MBEDTLS_ERR_SSL_ALLOC_FAILED );
-        }
-        memcpy( ssl->handshake->certificate_request_context, p, context_len );
-
-        /* jump over certificate_request_context */
-        p += context_len;
-    }
-
-    /*
-     * Parse extensions
-     */
-    ext_len = ( (size_t) p[0] << 8 ) | ( (size_t) p[1] );
-
-    /* At least one extension needs to be present,
-     * namely signature_algorithms ext. */
-    if( ext_len < 4 )
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad certificate request message" ) );
-        MBEDTLS_SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_DECODE_ERROR,
-                                      MBEDTLS_ERR_SSL_DECODE_ERROR );
-        return( MBEDTLS_ERR_SSL_DECODE_ERROR );
-    }
-
-    /* skip total extension length */
-    p += 2;
-
-    ext = p; /* jump to extensions */
-    while( ext_len )
-    {
-        size_t ext_id = ( ( size_t ) ext[0] << 8 ) | ( ( size_t ) ext[1] );
-        size_t ext_size = ( ( size_t ) ext[2] << 8 ) | ( ( size_t ) ext[3] );
-
-        if( ext_size + 4 > ext_len )
-        {
-            MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad certificate request message" ) );
-            MBEDTLS_SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_DECODE_ERROR,
-                                          MBEDTLS_ERR_SSL_DECODE_ERROR );
-            return( MBEDTLS_ERR_SSL_DECODE_ERROR );
-        }
-
-        switch( ext_id )
-        {
-            case MBEDTLS_TLS_EXT_SIG_ALG:
-                MBEDTLS_SSL_DEBUG_MSG( 3,
-                    ( "found signature_algorithms extension" ) );
-
-                if( ( ret = mbedtls_ssl_parse_signature_algorithms_ext( ssl,
-                        ext + 4, (size_t) ext_size ) ) != 0 )
-                {
-                    MBEDTLS_SSL_DEBUG_RET( 1,
-                        "mbedtls_ssl_parse_signature_algorithms_ext", ret );
-                    MBEDTLS_SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_DECODE_ERROR,
-                                                  ret );
-                    return( ret );
-                }
-                break;
-
-            default:
-                MBEDTLS_SSL_DEBUG_MSG( 3,
-                    ( "unknown extension found: %" MBEDTLS_PRINTF_SIZET " ( ignoring )", ext_id ) );
-                break;
-        }
-
-        ext_len -= 4 + ext_size;
-        ext += 4 + ext_size;
-
-        if( ext_len > 0 && ext_len < 4 )
-        {
-            MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad certificate request message" ) );
-            MBEDTLS_SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_DECODE_ERROR,
-                                          MBEDTLS_ERR_SSL_DECODE_ERROR );
-            return( MBEDTLS_ERR_SSL_DECODE_ERROR );
-        }
-    }
-
-    ssl->client_auth = 1;
-    return( 0 );
-}
-#endif /* ( MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED ) */
-
-
-static int ssl_certificate_request_postprocess( mbedtls_ssl_context* ssl )
-{
-    mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_SERVER_CERTIFICATE );
-    return( 0 );
-}
-
-/*
- *
- * EncryptedExtensions message
- *
- * The EncryptedExtensions message contains any extensions which
- * should be protected, i.e., any which are not needed to establish
- * the cryptographic context.
- */
-
-/*
- * Overview
- */
-
-/* Main entry point; orchestrates the other functions */
-static int ssl_encrypted_extensions_process( mbedtls_ssl_context* ssl );
-
-static int ssl_encrypted_extensions_parse( mbedtls_ssl_context* ssl,
-                                           const unsigned char* buf,
-                                           size_t buflen );
-static int ssl_encrypted_extensions_postprocess( mbedtls_ssl_context* ssl );
-
-static int ssl_encrypted_extensions_process( mbedtls_ssl_context* ssl )
-{
-    int ret;
-    unsigned char *buf;
-    size_t buflen;
-
-    MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> parse encrypted extensions" ) );
-
-    MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_fetch_handshake_msg( ssl,
-                                             MBEDTLS_SSL_HS_ENCRYPTED_EXTENSION,
-                                             &buf, &buflen ) );
-
-    /* Process the message contents */
-    MBEDTLS_SSL_PROC_CHK( ssl_encrypted_extensions_parse( ssl, buf, buflen ) );
-
-    mbedtls_ssl_tls13_add_hs_msg_to_checksum(
-        ssl, MBEDTLS_SSL_HS_ENCRYPTED_EXTENSION, buf, buflen );
-#if defined(MBEDTLS_SSL_USE_MPS)
-    MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_mps_hs_consume_full_hs_msg( ssl ) );
-#endif /* MBEDTLS_SSL_USE_MPS */
-
-    MBEDTLS_SSL_PROC_CHK( ssl_encrypted_extensions_postprocess( ssl ) );
-
-cleanup:
-
-    MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= parse encrypted extensions" ) );
-    return( ret );
-
-}
-
-static int ssl_encrypted_extensions_parse( mbedtls_ssl_context* ssl,
-                                           const unsigned char* buf,
-                                           size_t buflen )
-{
-    int ret = 0;
-    size_t ext_len;
-    const unsigned char *ext;
-
-    if( buflen < 2 )
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "EncryptedExtension message too short" ) );
-        return( MBEDTLS_ERR_SSL_DECODE_ERROR );
-    }
-
-    ext_len = ( ( (size_t) buf[0] << 8 ) | ( (size_t) buf[1] ) );
-
-    buf += 2; /* skip extension length */
-    ext = buf;
-
-    /* Checking for an extension length that is too short */
-    if( ext_len > 0 && ext_len < 4 )
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "EncryptedExtension message too short" ) );
-        return( MBEDTLS_ERR_SSL_DECODE_ERROR );
-    }
-
-    /* Checking for an extension length that is not aligned with the rest of the message */
-    if( buflen != 2 + ext_len )
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "EncryptedExtension lengths misaligned" ) );
-        return( MBEDTLS_ERR_SSL_DECODE_ERROR );
-    }
-
-    MBEDTLS_SSL_DEBUG_BUF( 3, "encrypted extensions extensions", ext, ext_len );
-
-    while( ext_len )
-    {
-        unsigned int ext_id = ( ( (unsigned int) ext[0] << 8 ) | ( (unsigned int) ext[1] ) );
-        size_t ext_size = ( ( (size_t) ext[2] << 8 ) | ( (size_t) ext[3] ) );
-
-        if( ext_size + 4 > ext_len )
-        {
-            MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad encrypted extensions message" ) );
-            return( MBEDTLS_ERR_SSL_DECODE_ERROR );
-        }
-
-        /* TBD: The client MUST check EncryptedExtensions for the
-         * presence of any forbidden extensions and if any are found MUST abort
-         * the handshake with an "illegal_parameter" alert.
-         */
-
-        switch( ext_id )
-        {
-
-#if defined(MBEDTLS_SSL_MAX_FRAGMENT_LENGTH)
-            case MBEDTLS_TLS_EXT_MAX_FRAGMENT_LENGTH:
-                MBEDTLS_SSL_DEBUG_MSG( 3, ( "found max_fragment_length extension" ) );
-
-                ret = ssl_parse_max_fragment_length_ext( ssl, ext + 4,
-                        ext_size );
-                if( ret != 0 )
-                {
-                    MBEDTLS_SSL_DEBUG_RET( 1, "ssl_parse_max_fragment_length_ext", ret );
-                    return( ret );
-                }
-
-                break;
-#endif /* MBEDTLS_SSL_MAX_FRAGMENT_LENGTH */
-
-
-#if defined(MBEDTLS_SSL_ALPN)
-            case MBEDTLS_TLS_EXT_ALPN:
-                MBEDTLS_SSL_DEBUG_MSG( 3, ( "found alpn extension" ) );
-
-                ret = ssl_parse_alpn_ext( ssl, ext + 4, ext_size );
-                if( ret != 0 )
-                {
-                    MBEDTLS_SSL_DEBUG_RET( 1, "ssl_parse_alpn_ext", ret );
-                    return( ret );
-                }
-
-                break;
-#endif /* MBEDTLS_SSL_ALPN */
-
-#if defined(MBEDTLS_SSL_SERVER_NAME_INDICATION)
-            case MBEDTLS_TLS_EXT_SERVERNAME:
-                MBEDTLS_SSL_DEBUG_MSG( 3, ( "found server_name extension" ) );
-
-                /* The server_name extension should be an empty extension */
-
-                break;
-#endif /* MBEDTLS_SSL_SERVER_NAME_INDICATION */
-
-#if defined(MBEDTLS_ZERO_RTT)
-            case MBEDTLS_TLS_EXT_EARLY_DATA:
-                MBEDTLS_SSL_DEBUG_MSG(3, ( "found early_data extension" ));
-
-                ret = ssl_parse_encrypted_extensions_early_data_ext(
-                    ssl, ext + 4, ext_size );
-                if( ret != 0 )
-                {
-                    MBEDTLS_SSL_DEBUG_RET( 1, "ssl_parse_early_data_ext", ret );
-                    return( ret );
-                }
-                break;
-#endif /* MBEDTLS_ZERO_RTT */
-
-            default:
-                MBEDTLS_SSL_DEBUG_MSG( 3, ( "unknown extension found: %d ( ignoring )", ext_id ) );
-                break;
-        }
-
-        ext_len -= 4 + ext_size;
-        ext += 4 + ext_size;
-
-        if( ext_len > 0 && ext_len < 4 )
-        {
-            MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad encrypted extensions message" ) );
-            return( MBEDTLS_ERR_SSL_DECODE_ERROR );
-        }
-    }
-
-    return( ret );
-}
-
-static int ssl_encrypted_extensions_postprocess( mbedtls_ssl_context* ssl )
-{
-    mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_CERTIFICATE_REQUEST );
-    return( 0 );
-}
-
-
-/*
- *
- * STATE HANDLING: ServerHello
- *
- */
-
-/*
- * Overview
- */
-
-/* Main entry point; orchestrates the other functions */
-static int ssl_server_hello_process( mbedtls_ssl_context* ssl );
+static int ssl_tls1_3_process_server_hello( mbedtls_ssl_context *ssl );
 
 /* Fetch and preprocess
  * Returns a negative value on failure, and otherwise
@@ -2746,7 +2254,7 @@ static int ssl_hrr_postprocess( mbedtls_ssl_context* ssl );
  * Implementation
  */
 
-static int ssl_server_hello_process( mbedtls_ssl_context* ssl )
+static int ssl_tls1_3_process_server_hello( mbedtls_ssl_context *ssl )
 {
     int ret = 0;
 #if defined(MBEDTLS_SSL_USE_MPS)
@@ -3687,6 +3195,594 @@ static int ssl_hrr_postprocess( mbedtls_ssl_context* ssl )
     return( 0 );
 }
 
+/*
+ *
+ * Handler for MBEDTLS_SSL_ENCRYPTED_EXTENSIONS
+ *
+ * The EncryptedExtensions message contains any extensions which
+ * should be protected, i.e., any which are not needed to establish
+ * the cryptographic context.
+ */
+
+/*
+ * Overview
+ */
+
+/* Main entry point; orchestrates the other functions */
+static int ssl_tls1_3_process_encrypted_extensions( mbedtls_ssl_context *ssl );
+
+static int ssl_encrypted_extensions_parse( mbedtls_ssl_context* ssl,
+                                           const unsigned char* buf,
+                                           size_t buflen );
+static int ssl_encrypted_extensions_postprocess( mbedtls_ssl_context* ssl );
+
+static int ssl_tls1_3_process_encrypted_extensions( mbedtls_ssl_context *ssl )
+{
+    int ret;
+    unsigned char *buf;
+    size_t buflen;
+
+    MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> parse encrypted extensions" ) );
+
+    MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_fetch_handshake_msg( ssl,
+                                             MBEDTLS_SSL_HS_ENCRYPTED_EXTENSION,
+                                             &buf, &buflen ) );
+
+    /* Process the message contents */
+    MBEDTLS_SSL_PROC_CHK( ssl_encrypted_extensions_parse( ssl, buf, buflen ) );
+
+    mbedtls_ssl_tls13_add_hs_msg_to_checksum(
+        ssl, MBEDTLS_SSL_HS_ENCRYPTED_EXTENSION, buf, buflen );
+#if defined(MBEDTLS_SSL_USE_MPS)
+    MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_mps_hs_consume_full_hs_msg( ssl ) );
+#endif /* MBEDTLS_SSL_USE_MPS */
+
+    MBEDTLS_SSL_PROC_CHK( ssl_encrypted_extensions_postprocess( ssl ) );
+
+cleanup:
+
+    MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= parse encrypted extensions" ) );
+    return( ret );
+
+}
+
+static int ssl_encrypted_extensions_parse( mbedtls_ssl_context* ssl,
+                                           const unsigned char* buf,
+                                           size_t buflen )
+{
+    int ret = 0;
+    size_t ext_len;
+    const unsigned char *ext;
+
+    if( buflen < 2 )
+    {
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "EncryptedExtension message too short" ) );
+        return( MBEDTLS_ERR_SSL_DECODE_ERROR );
+    }
+
+    ext_len = ( ( (size_t) buf[0] << 8 ) | ( (size_t) buf[1] ) );
+
+    buf += 2; /* skip extension length */
+    ext = buf;
+
+    /* Checking for an extension length that is too short */
+    if( ext_len > 0 && ext_len < 4 )
+    {
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "EncryptedExtension message too short" ) );
+        return( MBEDTLS_ERR_SSL_DECODE_ERROR );
+    }
+
+    /* Checking for an extension length that is not aligned with the rest of the message */
+    if( buflen != 2 + ext_len )
+    {
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "EncryptedExtension lengths misaligned" ) );
+        return( MBEDTLS_ERR_SSL_DECODE_ERROR );
+    }
+
+    MBEDTLS_SSL_DEBUG_BUF( 3, "encrypted extensions extensions", ext, ext_len );
+
+    while( ext_len )
+    {
+        unsigned int ext_id = ( ( (unsigned int) ext[0] << 8 ) | ( (unsigned int) ext[1] ) );
+        size_t ext_size = ( ( (size_t) ext[2] << 8 ) | ( (size_t) ext[3] ) );
+
+        if( ext_size + 4 > ext_len )
+        {
+            MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad encrypted extensions message" ) );
+            return( MBEDTLS_ERR_SSL_DECODE_ERROR );
+        }
+
+        /* TBD: The client MUST check EncryptedExtensions for the
+         * presence of any forbidden extensions and if any are found MUST abort
+         * the handshake with an "illegal_parameter" alert.
+         */
+
+        switch( ext_id )
+        {
+
+#if defined(MBEDTLS_SSL_MAX_FRAGMENT_LENGTH)
+            case MBEDTLS_TLS_EXT_MAX_FRAGMENT_LENGTH:
+                MBEDTLS_SSL_DEBUG_MSG( 3, ( "found max_fragment_length extension" ) );
+
+                ret = ssl_parse_max_fragment_length_ext( ssl, ext + 4,
+                        ext_size );
+                if( ret != 0 )
+                {
+                    MBEDTLS_SSL_DEBUG_RET( 1, "ssl_parse_max_fragment_length_ext", ret );
+                    return( ret );
+                }
+
+                break;
+#endif /* MBEDTLS_SSL_MAX_FRAGMENT_LENGTH */
+
+
+#if defined(MBEDTLS_SSL_ALPN)
+            case MBEDTLS_TLS_EXT_ALPN:
+                MBEDTLS_SSL_DEBUG_MSG( 3, ( "found alpn extension" ) );
+
+                ret = ssl_parse_alpn_ext( ssl, ext + 4, ext_size );
+                if( ret != 0 )
+                {
+                    MBEDTLS_SSL_DEBUG_RET( 1, "ssl_parse_alpn_ext", ret );
+                    return( ret );
+                }
+
+                break;
+#endif /* MBEDTLS_SSL_ALPN */
+
+#if defined(MBEDTLS_SSL_SERVER_NAME_INDICATION)
+            case MBEDTLS_TLS_EXT_SERVERNAME:
+                MBEDTLS_SSL_DEBUG_MSG( 3, ( "found server_name extension" ) );
+
+                /* The server_name extension should be an empty extension */
+
+                break;
+#endif /* MBEDTLS_SSL_SERVER_NAME_INDICATION */
+
+#if defined(MBEDTLS_ZERO_RTT)
+            case MBEDTLS_TLS_EXT_EARLY_DATA:
+                MBEDTLS_SSL_DEBUG_MSG(3, ( "found early_data extension" ));
+
+                ret = ssl_parse_encrypted_extensions_early_data_ext(
+                    ssl, ext + 4, ext_size );
+                if( ret != 0 )
+                {
+                    MBEDTLS_SSL_DEBUG_RET( 1, "ssl_parse_early_data_ext", ret );
+                    return( ret );
+                }
+                break;
+#endif /* MBEDTLS_ZERO_RTT */
+
+            default:
+                MBEDTLS_SSL_DEBUG_MSG( 3, ( "unknown extension found: %d ( ignoring )", ext_id ) );
+                break;
+        }
+
+        ext_len -= 4 + ext_size;
+        ext += 4 + ext_size;
+
+        if( ext_len > 0 && ext_len < 4 )
+        {
+            MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad encrypted extensions message" ) );
+            return( MBEDTLS_ERR_SSL_DECODE_ERROR );
+        }
+    }
+
+    return( ret );
+}
+
+static int ssl_encrypted_extensions_postprocess( mbedtls_ssl_context* ssl )
+{
+    mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_CERTIFICATE_REQUEST );
+    return( 0 );
+}
+
+/*
+ * Handler for MBEDTLS_SSL_CERTIFICATE_REQUEST
+ */
+
+/*
+ * Overview
+ */
+
+/* Main entry point; orchestrates the other functions */
+static int ssl_tls1_3_process_certificate_request( mbedtls_ssl_context *ssl );
+
+/* Coordination:
+ * Deals with the ambiguity of not knowing if a CertificateRequest
+ * will be sent. Returns a negative code on failure, or
+ * - SSL_CERTIFICATE_REQUEST_EXPECT_REQUEST
+ * - SSL_CERTIFICATE_REQUEST_SKIP
+ * indicating if a Certificate Request is expected or not.
+ */
+#define SSL_CERTIFICATE_REQUEST_EXPECT_REQUEST 0
+#define SSL_CERTIFICATE_REQUEST_SKIP    1
+static int ssl_certificate_request_coordinate( mbedtls_ssl_context* ssl );
+
+#if defined(MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED)
+static int ssl_certificate_request_parse( mbedtls_ssl_context* ssl,
+                                          unsigned char const* buf,
+                                          size_t buflen );
+#endif /* MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED */
+static int ssl_certificate_request_postprocess( mbedtls_ssl_context* ssl );
+
+/*
+ * Implementation
+ */
+
+/* Main entry point; orchestrates the other functions */
+static int ssl_tls1_3_process_certificate_request( mbedtls_ssl_context *ssl )
+{
+    int ret = 0;
+
+    MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> parse certificate request" ) );
+
+    /* Coordination step
+     * - Fetch record
+     * - Make sure it's either a CertificateRequest or a ServerHelloDone
+     */
+    MBEDTLS_SSL_PROC_CHK_NEG( ssl_certificate_request_coordinate( ssl ) );
+
+#if defined(MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED)
+    if( ret == SSL_CERTIFICATE_REQUEST_EXPECT_REQUEST )
+    {
+        unsigned char *buf;
+        size_t buflen;
+
+        MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_fetch_handshake_msg( ssl,
+                                              MBEDTLS_SSL_HS_CERTIFICATE_REQUEST,
+                                              &buf, &buflen ) );
+
+        MBEDTLS_SSL_PROC_CHK( ssl_certificate_request_parse( ssl, buf, buflen ) );
+
+        mbedtls_ssl_tls13_add_hs_msg_to_checksum(
+            ssl, MBEDTLS_SSL_HS_CERTIFICATE_REQUEST, buf, buflen );
+#if defined(MBEDTLS_SSL_USE_MPS)
+        MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_mps_hs_consume_full_hs_msg( ssl ) );
+#endif
+    }
+    else
+#endif /* MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED */
+    if( ret == SSL_CERTIFICATE_REQUEST_SKIP )
+    {
+        MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= skip parse certificate request" ) );
+    }
+    else
+    {
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "should never happen" ) );
+        return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
+    }
+
+    /* Update state */
+    MBEDTLS_SSL_PROC_CHK( ssl_certificate_request_postprocess( ssl ) );
+
+    MBEDTLS_SSL_DEBUG_MSG( 3, ( "got %s certificate request",
+                                ssl->client_auth ? "a" : "no" ) );
+
+cleanup:
+
+    /* In the MPS one would close the read-port here to
+     * ensure there's no overlap of reading and writing. */
+
+    MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= parse certificate request" ) );
+    return( ret );
+}
+
+#if defined(MBEDTLS_SSL_USE_MPS)
+static int ssl_certificate_request_coordinate( mbedtls_ssl_context* ssl )
+{
+    int ret;
+    mbedtls_mps_handshake_in msg;
+
+    if( mbedtls_ssl_tls13_kex_with_psk( ssl ) )
+    {
+        MBEDTLS_SSL_DEBUG_MSG( 3, ( "<= skip parse certificate request" ) );
+        return( SSL_CERTIFICATE_REQUEST_SKIP );
+    }
+
+    MBEDTLS_SSL_PROC_CHK_NEG( mbedtls_mps_read( &ssl->mps->l4 ) );
+    if( ret != MBEDTLS_MPS_MSG_HS )
+    {
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad certificate request message" ) );
+        MBEDTLS_SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_UNEXPECTED_MESSAGE,
+                                      MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE );
+        return( MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE );
+    }
+
+    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read_handshake( &ssl->mps->l4, &msg ) );
+
+    if( msg.type == MBEDTLS_SSL_HS_CERTIFICATE_REQUEST )
+        return( SSL_CERTIFICATE_REQUEST_EXPECT_REQUEST );
+
+    return( SSL_CERTIFICATE_REQUEST_SKIP );
+
+cleanup:
+    return( ret);
+}
+
+#else /* MBEDTLS_SSL_USE_MPS */
+
+static int ssl_certificate_request_coordinate( mbedtls_ssl_context* ssl )
+{
+    int ret;
+
+    if( mbedtls_ssl_tls13_kex_with_psk( ssl ) )
+    {
+        MBEDTLS_SSL_DEBUG_MSG( 3, ( "<= skip parse certificate request" ) );
+        return( SSL_CERTIFICATE_REQUEST_SKIP );
+    }
+
+    if( ( ret = mbedtls_ssl_read_record( ssl, 0 ) ) != 0 )
+    {
+        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_read_record", ret );
+        return( ret );
+    }
+    ssl->keep_current_message = 1;
+
+    if( ssl->in_msgtype != MBEDTLS_SSL_MSG_HANDSHAKE )
+    {
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad certificate request message" ) );
+        MBEDTLS_SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_UNEXPECTED_MESSAGE,
+                                      MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE );
+        return( MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE );
+    }
+
+    if( ssl->in_msg[0] == MBEDTLS_SSL_HS_CERTIFICATE_REQUEST )
+    {
+        return( SSL_CERTIFICATE_REQUEST_EXPECT_REQUEST );
+    }
+
+    return( SSL_CERTIFICATE_REQUEST_SKIP );
+}
+#endif /* MBEDTLS_SSL_USE_MPS */
+
+#if defined(MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED)
+static int ssl_certificate_request_parse( mbedtls_ssl_context* ssl,
+                                          const unsigned char* buf,
+                                          size_t buflen )
+{
+    int ret;
+    const unsigned char* p;
+    const unsigned char* ext;
+    size_t ext_len = 0;
+    size_t context_len = 0;
+
+    if( buflen < 1 )
+    {
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad certificate request message" ) );
+        MBEDTLS_SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_DECODE_ERROR,
+                                      MBEDTLS_ERR_SSL_DECODE_ERROR );
+        return( MBEDTLS_ERR_SSL_DECODE_ERROR );
+    }
+
+    /*
+     * struct {
+     *   opaque certificate_request_context<0..2^8-1>;
+     *   Extension extensions<2..2^16-1>;
+     * } CertificateRequest;
+     */
+
+    p = buf;
+
+    /*
+     * Parse certificate_request_context
+     */
+    context_len = (size_t) p[0];
+
+    /* skip context_len */
+    p++;
+
+    /* Fixed length fields are:
+     *  - 1 for length of context
+     *  - 2 for length of extensions
+     * -----
+     *    3 bytes
+     */
+
+    if( buflen < (size_t) ( 3 + context_len ) )
+    {
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad certificate request message" ) );
+        MBEDTLS_SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_DECODE_ERROR,
+                                      MBEDTLS_ERR_SSL_DECODE_ERROR );
+        return( MBEDTLS_ERR_SSL_DECODE_ERROR );
+    }
+
+    /* store context ( if necessary ) */
+    if( context_len > 0 )
+    {
+        MBEDTLS_SSL_DEBUG_BUF( 3, "Certificate Request Context",
+            p, context_len );
+
+        ssl->handshake->certificate_request_context =
+          mbedtls_calloc( context_len, 1 );
+        if( ssl->handshake->certificate_request_context == NULL )
+        {
+            MBEDTLS_SSL_DEBUG_MSG( 1, ( "buffer too small" ) );
+            return ( MBEDTLS_ERR_SSL_ALLOC_FAILED );
+        }
+        memcpy( ssl->handshake->certificate_request_context, p, context_len );
+
+        /* jump over certificate_request_context */
+        p += context_len;
+    }
+
+    /*
+     * Parse extensions
+     */
+    ext_len = ( (size_t) p[0] << 8 ) | ( (size_t) p[1] );
+
+    /* At least one extension needs to be present,
+     * namely signature_algorithms ext. */
+    if( ext_len < 4 )
+    {
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad certificate request message" ) );
+        MBEDTLS_SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_DECODE_ERROR,
+                                      MBEDTLS_ERR_SSL_DECODE_ERROR );
+        return( MBEDTLS_ERR_SSL_DECODE_ERROR );
+    }
+
+    /* skip total extension length */
+    p += 2;
+
+    ext = p; /* jump to extensions */
+    while( ext_len )
+    {
+        size_t ext_id = ( ( size_t ) ext[0] << 8 ) | ( ( size_t ) ext[1] );
+        size_t ext_size = ( ( size_t ) ext[2] << 8 ) | ( ( size_t ) ext[3] );
+
+        if( ext_size + 4 > ext_len )
+        {
+            MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad certificate request message" ) );
+            MBEDTLS_SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_DECODE_ERROR,
+                                          MBEDTLS_ERR_SSL_DECODE_ERROR );
+            return( MBEDTLS_ERR_SSL_DECODE_ERROR );
+        }
+
+        switch( ext_id )
+        {
+            case MBEDTLS_TLS_EXT_SIG_ALG:
+                MBEDTLS_SSL_DEBUG_MSG( 3,
+                    ( "found signature_algorithms extension" ) );
+
+                if( ( ret = mbedtls_ssl_parse_signature_algorithms_ext( ssl,
+                        ext + 4, (size_t) ext_size ) ) != 0 )
+                {
+                    MBEDTLS_SSL_DEBUG_RET( 1,
+                        "mbedtls_ssl_parse_signature_algorithms_ext", ret );
+                    MBEDTLS_SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_DECODE_ERROR,
+                                                  ret );
+                    return( ret );
+                }
+                break;
+
+            default:
+                MBEDTLS_SSL_DEBUG_MSG( 3,
+                    ( "unknown extension found: %" MBEDTLS_PRINTF_SIZET " ( ignoring )", ext_id ) );
+                break;
+        }
+
+        ext_len -= 4 + ext_size;
+        ext += 4 + ext_size;
+
+        if( ext_len > 0 && ext_len < 4 )
+        {
+            MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad certificate request message" ) );
+            MBEDTLS_SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_DECODE_ERROR,
+                                          MBEDTLS_ERR_SSL_DECODE_ERROR );
+            return( MBEDTLS_ERR_SSL_DECODE_ERROR );
+        }
+    }
+
+    ssl->client_auth = 1;
+    return( 0 );
+}
+#endif /* ( MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED ) */
+
+
+static int ssl_certificate_request_postprocess( mbedtls_ssl_context* ssl )
+{
+    mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_SERVER_CERTIFICATE );
+    return( 0 );
+}
+
+/*
+ * Handler for MBEDTLS_SSL_SERVER_CERTIFICATE
+ */
+static int ssl_tls1_3_process_server_certificate( mbedtls_ssl_context *ssl )
+{
+    return( mbedtls_ssl_read_certificate_process( ssl ) );
+}
+
+/*
+ * Handler for MBEDTLS_SSL_CERTIFICATE_VERIFY
+ */
+static int ssl_tls1_3_process_certificate_verify( mbedtls_ssl_context *ssl )
+{
+    return( mbedtls_ssl_read_certificate_verify_process( ssl ) );
+}
+
+/*
+ * Handler for MBEDTLS_SSL_SERVER_FINISHED
+ */
+static int ssl_tls1_3_process_server_finished( mbedtls_ssl_context *ssl )
+{
+    return( mbedtls_ssl_finished_in_process( ssl ) );
+}
+
+/*
+ * Handler for MBEDTLS_SSL_CLIENT_CERTIFICATE
+ */
+static int ssl_tls1_3_write_client_certificate( mbedtls_ssl_context *ssl )
+{
+    return( mbedtls_ssl_write_certificate_process( ssl ) );
+}
+
+/*
+ * Handler for MBEDTLS_SSL_CLIENT_CERTIFICATE_VERIFY
+ */
+static int ssl_tls1_3_write_client_certificate_verify( mbedtls_ssl_context *ssl )
+{
+    return( mbedtls_ssl_write_certificate_verify_process( ssl ) );
+}
+
+/*
+ * Handler for MBEDTLS_SSL_CLIENT_FINISHED
+ */
+static int ssl_tls1_3_write_client_finished( mbedtls_ssl_context *ssl )
+{
+    MBEDTLS_SSL_DEBUG_MSG( 1, ( "%s hasn't been implemented", __func__ ) );
+    mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_FLUSH_BUFFERS );
+    return( mbedtls_ssl_finished_out_process( ssl ) );
+}
+
+/*
+ * Handler for MBEDTLS_SSL_FLUSH_BUFFERS
+ */
+static int ssl_tls1_3_flush_buffers( mbedtls_ssl_context *ssl )
+{
+    MBEDTLS_SSL_DEBUG_MSG( 2, ( "handshake: done" ) );
+    mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_HANDSHAKE_WRAPUP );
+
+    return( 0 );
+}
+
+/*
+ * Handler for MBEDTLS_SSL_HANDSHAKE_WRAPUP
+ */
+static int ssl_tls1_3_handshake_wrapup( mbedtls_ssl_context *ssl )
+{
+    MBEDTLS_SSL_DEBUG_MSG( 1, ( "Switch to application keys for inbound traffic" ) );
+    MBEDTLS_SSL_DEBUG_MSG( 1, ( "Switch to application keys for outbound traffic" ) );
+
+#if defined(MBEDTLS_SSL_USE_MPS)
+    int ret = 0;
+
+    ret = mbedtls_mps_set_incoming_keys( &ssl->mps->l4,
+                                                 ssl->epoch_application );
+    if( ret != 0 )
+        return( ret );
+
+    ret = mbedtls_mps_set_outgoing_keys( &ssl->mps->l4,
+                                         ssl->epoch_application );
+    if( ret != 0 )
+        return( ret );
+#else
+    mbedtls_ssl_set_inbound_transform ( ssl, ssl->transform_application );
+    mbedtls_ssl_set_outbound_transform( ssl, ssl->transform_application );
+#endif /* MBEDTLS_SSL_USE_MPS */
+
+    mbedtls_ssl_handshake_wrapup_tls13( ssl );
+    mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_HANDSHAKE_OVER );
+
+    return( 0 );
+}
+
+/*
+ *
+ * Handler for MBEDTLS_SSL_CLIENT_NEW_SESSION_TICKET
+ *
+ */
+
 #if defined(MBEDTLS_SSL_NEW_SESSION_TICKET)
 
 static int ssl_new_session_ticket_early_data_ext_parse( mbedtls_ssl_context* ssl,
@@ -4013,7 +4109,8 @@ int mbedtls_ssl_tls13_handshake_client_step( mbedtls_ssl_context *ssl )
         MBEDTLS_SSL_DEBUG_MSG( 2, ( "Handshake completed but ssl->handshake is NULL.\n" ) );
         return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
     }
-    MBEDTLS_SSL_DEBUG_MSG( 2, ( "client state: %d", ssl->state ) );
+
+    MBEDTLS_SSL_DEBUG_MSG( 2, ( "tls1_3 client state: %d", ssl->state ) );
 
     if( ( ret = mbedtls_ssl_flush_output( ssl ) ) != 0 )
         return( ret );
@@ -4045,27 +4142,27 @@ int mbedtls_ssl_tls13_handshake_client_step( mbedtls_ssl_context *ssl )
          *        Finished
          */
         case MBEDTLS_SSL_SERVER_HELLO:
-            ret = ssl_server_hello_process( ssl );
+            ret = ssl_tls1_3_process_server_hello( ssl );
             break;
 
         case MBEDTLS_SSL_ENCRYPTED_EXTENSIONS:
-            ret = ssl_encrypted_extensions_process( ssl );
+            ret = ssl_tls1_3_process_encrypted_extensions( ssl );
             break;
 
         case MBEDTLS_SSL_CERTIFICATE_REQUEST:
-            ret = ssl_certificate_request_process( ssl );
+            ret = ssl_tls1_3_process_certificate_request( ssl );
             break;
 
         case MBEDTLS_SSL_SERVER_CERTIFICATE:
-            ret = mbedtls_ssl_read_certificate_process( ssl );
+            ret = ssl_tls1_3_process_server_certificate( ssl );
             break;
 
         case MBEDTLS_SSL_CERTIFICATE_VERIFY:
-            ret = mbedtls_ssl_read_certificate_verify_process( ssl );
+            ret = ssl_tls1_3_process_certificate_verify( ssl );
             break;
 
         case MBEDTLS_SSL_SERVER_FINISHED:
-            ret = mbedtls_ssl_finished_in_process( ssl );
+            ret = ssl_tls1_3_process_server_finished( ssl );
             break;
 
         /*
@@ -4079,15 +4176,15 @@ int mbedtls_ssl_tls13_handshake_client_step( mbedtls_ssl_context *ssl )
             break;
 
         case MBEDTLS_SSL_CLIENT_CERTIFICATE:
-            ret = mbedtls_ssl_write_certificate_process( ssl );
+            ret = ssl_tls1_3_write_client_certificate( ssl );
             break;
 
         case MBEDTLS_SSL_CLIENT_CERTIFICATE_VERIFY:
-            ret = mbedtls_ssl_write_certificate_verify_process( ssl );
+            ret = ssl_tls1_3_write_client_certificate_verify( ssl );
             break;
 
         case MBEDTLS_SSL_CLIENT_FINISHED:
-            ret = mbedtls_ssl_finished_out_process( ssl );
+            ret = ssl_tls1_3_write_client_finished( ssl );
             break;
 
         /*
@@ -4118,32 +4215,12 @@ int mbedtls_ssl_tls13_handshake_client_step( mbedtls_ssl_context *ssl )
          */
 
         case MBEDTLS_SSL_FLUSH_BUFFERS:
-            MBEDTLS_SSL_DEBUG_MSG( 2, ( "handshake: done" ) );
-            mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_HANDSHAKE_WRAPUP );
+            ret = ssl_tls1_3_flush_buffers( ssl );
             break;
 
         case MBEDTLS_SSL_HANDSHAKE_WRAPUP:
 
-            MBEDTLS_SSL_DEBUG_MSG( 1, ( "Switch to application keys for inbound traffic" ) );
-            MBEDTLS_SSL_DEBUG_MSG( 1, ( "Switch to application keys for outbound traffic" ) );
-
-#if defined(MBEDTLS_SSL_USE_MPS)
-            ret = mbedtls_mps_set_incoming_keys( &ssl->mps->l4,
-                                                 ssl->epoch_application );
-            if( ret != 0 )
-                return( ret );
-
-            ret = mbedtls_mps_set_outgoing_keys( &ssl->mps->l4,
-                                                 ssl->epoch_application );
-            if( ret != 0 )
-                return( ret );
-#else
-            mbedtls_ssl_set_inbound_transform ( ssl, ssl->transform_application );
-            mbedtls_ssl_set_outbound_transform( ssl, ssl->transform_application );
-#endif /* MBEDTLS_SSL_USE_MPS */
-
-            mbedtls_ssl_handshake_wrapup_tls13( ssl );
-            mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_HANDSHAKE_OVER );
+            ret = ssl_tls1_3_handshake_wrapup( ssl );
             break;
 
         default:
