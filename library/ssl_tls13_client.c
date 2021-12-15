@@ -3301,15 +3301,13 @@ static int ssl_tls13_write_end_of_early_data_coordinate( mbedtls_ssl_context *ss
 
 static int ssl_tls13_write_end_of_early_data_postprocess( mbedtls_ssl_context *ssl )
 {
-#if defined(MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE)
-    if( ssl_tls13_write_end_of_early_data_coordinate( ssl ) != SSL_END_OF_EARLY_DATA_WRITE )
-    {
-        mbedtls_ssl_handshake_set_state( ssl,
-                         MBEDTLS_SSL_CLIENT_CCS_AFTER_SERVER_FINISHED );
-        return( 0 );
-    }
-#endif /* MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE */
+#if defined(MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE)
+    mbedtls_ssl_handshake_set_state( ssl,
+                        MBEDTLS_SSL_CLIENT_CCS_AFTER_SERVER_FINISHED );
+#else
     mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_CLIENT_CERTIFICATE );
+#endif /* MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE */
+
     return( 0 );
 }
 

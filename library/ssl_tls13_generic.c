@@ -1437,7 +1437,7 @@ static int ssl_tls13_finalize_finished_message( mbedtls_ssl_context *ssl )
                     "mbedtls_ssl_tls13_generate_resumption_master_secret ", ret );
             return ( ret );
         }
-        
+
         mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_FLUSH_BUFFERS );
     }
     else
@@ -1605,6 +1605,19 @@ static int ssl_tls13_write_change_cipher_spec_coordinate( mbedtls_ssl_context *s
         }
     }
 #endif /* MBEDTLS_SSL_SRV_C */
+
+#if defined(MBEDTLS_SSL_CLI_C) && defined(MBEDTLS_ZERO_RTT)
+    if( ssl->conf->endpoint == MBEDTLS_SSL_IS_CLIENT )
+    {
+        if( ssl->state == MBEDTLS_SSL_CLIENT_CCS_AFTER_SERVER_FINISHED )
+        {
+            if( ssl->handshake->early_data == MBEDTLS_SSL_EARLY_DATA_ON )
+                ret = SSL_WRITE_CCS_SKIP;
+            else
+                ret = SSL_WRITE_CCS_NEEDED;
+        }
+    }
+#endif /* MBEDTLS_SSL_CLI_C && MBEDTLS_ZERO_RTT */
     return( ret );
 }
 
