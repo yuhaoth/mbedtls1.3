@@ -415,6 +415,8 @@ static int ssl_write_change_cipher_spec_postprocess( mbedtls_ssl_context* ssl )
 }
 #endif /* MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE */
 
+#if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
+
 /*
  * mbedtls_ssl_tls13_write_sig_alg_ext( )
  *
@@ -432,17 +434,14 @@ static int ssl_write_change_cipher_spec_postprocess( mbedtls_ssl_context* ssl )
  *
  * Only if we handle at least one key exchange that needs signatures.
  */
-
-#if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
 int mbedtls_ssl_tls13_write_sig_alg_ext( mbedtls_ssl_context *ssl,
                                          unsigned char* buf,
                                          unsigned char* end,
                                          size_t* olen )
 {
     unsigned char *p = buf;
-    size_t sig_alg_len = 0;
-    const uint16_t *sig_alg;
-    unsigned char *sig_alg_list = buf + 6;
+    unsigned char *supported_sig_alg_ptr; /* Start of supported_signature_algorithms */
+    size_t supported_sig_alg_len = 0;     /* Length of supported_signature_algorithms */
 
     *olen = 0;
 
@@ -458,55 +457,47 @@ int mbedtls_ssl_tls13_write_sig_alg_ext( mbedtls_ssl_context *ssl,
 
     MBEDTLS_SSL_DEBUG_MSG( 3, ( "adding signature_algorithms extension" ) );
 
-    /*
-     * Determine length of the signature scheme list
+    /* Check if we have space for header and length field:
+     * - extension_type         (2 bytes)
+     * - extension_data_length  (2 bytes)
+     * - supported_signature_algorithms_length   (2 bytes)
      */
-    for ( sig_alg = ssl->conf->tls13_sig_algs;
-          *sig_alg != MBEDTLS_TLS13_SIG_NONE; sig_alg++ )
+    MBEDTLS_SSL_CHK_BUF_PTR( p, end, 6 );
+    p += 6;
+
+    /*
+     * Write supported_signature_algorithms
+     */
+    supported_sig_alg_ptr = p;
+    for( const uint16_t *sig_alg = ssl->conf->tls13_sig_algs;
+         *sig_alg != MBEDTLS_TLS13_SIG_NONE; sig_alg++ )
     {
-        sig_alg_len += 2;
+        MBEDTLS_SSL_CHK_BUF_PTR( p, end, 2 );
+        MBEDTLS_PUT_UINT16_BE( *sig_alg, p, 0 );
+        p += 2;
+        MBEDTLS_SSL_DEBUG_MSG( 3, ( "signature scheme [%x]", *sig_alg ) );
     }
 
-    if( sig_alg_len == 0 )
+    /* Length of supported_signature_algorithms */
+    supported_sig_alg_len = p - supported_sig_alg_ptr;
+    if( supported_sig_alg_len == 0 )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "No signature algorithms defined." ) );
         return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
     }
 
-    if( end < p || (size_t)( end - p ) < sig_alg_len + 6 )
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "buffer too small" ) );
-        return( MBEDTLS_ERR_SSL_BUFFER_TOO_SMALL );
-    }
+    /* Write extension_type */
+    MBEDTLS_PUT_UINT16_BE( MBEDTLS_TLS_EXT_SIG_ALG, buf, 0 );
+    /* Write extension_data_length */
+    MBEDTLS_PUT_UINT16_BE( supported_sig_alg_len + 2, buf, 2 );
+    /* Write length of supported_signature_algorithms */
+    MBEDTLS_PUT_UINT16_BE( supported_sig_alg_len, buf, 4 );
 
-    /*
-     * Write signature schemes
-     */
-
-    for( sig_alg = ssl->conf->tls13_sig_algs;
-         *sig_alg != MBEDTLS_TLS13_SIG_NONE; sig_alg++ )
-    {
-        *sig_alg_list++ = (unsigned char)( ( *sig_alg >> 8 ) & 0xFF );
-        *sig_alg_list++ = (unsigned char)( ( *sig_alg ) & 0xFF );
-        MBEDTLS_SSL_DEBUG_MSG( 3, ( "signature scheme [%x]", *sig_alg ) );
-    }
-
-    /*
-     * Write extension header
-     */
-
-    *p++ = (unsigned char)( ( MBEDTLS_TLS_EXT_SIG_ALG >> 8 ) & 0xFF );
-    *p++ = (unsigned char)( ( MBEDTLS_TLS_EXT_SIG_ALG ) & 0xFF );
-
-    *p++ = (unsigned char)( ( ( sig_alg_len + 2 ) >> 8 ) & 0xFF );
-    *p++ = (unsigned char)( ( ( sig_alg_len + 2 ) ) & 0xFF );
-
-    *p++ = (unsigned char)( ( sig_alg_len >> 8 ) & 0xFF );
-    *p++ = (unsigned char)( ( sig_alg_len ) & 0xFF );
-
-    *olen = 6 + sig_alg_len;
+    /* Output the total length of signature algorithms extension. */
+    *olen = p - buf;
 
     ssl->handshake->extensions_present |= MBEDTLS_SSL_EXT_SIG_ALG;
+
     return( 0 );
 }
 
@@ -911,6 +902,7 @@ static int ssl_certificate_verify_postprocess( mbedtls_ssl_context* ssl )
     {
         mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_SERVER_FINISHED );
     }
+
     return( 0 );
 }
 
