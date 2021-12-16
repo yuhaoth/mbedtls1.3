@@ -52,10 +52,10 @@
 #endif /* MBEDTLS_PLATFORM_C */
 
 #if defined(MBEDTLS_SSL_USE_MPS)
-int mbedtls_ssl_fetch_handshake_msg( mbedtls_ssl_context *ssl,
-                                     unsigned hs_type,
-                                     unsigned char **buf,
-                                     size_t *buflen )
+int mbedtls_ssl_tls1_3_fetch_handshake_msg( mbedtls_ssl_context *ssl,
+                                            unsigned hs_type,
+                                            unsigned char **buf,
+                                            size_t *buflen )
 {
     int ret;
     mbedtls_mps_handshake_in msg;
@@ -147,11 +147,10 @@ cleanup:
 }
 
 #else /* MBEDTLS_SSL_USE_MPS */
-
-int mbedtls_ssl_fetch_handshake_msg( mbedtls_ssl_context *ssl,
-                                     unsigned hs_type,
-                                     unsigned char **buf,
-                                     size_t *buflen )
+int mbedtls_ssl_tls1_3_fetch_handshake_msg( mbedtls_ssl_context *ssl,
+                                            unsigned hs_type,
+                                            unsigned char **buf,
+                                            size_t *buflen )
 {
     int ret;
 
@@ -161,19 +160,25 @@ int mbedtls_ssl_fetch_handshake_msg( mbedtls_ssl_context *ssl,
         goto cleanup;
     }
 
-    if( ssl->in_msgtype != MBEDTLS_SSL_MSG_HANDSHAKE         ||
+    if( ssl->in_msgtype != MBEDTLS_SSL_MSG_HANDSHAKE ||
         ssl->in_msg[0]  != hs_type )
     {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad certificate verify message" ) );
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "Receive unexpected handshake message." ) );
         MBEDTLS_SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_UNEXPECTED_MESSAGE,
                                       MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE );
         ret = MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE;
         goto cleanup;
     }
 
+    /*
+     * Jump handshake header (4 bytes, see Section 4 of RFC 8446).
+     *    ...
+     *    HandshakeType msg_type;
+     *    uint24 length;
+     *    ...
+     */
     *buf    = ssl->in_msg   + 4;
     *buflen = ssl->in_hslen - 4;
-
 
 cleanup:
 
@@ -990,7 +995,7 @@ int mbedtls_ssl_read_certificate_verify_process( mbedtls_ssl_context* ssl )
                                      &verify_buffer_len,
                                      !ssl->conf->endpoint );
 
-        MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_fetch_handshake_msg( ssl,
+        MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_tls1_3_fetch_handshake_msg( ssl,
                           MBEDTLS_SSL_HS_CERTIFICATE_VERIFY, &buf, &buflen ) );
 
 
@@ -1554,7 +1559,7 @@ int mbedtls_ssl_read_certificate_process( mbedtls_ssl_context* ssl )
         unsigned char *buf;
         size_t buflen;
 
-        MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_fetch_handshake_msg( ssl,
+        MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_tls1_3_fetch_handshake_msg( ssl,
                                           MBEDTLS_SSL_HS_CERTIFICATE,
                                           &buf, &buflen ) );
 
@@ -2237,9 +2242,9 @@ int mbedtls_ssl_finished_in_process( mbedtls_ssl_context* ssl )
     /* Preprocessing step: Compute handshake digest */
     MBEDTLS_SSL_PROC_CHK( ssl_finished_in_preprocess( ssl ) );
 
-    MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_fetch_handshake_msg( ssl,
-                                              MBEDTLS_SSL_HS_FINISHED,
-                                              &buf, &buflen ) );
+    MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_tls1_3_fetch_handshake_msg(
+                              ssl, MBEDTLS_SSL_HS_FINISHED,
+                              &buf, &buflen ) );
     MBEDTLS_SSL_PROC_CHK( ssl_finished_in_parse( ssl, buf, buflen ) );
     mbedtls_ssl_tls13_add_hs_msg_to_checksum(
         ssl, MBEDTLS_SSL_HS_FINISHED, buf, buflen );

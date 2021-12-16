@@ -2065,9 +2065,9 @@ static int ssl_client_hello_process( mbedtls_ssl_context* ssl )
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> parse client hello" ) );
 
     ssl->major_ver = MBEDTLS_SSL_MAJOR_VERSION_3;
-    MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_fetch_handshake_msg( ssl,
-                                            MBEDTLS_SSL_HS_CLIENT_HELLO,
-                                            &buf, &buflen ) );
+    MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_tls1_3_fetch_handshake_msg(
+                              ssl, MBEDTLS_SSL_HS_CLIENT_HELLO,
+                              &buf, &buflen ) );
 
     mbedtls_ssl_tls13_add_hs_hdr_to_checksum( ssl,
                   MBEDTLS_SSL_HS_CLIENT_HELLO, buflen );
