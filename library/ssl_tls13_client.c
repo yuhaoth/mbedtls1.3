@@ -689,11 +689,11 @@ static int ssl_write_early_data_prepare( mbedtls_ssl_context* ssl )
     }
 
     /* Start the TLS 1.3 key schedule: Set the PSK and derive early secret. */
-    ret = mbedtls_ssl_tls1_3_key_schedule_stage_early_data( ssl );
+    ret = mbedtls_ssl_tls1_3_key_schedule_stage_early( ssl );
     if( ret != 0 )
     {
         MBEDTLS_SSL_DEBUG_RET( 1,
-             "mbedtls_ssl_tls1_3_key_schedule_stage_early_data", ret );
+             "mbedtls_ssl_tls1_3_key_schedule_stage_early", ret );
         return( ret );
     }
 
@@ -2260,8 +2260,8 @@ static int ssl_tls1_3_process_server_hello( mbedtls_ssl_context *ssl )
 #if defined(MBEDTLS_SSL_USE_MPS)
     mbedtls_mps_handshake_in msg;
 #endif
-    unsigned char *buf;
-    size_t buflen;
+    unsigned char *buf = NULL;
+    size_t buflen = 0;
 
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> parse server hello" ) );
 
@@ -2291,7 +2291,7 @@ static int ssl_tls1_3_process_server_hello( mbedtls_ssl_context *ssl )
     {
         MBEDTLS_SSL_PROC_CHK( ssl_server_hello_parse( ssl, buf, buflen ) );
 
-        mbedtls_ssl_tls13_add_hs_msg_to_checksum(
+        mbedtls_ssl_tls1_3_add_hs_msg_to_checksum(
             ssl, MBEDTLS_SSL_HS_SERVER_HELLO, buf, buflen );
 
 #if defined(MBEDTLS_SSL_USE_MPS)
@@ -2306,7 +2306,7 @@ static int ssl_tls1_3_process_server_hello( mbedtls_ssl_context *ssl )
         MBEDTLS_SSL_PROC_CHK( ssl_hrr_parse( ssl, buf, buflen ) );
         MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_reset_transcript_for_hrr( ssl ) );
 
-        mbedtls_ssl_tls13_add_hs_msg_to_checksum(
+        mbedtls_ssl_tls1_3_add_hs_msg_to_checksum(
             ssl, MBEDTLS_SSL_HS_SERVER_HELLO, buf, buflen );
 
 #if defined(MBEDTLS_SSL_USE_MPS)
@@ -2777,10 +2777,10 @@ static int ssl_server_hello_postprocess( mbedtls_ssl_context* ssl )
      *       server accepted it. In this case, we could skip generating
      *       the early secret. */
 
-    ret = mbedtls_ssl_tls1_3_key_schedule_stage_early_data( ssl );
+    ret = mbedtls_ssl_tls1_3_key_schedule_stage_early( ssl );
     if( ret != 0 )
     {
-        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_tls1_3_key_schedule_stage_early_data",
+        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_tls1_3_key_schedule_stage_early",
                                ret );
         return( ret );
     }
@@ -3231,7 +3231,7 @@ static int ssl_tls1_3_process_encrypted_extensions( mbedtls_ssl_context *ssl )
     /* Process the message contents */
     MBEDTLS_SSL_PROC_CHK( ssl_encrypted_extensions_parse( ssl, buf, buflen ) );
 
-    mbedtls_ssl_tls13_add_hs_msg_to_checksum(
+    mbedtls_ssl_tls1_3_add_hs_msg_to_checksum(
         ssl, MBEDTLS_SSL_HS_ENCRYPTED_EXTENSION, buf, buflen );
 #if defined(MBEDTLS_SSL_USE_MPS)
     MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_mps_hs_consume_full_hs_msg( ssl ) );
@@ -3435,7 +3435,7 @@ static int ssl_tls1_3_process_certificate_request( mbedtls_ssl_context *ssl )
 
         MBEDTLS_SSL_PROC_CHK( ssl_certificate_request_parse( ssl, buf, buflen ) );
 
-        mbedtls_ssl_tls13_add_hs_msg_to_checksum(
+        mbedtls_ssl_tls1_3_add_hs_msg_to_checksum(
             ssl, MBEDTLS_SSL_HS_CERTIFICATE_REQUEST, buf, buflen );
 #if defined(MBEDTLS_SSL_USE_MPS)
         MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_mps_hs_consume_full_hs_msg( ssl ) );

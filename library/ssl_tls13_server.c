@@ -708,7 +708,7 @@ int mbedtls_ssl_parse_client_psk_identity_ext(
                     if( diff > MBEDTLS_SSL_TICKET_AGE_TOLERANCE )
                     {
                         MBEDTLS_SSL_DEBUG_MSG( 3,
-                            ( "Ticket age outside tolerance window ( diff=%lld )",
+                            ( "Ticket age outside tolerance window ( diff=%ld )",
                               diff ) );
                         ret = MBEDTLS_ERR_SSL_SESSION_TICKET_EXPIRED;
                     }
@@ -724,7 +724,7 @@ int mbedtls_ssl_parse_client_psk_identity_ext(
                         else
                         {
                             MBEDTLS_SSL_DEBUG_MSG( 3,
-                            ( "0-RTT is disabled ( diff=%lld exceeds "\
+                            ( "0-RTT is disabled ( diff=%ld exceeds "\
                               "MBEDTLS_SSL_EARLY_DATA_MAX_DELAY )", diff ) );
                             ssl->session_negotiate->process_early_data =
                                 MBEDTLS_SSL_EARLY_DATA_DISABLED;
@@ -2795,11 +2795,11 @@ static int ssl_client_hello_postprocess( mbedtls_ssl_context* ssl,
         return( 0 );
     }
 
-    ret = mbedtls_ssl_tls1_3_key_schedule_stage_early_data( ssl );
+    ret = mbedtls_ssl_tls1_3_key_schedule_stage_early( ssl );
     if( ret != 0 )
     {
         MBEDTLS_SSL_DEBUG_RET( 1,
-             "mbedtls_ssl_tls1_3_key_schedule_stage_early_data", ret );
+             "mbedtls_ssl_tls1_3_key_schedule_stage_early", ret );
         return( ret );
     }
 
@@ -2989,7 +2989,7 @@ static int ssl_encrypted_extensions_process( mbedtls_ssl_context* ssl )
     MBEDTLS_SSL_PROC_CHK( ssl_encrypted_extensions_write(
                               ssl, buf, buf_len, &msg_len ) );
 
-    mbedtls_ssl_tls13_add_hs_msg_to_checksum(
+    mbedtls_ssl_tls1_3_add_hs_msg_to_checksum(
         ssl, MBEDTLS_SSL_HS_ENCRYPTED_EXTENSION, buf, msg_len );
 
     /* Update state */
@@ -3185,7 +3185,7 @@ static int ssl_write_hello_retry_request_process( mbedtls_ssl_context *ssl )
     MBEDTLS_SSL_PROC_CHK( ssl_write_hello_retry_request_write(
                               ssl, buf, buf_len, &msg_len ) );
 
-    mbedtls_ssl_tls13_add_hs_msg_to_checksum(
+    mbedtls_ssl_tls1_3_add_hs_msg_to_checksum(
         ssl, MBEDTLS_SSL_HS_SERVER_HELLO, buf, msg_len );
 
     MBEDTLS_SSL_PROC_CHK( ssl_write_hello_retry_request_postprocess( ssl ) );
@@ -3523,7 +3523,7 @@ static int ssl_server_hello_process( mbedtls_ssl_context* ssl ) {
     MBEDTLS_SSL_PROC_CHK( ssl_server_hello_write( ssl, buf, buf_len,
                                                   &msg_len ) );
 
-    mbedtls_ssl_tls13_add_hs_msg_to_checksum(
+    mbedtls_ssl_tls1_3_add_hs_msg_to_checksum(
         ssl, MBEDTLS_SSL_HS_SERVER_HELLO, buf, msg_len );
 
     MBEDTLS_SSL_PROC_CHK( ssl_server_hello_postprocess( ssl ) );
@@ -3760,7 +3760,7 @@ static int ssl_certificate_request_process( mbedtls_ssl_context* ssl )
         MBEDTLS_SSL_PROC_CHK( ssl_certificate_request_write(
                                   ssl, buf, buf_len, &msg_len ) );
 
-        mbedtls_ssl_tls13_add_hs_msg_to_checksum(
+        mbedtls_ssl_tls1_3_add_hs_msg_to_checksum(
             ssl, MBEDTLS_SSL_HS_CERTIFICATE_REQUEST, buf, msg_len );
 
         /* TODO: Logically this should come at the end, but the non-MPS msg

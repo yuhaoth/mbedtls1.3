@@ -225,10 +225,10 @@ cleanup:
 
 #endif /* MBEDTLS_SSL_USE_MPS */
 
-void mbedtls_ssl_tls13_add_hs_msg_to_checksum( mbedtls_ssl_context *ssl,
-                                               unsigned hs_type,
-                                               unsigned char const *msg,
-                                               size_t msg_len )
+void mbedtls_ssl_tls1_3_add_hs_msg_to_checksum( mbedtls_ssl_context *ssl,
+                                                unsigned hs_type,
+                                                unsigned char const *msg,
+                                                size_t msg_len )
 {
     mbedtls_ssl_tls13_add_hs_hdr_to_checksum( ssl, hs_type, msg_len );
     ssl->handshake->update_checksum( ssl, msg, msg_len );
@@ -566,25 +566,6 @@ int mbedtls_ssl_parse_signature_algorithms_ext( mbedtls_ssl_context *ssl,
 }
 #endif /* MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED */
 
-#if !defined(MBEDTLS_SSL_USE_MPS)
-void mbedtls_ssl_set_inbound_transform( mbedtls_ssl_context *ssl,
-                                       mbedtls_ssl_transform *transform )
-{
-    if( ssl->transform_in == transform )
-        return;
-
-    ssl->transform_in = transform;
-    memset( ssl->in_ctr, 0, 8 );
-}
-
-void mbedtls_ssl_set_outbound_transform( mbedtls_ssl_context *ssl,
-                                         mbedtls_ssl_transform *transform )
-{
-    ssl->transform_out = transform;
-    memset( ssl->cur_out_ctr, 0, 8 );
-}
-#endif /* !MBEDTLS_SSL_USE_MPS */
-
 /*
  * The ssl_create_verify_structure() creates the verify structure.
  * As input, it requires the transcript hash.
@@ -688,7 +669,7 @@ int mbedtls_ssl_write_certificate_verify_process( mbedtls_ssl_context* ssl )
         MBEDTLS_SSL_PROC_CHK( ssl_certificate_verify_write(
                                   ssl, buf, buf_len, &msg_len ) );
 
-        mbedtls_ssl_tls13_add_hs_msg_to_checksum(
+        mbedtls_ssl_tls1_3_add_hs_msg_to_checksum(
             ssl, MBEDTLS_SSL_HS_CERTIFICATE_VERIFY, buf, msg_len );
         /* Update state */
         MBEDTLS_SSL_PROC_CHK( ssl_certificate_verify_postprocess( ssl ) );
@@ -1004,7 +985,7 @@ int mbedtls_ssl_read_certificate_verify_process( mbedtls_ssl_context* ssl )
                                                                  verify_buffer,
                                                                  verify_buffer_len ) );
 
-        mbedtls_ssl_tls13_add_hs_msg_to_checksum(
+        mbedtls_ssl_tls1_3_add_hs_msg_to_checksum(
             ssl, MBEDTLS_SSL_HS_CERTIFICATE_VERIFY, buf, buflen );
 #if defined(MBEDTLS_SSL_USE_MPS)
         MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_mps_hs_consume_full_hs_msg( ssl ) );
@@ -1297,7 +1278,7 @@ int mbedtls_ssl_write_certificate_process( mbedtls_ssl_context* ssl )
         MBEDTLS_SSL_PROC_CHK( ssl_write_certificate_write(
                                   ssl, buf, buf_len, &msg_len ) );
 
-        mbedtls_ssl_tls13_add_hs_msg_to_checksum(
+        mbedtls_ssl_tls1_3_add_hs_msg_to_checksum(
             ssl, MBEDTLS_SSL_HS_CERTIFICATE, buf, msg_len );
 
         MBEDTLS_SSL_PROC_CHK( ssl_write_certificate_postprocess( ssl ) );
@@ -1568,7 +1549,7 @@ int mbedtls_ssl_read_certificate_process( mbedtls_ssl_context* ssl )
         /* Validate the certificate chain and set the verification results. */
         MBEDTLS_SSL_PROC_CHK( ssl_read_certificate_validate( ssl ) );
 
-        mbedtls_ssl_tls13_add_hs_msg_to_checksum(
+        mbedtls_ssl_tls1_3_add_hs_msg_to_checksum(
             ssl, MBEDTLS_SSL_HS_CERTIFICATE, buf, buflen );
 #if defined(MBEDTLS_SSL_USE_MPS)
         MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_mps_hs_consume_full_hs_msg( ssl ) );
@@ -2074,7 +2055,7 @@ int mbedtls_ssl_finished_out_process( mbedtls_ssl_context* ssl )
     MBEDTLS_SSL_PROC_CHK( ssl_finished_out_write(
                               ssl, buf, buf_len, &msg_len ) );
 
-    mbedtls_ssl_tls13_add_hs_msg_to_checksum(
+    mbedtls_ssl_tls1_3_add_hs_msg_to_checksum(
         ssl, MBEDTLS_SSL_HS_FINISHED, buf, msg_len );
 
     MBEDTLS_SSL_PROC_CHK( ssl_finished_out_postprocess( ssl ) );
@@ -2246,7 +2227,7 @@ int mbedtls_ssl_finished_in_process( mbedtls_ssl_context* ssl )
                               ssl, MBEDTLS_SSL_HS_FINISHED,
                               &buf, &buflen ) );
     MBEDTLS_SSL_PROC_CHK( ssl_finished_in_parse( ssl, buf, buflen ) );
-    mbedtls_ssl_tls13_add_hs_msg_to_checksum(
+    mbedtls_ssl_tls1_3_add_hs_msg_to_checksum(
         ssl, MBEDTLS_SSL_HS_FINISHED, buf, buflen );
 #if defined(MBEDTLS_SSL_USE_MPS)
     MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_mps_hs_consume_full_hs_msg( ssl ) );
