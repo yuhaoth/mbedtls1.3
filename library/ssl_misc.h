@@ -437,6 +437,32 @@ static inline int mbedtls_ssl_chk_buf_ptr( const uint8_t *cur,
         }                                                                \
     } while( 0 )
 
+/**
+ * \brief        This macro checks if the remaining length in an input buffer is
+ *               greater or equal than a needed length. If it is not the case, it
+ *               returns #MBEDTLS_ERR_SSL_DECODE_ERROR error and pends a
+ *               #MBEDTLS_SSL_ALERT_MSG_DECODE_ERROR alert message.
+ *
+ *               This is a function-like macro. It is guaranteed to evaluate each
+ *               argument exactly once.
+ *
+ * \param cur    Pointer to the current position in the buffer.
+ * \param end    Pointer to one past the end of the buffer.
+ * \param need   Needed length in bytes.
+ *
+ */
+#define MBEDTLS_SSL_CHK_BUF_READ_PTR( cur, end, need )                          \
+    do {                                                                        \
+        if( mbedtls_ssl_chk_buf_ptr( ( cur ), ( end ), ( need ) ) != 0 )        \
+        {                                                                       \
+            MBEDTLS_SSL_DEBUG_MSG( 1,                                           \
+                                   ( "missing input data in %s", __func__ ) );  \
+            MBEDTLS_SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_DECODE_ERROR,   \
+                                          MBEDTLS_ERR_SSL_DECODE_ERROR );       \
+            return( MBEDTLS_ERR_SSL_DECODE_ERROR );                             \
+        }                                                                       \
+    } while( 0 )
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -545,7 +571,7 @@ struct mbedtls_ssl_handshake_params
      */
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
     unsigned int key_exchange; /* Indication of the key exchange algorithm being negotiated*/
-    unsigned char tls13_kex_modes; /*!< psk key exchange modes */
+    int tls1_3_kex_modes; /*!< key exchange modes for TLS 1.3 */
 #if defined(MBEDTLS_X509_CRT_PARSE_C)
     int received_signature_schemes_list[MBEDTLS_SIGNATURE_SCHEMES_SIZE];              /*!<  Received signature algorithms */
 #endif /* MBEDTLS_X509_CRT_PARSE_C */
@@ -2017,6 +2043,54 @@ static inline int mbedtls_ssl_tls13_kex_with_ephemeral( mbedtls_ssl_context *ssl
     return( mbedtls_ssl_tls13_kex_check( ssl,
                    MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_EPHEMERAL_ALL ) );
 }
+
+/**
+ * Given a list of key exchange modes, check if at least one of them is
+ * supported.
+ *
+ * \param[in] ssl  SSL context
+ * \param kex_modes_mask  Mask of the key exchange modes to check
+ *
+ * \return 0 if at least one of the key exchange modes is supported,
+ *         !=0 otherwise.
+ */
+static inline unsigned mbedtls_ssl_tls1_3_check_kex_modes( mbedtls_ssl_context *ssl,
+                                                           int kex_modes_mask )
+{
+    return( ( ssl->handshake->tls1_3_kex_modes & kex_modes_mask ) == 0 );
+}
+
+static inline int mbedtls_ssl_tls1_3_psk_enabled( mbedtls_ssl_context *ssl )
+{
+    return( ! mbedtls_ssl_tls1_3_check_kex_modes( ssl,
+                   MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK ) );
+}
+
+static inline int mbedtls_ssl_tls1_3_psk_ephemeral_enabled(
+                                                    mbedtls_ssl_context *ssl )
+{
+    return( ! mbedtls_ssl_tls1_3_check_kex_modes( ssl,
+                   MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_EPHEMERAL ) );
+}
+
+static inline int mbedtls_ssl_tls1_3_ephemeral_enabled( mbedtls_ssl_context *ssl )
+{
+    return( ! mbedtls_ssl_tls1_3_check_kex_modes( ssl,
+                   MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_EPHEMERAL ) );
+}
+
+static inline int mbedtls_ssl_tls1_3_some_ephemeral_enabled( mbedtls_ssl_context *ssl )
+{
+    return( ! mbedtls_ssl_tls1_3_check_kex_modes( ssl,
+                   MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_EPHEMERAL_ALL ) );
+}
+
+static inline int mbedtls_ssl_tls1_3_some_psk_enabled( mbedtls_ssl_context *ssl )
+{
+    return( ! mbedtls_ssl_tls1_3_check_kex_modes( ssl,
+                   MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_ALL ) );
+}
+
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 
 /**

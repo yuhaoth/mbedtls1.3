@@ -1148,7 +1148,7 @@ static int ssl_parse_key_exchange_modes_ext( mbedtls_ssl_context *ssl,
                                              size_t len )
 {
     size_t ke_modes_len;
-    unsigned ke_modes = 0;
+    int ke_modes = 0;
 
     /* Read PSK mode list length (1 Byte) */
     ke_modes_len = *buf++;
@@ -1179,7 +1179,7 @@ static int ssl_parse_key_exchange_modes_ext( mbedtls_ssl_context *ssl,
         }
     }
 
-    ssl->handshake->tls13_kex_modes = ke_modes;
+    ssl->handshake->tls1_3_kex_modes = ke_modes;
     return( 0 );
 }
 #endif /* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED */
@@ -2165,24 +2165,6 @@ static int ssl_client_hello_has_cert_extensions( mbedtls_ssl_context *ssl )
                           MBEDTLS_SSL_EXT_SIG_ALG ) );
 }
 
-static int ssl_client_hello_allows_psk_mode( mbedtls_ssl_context *ssl,
-                                             unsigned psk_mode )
-{
-    return( ( ssl->handshake->tls13_kex_modes & psk_mode ) != 0 );
-}
-
-static int ssl_client_hello_allows_psk( mbedtls_ssl_context *ssl )
-{
-    return( ssl_client_hello_allows_psk_mode( ssl,
-                           MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK ) );
-}
-
-static int ssl_client_hello_allows_psk_ephemeral( mbedtls_ssl_context *ssl )
-{
-    return( ssl_client_hello_allows_psk_mode( ssl,
-                           MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_EPHEMERAL ) );
-}
-
 static int ssl_check_psk_key_exchange( mbedtls_ssl_context *ssl )
 {
     if( !ssl_client_hello_has_psk_extensions( ssl ) )
@@ -2190,7 +2172,7 @@ static int ssl_check_psk_key_exchange( mbedtls_ssl_context *ssl )
 
     /* Test whether pure PSK is offered by client and supported by us. */
     if( mbedtls_ssl_conf_tls13_psk_enabled( ssl ) &&
-        ssl_client_hello_allows_psk( ssl ) )
+        mbedtls_ssl_tls1_3_psk_enabled( ssl ) )
     {
         MBEDTLS_SSL_DEBUG_MSG( 3, ( "Using a PSK key exchange" ) );
         ssl->handshake->key_exchange = MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK;
@@ -2199,7 +2181,7 @@ static int ssl_check_psk_key_exchange( mbedtls_ssl_context *ssl )
 
     /* Test whether PSK-ephemeral is offered by client and supported by us. */
     if( mbedtls_ssl_conf_tls13_psk_ephemeral_enabled( ssl ) &&
-        ssl_client_hello_allows_psk_ephemeral( ssl ) &&
+        mbedtls_ssl_tls1_3_psk_ephemeral_enabled( ssl ) &&
         ssl_client_hello_has_key_share_extensions( ssl ) )
     {
         MBEDTLS_SSL_DEBUG_MSG( 3, ( "Using a ECDHE-PSK key exchange" ) );
