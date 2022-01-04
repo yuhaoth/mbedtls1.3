@@ -64,37 +64,6 @@
 
 #define CLIENT_HELLO_RANDOM_LEN 32
 
-#if (defined(MBEDTLS_ECDH_C) || defined(MBEDTLS_ECDSA_C))
-
-/* TODO: Code for MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED missing */
-static int check_ecdh_params( const mbedtls_ssl_context *ssl )
-{
-    const mbedtls_ecp_curve_info *curve_info;
-
-    curve_info = mbedtls_ecp_curve_info_from_grp_id( ssl->handshake->ecdh_ctx.grp_id );
-    if( curve_info == NULL )
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "should never happen" ) );
-        return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
-    }
-
-    MBEDTLS_SSL_DEBUG_MSG( 2, ( "ECDH curve: %s", curve_info->name ) );
-
-#if defined(MBEDTLS_ECP_C)
-    if( mbedtls_ssl_check_curve( ssl, ssl->handshake->ecdh_ctx.grp_id ) != 0 )
-#else
-    if( ssl->handshake->ecdh_ctx.grp.nbits < 163 ||
-            ssl->handshake->ecdh_ctx.grp.nbits > 521 )
-#endif
-            return( -1 );
-
-    MBEDTLS_SSL_DEBUG_ECDH( 3, &ssl->handshake->ecdh_ctx,
-                            MBEDTLS_DEBUG_ECDH_QP );
-
-    return( 0 );
-}
-#endif /* MBEDTLS_ECDH_C || MBEDTLS_ECDSA_C */
-
 /* Write extensions */
 
 /*
@@ -148,6 +117,32 @@ static int ssl_tls13_write_supported_versions_ext( mbedtls_ssl_context *ssl,
                                 ssl->conf->max_minor_ver ) );
 
     *olen = 7;
+
+    return( 0 );
+}
+
+static int ssl_parse_supported_version_ext( mbedtls_ssl_context* ssl,
+                                            const unsigned char* buf,
+                                            size_t len )
+{
+    ((void) ssl);
+
+    if( len != 2 ||
+        buf[0] != MBEDTLS_SSL_MAJOR_VERSION_3 ||
+        buf[1] != MBEDTLS_SSL_MINOR_VERSION_4 )
+    {
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "unexpected version" ) );
+        return( MBEDTLS_ERR_SSL_HANDSHAKE_FAILURE );
+    }
+
+#if defined(MBEDTLS_SSL_NEW_SESSION_TICKET)
+    /* For ticket handling, we need to populate the version
+    * and the endpoint information into the session structure
+    * since only session information is available in that API.
+    */
+    ssl->session_negotiate->minor_ver = ssl->minor_ver;
+    ssl->session_negotiate->endpoint = ssl->conf->endpoint;
+#endif /* MBEDTLS_SSL_NEW_SESSION_TICKET */
 
     return( 0 );
 }
@@ -511,6 +506,115 @@ cleanup:
 
     return( ret );
 }
+
+#if (defined(MBEDTLS_ECDH_C) || defined(MBEDTLS_ECDSA_C))
+
+/* TODO: Code for MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED missing */
+static int check_ecdh_params( const mbedtls_ssl_context *ssl )
+{
+    const mbedtls_ecp_curve_info *curve_info;
+
+    curve_info = mbedtls_ecp_curve_info_from_grp_id( ssl->handshake->ecdh_ctx.grp_id );
+    if( curve_info == NULL )
+    {
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "should never happen" ) );
+        return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
+    }
+
+    MBEDTLS_SSL_DEBUG_MSG( 2, ( "ECDH curve: %s", curve_info->name ) );
+
+#if defined(MBEDTLS_ECP_C)
+    if( mbedtls_ssl_check_curve( ssl, ssl->handshake->ecdh_ctx.grp_id ) != 0 )
+#else
+    if( ssl->handshake->ecdh_ctx.grp.nbits < 163 ||
+            ssl->handshake->ecdh_ctx.grp.nbits > 521 )
+#endif
+            return( -1 );
+
+    MBEDTLS_SSL_DEBUG_ECDH( 3, &ssl->handshake->ecdh_ctx,
+                            MBEDTLS_DEBUG_ECDH_QP );
+
+    return( 0 );
+}
+
+/* TODO: Code for MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED missing */
+/*
+
+  ssl_parse_key_shares_ext() verifies whether the information in the extension
+  is correct and stores the provided key shares.
+
+*/
+
+/* The ssl_parse_key_shares_ext() function is used
+ *  by the client to parse a KeyShare extension in
+ *  a ServerHello message.
+ *
+ *  The server only provides a single KeyShareEntry.
+ */
+static int ssl_read_public_ecdhe_share( mbedtls_ssl_context *ssl,
+                                        const unsigned char *buf,
+                                        size_t len )
+{
+    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
+
+    ret = mbedtls_ecdh_read_tls_13_public( &ssl->handshake->ecdh_ctx,
+                                           buf, len );
+    if( ret != 0 )
+    {
+        MBEDTLS_SSL_DEBUG_RET( 1, ( "mbedtls_ecdh_read_tls_13_public" ), ret );
+        return( ret );
+    }
+
+    if( check_ecdh_params( ssl ) != 0 )
+    {
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "check_ecdh_params() failed!" ) );
+        return( MBEDTLS_ERR_SSL_HANDSHAKE_FAILURE );
+    }
+
+    return( 0 );
+}
+
+static int ssl_parse_key_shares_ext( mbedtls_ssl_context *ssl,
+                                     const unsigned char *buf,
+                                     size_t len )
+{
+    int ret = 0;
+    uint16_t their_group;
+
+    if( len < 2 )
+        return( MBEDTLS_ERR_SSL_DECODE_ERROR );
+
+    their_group = ((uint16_t) buf[0] << 8 ) | ((uint16_t) buf[1] );
+    buf += 2;
+    len -= 2;
+
+    /* Check that chosen group matches the one we offered. */
+    if( ssl->handshake->offered_group_id != their_group )
+    {
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "Invalid server key share, our group %u, their group %u",
+                                    (unsigned) ssl->handshake->offered_group_id,
+                                    (unsigned) their_group ) );
+        return( MBEDTLS_ERR_SSL_ILLEGAL_PARAMETER );
+    }
+
+    if( mbedtls_ssl_tls13_named_group_is_ecdhe( their_group ) )
+    {
+        /* Complete ECDHE key agreement */
+        ret = ssl_read_public_ecdhe_share( ssl, buf, len );
+        if( ret != 0 )
+            return( ret );
+    }
+    else if( 0 /* other KEMs? */ )
+    {
+        /* Do something */
+    }
+    else
+        return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
+
+    ssl->handshake->extensions_present |= MBEDTLS_SSL_EXT_KEY_SHARE;
+    return( ret );
+}
+#endif /* MBEDTLS_ECDH_C || MBEDTLS_ECDSA_C */
 
 static int ssl_reset_ecdhe_share( mbedtls_ssl_context *ssl )
 {
@@ -1874,31 +1978,7 @@ cleanup:
     return( ret );
 }
 
-static int ssl_parse_supported_version_ext( mbedtls_ssl_context* ssl,
-                                            const unsigned char* buf,
-                                            size_t len )
-{
-    ((void) ssl);
 
-    if( len != 2 ||
-        buf[0] != MBEDTLS_SSL_MAJOR_VERSION_3 ||
-        buf[1] != MBEDTLS_SSL_MINOR_VERSION_4 )
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "unexpected version" ) );
-        return( MBEDTLS_ERR_SSL_HANDSHAKE_FAILURE );
-    }
-
-#if defined(MBEDTLS_SSL_NEW_SESSION_TICKET)
-    /* For ticket handling, we need to populate the version
-    * and the endpoint information into the session structure
-    * since only session information is available in that API.
-    */
-    ssl->session_negotiate->minor_ver = ssl->minor_ver;
-    ssl->session_negotiate->endpoint = ssl->conf->endpoint;
-#endif /* MBEDTLS_SSL_NEW_SESSION_TICKET */
-
-    return( 0 );
-}
 
 
 #if defined(MBEDTLS_SSL_MAX_FRAGMENT_LENGTH)
@@ -2075,88 +2155,6 @@ int mbedtls_ssl_set_early_data( mbedtls_ssl_context *ssl,
 }
 #endif /* MBEDTLS_ZERO_RTT */
 
-#if ( defined(MBEDTLS_ECDH_C) || defined(MBEDTLS_ECDSA_C) )
-
-/* TODO: Code for MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED missing */
-/*
-
-  ssl_parse_key_shares_ext() verifies whether the information in the extension
-  is correct and stores the provided key shares.
-
-*/
-
-/* The ssl_parse_key_shares_ext() function is used
- *  by the client to parse a KeyShare extension in
- *  a ServerHello message.
- *
- *  The server only provides a single KeyShareEntry.
- */
-static int ssl_read_public_ecdhe_share( mbedtls_ssl_context *ssl,
-                                        const unsigned char *buf,
-                                        size_t len )
-{
-    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
-
-    ret = mbedtls_ecdh_read_tls_13_public( &ssl->handshake->ecdh_ctx,
-                                           buf, len );
-    if( ret != 0 )
-    {
-        MBEDTLS_SSL_DEBUG_RET( 1, ( "mbedtls_ecdh_read_tls_13_public" ), ret );
-        return( ret );
-    }
-
-    if( check_ecdh_params( ssl ) != 0 )
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "check_ecdh_params() failed!" ) );
-        return( MBEDTLS_ERR_SSL_HANDSHAKE_FAILURE );
-    }
-
-    return( 0 );
-}
-
-static int ssl_parse_key_shares_ext( mbedtls_ssl_context *ssl,
-                                     const unsigned char *buf,
-                                     size_t len )
-{
-    int ret = 0;
-    uint16_t their_group;
-
-    if( len < 2 )
-        return( MBEDTLS_ERR_SSL_DECODE_ERROR );
-
-    their_group = ((uint16_t) buf[0] << 8 ) | ((uint16_t) buf[1] );
-    buf += 2;
-    len -= 2;
-
-    /* Check that chosen group matches the one we offered. */
-    if( ssl->handshake->offered_group_id != their_group )
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "Invalid server key share, our group %u, their group %u",
-                                    (unsigned) ssl->handshake->offered_group_id,
-                                    (unsigned) their_group ) );
-        return( MBEDTLS_ERR_SSL_ILLEGAL_PARAMETER );
-    }
-
-    if( mbedtls_ssl_tls13_named_group_is_ecdhe( their_group ) )
-    {
-        /* Complete ECDHE key agreement */
-        ret = ssl_read_public_ecdhe_share( ssl, buf, len );
-        if( ret != 0 )
-            return( ret );
-    }
-    else if( 0 /* other KEMs? */ )
-    {
-        /* Do something */
-    }
-    else
-        return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
-
-    ssl->handshake->extensions_present |= MBEDTLS_SSL_EXT_KEY_SHARE;
-    return( ret );
-}
-#endif /* MBEDTLS_ECDH_C || MBEDTLS_ECDSA_C */
-
-
 #if defined(MBEDTLS_SSL_ALPN)
 static int ssl_parse_alpn_ext( mbedtls_ssl_context *ssl,
                                const unsigned char *buf, size_t len )
@@ -2215,114 +2213,17 @@ static int ssl_parse_alpn_ext( mbedtls_ssl_context *ssl,
  * Overview
  */
 
-/* Main entry point; orchestrates the other functions */
-static int ssl_tls1_3_process_server_hello( mbedtls_ssl_context *ssl );
+/*
+ * Implementation
+ */
 
 /* Fetch and preprocess
  * Returns a negative value on failure, and otherwise
  * - SSL_SERVER_HELLO_COORDINATE_HELLO or
  * - SSL_SERVER_HELLO_COORDINATE_HRR
  * to indicate which message is expected and to be parsed next. */
-#define SSL_SERVER_HELLO_COORDINATE_HELLO  0
+#define SSL_SERVER_HELLO_COORDINATE_HELLO 0
 #define SSL_SERVER_HELLO_COORDINATE_HRR 1
-
-#if defined(MBEDTLS_SSL_USE_MPS)
-static int ssl_server_hello_coordinate( mbedtls_ssl_context* ssl,
-                                        mbedtls_mps_handshake_in *msg,
-                                        unsigned char **buf,
-                                        size_t *buflen );
-#else
-static int ssl_server_hello_coordinate( mbedtls_ssl_context* ssl,
-                                        unsigned char **buf,
-                                        size_t *buflen );
-#endif
-
-/* Parse ServerHello */
-static int ssl_server_hello_parse( mbedtls_ssl_context* ssl,
-                                   const unsigned char* buf,
-                                   size_t buflen );
-
-static int ssl_server_hello_postprocess( mbedtls_ssl_context* ssl );
-
-static int ssl_hrr_parse( mbedtls_ssl_context* ssl,
-                          const unsigned char* buf,
-                          size_t buflen );
-
-static int ssl_hrr_postprocess( mbedtls_ssl_context* ssl );
-
-/*
- * Implementation
- */
-
-static int ssl_tls1_3_process_server_hello( mbedtls_ssl_context *ssl )
-{
-    int ret = 0;
-#if defined(MBEDTLS_SSL_USE_MPS)
-    mbedtls_mps_handshake_in msg;
-#endif
-    unsigned char *buf = NULL;
-    size_t buflen = 0;
-
-    MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> parse server hello" ) );
-
-    /* Coordination step
-     * - Fetch record
-     * - Make sure it's either a ServerHello or a HRR.
-     * - Switch processing routine in case of HRR
-     */
-
-    ssl->major_ver = MBEDTLS_SSL_MAJOR_VERSION_3;
-    ssl->handshake->extensions_present = MBEDTLS_SSL_EXT_NONE;
-
-#if defined(MBEDTLS_SSL_USE_MPS)
-    MBEDTLS_SSL_PROC_CHK_NEG( ssl_server_hello_coordinate( ssl, &msg,
-                                                 &buf, &buflen ) );
-#else /* MBEDTLS_SSL_USE_MPS */
-    MBEDTLS_SSL_PROC_CHK_NEG( ssl_server_hello_coordinate( ssl,
-                                                 &buf, &buflen ) );
-#endif /* MBEDTLS_SSL_USE_MPS */
-
-    /* Parsing step
-     * We know what message to expect by now and call
-     * the respective parsing function.
-     */
-
-    if( ret == SSL_SERVER_HELLO_COORDINATE_HELLO )
-    {
-        MBEDTLS_SSL_PROC_CHK( ssl_server_hello_parse( ssl, buf, buflen ) );
-
-        mbedtls_ssl_tls1_3_add_hs_msg_to_checksum(
-            ssl, MBEDTLS_SSL_HS_SERVER_HELLO, buf, buflen );
-
-#if defined(MBEDTLS_SSL_USE_MPS)
-        MBEDTLS_SSL_PROC_CHK( mbedtls_mps_reader_commit( msg.handle ) );
-        MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read_consume( &ssl->mps->l4  ) );
-#endif /* MBEDTLS_SSL_USE_MPS */
-
-        MBEDTLS_SSL_PROC_CHK( ssl_server_hello_postprocess( ssl ) );
-    }
-    else
-    {
-        MBEDTLS_SSL_PROC_CHK( ssl_hrr_parse( ssl, buf, buflen ) );
-        MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_reset_transcript_for_hrr( ssl ) );
-
-        mbedtls_ssl_tls1_3_add_hs_msg_to_checksum(
-            ssl, MBEDTLS_SSL_HS_SERVER_HELLO, buf, buflen );
-
-#if defined(MBEDTLS_SSL_USE_MPS)
-        MBEDTLS_SSL_PROC_CHK( mbedtls_mps_reader_commit( msg.handle ) );
-        MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read_consume( &ssl->mps->l4  ) );
-#endif /* MBEDTLS_SSL_USE_MPS */
-
-        MBEDTLS_SSL_PROC_CHK( ssl_hrr_postprocess( ssl ) );
-    }
-
-
-cleanup:
-
-    MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= parse server hello" ) );
-    return( ret );
-}
 
 static int ssl_server_hello_is_hrr( unsigned const char *buf )
 {
@@ -2356,7 +2257,6 @@ static int ssl_server_hello_is_hrr( unsigned const char *buf )
 
     return( 0 );
 }
-
 
 #if defined(MBEDTLS_SSL_USE_MPS)
 static int ssl_server_hello_coordinate( mbedtls_ssl_context* ssl,
@@ -2737,118 +2637,6 @@ static int ssl_server_hello_parse( mbedtls_ssl_context* ssl,
     return( 0 );
 }
 
-
-static int ssl_server_hello_postprocess( mbedtls_ssl_context* ssl )
-{
-    int ret;
-    mbedtls_ssl_key_set traffic_keys;
-    mbedtls_ssl_transform *transform_handshake;
-
-    /* We need to set the key exchange algorithm based on the
-     * following rules:
-     *
-     *   1 ) IF PRE_SHARED_KEY extension was received
-     *      THEN set MBEDTLS_KEY_EXCHANGE_PSK
-     *   2 ) IF PRE_SHARED_KEY extension && KEY_SHARE was received
-     *      THEN set MBEDTLS_KEY_EXCHANGE_ECDHE_PSK
-     *   3 ) IF KEY_SHARE extension was received && SIG_ALG extension received
-     *      THEN set MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA
-     *   ELSE unknown key exchange mechanism.
-     */
-
-    if( ssl->handshake->extensions_present & MBEDTLS_SSL_EXT_PRE_SHARED_KEY )
-    {
-        if( ssl->handshake->extensions_present & MBEDTLS_SSL_EXT_KEY_SHARE )
-            ssl->handshake->key_exchange = MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_EPHEMERAL;
-        else
-            ssl->handshake->key_exchange = MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK;
-    }
-    else if( ssl->handshake->extensions_present & MBEDTLS_SSL_EXT_KEY_SHARE )
-        ssl->handshake->key_exchange = MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_EPHEMERAL;
-    else
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "Unknown key exchange." ) );
-        return( MBEDTLS_ERR_SSL_HANDSHAKE_FAILURE );
-    }
-
-    /* Start the TLS 1.3 key schedule: Set the PSK and derive early secret.
-     *
-     * TODO: We don't have to do this in case we offered 0-RTT and the
-     *       server accepted it. In this case, we could skip generating
-     *       the early secret. */
-
-    ret = mbedtls_ssl_tls1_3_key_schedule_stage_early( ssl );
-    if( ret != 0 )
-    {
-        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_tls1_3_key_schedule_stage_early",
-                               ret );
-        return( ret );
-    }
-
-    /* Compute handshake secret */
-    ret = mbedtls_ssl_tls1_3_key_schedule_stage_handshake( ssl );
-    if( ret != 0 )
-    {
-        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_tls1_3_derive_master_secret", ret );
-        return( ret );
-    }
-
-    /* Next evolution in key schedule: Establish handshake secret and
-     * key material. */
-    ret = mbedtls_ssl_tls1_3_generate_handshake_keys( ssl, &traffic_keys );
-    if( ret != 0 )
-    {
-        MBEDTLS_SSL_DEBUG_RET( 1,
-                "mbedtls_ssl_tls1_3_generate_handshake_keys", ret );
-        return( ret );
-    }
-
-    transform_handshake =
-        mbedtls_calloc( 1, sizeof( mbedtls_ssl_transform ) );
-    if( transform_handshake == NULL )
-        return( MBEDTLS_ERR_SSL_ALLOC_FAILED );
-
-    ret = mbedtls_ssl_tls13_populate_transform(
-                              transform_handshake,
-                              ssl->conf->endpoint,
-                              ssl->session_negotiate->ciphersuite,
-                              &traffic_keys,
-                              ssl );
-    if( ret != 0 )
-    {
-        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_tls13_populate_transform", ret );
-        return( ret );
-    }
-
-#if !defined(MBEDTLS_SSL_USE_MPS)
-    ssl->handshake->transform_handshake = transform_handshake;
-    mbedtls_ssl_set_inbound_transform( ssl, ssl->handshake->transform_handshake );
-#else /* MBEDTLS_SSL_USE_MPS */
-    ret = mbedtls_mps_add_key_material( &ssl->mps->l4,
-                                        transform_handshake,
-                                        &ssl->handshake->epoch_handshake );
-    if( ret != 0 )
-        return( ret );
-
-    ret = mbedtls_mps_set_incoming_keys( &ssl->mps->l4,
-                                         ssl->handshake->epoch_handshake );
-    if( ret != 0 )
-        return( ret );
-#endif /* MBEDTLS_SSL_USE_MPS */
-
-    MBEDTLS_SSL_DEBUG_MSG( 1, ( "Switch to handshake keys for inbound traffic" ) );
-    ssl->session_in = ssl->session_negotiate;
-
-    /*
-     * State machine update
-     */
-    mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_ENCRYPTED_EXTENSIONS );
-
-    mbedtls_platform_zeroize( &traffic_keys, sizeof( traffic_keys ) );
-    return( 0 );
-}
-
-
 static int ssl_hrr_parse( mbedtls_ssl_context* ssl,
                           const unsigned char* buf, size_t buflen )
 {
@@ -3157,6 +2945,116 @@ static int ssl_hrr_parse( mbedtls_ssl_context* ssl,
     return( 0 );
 }
 
+static int ssl_server_hello_postprocess( mbedtls_ssl_context* ssl )
+{
+    int ret;
+    mbedtls_ssl_key_set traffic_keys;
+    mbedtls_ssl_transform *transform_handshake;
+
+    /* We need to set the key exchange algorithm based on the
+     * following rules:
+     *
+     *   1 ) IF PRE_SHARED_KEY extension was received
+     *      THEN set MBEDTLS_KEY_EXCHANGE_PSK
+     *   2 ) IF PRE_SHARED_KEY extension && KEY_SHARE was received
+     *      THEN set MBEDTLS_KEY_EXCHANGE_ECDHE_PSK
+     *   3 ) IF KEY_SHARE extension was received && SIG_ALG extension received
+     *      THEN set MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA
+     *   ELSE unknown key exchange mechanism.
+     */
+
+    if( ssl->handshake->extensions_present & MBEDTLS_SSL_EXT_PRE_SHARED_KEY )
+    {
+        if( ssl->handshake->extensions_present & MBEDTLS_SSL_EXT_KEY_SHARE )
+            ssl->handshake->key_exchange = MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_EPHEMERAL;
+        else
+            ssl->handshake->key_exchange = MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK;
+    }
+    else if( ssl->handshake->extensions_present & MBEDTLS_SSL_EXT_KEY_SHARE )
+        ssl->handshake->key_exchange = MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_EPHEMERAL;
+    else
+    {
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "Unknown key exchange." ) );
+        return( MBEDTLS_ERR_SSL_HANDSHAKE_FAILURE );
+    }
+
+    /* Start the TLS 1.3 key schedule: Set the PSK and derive early secret.
+     *
+     * TODO: We don't have to do this in case we offered 0-RTT and the
+     *       server accepted it. In this case, we could skip generating
+     *       the early secret. */
+
+    ret = mbedtls_ssl_tls1_3_key_schedule_stage_early( ssl );
+    if( ret != 0 )
+    {
+        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_tls1_3_key_schedule_stage_early",
+                               ret );
+        return( ret );
+    }
+
+    /* Compute handshake secret */
+    ret = mbedtls_ssl_tls1_3_key_schedule_stage_handshake( ssl );
+    if( ret != 0 )
+    {
+        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_tls1_3_derive_master_secret", ret );
+        return( ret );
+    }
+
+    /* Next evolution in key schedule: Establish handshake secret and
+     * key material. */
+    ret = mbedtls_ssl_tls1_3_generate_handshake_keys( ssl, &traffic_keys );
+    if( ret != 0 )
+    {
+        MBEDTLS_SSL_DEBUG_RET( 1,
+                "mbedtls_ssl_tls1_3_generate_handshake_keys", ret );
+        return( ret );
+    }
+
+    transform_handshake =
+        mbedtls_calloc( 1, sizeof( mbedtls_ssl_transform ) );
+    if( transform_handshake == NULL )
+        return( MBEDTLS_ERR_SSL_ALLOC_FAILED );
+
+    ret = mbedtls_ssl_tls13_populate_transform(
+                              transform_handshake,
+                              ssl->conf->endpoint,
+                              ssl->session_negotiate->ciphersuite,
+                              &traffic_keys,
+                              ssl );
+    if( ret != 0 )
+    {
+        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_tls13_populate_transform", ret );
+        return( ret );
+    }
+
+#if !defined(MBEDTLS_SSL_USE_MPS)
+    ssl->handshake->transform_handshake = transform_handshake;
+    mbedtls_ssl_set_inbound_transform( ssl, ssl->handshake->transform_handshake );
+#else /* MBEDTLS_SSL_USE_MPS */
+    ret = mbedtls_mps_add_key_material( &ssl->mps->l4,
+                                        transform_handshake,
+                                        &ssl->handshake->epoch_handshake );
+    if( ret != 0 )
+        return( ret );
+
+    ret = mbedtls_mps_set_incoming_keys( &ssl->mps->l4,
+                                         ssl->handshake->epoch_handshake );
+    if( ret != 0 )
+        return( ret );
+#endif /* MBEDTLS_SSL_USE_MPS */
+
+    MBEDTLS_SSL_DEBUG_MSG( 1, ( "Switch to handshake keys for inbound traffic" ) );
+    ssl->session_in = ssl->session_negotiate;
+
+    /*
+     * State machine update
+     */
+    mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_ENCRYPTED_EXTENSIONS );
+
+    mbedtls_platform_zeroize( &traffic_keys, sizeof( traffic_keys ) );
+    return( 0 );
+}
+
 static int ssl_hrr_postprocess( mbedtls_ssl_context* ssl )
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
@@ -3193,6 +3091,76 @@ static int ssl_hrr_postprocess( mbedtls_ssl_context* ssl )
         return( ret );
 
     return( 0 );
+}
+
+static int ssl_tls1_3_process_server_hello( mbedtls_ssl_context *ssl )
+{
+    int ret = 0;
+#if defined(MBEDTLS_SSL_USE_MPS)
+    mbedtls_mps_handshake_in msg;
+#endif
+    unsigned char *buf = NULL;
+    size_t buflen = 0;
+
+    MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> parse server hello" ) );
+
+    /* Coordination step
+     * - Fetch record
+     * - Make sure it's either a ServerHello or a HRR.
+     * - Switch processing routine in case of HRR
+     */
+
+    ssl->major_ver = MBEDTLS_SSL_MAJOR_VERSION_3;
+    ssl->handshake->extensions_present = MBEDTLS_SSL_EXT_NONE;
+
+#if defined(MBEDTLS_SSL_USE_MPS)
+    MBEDTLS_SSL_PROC_CHK_NEG( ssl_server_hello_coordinate( ssl, &msg,
+                                                 &buf, &buflen ) );
+#else /* MBEDTLS_SSL_USE_MPS */
+    MBEDTLS_SSL_PROC_CHK_NEG( ssl_server_hello_coordinate( ssl,
+                                                 &buf, &buflen ) );
+#endif /* MBEDTLS_SSL_USE_MPS */
+
+    /* Parsing step
+     * We know what message to expect by now and call
+     * the respective parsing function.
+     */
+
+    if( ret == SSL_SERVER_HELLO_COORDINATE_HELLO )
+    {
+        MBEDTLS_SSL_PROC_CHK( ssl_server_hello_parse( ssl, buf, buflen ) );
+
+        mbedtls_ssl_tls1_3_add_hs_msg_to_checksum(
+            ssl, MBEDTLS_SSL_HS_SERVER_HELLO, buf, buflen );
+
+#if defined(MBEDTLS_SSL_USE_MPS)
+        MBEDTLS_SSL_PROC_CHK( mbedtls_mps_reader_commit( msg.handle ) );
+        MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read_consume( &ssl->mps->l4  ) );
+#endif /* MBEDTLS_SSL_USE_MPS */
+
+        MBEDTLS_SSL_PROC_CHK( ssl_server_hello_postprocess( ssl ) );
+    }
+    else
+    {
+        MBEDTLS_SSL_PROC_CHK( ssl_hrr_parse( ssl, buf, buflen ) );
+        MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_reset_transcript_for_hrr( ssl ) );
+
+        mbedtls_ssl_tls1_3_add_hs_msg_to_checksum(
+            ssl, MBEDTLS_SSL_HS_SERVER_HELLO, buf, buflen );
+
+#if defined(MBEDTLS_SSL_USE_MPS)
+        MBEDTLS_SSL_PROC_CHK( mbedtls_mps_reader_commit( msg.handle ) );
+        MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read_consume( &ssl->mps->l4  ) );
+#endif /* MBEDTLS_SSL_USE_MPS */
+
+        MBEDTLS_SSL_PROC_CHK( ssl_hrr_postprocess( ssl ) );
+    }
+
+
+cleanup:
+
+    MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= parse server hello" ) );
+    return( ret );
 }
 
 /*
