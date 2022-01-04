@@ -208,7 +208,6 @@ int main( void )
 #define USAGE_TICKETS ""
 #endif /* MBEDTLS_SSL_SESSION_TICKETS */
 
-#if defined(MBEDTLS_SSL_EXPORT_KEYS)
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
 /* Support for EAP-TLS 1.3 has not been implemented yet. */
 #define USAGE_EAP_TLS ""
@@ -216,6 +215,7 @@ int main( void )
 #define USAGE_EAP_TLS                                       \
     "    eap_tls=%%d          default: 0 (disabled)\n"
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+
 #define USAGE_NSS_KEYLOG                                    \
     "    nss_keylog=%%d          default: 0 (disabled)\n"               \
     "                             This cannot be used with eap_tls=1\n"
@@ -236,12 +236,6 @@ int main( void )
 #else /* MBEDTLS_SSL_DTLS_SRTP */
 #define USAGE_SRTP ""
 #endif
-#else /* MBEDTLS_SSL_EXPORT_KEYS */
-#define USAGE_EAP_TLS ""
-#define USAGE_NSS_KEYLOG ""
-#define USAGE_NSS_KEYLOG_FILE ""
-#define USAGE_SRTP ""
-#endif /* MBEDTLS_SSL_EXPORT_KEYS */
 
 #if defined(MBEDTLS_SSL_MAX_FRAGMENT_LENGTH)
 #define USAGE_MAX_FRAG_LEN                                      \
@@ -797,14 +791,11 @@ int main( int argc, char *argv[] )
     unsigned char *context_buf = NULL;
     size_t context_buf_len;
 #endif
-#if defined(MBEDTLS_SSL_EXPORT_KEYS)
-#if defined(MBEDTLS_SSL_PROTO_TLS1) || defined(MBEDTLS_SSL_PROTO_TLS1_1) || \
-    defined(MBEDTLS_SSL_PROTO_TLS1_2)
+#if defined(MBEDTLS_SSL_PROTO_TLS1_2)
     unsigned char eap_tls_keymaterial[16];
     unsigned char eap_tls_iv[8];
     const char* eap_tls_label = "client EAP encryption";
-#endif /* MBEDTLS_SSL_PROTO_TLS1 || MBEDTLS_SSL_PROTO_TLS1_1 || \
-          MBEDTLS_SSL_PROTO_TLS1_2 */
+#endif /* MBEDTLS_SSL_PROTO_TLS1_2 */
     eap_tls_keys eap_tls_keying;
 #if defined( MBEDTLS_SSL_DTLS_SRTP )
     /*! master keys and master salt for SRTP generated during handshake */
@@ -819,7 +810,6 @@ int main( int argc, char *argv[] )
         MBEDTLS_TLS_SRTP_UNSET
     };
 #endif /* MBEDTLS_SSL_DTLS_SRTP */
-#endif /* MBEDTLS_SSL_EXPORT_KEYS */
 
 #if defined(MBEDTLS_MEMORY_BUFFER_ALLOC_C)
     mbedtls_memory_buffer_alloc_init( alloc_buf, sizeof( alloc_buf ) );
@@ -2212,7 +2202,6 @@ int main( int argc, char *argv[] )
         goto exit;
     }
 
-#if defined(MBEDTLS_SSL_EXPORT_KEYS)
     if( opt.eap_tls != 0 )
     {
         mbedtls_ssl_set_export_keys_cb( &ssl, eap_tls_key_derivation,
@@ -2231,7 +2220,6 @@ int main( int argc, char *argv[] )
                                         &dtls_srtp_keying );
     }
 #endif /* MBEDTLS_SSL_DTLS_SRTP */
-#endif /* MBEDTLS_SSL_EXPORT_KEYS */
 
 #if defined(MBEDTLS_X509_CRT_PARSE_C)
     if( ( ret = mbedtls_ssl_set_hostname( &ssl, opt.server_name ) ) != 0 )
@@ -2420,9 +2408,7 @@ int main( int argc, char *argv[] )
     }
 #endif
 
-#if defined(MBEDTLS_SSL_EXPORT_KEYS)
-#if defined(MBEDTLS_SSL_PROTO_TLS1) || defined(MBEDTLS_SSL_PROTO_TLS1_1) || \
-    defined(MBEDTLS_SSL_PROTO_TLS1_2)
+#if defined(MBEDTLS_SSL_PROTO_TLS1_2)
     if( opt.eap_tls != 0 )
     {
         size_t j = 0;
@@ -2472,8 +2458,7 @@ int main( int argc, char *argv[] )
         }
         mbedtls_printf("\n");
     }
-#endif /* MBEDTLS_SSL_PROTO_TLS1 || MBEDTLS_SSL_PROTO_TLS1_1 || \
-          MBEDTLS_SSL_PROTO_TLS1_2 */
+#endif /* MBEDTLS_SSL_PROTO_TLS1_2 */
 
 #if defined( MBEDTLS_SSL_DTLS_SRTP )
     else if( opt.use_srtp != 0  )
@@ -2541,7 +2526,6 @@ int main( int argc, char *argv[] )
         }
     }
 #endif /* MBEDTLS_SSL_DTLS_SRTP */
-#endif /* MBEDTLS_SSL_EXPORT_KEYS */
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && \
     defined(MBEDTLS_ZERO_RTT) && defined(MBEDTLS_SSL_CLI_C)

@@ -1330,7 +1330,6 @@ typedef enum
 }
 mbedtls_tls_prf_types;
 
-#if defined(MBEDTLS_SSL_EXPORT_KEYS)
 typedef enum
 {
     MBEDTLS_SSL_KEY_EXPORT_TLS12_MASTER_SECRET = 0,
@@ -1366,7 +1365,6 @@ typedef void mbedtls_ssl_export_keys_t( void *p_expkey,
                                         const unsigned char client_random[32],
                                         const unsigned char server_random[32],
                                         mbedtls_tls_prf_types tls_prf_type );
-#endif /* MBEDTLS_SSL_EXPORT_KEYS */
 
 #if defined(MBEDTLS_SSL_USE_MPS)
 struct mbedtls_ssl_mps;
@@ -1899,12 +1897,9 @@ struct mbedtls_ssl_context
     int MBEDTLS_PRIVATE(early_data_status);
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL && MBEDTLS_ZERO_RTT && MBEDTLS_SSL_CLI_C */
 
-#if defined(MBEDTLS_SSL_EXPORT_KEYS)
     /** Callback to export key block and master secret                      */
     mbedtls_ssl_export_keys_t *MBEDTLS_PRIVATE(f_export_keys);
     void *MBEDTLS_PRIVATE(p_export_keys);            /*!< context for key export callback    */
-#endif
-
 };
 
 /**
@@ -2533,7 +2528,6 @@ void mbedtls_ssl_conf_session_tickets_cb( mbedtls_ssl_config *conf,
         void *p_ticket );
 #endif /* ( MBEDTLS_SSL_SESSION_TICKETS || MBEDTLS_SSL_NEW_SESSION_TICKET ) && MBEDTLS_SSL_SRV_C */
 
-#if defined(MBEDTLS_SSL_EXPORT_KEYS)
 /**
  * \brief   Configure a key export callback.
  *          (Default: none.)
@@ -2555,7 +2549,6 @@ void mbedtls_ssl_conf_session_tickets_cb( mbedtls_ssl_config *conf,
 void mbedtls_ssl_set_export_keys_cb( mbedtls_ssl_context *ssl,
                                      mbedtls_ssl_export_keys_t *f_export_keys,
                                      void *p_export_keys );
-#endif /* MBEDTLS_SSL_EXPORT_KEYS */
 
 #if defined(MBEDTLS_SSL_ASYNC_PRIVATE)
 /**

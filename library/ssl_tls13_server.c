@@ -2993,7 +2993,7 @@ static int ssl_encrypted_extensions_prepare( mbedtls_ssl_context* ssl )
     mbedtls_ssl_transform *transform_handshake;
 
     /* Compute handshake secret */
-    ret = mbedtls_ssl_tls1_3_key_schedule_stage_handshake( ssl );
+    ret = mbedtls_ssl_tls13_key_schedule_stage_handshake( ssl );
     if( ret != 0 )
     {
         MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_tls1_3_derive_master_secret", ret );
@@ -3001,7 +3001,7 @@ static int ssl_encrypted_extensions_prepare( mbedtls_ssl_context* ssl )
     }
 
     /* Derive handshake key material */
-    ret = mbedtls_ssl_tls1_3_generate_handshake_keys( ssl, &traffic_keys );
+    ret = mbedtls_ssl_tls13_generate_handshake_keys( ssl, &traffic_keys );
     if( ret != 0 )
     {
         MBEDTLS_SSL_DEBUG_RET( 1,
