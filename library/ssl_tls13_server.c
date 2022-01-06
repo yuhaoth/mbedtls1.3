@@ -4036,7 +4036,12 @@ int mbedtls_ssl_tls13_handshake_server_step( mbedtls_ssl_context *ssl )
             /* ----- READ CLIENT CERTIFICATE ----*/
 
         case MBEDTLS_SSL_CLIENT_CERTIFICATE:
-            ret = mbedtls_ssl_read_certificate_process( ssl );
+            ret = mbedtls_ssl_tls13_process_certificate( ssl );
+            if( ret == 0 )
+            {
+                mbedtls_ssl_handshake_set_state(
+                    ssl, MBEDTLS_SSL_CLIENT_CERTIFICATE_VERIFY );
+            }
             break;
 
             /* ----- READ CLIENT CERTIFICATE VERIFY ----*/

@@ -3384,7 +3384,7 @@ static int ssl_tls13_postprocess_encrypted_extensions( mbedtls_ssl_context *ssl 
  */
 
 /* Main entry point; orchestrates the other functions */
-static int ssl_tls1_3_process_certificate_request( mbedtls_ssl_context *ssl );
+static int ssl_tls13_process_certificate_request( mbedtls_ssl_context *ssl );
 
 /* Coordination:
  * Deals with the ambiguity of not knowing if a CertificateRequest
@@ -3409,7 +3409,7 @@ static int ssl_certificate_request_postprocess( mbedtls_ssl_context* ssl );
  */
 
 /* Main entry point; orchestrates the other functions */
-static int ssl_tls1_3_process_certificate_request( mbedtls_ssl_context *ssl )
+static int ssl_tls13_process_certificate_request( mbedtls_ssl_context *ssl )
 {
     int ret = 0;
 
@@ -3680,6 +3680,7 @@ static int ssl_certificate_request_parse( mbedtls_ssl_context* ssl,
 static int ssl_certificate_request_postprocess( mbedtls_ssl_context* ssl )
 {
     mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_SERVER_CERTIFICATE );
+
     return( 0 );
 }
 
@@ -3688,7 +3689,15 @@ static int ssl_certificate_request_postprocess( mbedtls_ssl_context* ssl )
  */
 static int ssl_tls1_3_process_server_certificate( mbedtls_ssl_context *ssl )
 {
-    return( mbedtls_ssl_read_certificate_process( ssl ) );
+    int ret;
+
+    ret = mbedtls_ssl_tls13_process_certificate( ssl );
+    if( ret != 0 )
+        return( ret );
+
+    mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_CERTIFICATE_VERIFY );
+
+    return( 0 );
 }
 
 /*
@@ -4147,8 +4156,9 @@ int mbedtls_ssl_tls13_handshake_client_step( mbedtls_ssl_context *ssl )
             ret = ssl_tls13_process_encrypted_extensions( ssl );
             break;
 
+#if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
         case MBEDTLS_SSL_CERTIFICATE_REQUEST:
-            ret = ssl_tls1_3_process_certificate_request( ssl );
+            ret = ssl_tls13_process_certificate_request( ssl );
             break;
 
         case MBEDTLS_SSL_SERVER_CERTIFICATE:
@@ -4158,6 +4168,7 @@ int mbedtls_ssl_tls13_handshake_client_step( mbedtls_ssl_context *ssl )
         case MBEDTLS_SSL_CERTIFICATE_VERIFY:
             ret = ssl_tls1_3_process_certificate_verify( ssl );
             break;
+#endif /* MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED */
 
         case MBEDTLS_SSL_SERVER_FINISHED:
             ret = ssl_tls1_3_process_server_finished( ssl );
