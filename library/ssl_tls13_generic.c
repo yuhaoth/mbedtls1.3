@@ -1483,8 +1483,6 @@ static int ssl_write_certificate_postprocess( mbedtls_ssl_context* ssl )
     return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
 }
 
-
-
 /*
  *
  * STATE HANDLING: Incoming Certificate
@@ -1492,11 +1490,8 @@ static int ssl_write_certificate_postprocess( mbedtls_ssl_context* ssl )
  */
 
 /*
- * Overview
+ * Implementation
  */
-
-/* Main state-handling entry point; orchestrates the other functions. */
-int mbedtls_ssl_read_certificate_process( mbedtls_ssl_context* ssl );
 
 /* Coordination: Check if a certificate is expected.
  * Returns a negative error code on failure, and otherwise
@@ -1506,76 +1501,6 @@ int mbedtls_ssl_read_certificate_process( mbedtls_ssl_context* ssl );
  */
 #define SSL_CERTIFICATE_EXPECTED   0
 #define SSL_CERTIFICATE_SKIP       1
-static int ssl_read_certificate_coordinate( mbedtls_ssl_context* ssl );
-
-#if defined(MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED)
-/* Parse certificate chain send by the peer. */
-static int ssl_read_certificate_parse( mbedtls_ssl_context* ssl,
-                                       unsigned char const* buf,
-                                       size_t buflen );
-/* Validate certificate chain sent by the peer. */
-static int ssl_read_certificate_validate( mbedtls_ssl_context* ssl );
-
-#endif /* MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED */
-
-/* Update the state after handling the incoming certificate message. */
-static int ssl_read_certificate_postprocess( mbedtls_ssl_context* ssl );
-
-/*
- * Implementation
- */
-
-int mbedtls_ssl_read_certificate_process( mbedtls_ssl_context* ssl )
-{
-    int ret;
-    MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> parse certificate" ) );
-
-    /* Coordination:
-     * Check if we expect a certificate, and if yes,
-     * check if a non-empty certificate has been sent. */
-    MBEDTLS_SSL_PROC_CHK_NEG( ssl_read_certificate_coordinate( ssl ) );
-#if defined(MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED)
-    if( ret == SSL_CERTIFICATE_EXPECTED )
-    {
-        unsigned char *buf;
-        size_t buflen;
-
-        MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_tls1_3_fetch_handshake_msg( ssl,
-                                          MBEDTLS_SSL_HS_CERTIFICATE,
-                                          &buf, &buflen ) );
-
-        /* Parse the certificate chain sent by the peer. */
-        MBEDTLS_SSL_PROC_CHK( ssl_read_certificate_parse( ssl, buf, buflen ) );
-        /* Validate the certificate chain and set the verification results. */
-        MBEDTLS_SSL_PROC_CHK( ssl_read_certificate_validate( ssl ) );
-
-        mbedtls_ssl_tls1_3_add_hs_msg_to_checksum(
-            ssl, MBEDTLS_SSL_HS_CERTIFICATE, buf, buflen );
-#if defined(MBEDTLS_SSL_USE_MPS)
-        MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_mps_hs_consume_full_hs_msg( ssl ) );
-#endif /* MBEDTLS_SSL_USE_MPS */
-
-    }
-    else
-#endif /* MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED */
-    if( ret == SSL_CERTIFICATE_SKIP )
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= skip parse certificate" ) );
-    }
-    else
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "should never happen" ) );
-        return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
-    }
-
-    /* Update state */
-    MBEDTLS_SSL_PROC_CHK( ssl_read_certificate_postprocess( ssl ) );
-
-cleanup:
-
-    MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= parse certificate" ) );
-    return( ret );
-}
 
 static int ssl_read_certificate_coordinate( mbedtls_ssl_context* ssl )
 {
@@ -1988,6 +1913,58 @@ static int ssl_read_certificate_postprocess( mbedtls_ssl_context* ssl )
     return( 0 );
 }
 
+int mbedtls_ssl_read_certificate_process( mbedtls_ssl_context* ssl )
+{
+    int ret;
+    MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> parse certificate" ) );
+
+    /* Coordination:
+     * Check if we expect a certificate, and if yes,
+     * check if a non-empty certificate has been sent. */
+    MBEDTLS_SSL_PROC_CHK_NEG( ssl_read_certificate_coordinate( ssl ) );
+#if defined(MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED)
+    if( ret == SSL_CERTIFICATE_EXPECTED )
+    {
+        unsigned char *buf;
+        size_t buflen;
+
+        MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_tls1_3_fetch_handshake_msg( ssl,
+                                          MBEDTLS_SSL_HS_CERTIFICATE,
+                                          &buf, &buflen ) );
+
+        /* Parse the certificate chain sent by the peer. */
+        MBEDTLS_SSL_PROC_CHK( ssl_read_certificate_parse( ssl, buf, buflen ) );
+        /* Validate the certificate chain and set the verification results. */
+        MBEDTLS_SSL_PROC_CHK( ssl_read_certificate_validate( ssl ) );
+
+        mbedtls_ssl_tls1_3_add_hs_msg_to_checksum(
+            ssl, MBEDTLS_SSL_HS_CERTIFICATE, buf, buflen );
+#if defined(MBEDTLS_SSL_USE_MPS)
+        MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_mps_hs_consume_full_hs_msg( ssl ) );
+#endif /* MBEDTLS_SSL_USE_MPS */
+
+    }
+    else
+#endif /* MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED */
+    if( ret == SSL_CERTIFICATE_SKIP )
+    {
+        MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= skip parse certificate" ) );
+    }
+    else
+    {
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "should never happen" ) );
+        return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
+    }
+
+    /* Update state */
+    MBEDTLS_SSL_PROC_CHK( ssl_read_certificate_postprocess( ssl ) );
+
+cleanup:
+
+    MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= parse certificate" ) );
+    return( ret );
+}
+
 void mbedtls_ssl_handshake_wrapup_tls13( mbedtls_ssl_context *ssl )
 {
 
@@ -2008,7 +1985,6 @@ void mbedtls_ssl_handshake_wrapup_tls13( mbedtls_ssl_context *ssl )
 
     MBEDTLS_SSL_DEBUG_MSG( 3, ( "<= handshake wrapup" ) );
 }
-
 /*
  *
  * STATE HANDLING: Outgoing Finished
