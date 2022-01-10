@@ -899,11 +899,8 @@ static int ssl_certificate_verify_postprocess( mbedtls_ssl_context* ssl )
  */
 
 /*
- * Overview
+ * Implementation
  */
-
-/* Main entry point; orchestrates the other functions */
-int mbedtls_ssl_read_certificate_verify_process( mbedtls_ssl_context* ssl );
 
 /* Coordinate: Check whether a certificate verify message is expected.
  * Returns a negative value on failure, and otherwise
@@ -913,110 +910,6 @@ int mbedtls_ssl_read_certificate_verify_process( mbedtls_ssl_context* ssl );
  */
 #define SSL_CERTIFICATE_VERIFY_SKIP 0
 #define SSL_CERTIFICATE_VERIFY_READ 1
-static int ssl_read_certificate_verify_coordinate( mbedtls_ssl_context* ssl );
-
-#if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
-/* Parse and validate CertificateVerify message
- *
- * Note: The size of the hash buffer is assumed to be large enough to
- *       hold the transcript given the selected hash algorithm.
- *       No bounds-checking is done inside the function.
- */
-static int ssl_read_certificate_verify_parse( mbedtls_ssl_context* ssl,
-                                              unsigned char const* buf,
-                                              size_t buflen,
-                                              unsigned char const* hash,
-                                              size_t hashlen );
-#endif /* MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED */
-
-/* Update handshake state machine */
-static int ssl_read_certificate_verify_postprocess( mbedtls_ssl_context* ssl );
-
-/*
- * Implementation
- */
-
-int mbedtls_ssl_read_certificate_verify_process( mbedtls_ssl_context* ssl )
-{
-    int ret;
-    unsigned char verify_buffer[ MBEDTLS_SSL_VERIFY_STRUCT_MAX_SIZE ];
-    size_t verify_buffer_len;
-    unsigned char transcript[ MBEDTLS_MD_MAX_SIZE ];
-    size_t transcript_len;
-
-    /* Coordination step */
-    MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> parse certificate verify" ) );
-
-    MBEDTLS_SSL_PROC_CHK_NEG( ssl_read_certificate_verify_coordinate( ssl ) );
-
-#if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED) // TBD: double-check
-    if( ret == SSL_CERTIFICATE_VERIFY_READ )
-    {
-        unsigned char *buf;
-        size_t buflen;
-
-        /* Need to calculate the hash of the transcript first
-         * before reading the message since otherwise it gets
-         * included in the transcript
-         */
-        ret = mbedtls_ssl_get_handshake_transcript( ssl,
-                               ssl->handshake->ciphersuite_info->mac,
-                               transcript, sizeof( transcript ),
-                               &transcript_len );
-        if( ret != 0 )
-            return( ret );
-
-        MBEDTLS_SSL_DEBUG_BUF( 3, "handshake hash", transcript,
-                               transcript_len );
-
-        /* Create verify structure */
-        ssl_create_verify_structure( transcript,
-                                     transcript_len,
-                                     verify_buffer,
-                                     &verify_buffer_len,
-                                     !ssl->conf->endpoint );
-
-        MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_tls1_3_fetch_handshake_msg( ssl,
-                          MBEDTLS_SSL_HS_CERTIFICATE_VERIFY, &buf, &buflen ) );
-
-
-        /* Process the message contents */
-        MBEDTLS_SSL_PROC_CHK( ssl_read_certificate_verify_parse( ssl, buf, buflen,
-                                                                 verify_buffer,
-                                                                 verify_buffer_len ) );
-
-        mbedtls_ssl_tls1_3_add_hs_msg_to_checksum(
-            ssl, MBEDTLS_SSL_HS_CERTIFICATE_VERIFY, buf, buflen );
-#if defined(MBEDTLS_SSL_USE_MPS)
-        MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_mps_hs_consume_full_hs_msg( ssl ) );
-#endif
-    }
-    else
-#endif /* MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED */
-    if( ret == SSL_CERTIFICATE_VERIFY_SKIP )
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= skip parse certificate verify" ) );
-    }
-    else
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "should never happen" ) );
-        return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
-    }
-
-    /* Update state machine and handshake checksum state.
-     *
-     * The manual update of the checksum state only needs to be
-     * done manually here because we couldn't have it done automatically
-     * when reading the message.
-     */
-    MBEDTLS_SSL_PROC_CHK( ssl_read_certificate_verify_postprocess( ssl ) );
-
-cleanup:
-
-    MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= parse certificate verify" ) );
-    return( ret );
-}
-
 static int ssl_read_certificate_verify_coordinate( mbedtls_ssl_context* ssl )
 {
     if( mbedtls_ssl_tls13_kex_with_psk( ssl ) )
@@ -1033,8 +926,13 @@ static int ssl_read_certificate_verify_coordinate( mbedtls_ssl_context* ssl )
 #endif /* MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED */
 }
 
-
 #if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
+/* Parse and validate CertificateVerify message
+ *
+ * Note: The size of the hash buffer is assumed to be large enough to
+ *       hold the transcript given the selected hash algorithm.
+ *       No bounds-checking is done inside the function.
+ */
 static int ssl_read_certificate_verify_parse( mbedtls_ssl_context* ssl,
                                               unsigned char const* buf,
                                               size_t buflen,
@@ -1216,7 +1114,86 @@ static int ssl_read_certificate_verify_postprocess( mbedtls_ssl_context* ssl )
     return( 0 );
 }
 
+int mbedtls_ssl_read_certificate_verify_process( mbedtls_ssl_context* ssl )
+{
+    int ret;
+    unsigned char verify_buffer[ MBEDTLS_SSL_VERIFY_STRUCT_MAX_SIZE ];
+    size_t verify_buffer_len;
+    unsigned char transcript[ MBEDTLS_MD_MAX_SIZE ];
+    size_t transcript_len;
 
+    /* Coordination step */
+    MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> parse certificate verify" ) );
+
+    MBEDTLS_SSL_PROC_CHK_NEG( ssl_read_certificate_verify_coordinate( ssl ) );
+
+#if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED) // TBD: double-check
+    if( ret == SSL_CERTIFICATE_VERIFY_READ )
+    {
+        unsigned char *buf;
+        size_t buflen;
+
+        /* Need to calculate the hash of the transcript first
+         * before reading the message since otherwise it gets
+         * included in the transcript
+         */
+        ret = mbedtls_ssl_get_handshake_transcript( ssl,
+                               ssl->handshake->ciphersuite_info->mac,
+                               transcript, sizeof( transcript ),
+                               &transcript_len );
+        if( ret != 0 )
+            return( ret );
+
+        MBEDTLS_SSL_DEBUG_BUF( 3, "handshake hash", transcript,
+                               transcript_len );
+
+        /* Create verify structure */
+        ssl_create_verify_structure( transcript,
+                                     transcript_len,
+                                     verify_buffer,
+                                     &verify_buffer_len,
+                                     !ssl->conf->endpoint );
+
+        MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_tls1_3_fetch_handshake_msg( ssl,
+                          MBEDTLS_SSL_HS_CERTIFICATE_VERIFY, &buf, &buflen ) );
+
+
+        /* Process the message contents */
+        MBEDTLS_SSL_PROC_CHK( ssl_read_certificate_verify_parse( ssl, buf, buflen,
+                                                                 verify_buffer,
+                                                                 verify_buffer_len ) );
+
+        mbedtls_ssl_tls1_3_add_hs_msg_to_checksum(
+            ssl, MBEDTLS_SSL_HS_CERTIFICATE_VERIFY, buf, buflen );
+#if defined(MBEDTLS_SSL_USE_MPS)
+        MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_mps_hs_consume_full_hs_msg( ssl ) );
+#endif
+    }
+    else
+#endif /* MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED */
+    if( ret == SSL_CERTIFICATE_VERIFY_SKIP )
+    {
+        MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= skip parse certificate verify" ) );
+    }
+    else
+    {
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "should never happen" ) );
+        return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
+    }
+
+    /* Update state machine and handshake checksum state.
+     *
+     * The manual update of the checksum state only needs to be
+     * done manually here because we couldn't have it done automatically
+     * when reading the message.
+     */
+    MBEDTLS_SSL_PROC_CHK( ssl_read_certificate_verify_postprocess( ssl ) );
+
+cleanup:
+
+    MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= parse certificate verify" ) );
+    return( ret );
+}
 
 /*
  *
