@@ -567,17 +567,17 @@ int mbedtls_ssl_parse_signature_algorithms_ext( mbedtls_ssl_context *ssl,
 #endif /* MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED */
 
 /*
- * The ssl_create_verify_structure() creates the verify structure.
+ * The ssl_tls13_create_verify_structure() creates the verify structure.
  * As input, it requires the transcript hash.
  *
  * The caller has to ensure that the buffer has size at least
  * MBEDTLS_SSL_VERIFY_STRUCT_MAX_SIZE bytes.
  */
-static void ssl_create_verify_structure( unsigned char *transcript_hash,
-                                        size_t transcript_hash_len,
-                                        unsigned char *verify_buffer,
-                                        size_t *verify_buffer_len,
-                                        int from )
+static void ssl_tls13_create_verify_structure( unsigned char *transcript_hash,
+                                               size_t transcript_hash_len,
+                                               unsigned char *verify_buffer,
+                                               size_t *verify_buffer_len,
+                                               int from )
 {
     size_t idx = 0;
 
@@ -785,7 +785,7 @@ static int ssl_certificate_verify_write( mbedtls_ssl_context* ssl,
     }
 
     /* Create verify structure */
-    ssl_create_verify_structure(
+    ssl_tls13_create_verify_structure(
             ssl->handshake->state_local.certificate_verify_out.handshake_hash,
             ssl->handshake->state_local.certificate_verify_out.handshake_hash_len,
             verify_buffer,
@@ -933,11 +933,11 @@ static int ssl_read_certificate_verify_coordinate( mbedtls_ssl_context* ssl )
  *       hold the transcript given the selected hash algorithm.
  *       No bounds-checking is done inside the function.
  */
-static int ssl_read_certificate_verify_parse( mbedtls_ssl_context* ssl,
-                                              unsigned char const* buf,
-                                              size_t buflen,
-                                              unsigned char const* verify_buffer,
-                                              size_t verify_buffer_len )
+static int ssl_tls13_parse_certificate_verify( mbedtls_ssl_context* ssl,
+                                               unsigned char const* buf,
+                                               size_t buflen,
+                                               unsigned char const* verify_buffer,
+                                               size_t verify_buffer_len )
 {
     int ret;
     int signature_scheme;
@@ -1114,7 +1114,7 @@ static int ssl_read_certificate_verify_postprocess( mbedtls_ssl_context* ssl )
     return( 0 );
 }
 
-int mbedtls_ssl_read_certificate_verify_process( mbedtls_ssl_context* ssl )
+int mbedtls_ssl_tls13_process_certificate_verify( mbedtls_ssl_context *ssl )
 {
     int ret;
     unsigned char verify_buffer[ MBEDTLS_SSL_VERIFY_STRUCT_MAX_SIZE ];
@@ -1148,20 +1148,20 @@ int mbedtls_ssl_read_certificate_verify_process( mbedtls_ssl_context* ssl )
                                transcript_len );
 
         /* Create verify structure */
-        ssl_create_verify_structure( transcript,
-                                     transcript_len,
-                                     verify_buffer,
-                                     &verify_buffer_len,
-                                     !ssl->conf->endpoint );
+        ssl_tls13_create_verify_structure( transcript,
+                                           transcript_len,
+                                           verify_buffer,
+                                           &verify_buffer_len,
+                                           !ssl->conf->endpoint );
 
         MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_tls1_3_fetch_handshake_msg( ssl,
                           MBEDTLS_SSL_HS_CERTIFICATE_VERIFY, &buf, &buflen ) );
 
 
         /* Process the message contents */
-        MBEDTLS_SSL_PROC_CHK( ssl_read_certificate_verify_parse( ssl, buf, buflen,
-                                                                 verify_buffer,
-                                                                 verify_buffer_len ) );
+        MBEDTLS_SSL_PROC_CHK( ssl_tls13_parse_certificate_verify(
+                                  ssl, buf, buflen,
+                                  verify_buffer, verify_buffer_len ) );
 
         mbedtls_ssl_tls1_3_add_hs_msg_to_checksum(
             ssl, MBEDTLS_SSL_HS_CERTIFICATE_VERIFY, buf, buflen );

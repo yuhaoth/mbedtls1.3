@@ -3712,7 +3712,7 @@ static int ssl_tls1_3_process_server_certificate( mbedtls_ssl_context *ssl )
  */
 static int ssl_tls1_3_process_certificate_verify( mbedtls_ssl_context *ssl )
 {
-    return( mbedtls_ssl_read_certificate_verify_process( ssl ) );
+    return( mbedtls_ssl_tls13_process_certificate_verify( ssl ) );
 }
 
 /*
