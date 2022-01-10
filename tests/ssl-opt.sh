@@ -2018,6 +2018,17 @@ run_test    "TLS 1.3 G->m AES_128_CCM_8_SHA256    , ECDSA_SECP256R1_SHA256" \
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_SSL_CLI_C
+run_test    "TLS 1.3, HRR proposing secp256r1" \
+            "$P_SRV crt_file=data_files/server5.crt key_file=data_files/server5.key \
+                    debug_level=2 force_version=tls1_3 curves=secp256r1" \
+            "$P_CLI debug_level=2 force_version=tls1_3" \
+            0 \
+            -s "Protocol is TLSv1.3" \
+            -c "received HelloRetryRequest message"
+
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+requires_config_enabled MBEDTLS_SSL_SRV_C
+requires_config_enabled MBEDTLS_SSL_CLI_C
 run_test    "TLS 1.3, default suite, PSK" \
             "$P_SRV nbio=2 debug_level=5 force_version=tls1_3 psk=010203 psk_identity=0a0b0c tls13_kex_modes=psk" \
             "$P_CLI nbio=2 debug_level=5 force_version=tls1_3 psk=010203 psk_identity=0a0b0c tls13_kex_modes=psk" \
