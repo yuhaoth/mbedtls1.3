@@ -3241,7 +3241,7 @@ static int ssl_write_hrr_key_share_ext( mbedtls_ssl_context *ssl,
                                         unsigned char* end,
                                         size_t* olen )
 {
-    const mbedtls_ecp_group_id *gid;
+    const uint16_t *group_list;
     const mbedtls_ecp_curve_info **curve = NULL;
 
     size_t total_len = 0;
@@ -3285,11 +3285,12 @@ static int ssl_write_hrr_key_share_ext( mbedtls_ssl_context *ssl,
     *buf++ = 2;
 
     /* Find common curve */
-    for( gid = ssl->conf->curve_list; *gid != MBEDTLS_ECP_DP_NONE; gid++ )
+    for( group_list = mbedtls_ssl_get_groups( ssl );
+         *group_list != 0; group_list++ )
     {
         for( curve = ssl->handshake->curves; *curve != NULL; curve++ )
         {
-            if( (*curve)->grp_id == *gid )
+            if( (*curve)->tls_id == *group_list )
                 goto curve_matching_done;
         }
     }

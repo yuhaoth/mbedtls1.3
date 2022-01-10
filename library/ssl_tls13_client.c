@@ -176,36 +176,35 @@ static int ssl_tls13_parse_supported_versions_ext( mbedtls_ssl_context *ssl,
  * 'elliptic_curves' and only contained elliptic curve groups.
  */
 static int ssl_tls13_write_named_group_list_ecdhe( mbedtls_ssl_context *ssl,
-                                            unsigned char *buf,
-                                            unsigned char *end,
-                                            size_t *olen )
+                                                   unsigned char *buf,
+                                                   unsigned char *end,
+                                                   size_t *olen )
 {
     unsigned char *p = buf;
 
     *olen = 0;
 
-    if( ssl->conf->curve_list == NULL )
+    const uint16_t *group_list = mbedtls_ssl_get_groups( ssl );
+
+    if( group_list == NULL )
         return( MBEDTLS_ERR_SSL_BAD_CONFIG );
 
-    for ( const mbedtls_ecp_group_id *grp_id = ssl->conf->curve_list;
-          *grp_id != MBEDTLS_ECP_DP_NONE;
-          grp_id++ )
+    for ( ; *group_list != 0; group_list++ )
     {
         const mbedtls_ecp_curve_info *info;
-        info = mbedtls_ecp_curve_info_from_grp_id( *grp_id );
+        info = mbedtls_ecp_curve_info_from_tls_id( *group_list );
         if( info == NULL )
             continue;
 
-        if( !mbedtls_ssl_tls13_named_group_is_ecdhe( info->tls_id ) )
+        if( !mbedtls_ssl_tls13_named_group_is_ecdhe( *group_list ) )
             continue;
 
         MBEDTLS_SSL_CHK_BUF_PTR( p, end, 2);
-        MBEDTLS_PUT_UINT16_BE( info->tls_id, p, 0 );
+        MBEDTLS_PUT_UINT16_BE( *group_list, p, 0 );
         p += 2;
 
         MBEDTLS_SSL_DEBUG_MSG( 3, ( "NamedGroup: %s ( %x )",
-                  mbedtls_ecp_curve_info_from_tls_id( info->tls_id )->name,
-                  info->tls_id ) );
+                                    info->name, *group_list ) );
     }
 
     *olen = p - buf;
@@ -360,20 +359,19 @@ static int ssl_tls13_get_default_group_id( mbedtls_ssl_context *ssl,
 
 
 #if defined(MBEDTLS_ECDH_C)
+    const uint16_t *group_list = mbedtls_ssl_get_groups( ssl );
     /* Pick first available ECDHE group compatible with TLS 1.3 */
-    if( ssl->conf->curve_list == NULL )
+    if( group_list == NULL )
         return( MBEDTLS_ERR_SSL_BAD_CONFIG );
 
-    for ( const mbedtls_ecp_group_id *grp_id = ssl->conf->curve_list;
-          *grp_id != MBEDTLS_ECP_DP_NONE;
-          grp_id++ )
+    for ( ; *group_list != 0; group_list++ )
     {
         const mbedtls_ecp_curve_info *info;
-        info = mbedtls_ecp_curve_info_from_grp_id( *grp_id );
+        info = mbedtls_ecp_curve_info_from_tls_id( *group_list );
         if( info != NULL &&
-            mbedtls_ssl_tls13_named_group_is_ecdhe( info->tls_id ) )
+            mbedtls_ssl_tls13_named_group_is_ecdhe( *group_list ) )
         {
-            *group_id = info->tls_id;
+            *group_id = *group_list;
             return( 0 );
         }
     }
@@ -2884,7 +2882,7 @@ static int ssl_hrr_parse( mbedtls_ssl_context* ssl,
             case MBEDTLS_TLS_EXT_KEY_SHARE:
             {
                 /* Variables for parsing the key_share */
-                const mbedtls_ecp_group_id* grp_id;
+                const uint16_t *group_list;
                 const mbedtls_ecp_curve_info *curve_info = NULL;
                 int tls_id;
                 int found = 0;
@@ -2895,18 +2893,27 @@ static int ssl_hrr_parse( mbedtls_ssl_context* ssl,
                 tls_id = ( ( ext[4] << 8 ) | ( ext[5] ) );
                 MBEDTLS_SSL_DEBUG_MSG( 3, ( "selected_group ( %d )", tls_id ) );
 
-                /* Upon receipt of this extension in a HelloRetryRequest, the client
-                 * MUST first verify that the selected_group field corresponds to a
-                 * group which was provided in the "supported_groups" extension in the
-                 * original ClientHello.
-                 * The supported_group was based on the info in ssl->conf->curve_list.
+                /* Upon receipt of this extension in a HelloRetryRequest, the
+                 * client MUST first verify that the selected_group field
+                 * corresponds to a group which was provided in the
+                 * "supported_groups" extension in the original ClientHello.
+                 * The supported_group was based on the configured list of
+                 * groups.
                  *
-                 * If the server provided a key share that was not sent in the ClientHello
-                 * then the client MUST abort the handshake with an "illegal_parameter" alert. */
-                for( grp_id = ssl->conf->curve_list; *grp_id != MBEDTLS_ECP_DP_NONE; grp_id++ )
+                 * If the server provided a key share that was not sent in the
+                 * ClientHello then the client MUST abort the handshake with an
+                 * "illegal_parameter" alert. */
+                for( group_list = mbedtls_ssl_get_groups( ssl );
+                     *group_list != 0; group_list++ )
                 {
-                    curve_info = mbedtls_ecp_curve_info_from_grp_id( *grp_id );
-                    if( curve_info == NULL || curve_info->tls_id != tls_id )
+                    if( !mbedtls_ssl_tls13_named_group_is_ecdhe( *group_list ) )
+                        continue;
+
+                    curve_info =
+                        mbedtls_ecp_curve_info_from_tls_id( *group_list );
+
+                    if( ( curve_info == NULL ) ||
+                        ( curve_info->tls_id != tls_id ) )
                         continue;
 
                     /* We found a match */
