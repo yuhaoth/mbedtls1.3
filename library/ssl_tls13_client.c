@@ -1006,72 +1006,6 @@ static int ssl_write_end_of_early_data_postprocess( mbedtls_ssl_context* ssl )
     return( 0 );
 }
 
-
-#if defined(MBEDTLS_SSL_SERVER_NAME_INDICATION)
-static void ssl_write_hostname_ext( mbedtls_ssl_context *ssl,
-                                   unsigned char* buf,
-                                   unsigned char* end,
-                                   size_t* olen )
-{
-    unsigned char *p = buf;
-    size_t hostname_len;
-
-    *olen = 0;
-
-    if( !mbedtls_ssl_conf_tls13_ephemeral_enabled( ssl ) )
-        return;
-
-    if( ssl->hostname == NULL )
-        return;
-
-    MBEDTLS_SSL_DEBUG_MSG( 3, ( "client hello, adding server name extension: %s",
-                              ssl->hostname ) );
-
-    hostname_len = strlen( ssl->hostname );
-
-    if( end < p || (size_t)( end - p ) < hostname_len + 9 )
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "buffer too small" ) );
-        return;
-    }
-
-    /*
-     * struct {
-     *     NameType name_type;
-     *     select ( name_type ) {
-     *         case host_name: HostName;
-     *     } name;
-     * } ServerName;
-     *
-     * enum {
-     *     host_name( 0 ), ( 255 )
-     * } NameType;
-     *
-     * opaque HostName<1..2^16-1>;
-     *
-     * struct {
-     *     ServerName server_name_list<1..2^16-1>
-     * } ServerNameList;
-     */
-    *p++ = (unsigned char)( ( MBEDTLS_TLS_EXT_SERVERNAME >> 8 ) & 0xFF );
-    *p++ = (unsigned char)( ( MBEDTLS_TLS_EXT_SERVERNAME ) & 0xFF );
-
-    *p++ = (unsigned char)( ( ( hostname_len + 5 ) >> 8 ) & 0xFF );
-    *p++ = (unsigned char)( ( ( hostname_len + 5 ) ) & 0xFF );
-
-    *p++ = (unsigned char)( ( ( hostname_len + 3 ) >> 8 ) & 0xFF );
-    *p++ = (unsigned char)( ( ( hostname_len + 3 ) ) & 0xFF );
-
-    *p++ = (unsigned char)( ( MBEDTLS_TLS_EXT_SERVERNAME_HOSTNAME ) & 0xFF );
-    *p++ = (unsigned char)( ( hostname_len >> 8 ) & 0xFF );
-    *p++ = (unsigned char)( ( hostname_len ) & 0xFF );
-
-    memcpy( p, ssl->hostname, hostname_len );
-
-    *olen = hostname_len + 9;
-}
-#endif /* MBEDTLS_SSL_SERVER_NAME_INDICATION */
-
 #if defined(MBEDTLS_SSL_MAX_FRAGMENT_LENGTH)
 
 /*
@@ -1798,7 +1732,9 @@ static int ssl_tls13_write_client_hello_body( mbedtls_ssl_context *ssl,
 
 #if defined(MBEDTLS_SSL_SERVER_NAME_INDICATION)
     /* For PSK-based ciphersuites we don't really need the SNI extension */
-    ssl_write_hostname_ext( ssl, p, end, &output_len );
+    ret = mbedtls_ssl_write_hostname_ext( ssl, p, end, &output_len );
+    if( ret != 0 )
+        return( ret );
     p += output_len;
 #endif /* MBEDTLS_SSL_SERVER_NAME_INDICATION */
 
