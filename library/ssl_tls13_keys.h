@@ -36,27 +36,27 @@
 /* This requires MBEDTLS_SSL_TLS1_3_LABEL( idx, name, string ) to be defined at
  * the point of use. See e.g. the definition of mbedtls_ssl_tls1_3_labels_union
  * below. */
-#define MBEDTLS_SSL_TLS1_3_LABEL_LIST                                                 \
-    MBEDTLS_SSL_TLS1_3_LABEL( finished    , "finished"                              ) \
-    MBEDTLS_SSL_TLS1_3_LABEL( resumption  , "resumption"                            ) \
-    MBEDTLS_SSL_TLS1_3_LABEL( traffic_upd , "traffic upd"                           ) \
-    MBEDTLS_SSL_TLS1_3_LABEL( exporter    , "exporter"                              ) \
-    MBEDTLS_SSL_TLS1_3_LABEL( key         , "key"                                   ) \
-    MBEDTLS_SSL_TLS1_3_LABEL( iv          , "iv"                                    ) \
-    MBEDTLS_SSL_TLS1_3_LABEL( c_hs_traffic, "c hs traffic"                          ) \
-    MBEDTLS_SSL_TLS1_3_LABEL( c_ap_traffic, "c ap traffic"                          ) \
-    MBEDTLS_SSL_TLS1_3_LABEL( c_e_traffic , "c e traffic"                           ) \
-    MBEDTLS_SSL_TLS1_3_LABEL( s_hs_traffic, "s hs traffic"                          ) \
-    MBEDTLS_SSL_TLS1_3_LABEL( s_ap_traffic, "s ap traffic"                          ) \
-    MBEDTLS_SSL_TLS1_3_LABEL( s_e_traffic , "s e traffic"                           ) \
-    MBEDTLS_SSL_TLS1_3_LABEL( e_exp_master, "e exp master"                          ) \
-    MBEDTLS_SSL_TLS1_3_LABEL( res_master  , "res master"                            ) \
-    MBEDTLS_SSL_TLS1_3_LABEL( exp_master  , "exp master"                            ) \
-    MBEDTLS_SSL_TLS1_3_LABEL( ext_binder  , "ext binder"                            ) \
-    MBEDTLS_SSL_TLS1_3_LABEL( res_binder  , "res binder"                            ) \
-    MBEDTLS_SSL_TLS1_3_LABEL( derived     , "derived"                               ) \
-    MBEDTLS_SSL_TLS1_3_LABEL( client_cv   , "TLS 1.3, client CertificateVerify"     ) \
-    MBEDTLS_SSL_TLS1_3_LABEL( server_cv   , "TLS 1.3, server CertificateVerify"     )
+#define MBEDTLS_SSL_TLS1_3_LABEL_LIST                                             \
+    MBEDTLS_SSL_TLS1_3_LABEL( finished    , "finished"                          ) \
+    MBEDTLS_SSL_TLS1_3_LABEL( resumption  , "resumption"                        ) \
+    MBEDTLS_SSL_TLS1_3_LABEL( traffic_upd , "traffic upd"                       ) \
+    MBEDTLS_SSL_TLS1_3_LABEL( exporter    , "exporter"                          ) \
+    MBEDTLS_SSL_TLS1_3_LABEL( key         , "key"                               ) \
+    MBEDTLS_SSL_TLS1_3_LABEL( iv          , "iv"                                ) \
+    MBEDTLS_SSL_TLS1_3_LABEL( c_hs_traffic, "c hs traffic"                      ) \
+    MBEDTLS_SSL_TLS1_3_LABEL( c_ap_traffic, "c ap traffic"                      ) \
+    MBEDTLS_SSL_TLS1_3_LABEL( c_e_traffic , "c e traffic"                       ) \
+    MBEDTLS_SSL_TLS1_3_LABEL( s_hs_traffic, "s hs traffic"                      ) \
+    MBEDTLS_SSL_TLS1_3_LABEL( s_ap_traffic, "s ap traffic"                      ) \
+    MBEDTLS_SSL_TLS1_3_LABEL( s_e_traffic , "s e traffic"                       ) \
+    MBEDTLS_SSL_TLS1_3_LABEL( e_exp_master, "e exp master"                      ) \
+    MBEDTLS_SSL_TLS1_3_LABEL( res_master  , "res master"                        ) \
+    MBEDTLS_SSL_TLS1_3_LABEL( exp_master  , "exp master"                        ) \
+    MBEDTLS_SSL_TLS1_3_LABEL( ext_binder  , "ext binder"                        ) \
+    MBEDTLS_SSL_TLS1_3_LABEL( res_binder  , "res binder"                        ) \
+    MBEDTLS_SSL_TLS1_3_LABEL( derived     , "derived"                           ) \
+    MBEDTLS_SSL_TLS1_3_LABEL( client_cv   , "TLS 1.3, client CertificateVerify" ) \
+    MBEDTLS_SSL_TLS1_3_LABEL( server_cv   , "TLS 1.3, server CertificateVerify" )
 
 #define MBEDTLS_SSL_TLS1_3_LABEL( name, string )       \
     const unsigned char name    [ sizeof(string) - 1 ];
