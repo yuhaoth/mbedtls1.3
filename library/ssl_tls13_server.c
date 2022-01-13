@@ -4031,7 +4031,7 @@ int mbedtls_ssl_tls13_handshake_server_step( mbedtls_ssl_context *ssl )
             /* ----- WRITE FINISHED ----*/
 
         case MBEDTLS_SSL_SERVER_FINISHED:
-            ret = mbedtls_ssl_finished_out_process( ssl );
+            ret = mbedtls_ssl_tls13_write_finished_message( ssl );
             break;
 
             /* ----- READ CLIENT CERTIFICATE ----*/
