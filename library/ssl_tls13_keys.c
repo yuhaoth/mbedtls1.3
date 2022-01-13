@@ -932,6 +932,34 @@ int mbedtls_ssl_tls1_3_generate_resumption_master_secret(
 }
 #endif /* MBEDTLS_SSL_NEW_SESSION_TICKET */
 
+int mbedtls_ssl_tls1_3_key_schedule_stage_early( mbedtls_ssl_context *ssl )
+{
+    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
+    mbedtls_md_type_t md_type;
+    mbedtls_ssl_handshake_params *handshake = ssl->handshake;
+
+    if( handshake->ciphersuite_info == NULL )
+    {
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "cipher suite info not found" ) );
+        return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
+    }
+
+    md_type = handshake->ciphersuite_info->mac;
+
+    ret = mbedtls_ssl_tls1_3_evolve_secret(
+              md_type,
+              NULL,     /* No old secret */
+              handshake->psk, handshake->psk_len,
+              handshake->tls1_3_master_secrets.early );
+    if( ret != 0 )
+    {
+        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_tls1_3_evolve_secret", ret );
+        return( ret );
+    }
+
+    return( 0 );
+}
+
 int mbedtls_ssl_tls13_key_schedule_stage_handshake( mbedtls_ssl_context *ssl )
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
@@ -1348,34 +1376,6 @@ int mbedtls_ssl_tls13_populate_transform( mbedtls_ssl_transform *transform,
      * granularity. */
     transform->minlen =
         transform->taglen + MBEDTLS_SSL_CID_TLS1_3_PADDING_GRANULARITY;
-
-    return( 0 );
-}
-
-int mbedtls_ssl_tls1_3_key_schedule_stage_early( mbedtls_ssl_context *ssl )
-{
-    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
-    mbedtls_md_type_t md_type;
-    mbedtls_ssl_handshake_params *handshake = ssl->handshake;
-
-    if( handshake->ciphersuite_info == NULL )
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "cipher suite info not found" ) );
-        return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
-    }
-
-    md_type = handshake->ciphersuite_info->mac;
-
-    ret = mbedtls_ssl_tls1_3_evolve_secret(
-              md_type,
-              NULL,     /* No old secret */
-              handshake->psk, handshake->psk_len,
-              handshake->tls1_3_master_secrets.early );
-    if( ret != 0 )
-    {
-        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_tls1_3_evolve_secret", ret );
-        return( ret );
-    }
 
     return( 0 );
 }
