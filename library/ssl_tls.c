@@ -6450,6 +6450,14 @@ void mbedtls_ssl_handshake_free( mbedtls_ssl_context *ssl )
     psa_destroy_key( handshake->ecdh_psa_privkey );
 #endif /* MBEDTLS_ECDH_C && MBEDTLS_USE_PSA_CRYPTO */
 
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+    mbedtls_ssl_transform_free( handshake->transform_handshake );
+    mbedtls_ssl_transform_free( handshake->transform_earlydata );
+    mbedtls_free( handshake->transform_earlydata );
+    mbedtls_free( handshake->transform_handshake );
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+
+
 #if defined(MBEDTLS_SSL_VARIABLE_BUFFER_LENGTH)
     /* If the buffers are too big - reallocate. Because of the way Mbed TLS
      * processes datagrams and the fact that a datagram is allowed to have
@@ -6459,13 +6467,7 @@ void mbedtls_ssl_handshake_free( mbedtls_ssl_context *ssl )
                                     mbedtls_ssl_get_output_buflen( ssl ) );
 #endif
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
-    mbedtls_ssl_transform_free( handshake->transform_earlydata );
-    mbedtls_free( handshake->transform_earlydata );
-    mbedtls_ssl_transform_free( handshake->transform_handshake );
-    mbedtls_free( handshake->transform_handshake );
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
-
+    /* mbedtls_platform_zeroize MUST be last one in this function */
     mbedtls_platform_zeroize( handshake,
                               sizeof( mbedtls_ssl_handshake_params ) );
 }
