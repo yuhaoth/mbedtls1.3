@@ -522,7 +522,7 @@ int mbedtls_ssl_tls1_3_key_schedule_stage_early_data(
  *        with states Initial -> Early -> Handshake -> Application, and
  *        this function represents the Early -> Handshake transition.
  *
- *        In the handshake stage, mbedtls_ssl_tls1_3_generate_handshake_keys()
+ *        In the handshake stage, mbedtls_ssl_tls13_generate_handshake_keys()
  *        can be used to derive the handshake traffic keys.
  *
  * \param ssl  The SSL context to operate on. This must be in key schedule
@@ -531,8 +531,7 @@ int mbedtls_ssl_tls1_3_key_schedule_stage_early_data(
  * \returns    \c 0 on success.
  * \returns    A negative error code on failure.
  */
-int mbedtls_ssl_tls13_key_schedule_stage_handshake(
-    mbedtls_ssl_context *ssl );
+int mbedtls_ssl_tls13_key_schedule_stage_handshake( mbedtls_ssl_context *ssl );
 
 /**
  * \brief Transition into application stage of TLS 1.3 key schedule.
@@ -550,8 +549,7 @@ int mbedtls_ssl_tls13_key_schedule_stage_handshake(
  * \returns    \c 0 on success.
  * \returns    A negative error code on failure.
  */
-int mbedtls_ssl_tls13_key_schedule_stage_application(
-    mbedtls_ssl_context *ssl );
+int mbedtls_ssl_tls13_key_schedule_stage_application( mbedtls_ssl_context *ssl );
 
 /*
  * Convenience functions combining
@@ -594,15 +592,15 @@ int mbedtls_ssl_tls1_3_generate_early_data_keys(
  * \returns    \c 0 on success.
  * \returns    A negative error code on failure.
  */
-int mbedtls_ssl_tls13_generate_handshake_keys(
-    mbedtls_ssl_context* ssl, mbedtls_ssl_key_set *traffic_keys );
+int mbedtls_ssl_tls13_generate_handshake_keys( mbedtls_ssl_context *ssl,
+                                               mbedtls_ssl_key_set *traffic_keys );
 
 /**
  * \brief Compute TLS 1.3 application traffic keys.
  *
  * \param ssl  The SSL context to operate on. This must be in
  *             key schedule stage \c Application, see
- *             mbedtls_ssl_tls1_3_key_schedule_stage_application().
+ *             mbedtls_ssl_tls13_key_schedule_stage_application().
  * \param traffic_keys The address at which to store the application traffic key
  *                     keys. This must be writable but may be uninitialized.
  *
@@ -610,7 +608,7 @@ int mbedtls_ssl_tls13_generate_handshake_keys(
  * \returns    A negative error code on failure.
  */
 int mbedtls_ssl_tls13_generate_application_keys(
-    mbedtls_ssl_context* ssl, mbedtls_ssl_key_set *traffic_keys );
+    mbedtls_ssl_context *ssl, mbedtls_ssl_key_set *traffic_keys );
 
 /**
  * \brief Compute TLS 1.3 resumption master secret.
@@ -626,16 +624,17 @@ int mbedtls_ssl_tls1_3_generate_resumption_master_secret(
     mbedtls_ssl_context* ssl );
 
 /**
- * \brief Calculate content of TLS 1.3 Finished message.
+ * \brief Calculate the verify_data value for the client or server TLS 1.3
+ * Finished message.
  *
  * \param ssl  The SSL context to operate on. This must be in
  *             key schedule stage \c Handshake, see
- *             mbedtls_ssl_tls1_3_key_schedule_stage_application().
- * \param dst        The address at which to write the Finished content.
+ *             mbedtls_ssl_tls13_key_schedule_stage_application().
+ * \param dst        The address at which to write the verify_data value.
  * \param dst_len    The size of \p dst in bytes.
  * \param actual_len The address at which to store the amount of data
  *                   actually written to \p dst upon success.
- * \param from       The endpoint the Finished message originates from:
+ * \param which      The message to calculate the `verify_data` for:
  *                   - #MBEDTLS_SSL_IS_CLIENT for the Client's Finished message
  *                   - #MBEDTLS_SSL_IS_SERVER for the Server's Finished message
  *
@@ -650,7 +649,7 @@ int mbedtls_ssl_tls13_calculate_verify_data( mbedtls_ssl_context *ssl,
                                              unsigned char *dst,
                                              size_t dst_len,
                                              size_t *actual_len,
-                                             int from );
+                                             int which );
 
 #if defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
 #define MBEDTLS_SSL_TLS1_3_PSK_EXTERNAL   0

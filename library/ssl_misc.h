@@ -331,8 +331,6 @@
       + ( MBEDTLS_SSL_CID_OUT_LEN_MAX ) )
 #endif
 
-#define MBEDTLS_TLS1_3_MD_MAX_SIZE         MBEDTLS_MD_MAX_SIZE
-
 #define MBEDTLS_CLIENT_HELLO_RANDOM_LEN 32
 #define MBEDTLS_SERVER_HELLO_RANDOM_LEN 32
 
@@ -772,6 +770,16 @@ struct mbedtls_ssl_handshake_params
     mbedtls_mps_handshake_out hs_msg_out;
 #endif
 
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+    uint16_t offered_group_id; /* The NamedGroup value for the group
+                                * that is being used for ephemeral
+                                * key exchange.
+                                *
+                                * On the client: Defaults to the first
+                                * entry in the client's group list,
+                                * but can be overwritten by the HRR. */
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+
     /*
      * State-local variables used during the processing
      * of a specific handshake state.
@@ -785,16 +793,18 @@ struct mbedtls_ssl_handshake_params
 
             /* Buffer holding digest of the handshake up to
              * but excluding the outgoing finished message. */
-            unsigned char digest[MBEDTLS_MD_MAX_SIZE];
+            unsigned char digest[MBEDTLS_TLS1_3_MD_MAX_SIZE];
             size_t digest_len;
         } finished_out;
 
         /* Incoming Finished message */
         struct
         {
+            uint8_t preparation_done;
+
             /* Buffer holding digest of the handshake up to but
              * excluding the peer's incoming finished message. */
-            unsigned char digest[MBEDTLS_MD_MAX_SIZE];
+            unsigned char digest[MBEDTLS_TLS1_3_MD_MAX_SIZE];
             size_t digest_len;
         } finished_in;
 
@@ -869,16 +879,6 @@ struct mbedtls_ssl_handshake_params
     } state_local;
 
     /* End of state-local variables. */
-
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
-    uint16_t offered_group_id; /* The NamedGroup value for the group
-                                * that is being used for ephemeral
-                                * key exchange.
-                                *
-                                * On the client: Defaults to the first
-                                * entry in the client's group list,
-                                * but can be overwritten by the HRR. */
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 
     mbedtls_ssl_ciphersuite_t const *ciphersuite_info;
 

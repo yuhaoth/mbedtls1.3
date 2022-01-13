@@ -4064,6 +4064,11 @@ int mbedtls_ssl_tls13_handshake_server_step( mbedtls_ssl_context *ssl )
 
         case MBEDTLS_SSL_CLIENT_FINISHED:
             ret = mbedtls_ssl_tls13_process_finished_message( ssl );
+            if( ret == 0 )
+            {
+                mbedtls_ssl_handshake_set_state(
+                    ssl, MBEDTLS_SSL_HANDSHAKE_WRAPUP );
+            }
             break;
 
         case MBEDTLS_SSL_HANDSHAKE_WRAPUP:
