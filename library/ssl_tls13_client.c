@@ -3670,6 +3670,7 @@ static int ssl_tls1_3_process_server_finished( mbedtls_ssl_context *ssl )
         return( ret );
 
     mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_END_OF_EARLY_DATA );
+
     return( 0 );
 }
 
@@ -3692,9 +3693,8 @@ static int ssl_tls1_3_write_client_certificate_verify( mbedtls_ssl_context *ssl 
 /*
  * Handler for MBEDTLS_SSL_CLIENT_FINISHED
  */
-static int ssl_tls1_3_write_client_finished( mbedtls_ssl_context *ssl )
+static int ssl_tls13_write_client_finished( mbedtls_ssl_context *ssl )
 {
-    mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_FLUSH_BUFFERS );
     return( mbedtls_ssl_tls13_write_finished_message( ssl ) );
 }
 
@@ -4149,7 +4149,7 @@ int mbedtls_ssl_tls13_handshake_client_step( mbedtls_ssl_context *ssl )
             break;
 
         case MBEDTLS_SSL_CLIENT_FINISHED:
-            ret = ssl_tls1_3_write_client_finished( ssl );
+            ret = ssl_tls13_write_client_finished( ssl );
             break;
 
         /*
