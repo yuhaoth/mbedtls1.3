@@ -550,7 +550,7 @@ int mbedtls_ssl_tls13_key_schedule_stage_handshake(
  * \returns    \c 0 on success.
  * \returns    A negative error code on failure.
  */
-int mbedtls_ssl_tls1_3_key_schedule_stage_application(
+int mbedtls_ssl_tls13_key_schedule_stage_application(
     mbedtls_ssl_context *ssl );
 
 /*
@@ -609,7 +609,7 @@ int mbedtls_ssl_tls13_generate_handshake_keys(
  * \returns    \c 0 on success.
  * \returns    A negative error code on failure.
  */
-int mbedtls_ssl_tls1_3_generate_application_keys(
+int mbedtls_ssl_tls13_generate_application_keys(
     mbedtls_ssl_context* ssl, mbedtls_ssl_key_set *traffic_keys );
 
 /**
@@ -646,11 +646,11 @@ int mbedtls_ssl_tls1_3_generate_resumption_master_secret(
  * \returns    \c 0 on success.
  * \returns    A negative error code on failure.
  */
-int mbedtls_ssl_tls1_3_calc_finished( mbedtls_ssl_context* ssl,
-                                      unsigned char* dst,
-                                      size_t dst_len,
-                                      size_t *actual_len,
-                                      int from );
+int mbedtls_ssl_tls13_calculate_verify_data( mbedtls_ssl_context *ssl,
+                                             unsigned char *dst,
+                                             size_t dst_len,
+                                             size_t *actual_len,
+                                             int from );
 
 #if defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
 #define MBEDTLS_SSL_TLS1_3_PSK_EXTERNAL   0

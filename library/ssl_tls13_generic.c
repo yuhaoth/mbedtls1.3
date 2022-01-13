@@ -2065,7 +2065,7 @@ static int ssl_finished_out_prepare( mbedtls_ssl_context* ssl )
     int ret;
 
     /* Compute transcript of handshake up to now. */
-    ret = mbedtls_ssl_tls1_3_calc_finished( ssl,
+    ret = mbedtls_ssl_tls13_calculate_verify_data( ssl,
                     ssl->handshake->state_local.finished_out.digest,
                     sizeof( ssl->handshake->state_local.finished_out.digest ),
                     &ssl->handshake->state_local.finished_out.digest_len,
@@ -2106,15 +2106,15 @@ static int ssl_finished_out_postprocess( mbedtls_ssl_context* ssl )
         mbedtls_ssl_key_set traffic_keys;
         mbedtls_ssl_transform *transform_application;
 
-        ret = mbedtls_ssl_tls1_3_key_schedule_stage_application( ssl );
+        ret = mbedtls_ssl_tls13_key_schedule_stage_application( ssl );
         if( ret != 0 )
         {
             MBEDTLS_SSL_DEBUG_RET( 1,
-               "mbedtls_ssl_tls1_3_key_schedule_stage_application", ret );
+               "mbedtls_ssl_tls13_key_schedule_stage_application", ret );
             return( ret );
         }
 
-        ret = mbedtls_ssl_tls1_3_generate_application_keys(
+        ret = mbedtls_ssl_tls13_generate_application_keys(
                      ssl, &traffic_keys );
         if( ret != 0 )
         {
@@ -2190,11 +2190,11 @@ static int ssl_finished_out_write( mbedtls_ssl_context* ssl,
  * Implementation
  */
 
-static int ssl_finished_in_preprocess( mbedtls_ssl_context* ssl )
+static int ssl_tls13_preprocess_finished_message( mbedtls_ssl_context* ssl )
 {
     int ret;
 
-    ret = mbedtls_ssl_tls1_3_calc_finished( ssl,
+    ret = mbedtls_ssl_tls13_calculate_verify_data( ssl,
                     ssl->handshake->state_local.finished_in.digest,
                     sizeof( ssl->handshake->state_local.finished_in.digest ),
                     &ssl->handshake->state_local.finished_in.digest_len,
@@ -2208,9 +2208,9 @@ static int ssl_finished_in_preprocess( mbedtls_ssl_context* ssl )
     return( 0 );
 }
 
-static int ssl_finished_in_parse( mbedtls_ssl_context* ssl,
-                                  const unsigned char* buf,
-                                  size_t buflen )
+static int ssl_tls13_parse_finished_message( mbedtls_ssl_context* ssl,
+                                             const unsigned char* buf,
+                                             size_t buflen )
 {
     /* Structural validation */
     if( buflen != ssl->handshake->state_local.finished_in.digest_len )
@@ -2243,21 +2243,21 @@ static int ssl_finished_in_parse( mbedtls_ssl_context* ssl,
 }
 
 #if defined(MBEDTLS_SSL_CLI_C)
-static int ssl_finished_in_postprocess_cli( mbedtls_ssl_context *ssl )
+static int ssl_tls13_postprocess_server_finished_message( mbedtls_ssl_context *ssl )
 {
     int ret = 0;
     mbedtls_ssl_key_set traffic_keys;
     mbedtls_ssl_transform *transform_application;
 
-    ret = mbedtls_ssl_tls1_3_key_schedule_stage_application( ssl );
+    ret = mbedtls_ssl_tls13_key_schedule_stage_application( ssl );
     if( ret != 0 )
     {
         MBEDTLS_SSL_DEBUG_RET( 1,
-           "mbedtls_ssl_tls1_3_key_schedule_stage_application", ret );
+           "mbedtls_ssl_tls13_key_schedule_stage_application", ret );
         return( ret );
     }
 
-    ret = mbedtls_ssl_tls1_3_generate_application_keys(
+    ret = mbedtls_ssl_tls13_generate_application_keys(
         ssl, &traffic_keys );
     if( ret != 0 )
     {
@@ -2298,7 +2298,7 @@ static int ssl_finished_in_postprocess_cli( mbedtls_ssl_context *ssl )
 }
 #endif /* MBEDTLS_SSL_CLI_C */
 
-static int ssl_finished_in_postprocess( mbedtls_ssl_context* ssl )
+static int ssl_tls13_postprocess_finished_message( mbedtls_ssl_context *ssl )
 {
 #if defined(MBEDTLS_SSL_SRV_C)
     int ret;
@@ -2321,14 +2321,14 @@ static int ssl_finished_in_postprocess( mbedtls_ssl_context* ssl )
 #if defined(MBEDTLS_SSL_CLI_C)
     if( ssl->conf->endpoint == MBEDTLS_SSL_IS_CLIENT )
     {
-        return( ssl_finished_in_postprocess_cli( ssl ) );
+        return( ssl_tls13_postprocess_server_finished_message( ssl ) );
     }
 #endif /* MBEDTLS_SSL_CLI_C */
 
     return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
 }
 
-int mbedtls_ssl_finished_in_process( mbedtls_ssl_context* ssl )
+int mbedtls_ssl_tls13_process_finished_message( mbedtls_ssl_context *ssl )
 {
     int ret = 0;
     unsigned char *buf;
@@ -2337,18 +2337,18 @@ int mbedtls_ssl_finished_in_process( mbedtls_ssl_context* ssl )
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> parse finished" ) );
 
     /* Preprocessing step: Compute handshake digest */
-    MBEDTLS_SSL_PROC_CHK( ssl_finished_in_preprocess( ssl ) );
+    MBEDTLS_SSL_PROC_CHK( ssl_tls13_preprocess_finished_message( ssl ) );
 
     MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_tls1_3_fetch_handshake_msg(
                               ssl, MBEDTLS_SSL_HS_FINISHED,
                               &buf, &buflen ) );
-    MBEDTLS_SSL_PROC_CHK( ssl_finished_in_parse( ssl, buf, buflen ) );
+    MBEDTLS_SSL_PROC_CHK( ssl_tls13_parse_finished_message( ssl, buf, buflen ) );
     mbedtls_ssl_tls1_3_add_hs_msg_to_checksum(
         ssl, MBEDTLS_SSL_HS_FINISHED, buf, buflen );
 #if defined(MBEDTLS_SSL_USE_MPS)
     MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_mps_hs_consume_full_hs_msg( ssl ) );
 #endif /* MBEDTLS_SSL_USE_MPS */
-    MBEDTLS_SSL_PROC_CHK( ssl_finished_in_postprocess( ssl ) );
+    MBEDTLS_SSL_PROC_CHK( ssl_tls13_postprocess_finished_message( ssl ) );
 
 cleanup:
 

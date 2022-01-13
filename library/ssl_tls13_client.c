@@ -3663,7 +3663,7 @@ static int ssl_tls1_3_process_certificate_verify( mbedtls_ssl_context *ssl )
  */
 static int ssl_tls1_3_process_server_finished( mbedtls_ssl_context *ssl )
 {
-    return( mbedtls_ssl_finished_in_process( ssl ) );
+    return( mbedtls_ssl_tls13_process_finished_message( ssl ) );
 }
 
 /*

@@ -1360,7 +1360,7 @@ int mbedtls_ssl_write_record( mbedtls_ssl_context *ssl, uint8_t force_flush );
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
 int mbedtls_ssl_read_certificate_process(mbedtls_ssl_context* ssl);
 int mbedtls_ssl_write_certificate_process(mbedtls_ssl_context* ssl);
-int mbedtls_ssl_finished_in_process( mbedtls_ssl_context* ssl );
+int mbedtls_ssl_tls13_process_finished_message( mbedtls_ssl_context *ssl );
 int mbedtls_ssl_finished_out_process( mbedtls_ssl_context* ssl );
 
 #if defined(MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE)

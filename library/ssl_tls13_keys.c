@@ -736,7 +736,7 @@ exit:
 /* Generate application traffic keys since any records following a 1-RTT Finished message
  * MUST be encrypted under the application traffic key.
  */
-int mbedtls_ssl_tls1_3_generate_application_keys(
+int mbedtls_ssl_tls13_generate_application_keys(
                                         mbedtls_ssl_context *ssl,
                                         mbedtls_ssl_key_set *traffic_keys )
 {
@@ -1027,7 +1027,7 @@ int mbedtls_ssl_tls13_key_schedule_stage_handshake( mbedtls_ssl_context *ssl )
     return( 0 );
 }
 
-int mbedtls_ssl_tls1_3_key_schedule_stage_application(
+int mbedtls_ssl_tls13_key_schedule_stage_application(
     mbedtls_ssl_context *ssl )
 {
     int ret = 0;
@@ -1107,11 +1107,11 @@ exit:
     return( ret );
 }
 
-int mbedtls_ssl_tls1_3_calc_finished( mbedtls_ssl_context* ssl,
-                                      unsigned char* dst,
-                                      size_t dst_len,
-                                      size_t *actual_len,
-                                      int from )
+int mbedtls_ssl_tls13_calculate_verify_data( mbedtls_ssl_context *ssl,
+                                             unsigned char *dst,
+                                             size_t dst_len,
+                                             size_t *actual_len,
+                                             int from )
 {
     int ret;
 
