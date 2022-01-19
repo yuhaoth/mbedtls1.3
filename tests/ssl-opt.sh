@@ -2525,6 +2525,20 @@ run_test    "TLS 1.3, TLS1-3-AES-128-CCM-SHA256 with ECDHE-ECDSA, SRV auth, HRR 
             -c "Ciphersuite is TLS1-3-AES-128-CCM-SHA256" \
             -c "Verifying peer X.509 certificate... ok"
 
+# configure client to initially sent incorrect group, which will be corrected with HRR from the server
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_CLI_C
+run_test    "TLS 1.3 O-M, TLS1-3-AES-256-GCM-SHA384 with ECDHE-ECDSA, SRV auth, HRR enforcing group" \
+            "$O_SRV -msg -tls1_3 -ciphersuites TLS_AES_256_GCM_SHA384 -groups P-256 -num_tickets 0 -no_resume_ephemeral -no_cache -stateless" \
+            "$P_CLI debug_level=4 force_version=tls1_3 server_name=localhost force_ciphersuite=TLS1-3-AES-256-GCM-SHA384 tls13_kex_modes=ephemeral named_groups=secp384r1,secp256r1" \
+            0 \
+            -c "received HelloRetryRequest message"       \
+            -c "Protocol is TLSv1.3"                      \
+            -c "Ciphersuite is TLS1-3-AES-256-GCM-SHA384" \
+            -c "Verifying peer X.509 certificate... ok"   \
+            -c "HTTP/1.0 200 ok"
+
 # test early data status - not sent
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
 requires_config_enabled MBEDTLS_DEBUG_C
