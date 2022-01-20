@@ -1980,27 +1980,6 @@ cleanup:
     return( ret );
 }
 
-void mbedtls_ssl_handshake_wrapup_tls13( mbedtls_ssl_context *ssl )
-{
-
-    MBEDTLS_SSL_DEBUG_MSG( 3, ( "=> handshake wrapup" ) );
-
-
-    /*
-     * Free the previous session and switch in the current one
-     */
-    if( ssl->session )
-    {
-
-        mbedtls_ssl_session_free( ssl->session );
-        mbedtls_free( ssl->session );
-    }
-    ssl->session = ssl->session_negotiate;
-    ssl->session_negotiate = NULL;
-
-    MBEDTLS_SSL_DEBUG_MSG( 3, ( "<= handshake wrapup" ) );
-}
-
 /*
  *
  * STATE HANDLING: Write and send Finished message.
@@ -2161,6 +2140,25 @@ cleanup:
 
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= write finished message" ) );
     return( ret );
+}
+
+void mbedtls_ssl_tls13_handshake_wrapup( mbedtls_ssl_context *ssl )
+{
+
+    MBEDTLS_SSL_DEBUG_MSG( 3, ( "=> handshake wrapup" ) );
+
+    /*
+     * Free the previous session and switch to the current one.
+     */
+    if( ssl->session )
+    {
+        mbedtls_ssl_session_free( ssl->session );
+        mbedtls_free( ssl->session );
+    }
+    ssl->session = ssl->session_negotiate;
+    ssl->session_negotiate = NULL;
+
+    MBEDTLS_SSL_DEBUG_MSG( 3, ( "<= handshake wrapup" ) );
 }
 
 /*
@@ -2838,6 +2836,7 @@ int mbedtls_ecp_tls_13_write_group( const mbedtls_ecp_group *grp, size_t *olen,
 }
 
 #endif /* MBEDTLS_ECP_C */
+
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 
 #endif /* MBEDTLS_SSL_TLS_C */

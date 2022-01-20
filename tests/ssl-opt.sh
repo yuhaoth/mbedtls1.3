@@ -10503,11 +10503,10 @@ requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
 requires_config_enabled MBEDTLS_DEBUG_C
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_disabled MBEDTLS_USE_PSA_CRYPTO
-run_test    "TLS 1.3: Test client hello msg work - openssl" \
-            "$O_NEXT_SRV -tls1_3 -msg -no_middlebox" \
+run_test    "TLS 1.3: minimal feature sets - openssl" \
+            "$O_NEXT_SRV -msg -tls1_3 -no_middlebox -num_tickets 0 -no_resume_ephemeral -no_cache" \
             "$P_CLI debug_level=3 min_version=tls1_3 max_version=tls1_3" \
             0 \
-            -s "ServerHello"                \
             -c "tls1_3 client state: 0"     \
             -c "tls1_3 client state: 2"     \
             -c "tls1_3 client state: 26"    \
@@ -10529,7 +10528,8 @@ run_test    "TLS 1.3: Test client hello msg work - openssl" \
             -c "=> parse certificate verify"          \
             -c "<= parse certificate verify"          \
             -c "mbedtls_ssl_tls13_process_certificate_verify() returned 0" \
-            -c "<= parse finished message"
+            -c "<= parse finished message" \
+            -c "HTTP/1.0 200 ok"
 
 requires_gnutls_tls1_3
 requires_gnutls_next_no_ticket
@@ -10538,10 +10538,11 @@ requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
 requires_config_enabled MBEDTLS_DEBUG_C
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_disabled MBEDTLS_USE_PSA_CRYPTO
-run_test    "TLS 1.3: Test client hello msg work - gnutls" \
+run_test    "TLS 1.3: minimal feature sets - gnutls" \
             "$G_NEXT_SRV --debug=4 --priority=NORMAL:-VERS-ALL:+VERS-TLS1.3:+CIPHER-ALL:%NO_TICKETS:%DISABLE_TLS13_COMPAT_MODE --disable-client-cert" \
             "$P_CLI debug_level=3 min_version=tls1_3 max_version=tls1_3" \
             0 \
+            -s "SERVER HELLO was queued"    \
             -c "tls1_3 client state: 0"     \
             -c "tls1_3 client state: 2"     \
             -c "tls1_3 client state: 26"    \
@@ -10563,7 +10564,8 @@ run_test    "TLS 1.3: Test client hello msg work - gnutls" \
             -c "=> parse certificate verify"          \
             -c "<= parse certificate verify"          \
             -c "mbedtls_ssl_tls13_process_certificate_verify() returned 0" \
-            -c "<= parse finished message"
+            -c "<= parse finished message" \
+            -c "HTTP/1.0 200 OK"
 
 
 # Test heap memory usage after handshake

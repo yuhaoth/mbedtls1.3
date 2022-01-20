@@ -3730,11 +3730,15 @@ static int ssl_tls1_3_handshake_wrapup( mbedtls_ssl_context *ssl )
     if( ret != 0 )
         return( ret );
 #else
+    MBEDTLS_SSL_DEBUG_MSG( 1, ( "Switch to application keys for inbound traffic" ) );
     mbedtls_ssl_set_inbound_transform ( ssl, ssl->transform_application );
+
+    MBEDTLS_SSL_DEBUG_MSG( 1, ( "Switch to application keys for outbound traffic" ) );
     mbedtls_ssl_set_outbound_transform( ssl, ssl->transform_application );
 #endif /* MBEDTLS_SSL_USE_MPS */
 
-    mbedtls_ssl_handshake_wrapup_tls13( ssl );
+    mbedtls_ssl_tls13_handshake_wrapup( ssl );
+
     mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_HANDSHAKE_OVER );
 
     return( 0 );
