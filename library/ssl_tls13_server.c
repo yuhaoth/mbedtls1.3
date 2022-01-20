@@ -29,6 +29,7 @@
 #include "mbedtls/debug.h"
 #include "mbedtls/ssl.h"
 #include "mbedtls/error.h"
+#include "mbedtls/constant_time.h"
 
 #include "ssl_misc.h"
 #include "ssl_tls13_keys.h"
@@ -599,7 +600,7 @@ int mbedtls_ssl_parse_client_psk_identity_ext(
             /* Identity is not a big secret since clients send it in the clear,
              * but treat it carefully anyway, just in case */
             if( item_length != ssl->conf->psk_identity_len ||
-                mbedtls_ssl_safer_memcmp( ssl->conf->psk_identity, buf, item_length ) != 0 )
+                mbedtls_ct_memcmp( ssl->conf->psk_identity, buf, item_length ) != 0 )
             {
                 ret = MBEDTLS_ERR_SSL_UNKNOWN_IDENTITY;
             }
@@ -857,8 +858,7 @@ psk_parsing_successful:
         MBEDTLS_SSL_DEBUG_BUF( 3, "psk binder ( received ): ",
                                buf, item_length );
 
-        if( mbedtls_ssl_safer_memcmp( server_computed_binder, buf,
-                                      item_length ) != 0 )
+        if( mbedtls_ct_memcmp( server_computed_binder, buf, item_length ) != 0 )
         {
             MBEDTLS_SSL_DEBUG_MSG( 1,
                 ( "Received psk binder does not match computed psk binder." ) );

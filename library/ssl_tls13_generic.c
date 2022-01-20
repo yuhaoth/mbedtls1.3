@@ -29,6 +29,9 @@
 #include "mbedtls/ssl_ticket.h"
 #include "mbedtls/debug.h"
 #include "mbedtls/error.h"
+#include "mbedtls/oid.h"
+#include "mbedtls/platform.h"
+#include "mbedtls/constant_time.h"
 #include "mbedtls/ssl.h"
 #include "mbedtls/hkdf.h"
 #include <string.h>
@@ -40,16 +43,6 @@
 #endif /* MBEDTLS_SSL_USE_MPS */
 
 #include "ecp_internal.h"
-
-#include "mbedtls/oid.h"
-
-#if defined(MBEDTLS_PLATFORM_C)
-#include "mbedtls/platform.h"
-#else
-#include <stdlib.h>
-#define mbedtls_calloc    calloc
-#define mbedtls_free       free
-#endif /* MBEDTLS_PLATFORM_C */
 
 #if defined(MBEDTLS_SSL_USE_MPS)
 int mbedtls_ssl_tls1_3_fetch_handshake_msg( mbedtls_ssl_context *ssl,
@@ -1036,7 +1029,7 @@ static int ssl_tls13_parse_certificate_verify( mbedtls_ssl_context *ssl,
             break;
 #if defined(MBEDTLS_X509_RSASSA_PSS_SUPPORT)
         case MBEDTLS_TLS13_SIG_RSA_PSS_RSAE_SHA256:
-            MBEDTLS_SSL_DEBUG_MSG( 4, ( "Certificate Verify: using RSA" ) );
+            MBEDTLS_SSL_DEBUG_MSG( 4, ( "Certificate Verify: using RSA PSS" ) );
             md_alg = MBEDTLS_MD_SHA256;
             sig_alg = MBEDTLS_PK_RSASSA_PSS;
             break;
@@ -2218,9 +2211,9 @@ static int ssl_tls13_parse_finished_message( mbedtls_ssl_context *ssl,
                            expected_verify_data_len );
 
     /* Semantic validation */
-    if( mbedtls_ssl_safer_memcmp( buf,
-                                  expected_verify_data,
-                                  expected_verify_data_len ) != 0 )
+    if( mbedtls_ct_memcmp( buf,
+                           expected_verify_data,
+                           expected_verify_data_len ) != 0 )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad finished message" ) );
 
