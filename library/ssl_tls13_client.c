@@ -654,355 +654,75 @@ static int ssl_reset_key_share( mbedtls_ssl_context *ssl )
 
 #endif /* MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED */
 
-/*
- *
- * STATE HANDLING: Write Early-Data
- *
+/* Write cipher_suites
+ * CipherSuite cipher_suites<2..2^16-2>;
  */
-
- /*
-  * Overview
-  */
-
-  /* Main state-handling entry point; orchestrates the other functions. */
-int ssl_write_early_data_process( mbedtls_ssl_context* ssl );
-
-#define SSL_EARLY_DATA_WRITE 0
-#define SSL_EARLY_DATA_SKIP  1
-static int ssl_write_early_data_coordinate( mbedtls_ssl_context* ssl );
-
-#if defined(MBEDTLS_ZERO_RTT)
-static int ssl_write_early_data_prepare( mbedtls_ssl_context* ssl );
-
-/* Write early-data message */
-static int ssl_write_early_data_write( mbedtls_ssl_context* ssl,
-    unsigned char* buf,
-    size_t buflen,
-    size_t* olen );
-#endif /* MBEDTLS_ZERO_RTT */
-
-/* Update the state after handling the outgoing early-data message. */
-static int ssl_write_early_data_postprocess( mbedtls_ssl_context* ssl );
-
-/*
- * Implementation
- */
-
-int ssl_write_early_data_process( mbedtls_ssl_context* ssl )
+static int ssl_tls13_write_client_hello_cipher_suites(
+            mbedtls_ssl_context *ssl,
+            unsigned char *buf,
+            unsigned char *end,
+            size_t *olen )
 {
-    int ret;
-#if defined(MBEDTLS_SSL_USE_MPS)
-    mbedtls_writer *msg;
-    unsigned char *buf;
-    mbedtls_mps_size_t buf_len, msg_len;
-#endif /* MBEDTLS_SSL_USE_MPS */
-    MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> write early data" ) );
+    unsigned char *p = buf;
+    const int *ciphersuite_list;
+    unsigned char *cipher_suites_ptr; /* Start of the cipher_suites list */
+    size_t cipher_suites_len;
 
-    MBEDTLS_SSL_PROC_CHK_NEG( ssl_write_early_data_coordinate( ssl ) );
-    if( ret == SSL_EARLY_DATA_WRITE )
-    {
-#if defined(MBEDTLS_ZERO_RTT)
+    *olen = 0 ;
 
-        MBEDTLS_SSL_PROC_CHK( ssl_write_early_data_prepare( ssl ) );
-
-#if defined(MBEDTLS_SSL_USE_MPS)
-        MBEDTLS_SSL_PROC_CHK( mbedtls_mps_write_application( &ssl->mps->l4,
-                                                             &msg ) );
-
-        /* Request write-buffer */
-        MBEDTLS_SSL_PROC_CHK( mbedtls_writer_get( msg, MBEDTLS_MPS_SIZE_MAX,
-                                                  &buf, &buf_len ) );
-
-        MBEDTLS_SSL_PROC_CHK( ssl_write_early_data_write(
-                                  ssl, buf, buf_len, &msg_len ) );
-
-        /* Commit message */
-        MBEDTLS_SSL_PROC_CHK( mbedtls_writer_commit_partial( msg,
-                                                             buf_len - msg_len ) );
-
-        MBEDTLS_SSL_PROC_CHK( mbedtls_mps_dispatch( &ssl->mps->l4 ) );
-
-        /* Update state */
-        MBEDTLS_SSL_PROC_CHK( ssl_write_early_data_postprocess( ssl ) );
-
-#else  /* MBEDTLS_SSL_USE_MPS */
-
-        /* Write early-data to message buffer. */
-        MBEDTLS_SSL_PROC_CHK( ssl_write_early_data_write( ssl, ssl->out_msg,
-                                                          MBEDTLS_SSL_OUT_CONTENT_LEN,
-                                                          &ssl->out_msglen ) );
-
-        ssl->out_msgtype = MBEDTLS_SSL_MSG_APPLICATION_DATA;
-
-        /* Update state */
-        MBEDTLS_SSL_PROC_CHK( ssl_write_early_data_postprocess( ssl ) );
-
-        /* Dispatch message */
-        MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_write_record( ssl, SSL_FORCE_FLUSH ) );
-
-#endif /* MBEDTLS_SSL_USE_MPS */
-
-#else /* MBEDTLS_ZERO_RTT */
-        ((void) buf);
-        ((void) buf_len);
-        ((void) msg);
-        ((void) msg_len);
-        /* Should never happen */
-        return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
-
-#endif /* MBEDTLS_ZERO_RTT */
-    }
-    else
-    {
-        /* Update state */
-        MBEDTLS_SSL_PROC_CHK( ssl_write_early_data_postprocess( ssl ) );
-    }
-
-cleanup:
-
-    MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= write early data" ) );
-    return( ret );
-}
-
-#if defined(MBEDTLS_ZERO_RTT)
-
-static int ssl_write_early_data_coordinate( mbedtls_ssl_context* ssl )
-{
-    if( ssl->handshake->early_data != MBEDTLS_SSL_EARLY_DATA_ON )
-        return( SSL_EARLY_DATA_SKIP );
-
-    return( SSL_EARLY_DATA_WRITE );
-}
-
-static int ssl_write_early_data_prepare( mbedtls_ssl_context* ssl )
-{
-    int ret;
-    mbedtls_ssl_key_set traffic_keys;
-
-    const unsigned char *psk;
-    size_t psk_len;
-    const unsigned char *psk_identity;
-    size_t psk_identity_len;
-
-    mbedtls_ssl_transform *transform_earlydata;
-
-    /* From RFC 8446:
-     * "The PSK used to encrypt the
-     *  early data MUST be the first PSK listed in the client's
-     *  'pre_shared_key' extension."
+    /*
+     * Ciphersuite list
+     *
+     * This is a list of the symmetric cipher options supported by
+     * the client, specifically the record protection algorithm
+     * ( including secret key length ) and a hash to be used with
+     * HKDF, in descending order of client preference.
      */
+    ciphersuite_list = ssl->conf->ciphersuite_list;
 
-    if( mbedtls_ssl_get_psk_to_offer( ssl, &psk, &psk_len,
-                                      &psk_identity, &psk_identity_len ) != 0 )
+    /* Check there is space for the cipher suite list length (2 bytes). */
+    MBEDTLS_SSL_CHK_BUF_PTR( p, end, 2 );
+    p += 2;
+
+    /* Write cipher_suites */
+    cipher_suites_ptr = p;
+    for ( size_t i = 0; ciphersuite_list[i] != 0; i++ )
     {
-        /* This should never happen: We can only have gone past
-         * ssl_write_early_data_coordinate() if we have offered a PSK. */
-        return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
-    }
+        int cipher_suite = ciphersuite_list[i];
+        const mbedtls_ssl_ciphersuite_t *ciphersuite_info;
 
-    if( ( ret = mbedtls_ssl_set_hs_psk( ssl, psk, psk_len ) ) != 0 )
-    {
-        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_set_hs_psk", ret );
-        return( ret );
-    }
+        ciphersuite_info = mbedtls_ssl_ciphersuite_from_id( cipher_suite );
+        if( ciphersuite_info == NULL )
+            continue;
+        if( !( MBEDTLS_SSL_MINOR_VERSION_4 >= ciphersuite_info->min_minor_ver &&
+               MBEDTLS_SSL_MINOR_VERSION_4 <= ciphersuite_info->max_minor_ver ) )
+            continue;
 
-    /* Start the TLS 1.3 key schedule: Set the PSK and derive early secret. */
-    ret = mbedtls_ssl_tls1_3_key_schedule_stage_early( ssl );
-    if( ret != 0 )
-    {
-        MBEDTLS_SSL_DEBUG_RET( 1,
-             "mbedtls_ssl_tls1_3_key_schedule_stage_early", ret );
-        return( ret );
-    }
+        MBEDTLS_SSL_DEBUG_MSG( 3, ( "client hello, add ciphersuite: %04x, %s",
+                                    (unsigned int) cipher_suite,
+                                    ciphersuite_info->name ) );
 
-    /* Derive 0-RTT key material */
-    ret = mbedtls_ssl_tls1_3_generate_early_data_keys(
-        ssl, &traffic_keys );
-    if( ret != 0 )
-    {
-        MBEDTLS_SSL_DEBUG_RET( 1,
-            "mbedtls_ssl_tls1_3_generate_early_data_keys", ret );
-        return( ret );
-    }
-
-    transform_earlydata =
-        mbedtls_calloc( 1, sizeof( mbedtls_ssl_transform ) );
-    if( transform_earlydata == NULL )
-        return( MBEDTLS_ERR_SSL_ALLOC_FAILED );
-
-    ret = mbedtls_ssl_tls13_populate_transform(
-                          transform_earlydata,
-                          ssl->conf->endpoint,
-                          ssl->session_negotiate->ciphersuite,
-                          &traffic_keys,
-                          ssl );
-    if( ret != 0 )
-        return( ret );
-
-#if defined(MBEDTLS_SSL_USE_MPS)
-    /* Register transform with MPS. */
-    ret = mbedtls_mps_add_key_material( &ssl->mps->l4,
-                                        transform_earlydata,
-                                        &ssl->handshake->epoch_earlydata );
-    if( ret != 0 )
-        return( ret );
-
-    /* Use new transform for outgoing data. */
-    ret = mbedtls_mps_set_outgoing_keys( &ssl->mps->l4,
-                                         ssl->handshake->epoch_earlydata );
-    if( ret != 0 )
-        return( ret );
-#else /* MBEDTLS_SSL_USE_MPS */
-
-    /* Activate transform */
-    MBEDTLS_SSL_DEBUG_MSG( 1, ( "Switch to 0-RTT keys for outbound traffic" ) );
-    ssl->handshake->transform_earlydata = transform_earlydata;
-    mbedtls_ssl_set_outbound_transform( ssl, ssl->handshake->transform_earlydata );
-
-#endif /* MBEDTLS_SSL_USE_MPS */
-
-    return( 0 );
-}
-
-static int ssl_write_early_data_write( mbedtls_ssl_context* ssl,
-    unsigned char* buf,
-    size_t buflen,
-    size_t* olen )
-{
-    if( ssl->early_data_len > buflen )
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "buffer too small" ) );
-        return ( MBEDTLS_ERR_SSL_ALLOC_FAILED );
-    }
-    else
-    {
-        memcpy( buf, ssl->early_data_buf, ssl->early_data_len );
-
-#if defined(MBEDTLS_SSL_USE_MPS)
-        *olen = ssl->early_data_len;
-        MBEDTLS_SSL_DEBUG_BUF( 3, "Early Data", buf, ssl->early_data_len );
-#else
-        buf[ssl->early_data_len] = MBEDTLS_SSL_MSG_APPLICATION_DATA;
-        *olen = ssl->early_data_len + 1;
-
-        MBEDTLS_SSL_DEBUG_BUF( 3, "Early Data", ssl->out_msg, *olen );
-#endif /* MBEDTLS_SSL_USE_MPS */
-    }
-
-    return( 0 );
-}
-
-#else /* MBEDTLS_ZERO_RTT */
-
-static int ssl_write_early_data_coordinate( mbedtls_ssl_context* ssl )
-{
-    ((void) ssl);
-    return( SSL_EARLY_DATA_SKIP );
-}
-
-#endif /* MBEDTLS_ZERO_RTT */
-
-static int ssl_write_early_data_postprocess( mbedtls_ssl_context* ssl )
-{
-    /* Clear PSK we've used for the 0-RTT. */
-    mbedtls_ssl_remove_hs_psk( ssl );
-
-    mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_SERVER_HELLO );
-    return ( 0 );
-}
-
-
-/*
- *
- * STATE HANDLING: Write End-of-Early-Data
- *
- */
-
- /*
-  * Overview
-  */
-
-  /* Main state-handling entry point; orchestrates the other functions. */
-int ssl_write_end_of_early_data_process( mbedtls_ssl_context* ssl );
-
-#define SSL_END_OF_EARLY_DATA_WRITE 0
-#define SSL_END_OF_EARLY_DATA_SKIP  1
-static int ssl_write_end_of_early_data_coordinate( mbedtls_ssl_context* ssl );
-
-/* Update the state after handling the outgoing end-of-early-data message. */
-static int ssl_write_end_of_early_data_postprocess( mbedtls_ssl_context* ssl );
-
-/*
- * Implementation
- */
-
-int ssl_write_end_of_early_data_process( mbedtls_ssl_context* ssl )
-{
-    int ret;
-    MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> write EndOfEarlyData" ) );
-
-    MBEDTLS_SSL_PROC_CHK_NEG( ssl_write_end_of_early_data_coordinate( ssl ) );
-    if( ret == SSL_END_OF_EARLY_DATA_WRITE )
-    {
-        unsigned char *buf;
-        size_t buf_len;
-
-        MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_tls13_start_handshake_msg( ssl,
-                          MBEDTLS_SSL_HS_END_OF_EARLY_DATA, &buf, &buf_len ) );
-
-        mbedtls_ssl_tls13_add_hs_hdr_to_checksum(
-            ssl, MBEDTLS_SSL_HS_END_OF_EARLY_DATA, 0 );
-
-        MBEDTLS_SSL_PROC_CHK( ssl_write_end_of_early_data_postprocess( ssl ) );
-        MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_tls13_finish_handshake_msg( ssl, buf_len, 0 ) );
-    }
-    else
-    {
-        /* Update state */
-        MBEDTLS_SSL_PROC_CHK( ssl_write_end_of_early_data_postprocess( ssl ) );
-    }
-
-cleanup:
-
-    MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= write EndOfEarlyData" ) );
-    return( ret );
-}
-
-static int ssl_write_end_of_early_data_coordinate( mbedtls_ssl_context* ssl )
-{
-    ((void) ssl);
+        /* Check there is space for the cipher suite identifier (2 bytes). */
+        MBEDTLS_SSL_CHK_BUF_PTR( p, end, 2 );
+        MBEDTLS_PUT_UINT16_BE( cipher_suite, p, 0 );
+        p += 2;
 
 #if defined(MBEDTLS_ZERO_RTT)
-    if( ssl->handshake->early_data == MBEDTLS_SSL_EARLY_DATA_ON )
-    {
-        if( ssl->early_data_status == MBEDTLS_SSL_EARLY_DATA_ACCEPTED )
-            return( SSL_END_OF_EARLY_DATA_WRITE );
-
-        /*
-         * RFC 8446:
-         * "If the server does not send an "early_data"
-         *  extension in EncryptedExtensions, then the client MUST NOT send an
-         *  EndOfEarlyData message."
-         */
-
-        MBEDTLS_SSL_DEBUG_MSG( 4, ( "skip EndOfEarlyData, server rejected" ) );
-    }
+        /* For ZeroRTT we only add a single ciphersuite. */
+        break;
 #endif /* MBEDTLS_ZERO_RTT */
-
-    return( SSL_END_OF_EARLY_DATA_SKIP );
-}
-
-static int ssl_write_end_of_early_data_postprocess( mbedtls_ssl_context* ssl )
-{
-#if defined(MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE)
-    if( ssl_write_end_of_early_data_coordinate( ssl ) != SSL_END_OF_EARLY_DATA_WRITE )
-    {
-        mbedtls_ssl_handshake_set_state( ssl,
-                         MBEDTLS_SSL_CLIENT_CCS_AFTER_SERVER_FINISHED );
-        return( 0 );
     }
-#endif /* MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE */
-    mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_CLIENT_CERTIFICATE );
+
+    /* Write the cipher_suites length in number of bytes */
+    cipher_suites_len = p - cipher_suites_ptr;
+    MBEDTLS_PUT_UINT16_BE( cipher_suites_len, buf, 0 );
+    MBEDTLS_SSL_DEBUG_MSG( 3,
+                           ( "client hello, got %" MBEDTLS_PRINTF_SIZET " cipher suites",
+                             cipher_suites_len/2 ) );
+
+    /* Output the total length of cipher_suites field. */
+    *olen = p - buf;
+
     return( 0 );
 }
 
@@ -1510,77 +1230,6 @@ static int ssl_write_cookie_ext( mbedtls_ssl_context *ssl,
 /*
  * Functions for writing ClientHello message.
  */
-/* Write cipher_suites
- * CipherSuite cipher_suites<2..2^16-2>;
- */
-static int ssl_tls13_write_client_hello_cipher_suites(
-            mbedtls_ssl_context *ssl,
-            unsigned char *buf,
-            unsigned char *end,
-            size_t *olen )
-{
-    unsigned char *p = buf;
-    const int *ciphersuite_list;
-    unsigned char *cipher_suites_ptr; /* Start of the cipher_suites list */
-    size_t cipher_suites_len;
-
-    *olen = 0 ;
-
-    /*
-     * Ciphersuite list
-     *
-     * This is a list of the symmetric cipher options supported by
-     * the client, specifically the record protection algorithm
-     * ( including secret key length ) and a hash to be used with
-     * HKDF, in descending order of client preference.
-     */
-    ciphersuite_list = ssl->conf->ciphersuite_list;
-
-    /* Check there is space for the cipher suite list length (2 bytes). */
-    MBEDTLS_SSL_CHK_BUF_PTR( p, end, 2 );
-    p += 2;
-
-    /* Write cipher_suites */
-    cipher_suites_ptr = p;
-    for ( size_t i = 0; ciphersuite_list[i] != 0; i++ )
-    {
-        int cipher_suite = ciphersuite_list[i];
-        const mbedtls_ssl_ciphersuite_t *ciphersuite_info;
-
-        ciphersuite_info = mbedtls_ssl_ciphersuite_from_id( cipher_suite );
-        if( ciphersuite_info == NULL )
-            continue;
-        if( !( MBEDTLS_SSL_MINOR_VERSION_4 >= ciphersuite_info->min_minor_ver &&
-               MBEDTLS_SSL_MINOR_VERSION_4 <= ciphersuite_info->max_minor_ver ) )
-            continue;
-
-        MBEDTLS_SSL_DEBUG_MSG( 3, ( "client hello, add ciphersuite: %04x, %s",
-                                    (unsigned int) cipher_suite,
-                                    ciphersuite_info->name ) );
-
-        /* Check there is space for the cipher suite identifier (2 bytes). */
-        MBEDTLS_SSL_CHK_BUF_PTR( p, end, 2 );
-        MBEDTLS_PUT_UINT16_BE( cipher_suite, p, 0 );
-        p += 2;
-
-#if defined(MBEDTLS_ZERO_RTT)
-        /* For ZeroRTT we only add a single ciphersuite. */
-        break;
-#endif /* MBEDTLS_ZERO_RTT */
-    }
-
-    /* Write the cipher_suites length in number of bytes */
-    cipher_suites_len = p - cipher_suites_ptr;
-    MBEDTLS_PUT_UINT16_BE( cipher_suites_len, buf, 0 );
-    MBEDTLS_SSL_DEBUG_MSG( 3,
-                           ( "client hello, got %" MBEDTLS_PRINTF_SIZET " cipher suites",
-                             cipher_suites_len/2 ) );
-
-    /* Output the total length of cipher_suites field. */
-    *olen = p - buf;
-
-    return( 0 );
-}
 
 /*
  * Structure of ClientHello message:
@@ -3315,6 +2964,357 @@ static int ssl_tls13_parse_encrypted_extensions( mbedtls_ssl_context *ssl,
 static int ssl_tls13_postprocess_encrypted_extensions( mbedtls_ssl_context *ssl )
 {
     mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_CERTIFICATE_REQUEST );
+    return( 0 );
+}
+
+/*
+ *
+ * STATE HANDLING: Write Early-Data
+ *
+ */
+
+ /*
+  * Overview
+  */
+
+  /* Main state-handling entry point; orchestrates the other functions. */
+int ssl_write_early_data_process( mbedtls_ssl_context* ssl );
+
+#define SSL_EARLY_DATA_WRITE 0
+#define SSL_EARLY_DATA_SKIP  1
+static int ssl_write_early_data_coordinate( mbedtls_ssl_context* ssl );
+
+#if defined(MBEDTLS_ZERO_RTT)
+static int ssl_write_early_data_prepare( mbedtls_ssl_context* ssl );
+
+/* Write early-data message */
+static int ssl_write_early_data_write( mbedtls_ssl_context* ssl,
+    unsigned char* buf,
+    size_t buflen,
+    size_t* olen );
+#endif /* MBEDTLS_ZERO_RTT */
+
+/* Update the state after handling the outgoing early-data message. */
+static int ssl_write_early_data_postprocess( mbedtls_ssl_context* ssl );
+
+/*
+ * Implementation
+ */
+
+int ssl_write_early_data_process( mbedtls_ssl_context* ssl )
+{
+    int ret;
+#if defined(MBEDTLS_SSL_USE_MPS)
+    mbedtls_writer *msg;
+    unsigned char *buf;
+    mbedtls_mps_size_t buf_len, msg_len;
+#endif /* MBEDTLS_SSL_USE_MPS */
+    MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> write early data" ) );
+
+    MBEDTLS_SSL_PROC_CHK_NEG( ssl_write_early_data_coordinate( ssl ) );
+    if( ret == SSL_EARLY_DATA_WRITE )
+    {
+#if defined(MBEDTLS_ZERO_RTT)
+
+        MBEDTLS_SSL_PROC_CHK( ssl_write_early_data_prepare( ssl ) );
+
+#if defined(MBEDTLS_SSL_USE_MPS)
+        MBEDTLS_SSL_PROC_CHK( mbedtls_mps_write_application( &ssl->mps->l4,
+                                                             &msg ) );
+
+        /* Request write-buffer */
+        MBEDTLS_SSL_PROC_CHK( mbedtls_writer_get( msg, MBEDTLS_MPS_SIZE_MAX,
+                                                  &buf, &buf_len ) );
+
+        MBEDTLS_SSL_PROC_CHK( ssl_write_early_data_write(
+                                  ssl, buf, buf_len, &msg_len ) );
+
+        /* Commit message */
+        MBEDTLS_SSL_PROC_CHK( mbedtls_writer_commit_partial( msg,
+                                                             buf_len - msg_len ) );
+
+        MBEDTLS_SSL_PROC_CHK( mbedtls_mps_dispatch( &ssl->mps->l4 ) );
+
+        /* Update state */
+        MBEDTLS_SSL_PROC_CHK( ssl_write_early_data_postprocess( ssl ) );
+
+#else  /* MBEDTLS_SSL_USE_MPS */
+
+        /* Write early-data to message buffer. */
+        MBEDTLS_SSL_PROC_CHK( ssl_write_early_data_write( ssl, ssl->out_msg,
+                                                          MBEDTLS_SSL_OUT_CONTENT_LEN,
+                                                          &ssl->out_msglen ) );
+
+        ssl->out_msgtype = MBEDTLS_SSL_MSG_APPLICATION_DATA;
+
+        /* Update state */
+        MBEDTLS_SSL_PROC_CHK( ssl_write_early_data_postprocess( ssl ) );
+
+        /* Dispatch message */
+        MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_write_record( ssl, SSL_FORCE_FLUSH ) );
+
+#endif /* MBEDTLS_SSL_USE_MPS */
+
+#else /* MBEDTLS_ZERO_RTT */
+        ((void) buf);
+        ((void) buf_len);
+        ((void) msg);
+        ((void) msg_len);
+        /* Should never happen */
+        return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
+
+#endif /* MBEDTLS_ZERO_RTT */
+    }
+    else
+    {
+        /* Update state */
+        MBEDTLS_SSL_PROC_CHK( ssl_write_early_data_postprocess( ssl ) );
+    }
+
+cleanup:
+
+    MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= write early data" ) );
+    return( ret );
+}
+
+#if defined(MBEDTLS_ZERO_RTT)
+
+static int ssl_write_early_data_coordinate( mbedtls_ssl_context* ssl )
+{
+    if( ssl->handshake->early_data != MBEDTLS_SSL_EARLY_DATA_ON )
+        return( SSL_EARLY_DATA_SKIP );
+
+    return( SSL_EARLY_DATA_WRITE );
+}
+
+static int ssl_write_early_data_prepare( mbedtls_ssl_context* ssl )
+{
+    int ret;
+    mbedtls_ssl_key_set traffic_keys;
+
+    const unsigned char *psk;
+    size_t psk_len;
+    const unsigned char *psk_identity;
+    size_t psk_identity_len;
+
+    mbedtls_ssl_transform *transform_earlydata;
+
+    /* From RFC 8446:
+     * "The PSK used to encrypt the
+     *  early data MUST be the first PSK listed in the client's
+     *  'pre_shared_key' extension."
+     */
+
+    if( mbedtls_ssl_get_psk_to_offer( ssl, &psk, &psk_len,
+                                      &psk_identity, &psk_identity_len ) != 0 )
+    {
+        /* This should never happen: We can only have gone past
+         * ssl_write_early_data_coordinate() if we have offered a PSK. */
+        return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
+    }
+
+    if( ( ret = mbedtls_ssl_set_hs_psk( ssl, psk, psk_len ) ) != 0 )
+    {
+        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_set_hs_psk", ret );
+        return( ret );
+    }
+
+    /* Start the TLS 1.3 key schedule: Set the PSK and derive early secret. */
+    ret = mbedtls_ssl_tls1_3_key_schedule_stage_early( ssl );
+    if( ret != 0 )
+    {
+        MBEDTLS_SSL_DEBUG_RET( 1,
+             "mbedtls_ssl_tls1_3_key_schedule_stage_early", ret );
+        return( ret );
+    }
+
+    /* Derive 0-RTT key material */
+    ret = mbedtls_ssl_tls1_3_generate_early_data_keys(
+        ssl, &traffic_keys );
+    if( ret != 0 )
+    {
+        MBEDTLS_SSL_DEBUG_RET( 1,
+            "mbedtls_ssl_tls1_3_generate_early_data_keys", ret );
+        return( ret );
+    }
+
+    transform_earlydata =
+        mbedtls_calloc( 1, sizeof( mbedtls_ssl_transform ) );
+    if( transform_earlydata == NULL )
+        return( MBEDTLS_ERR_SSL_ALLOC_FAILED );
+
+    ret = mbedtls_ssl_tls13_populate_transform(
+                          transform_earlydata,
+                          ssl->conf->endpoint,
+                          ssl->session_negotiate->ciphersuite,
+                          &traffic_keys,
+                          ssl );
+    if( ret != 0 )
+        return( ret );
+
+#if defined(MBEDTLS_SSL_USE_MPS)
+    /* Register transform with MPS. */
+    ret = mbedtls_mps_add_key_material( &ssl->mps->l4,
+                                        transform_earlydata,
+                                        &ssl->handshake->epoch_earlydata );
+    if( ret != 0 )
+        return( ret );
+
+    /* Use new transform for outgoing data. */
+    ret = mbedtls_mps_set_outgoing_keys( &ssl->mps->l4,
+                                         ssl->handshake->epoch_earlydata );
+    if( ret != 0 )
+        return( ret );
+#else /* MBEDTLS_SSL_USE_MPS */
+
+    /* Activate transform */
+    MBEDTLS_SSL_DEBUG_MSG( 1, ( "Switch to 0-RTT keys for outbound traffic" ) );
+    ssl->handshake->transform_earlydata = transform_earlydata;
+    mbedtls_ssl_set_outbound_transform( ssl, ssl->handshake->transform_earlydata );
+
+#endif /* MBEDTLS_SSL_USE_MPS */
+
+    return( 0 );
+}
+
+static int ssl_write_early_data_write( mbedtls_ssl_context* ssl,
+    unsigned char* buf,
+    size_t buflen,
+    size_t* olen )
+{
+    if( ssl->early_data_len > buflen )
+    {
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "buffer too small" ) );
+        return ( MBEDTLS_ERR_SSL_ALLOC_FAILED );
+    }
+    else
+    {
+        memcpy( buf, ssl->early_data_buf, ssl->early_data_len );
+
+#if defined(MBEDTLS_SSL_USE_MPS)
+        *olen = ssl->early_data_len;
+        MBEDTLS_SSL_DEBUG_BUF( 3, "Early Data", buf, ssl->early_data_len );
+#else
+        buf[ssl->early_data_len] = MBEDTLS_SSL_MSG_APPLICATION_DATA;
+        *olen = ssl->early_data_len + 1;
+
+        MBEDTLS_SSL_DEBUG_BUF( 3, "Early Data", ssl->out_msg, *olen );
+#endif /* MBEDTLS_SSL_USE_MPS */
+    }
+
+    return( 0 );
+}
+
+#else /* MBEDTLS_ZERO_RTT */
+
+static int ssl_write_early_data_coordinate( mbedtls_ssl_context* ssl )
+{
+    ((void) ssl);
+    return( SSL_EARLY_DATA_SKIP );
+}
+
+#endif /* MBEDTLS_ZERO_RTT */
+
+static int ssl_write_early_data_postprocess( mbedtls_ssl_context* ssl )
+{
+    /* Clear PSK we've used for the 0-RTT. */
+    mbedtls_ssl_remove_hs_psk( ssl );
+
+    mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_SERVER_HELLO );
+    return ( 0 );
+}
+
+/*
+ *
+ * STATE HANDLING: Write End-of-Early-Data
+ *
+ */
+
+ /*
+  * Overview
+  */
+
+  /* Main state-handling entry point; orchestrates the other functions. */
+int ssl_write_end_of_early_data_process( mbedtls_ssl_context* ssl );
+
+#define SSL_END_OF_EARLY_DATA_WRITE 0
+#define SSL_END_OF_EARLY_DATA_SKIP  1
+static int ssl_write_end_of_early_data_coordinate( mbedtls_ssl_context* ssl );
+
+/* Update the state after handling the outgoing end-of-early-data message. */
+static int ssl_write_end_of_early_data_postprocess( mbedtls_ssl_context* ssl );
+
+/*
+ * Implementation
+ */
+
+int ssl_write_end_of_early_data_process( mbedtls_ssl_context* ssl )
+{
+    int ret;
+    MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> write EndOfEarlyData" ) );
+
+    MBEDTLS_SSL_PROC_CHK_NEG( ssl_write_end_of_early_data_coordinate( ssl ) );
+    if( ret == SSL_END_OF_EARLY_DATA_WRITE )
+    {
+        unsigned char *buf;
+        size_t buf_len;
+
+        MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_tls13_start_handshake_msg( ssl,
+                          MBEDTLS_SSL_HS_END_OF_EARLY_DATA, &buf, &buf_len ) );
+
+        mbedtls_ssl_tls13_add_hs_hdr_to_checksum(
+            ssl, MBEDTLS_SSL_HS_END_OF_EARLY_DATA, 0 );
+
+        MBEDTLS_SSL_PROC_CHK( ssl_write_end_of_early_data_postprocess( ssl ) );
+        MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_tls13_finish_handshake_msg( ssl, buf_len, 0 ) );
+    }
+    else
+    {
+        /* Update state */
+        MBEDTLS_SSL_PROC_CHK( ssl_write_end_of_early_data_postprocess( ssl ) );
+    }
+
+cleanup:
+
+    MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= write EndOfEarlyData" ) );
+    return( ret );
+}
+
+static int ssl_write_end_of_early_data_coordinate( mbedtls_ssl_context* ssl )
+{
+    ((void) ssl);
+
+#if defined(MBEDTLS_ZERO_RTT)
+    if( ssl->handshake->early_data == MBEDTLS_SSL_EARLY_DATA_ON )
+    {
+        if( ssl->early_data_status == MBEDTLS_SSL_EARLY_DATA_ACCEPTED )
+            return( SSL_END_OF_EARLY_DATA_WRITE );
+
+        /*
+         * RFC 8446:
+         * "If the server does not send an "early_data"
+         *  extension in EncryptedExtensions, then the client MUST NOT send an
+         *  EndOfEarlyData message."
+         */
+
+        MBEDTLS_SSL_DEBUG_MSG( 4, ( "skip EndOfEarlyData, server rejected" ) );
+    }
+#endif /* MBEDTLS_ZERO_RTT */
+
+    return( SSL_END_OF_EARLY_DATA_SKIP );
+}
+
+static int ssl_write_end_of_early_data_postprocess( mbedtls_ssl_context* ssl )
+{
+#if defined(MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE)
+    if( ssl_write_end_of_early_data_coordinate( ssl ) != SSL_END_OF_EARLY_DATA_WRITE )
+    {
+        mbedtls_ssl_handshake_set_state( ssl,
+                         MBEDTLS_SSL_CLIENT_CCS_AFTER_SERVER_FINISHED );
+        return( 0 );
+    }
+#endif /* MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE */
+    mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_CLIENT_CERTIFICATE );
     return( 0 );
 }
 
