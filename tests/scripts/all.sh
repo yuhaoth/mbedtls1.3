@@ -1079,7 +1079,7 @@ component_test_no_ctr_drbg_classic () {
     tests/ssl-opt.sh -f 'Default\|SSL async private.*delay=\|tickets enabled on server'
 
     msg "test: Full minus CTR_DRBG, classic crypto - compat.sh (subset)"
-    tests/compat.sh -m tls1_2 -t 'ECDSA PSK' -V NO -p OpenSSL
+    tests/compat.sh -m tls12 -t 'ECDSA PSK' -V NO -p OpenSSL
 }
 
 component_test_no_ctr_drbg_use_psa () {
@@ -1101,7 +1101,7 @@ component_test_no_ctr_drbg_use_psa () {
     tests/ssl-opt.sh -f 'Default\|SSL async private.*delay=\|tickets enabled on server'
 
     msg "test: Full minus CTR_DRBG, USE_PSA_CRYPTO - compat.sh (subset)"
-    tests/compat.sh -m tls1_2 -t 'ECDSA PSK' -V NO -p OpenSSL
+    tests/compat.sh -m tls12 -t 'ECDSA PSK' -V NO -p OpenSSL
 }
 
 component_test_no_hmac_drbg_classic () {
@@ -1128,7 +1128,7 @@ component_test_no_hmac_drbg_classic () {
     # To save time, only test one protocol version, since this part of
     # the protocol is identical in (D)TLS up to 1.2.
     msg "test: Full minus HMAC_DRBG, classic crypto - compat.sh (ECDSA)"
-    tests/compat.sh -m tls1_2 -t 'ECDSA'
+    tests/compat.sh -m tls12 -t 'ECDSA'
 }
 
 component_test_no_hmac_drbg_use_psa () {
@@ -1155,7 +1155,7 @@ component_test_no_hmac_drbg_use_psa () {
     # To save time, only test one protocol version, since this part of
     # the protocol is identical in (D)TLS up to 1.2.
     msg "test: Full minus HMAC_DRBG, USE_PSA_CRYPTO - compat.sh (ECDSA)"
-    tests/compat.sh -m tls1_2 -t 'ECDSA'
+    tests/compat.sh -m tls12 -t 'ECDSA'
 }
 
 component_test_psa_external_rng_no_drbg_classic () {
@@ -2194,7 +2194,7 @@ component_test_tls13 () {
     make
 
     msg "test: TLS 1.3 compat.sh"
-    if_build_succeeded tests/compat.sh -m tls1_3 -t ECDSA
+    if_build_succeeded tests/compat.sh -m tls13 -t ECDSA
 
     msg "test: TLS 1.3 ssl-opt.sh"
     if_build_succeeded tests/ssl-opt.sh -f "TLS 1.3"
@@ -2211,7 +2211,7 @@ component_test_tls13_no_mps () {
     make
 
     msg "test: TLS 1.3 without MPS compat.sh"
-    if_build_succeeded tests/compat.sh -m tls1_3 -t ECDSA
+    if_build_succeeded tests/compat.sh -m tls13 -t ECDSA
 
     msg "test: TLS 1.3 without MPS ssl-opt.sh"
     if_build_succeeded tests/ssl-opt.sh -f "TLS 1.3"
@@ -2228,7 +2228,7 @@ component_test_tls13_with_padding () {
     make
 
     msg "test: TLS 1.3 compat.sh"
-    if_build_succeeded tests/compat.sh -m tls1_3 -t ECDSA
+    if_build_succeeded tests/compat.sh -m tls13 -t ECDSA
 
     msg "test: TLS 1.3 ssl-opt.sh"
     if_build_succeeded tests/ssl-opt.sh -f "TLS 1.3"
@@ -2245,7 +2245,7 @@ component_test_tls13_no_mps_with_padding () {
     make
 
     msg "test: TLS 1.3 without MPS compat.sh"
-    if_build_succeeded tests/compat.sh -m tls1_3 -t ECDSA
+    if_build_succeeded tests/compat.sh -m tls13 -t ECDSA
 
     msg "test: TLS 1.3 without MPS ssl-opt.sh"
     if_build_succeeded tests/ssl-opt.sh -f "TLS 1.3"
@@ -2405,6 +2405,7 @@ component_test_make_shared () {
     msg "build/test: make shared" # ~ 40s
     make SHARED=1 all check
     ldd programs/util/strerror | grep libmbedcrypto
+    programs/test/dlopen_demo.sh
 }
 
 component_test_cmake_shared () {
@@ -2413,6 +2414,7 @@ component_test_cmake_shared () {
     make
     ldd programs/util/strerror | grep libmbedcrypto
     make test
+    programs/test/dlopen_demo.sh
 }
 
 test_build_opt () {

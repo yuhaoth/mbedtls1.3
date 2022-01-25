@@ -45,10 +45,10 @@
 #include "ecp_internal.h"
 
 #if defined(MBEDTLS_SSL_USE_MPS)
-int mbedtls_ssl_tls1_3_fetch_handshake_msg( mbedtls_ssl_context *ssl,
-                                            unsigned hs_type,
-                                            unsigned char **buf,
-                                            size_t *buflen )
+int mbedtls_ssl_tls13_fetch_handshake_msg( mbedtls_ssl_context *ssl,
+                                           unsigned hs_type,
+                                           unsigned char **buf,
+                                           size_t *buf_len )
 {
     int ret;
     mbedtls_mps_handshake_in msg;
@@ -79,7 +79,7 @@ int mbedtls_ssl_tls1_3_fetch_handshake_msg( mbedtls_ssl_context *ssl,
         MBEDTLS_SSL_PROC_CHK( ret );
 
         /* *buf already set in mbedtls_mps_reader_get() */
-        *buflen = msg.length;
+        *buf_len = msg.length;
     }
 
 cleanup:
@@ -106,7 +106,7 @@ cleanup:
 int mbedtls_ssl_tls13_start_handshake_msg( mbedtls_ssl_context *ssl,
                                            unsigned hs_type,
                                            unsigned char **buf,
-                                           size_t *buflen )
+                                           size_t *buf_len )
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
     mbedtls_mps_handshake_out * const msg = &ssl->handshake->hs_msg_out;
@@ -118,7 +118,7 @@ int mbedtls_ssl_tls13_start_handshake_msg( mbedtls_ssl_context *ssl,
 
     MBEDTLS_SSL_PROC_CHK( mbedtls_writer_get( msg->handle,
                                               MBEDTLS_MPS_SIZE_MAX,
-                                              buf, buflen ) );
+                                              buf, buf_len ) );
 
 cleanup:
     return( ret );
@@ -140,10 +140,10 @@ cleanup:
 }
 
 #else /* MBEDTLS_SSL_USE_MPS */
-int mbedtls_ssl_tls1_3_fetch_handshake_msg( mbedtls_ssl_context *ssl,
-                                            unsigned hs_type,
-                                            unsigned char **buf,
-                                            size_t *buflen )
+int mbedtls_ssl_tls13_fetch_handshake_msg( mbedtls_ssl_context *ssl,
+                                           unsigned hs_type,
+                                           unsigned char **buf,
+                                           size_t *buf_len )
 {
     int ret;
 
@@ -170,8 +170,8 @@ int mbedtls_ssl_tls1_3_fetch_handshake_msg( mbedtls_ssl_context *ssl,
      *    uint24 length;
      *    ...
      */
-    *buf    = ssl->in_msg   + 4;
-    *buflen = ssl->in_hslen - 4;
+    *buf = ssl->in_msg   + 4;
+    *buf_len = ssl->in_hslen - 4;
 
 cleanup:
 
@@ -204,12 +204,12 @@ int mbedtls_ssl_tls13_finish_handshake_msg( mbedtls_ssl_context *ssl,
                                             size_t msg_len )
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
-    size_t msg_len_with_header;
+    size_t msg_with_header_len;
     ((void) buf_len);
 
     /* Add reserved 4 bytes for handshake header */
-    msg_len_with_header = msg_len + 4;
-    ssl->out_msglen = msg_len_with_header;
+    msg_with_header_len = msg_len + 4;
+    ssl->out_msglen = msg_with_header_len;
     MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_write_handshake_msg_ext( ssl, 0 ) );
 
 cleanup:
@@ -218,10 +218,10 @@ cleanup:
 
 #endif /* MBEDTLS_SSL_USE_MPS */
 
-void mbedtls_ssl_tls1_3_add_hs_msg_to_checksum( mbedtls_ssl_context *ssl,
-                                                unsigned hs_type,
-                                                unsigned char const *msg,
-                                                size_t msg_len )
+void mbedtls_ssl_tls13_add_hs_msg_to_checksum( mbedtls_ssl_context *ssl,
+                                               unsigned hs_type,
+                                               unsigned char const *msg,
+                                               size_t msg_len )
 {
     mbedtls_ssl_tls13_add_hs_hdr_to_checksum( ssl, hs_type, msg_len );
     ssl->handshake->update_checksum( ssl, msg, msg_len );
@@ -262,15 +262,15 @@ void mbedtls_ssl_tls13_add_hs_hdr_to_checksum( mbedtls_ssl_context *ssl,
  * Only if we handle at least one key exchange that needs signatures.
  */
 int mbedtls_ssl_tls13_write_sig_alg_ext( mbedtls_ssl_context *ssl,
-                                         unsigned char* buf,
-                                         unsigned char* end,
-                                         size_t* olen )
+                                         unsigned char *buf,
+                                         unsigned char *end,
+                                         size_t *out_len )
 {
     unsigned char *p = buf;
-    unsigned char *supported_sig_alg_ptr; /* Start of supported_signature_algorithms */
-    size_t supported_sig_alg_len = 0;     /* Length of supported_signature_algorithms */
+    unsigned char *supported_sig_alg; /* Start of supported_signature_algorithms */
+    size_t supported_sig_alg_len = 0; /* Length of supported_signature_algorithms */
 
-    *olen = 0;
+    *out_len = 0;
 
     /* Skip the extension on the client if all allowed key exchanges
      * are PSK-based. */
@@ -295,9 +295,9 @@ int mbedtls_ssl_tls13_write_sig_alg_ext( mbedtls_ssl_context *ssl,
     /*
      * Write supported_signature_algorithms
      */
-    supported_sig_alg_ptr = p;
+    supported_sig_alg = p;
     for( const uint16_t *sig_alg = ssl->conf->tls13_sig_algs;
-         *sig_alg != MBEDTLS_TLS13_SIG_NONE; sig_alg++ )
+         *sig_alg != MBEDTLS_TLS1_3_SIG_NONE; sig_alg++ )
     {
         MBEDTLS_SSL_CHK_BUF_PTR( p, end, 2 );
         MBEDTLS_PUT_UINT16_BE( *sig_alg, p, 0 );
@@ -306,7 +306,7 @@ int mbedtls_ssl_tls13_write_sig_alg_ext( mbedtls_ssl_context *ssl,
     }
 
     /* Length of supported_signature_algorithms */
-    supported_sig_alg_len = p - supported_sig_alg_ptr;
+    supported_sig_alg_len = p - supported_sig_alg;
     if( supported_sig_alg_len == 0 )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "No signature algorithms defined." ) );
@@ -321,7 +321,7 @@ int mbedtls_ssl_tls13_write_sig_alg_ext( mbedtls_ssl_context *ssl,
     MBEDTLS_PUT_UINT16_BE( supported_sig_alg_len, buf, 4 );
 
     /* Output the total length of signature algorithms extension. */
-    *olen = p - buf;
+    *out_len = p - buf;
 
     ssl->handshake->extensions_present |= MBEDTLS_SSL_EXT_SIG_ALG;
 
@@ -406,7 +406,7 @@ static int ssl_tls13_sig_alg_is_offered( const mbedtls_ssl_context *ssl,
 {
     const uint16_t *tls13_sig_alg = ssl->conf->tls13_sig_algs;
 
-    for( ; *tls13_sig_alg != MBEDTLS_TLS13_SIG_NONE ; tls13_sig_alg++ )
+    for( ; *tls13_sig_alg != MBEDTLS_TLS1_3_SIG_NONE ; tls13_sig_alg++ )
     {
         if( *tls13_sig_alg == sig_alg )
             return( 1 );
@@ -423,7 +423,7 @@ static int ssl_tls13_sig_alg_is_offered( const mbedtls_ssl_context *ssl,
  */
 #define SSL_CERTIFICATE_VERIFY_SKIP 0
 #define SSL_CERTIFICATE_VERIFY_READ 1
-static int ssl_read_certificate_verify_coordinate( mbedtls_ssl_context* ssl )
+static int ssl_read_certificate_verify_coordinate( mbedtls_ssl_context *ssl )
 {
     if( mbedtls_ssl_tls13_kex_with_psk( ssl ) )
         return( SSL_CERTIFICATE_VERIFY_SKIP );
@@ -461,9 +461,9 @@ static int ssl_tls13_parse_certificate_verify( mbedtls_ssl_context *ssl,
     unsigned char verify_hash[MBEDTLS_MD_MAX_SIZE];
     size_t verify_hash_len;
 
-    void const *opts_ptr = NULL;
+    void const *options = NULL;
 #if defined(MBEDTLS_X509_RSASSA_PSS_SUPPORT)
-    mbedtls_pk_rsassa_pss_options opts;
+    mbedtls_pk_rsassa_pss_options rsassa_pss_options;
 #endif /* MBEDTLS_X509_RSASSA_PSS_SUPPORT */
 
     /*
@@ -502,20 +502,20 @@ static int ssl_tls13_parse_certificate_verify( mbedtls_ssl_context *ssl,
     /* We currently only support ECDSA-based signatures */
     switch( algorithm )
     {
-        case MBEDTLS_TLS13_SIG_ECDSA_SECP256R1_SHA256:
+        case MBEDTLS_TLS1_3_SIG_ECDSA_SECP256R1_SHA256:
             md_alg = MBEDTLS_MD_SHA256;
             sig_alg = MBEDTLS_PK_ECDSA;
             break;
-        case MBEDTLS_TLS13_SIG_ECDSA_SECP384R1_SHA384:
+        case MBEDTLS_TLS1_3_SIG_ECDSA_SECP384R1_SHA384:
             md_alg = MBEDTLS_MD_SHA384;
             sig_alg = MBEDTLS_PK_ECDSA;
             break;
-        case MBEDTLS_TLS13_SIG_ECDSA_SECP521R1_SHA512:
+        case MBEDTLS_TLS1_3_SIG_ECDSA_SECP521R1_SHA512:
             md_alg = MBEDTLS_MD_SHA512;
             sig_alg = MBEDTLS_PK_ECDSA;
             break;
 #if defined(MBEDTLS_X509_RSASSA_PSS_SUPPORT)
-        case MBEDTLS_TLS13_SIG_RSA_PSS_RSAE_SHA256:
+        case MBEDTLS_TLS1_3_SIG_RSA_PSS_RSAE_SHA256:
             MBEDTLS_SSL_DEBUG_MSG( 4, ( "Certificate Verify: using RSA PSS" ) );
             md_alg = MBEDTLS_MD_SHA256;
             sig_alg = MBEDTLS_PK_RSASSA_PSS;
@@ -582,18 +582,18 @@ static int ssl_tls13_parse_certificate_verify( mbedtls_ssl_context *ssl,
 #if defined(MBEDTLS_X509_RSASSA_PSS_SUPPORT)
     if( sig_alg == MBEDTLS_PK_RSASSA_PSS )
     {
-        const mbedtls_md_info_t* md_info;
-        opts.mgf1_hash_id = md_alg;
+        const mbedtls_md_info_t *md_info;
+        rsassa_pss_options.mgf1_hash_id = md_alg;
         if( ( md_info = mbedtls_md_info_from_type( md_alg ) ) == NULL )
         {
             return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
         }
-        opts.expected_salt_len = mbedtls_md_get_size( md_info );
-        opts_ptr = (const void*) &opts;
+        rsassa_pss_options.expected_salt_len = mbedtls_md_get_size( md_info );
+        options = (const void*) &rsassa_pss_options;
     }
 #endif /* MBEDTLS_X509_RSASSA_PSS_SUPPORT */
 
-    if( ( ret = mbedtls_pk_verify_ext( sig_alg, opts_ptr,
+    if( ( ret = mbedtls_pk_verify_ext( sig_alg, options,
                                        &ssl->session_negotiate->peer_cert->pk,
                                        md_alg, verify_hash, verify_hash_len,
                                        p, signature_len ) ) == 0 )
@@ -643,8 +643,9 @@ int mbedtls_ssl_tls13_process_certificate_verify( mbedtls_ssl_context *ssl )
         goto cleanup;
     }
 
-    MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_tls1_3_fetch_handshake_msg( ssl,
-                          MBEDTLS_SSL_HS_CERTIFICATE_VERIFY, &buf, &buf_len ) );
+    MBEDTLS_SSL_PROC_CHK(
+        mbedtls_ssl_tls13_fetch_handshake_msg( ssl,
+                MBEDTLS_SSL_HS_CERTIFICATE_VERIFY, &buf, &buf_len ) );
 
     ret = mbedtls_ssl_get_handshake_transcript( ssl,
                             ssl->handshake->ciphersuite_info->mac,
@@ -673,7 +674,7 @@ int mbedtls_ssl_tls13_process_certificate_verify( mbedtls_ssl_context *ssl )
     MBEDTLS_SSL_PROC_CHK( ssl_tls13_parse_certificate_verify( ssl, buf,
                             buf + buf_len, verify_buffer, verify_buffer_len ) );
 
-    mbedtls_ssl_tls1_3_add_hs_msg_to_checksum( ssl,
+    mbedtls_ssl_tls13_add_hs_msg_to_checksum( ssl,
                         MBEDTLS_SSL_HS_CERTIFICATE_VERIFY, buf, buf_len );
 #if defined(MBEDTLS_SSL_USE_MPS)
     MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_mps_hs_consume_full_hs_msg( ssl ) );
@@ -706,7 +707,7 @@ cleanup:
 #define SSL_CERTIFICATE_EXPECTED   0
 #define SSL_CERTIFICATE_SKIP       1
 
-static int ssl_read_certificate_coordinate( mbedtls_ssl_context* ssl )
+static int ssl_read_certificate_coordinate( mbedtls_ssl_context *ssl )
 {
 #if defined(MBEDTLS_SSL_SRV_C)
     int authmode = ssl->conf->authmode;
@@ -1052,7 +1053,7 @@ static int ssl_tls13_validate_certificate( mbedtls_ssl_context *ssl )
 
 #if defined(MBEDTLS_ECP_C)
     {
-        const mbedtls_pk_context* pk = &ssl->session_negotiate->peer_cert->pk;
+        const mbedtls_pk_context *pk = &ssl->session_negotiate->peer_cert->pk;
 
         /* If certificate uses an EC key, make sure the curve is OK */
         if( mbedtls_pk_can_do( pk, MBEDTLS_PK_ECKEY ) &&
@@ -1160,7 +1161,7 @@ int mbedtls_ssl_tls13_process_certificate( mbedtls_ssl_context *ssl )
         unsigned char *buf;
         size_t buf_len;
 
-        MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_tls1_3_fetch_handshake_msg(
+        MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_tls13_fetch_handshake_msg(
                               ssl, MBEDTLS_SSL_HS_CERTIFICATE,
                               &buf, &buf_len ) );
 
@@ -1170,8 +1171,8 @@ int mbedtls_ssl_tls13_process_certificate( mbedtls_ssl_context *ssl )
         /* Validate the certificate chain and set the verification results. */
         MBEDTLS_SSL_PROC_CHK( ssl_tls13_validate_certificate( ssl ) );
 
-        mbedtls_ssl_tls1_3_add_hs_msg_to_checksum( ssl, MBEDTLS_SSL_HS_CERTIFICATE,
-                                                   buf, buf_len );
+        mbedtls_ssl_tls13_add_hs_msg_to_checksum( ssl, MBEDTLS_SSL_HS_CERTIFICATE,
+                                                  buf, buf_len );
 #if defined(MBEDTLS_SSL_USE_MPS)
         MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_mps_hs_consume_full_hs_msg( ssl ) );
 #endif /* MBEDTLS_SSL_USE_MPS */
@@ -1340,11 +1341,11 @@ static int ssl_tls13_postprocess_finished_message( mbedtls_ssl_context *ssl )
     if( ssl->conf->endpoint == MBEDTLS_SSL_IS_SERVER )
     {
         /* Compute resumption_master_secret */
-        ret = mbedtls_ssl_tls1_3_generate_resumption_master_secret( ssl );
+        ret = mbedtls_ssl_tls13_generate_resumption_master_secret( ssl );
         if( ret != 0 )
         {
             MBEDTLS_SSL_DEBUG_RET( 1,
-               "mbedtls_ssl_tls1_3_generate_resumption_master_secret ", ret );
+               "mbedtls_ssl_tls13_generate_resumption_master_secret ", ret );
             return( ret );
         }
 
@@ -1366,19 +1367,20 @@ int mbedtls_ssl_tls13_process_finished_message( mbedtls_ssl_context *ssl )
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
     unsigned char *buf;
-    size_t buflen;
+    size_t buf_len;
 
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> parse finished message" ) );
 
     /* Preprocessing step: Compute handshake digest */
     MBEDTLS_SSL_PROC_CHK( ssl_tls13_preprocess_finished_message( ssl ) );
 
-    MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_tls1_3_fetch_handshake_msg( ssl,
+    MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_tls13_fetch_handshake_msg( ssl,
                                               MBEDTLS_SSL_HS_FINISHED,
-                                              &buf, &buflen ) );
-    MBEDTLS_SSL_PROC_CHK( ssl_tls13_parse_finished_message( ssl, buf, buf + buflen ) );
-    mbedtls_ssl_tls1_3_add_hs_msg_to_checksum(
-        ssl, MBEDTLS_SSL_HS_FINISHED, buf, buflen );
+                                              &buf, &buf_len ) );
+    MBEDTLS_SSL_PROC_CHK( ssl_tls13_parse_finished_message( ssl, buf, buf + buf_len ) );
+    mbedtls_ssl_tls13_add_hs_msg_to_checksum(
+        ssl, MBEDTLS_SSL_HS_FINISHED, buf, buf_len );
+
 #if defined(MBEDTLS_SSL_USE_MPS)
     MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_mps_hs_consume_full_hs_msg( ssl ) );
 #endif /* MBEDTLS_SSL_USE_MPS */
@@ -1428,11 +1430,11 @@ static int ssl_tls13_finalize_finished_message( mbedtls_ssl_context *ssl )
     if( ssl->conf->endpoint == MBEDTLS_SSL_IS_CLIENT )
     {
         /* Compute resumption_master_secret */
-        ret = mbedtls_ssl_tls1_3_generate_resumption_master_secret( ssl );
+        ret = mbedtls_ssl_tls13_generate_resumption_master_secret( ssl );
         if( ret != 0 )
         {
             MBEDTLS_SSL_DEBUG_RET( 1,
-                    "mbedtls_ssl_tls1_3_generate_resumption_master_secret ", ret );
+                    "mbedtls_ssl_tls13_generate_resumption_master_secret ", ret );
             return ( ret );
         }
         
@@ -1459,7 +1461,7 @@ static int ssl_tls13_finalize_finished_message( mbedtls_ssl_context *ssl )
         if( ret != 0 )
         {
             MBEDTLS_SSL_DEBUG_RET( 1,
-                  "mbedtls_ssl_tls1_3_generate_application_keys", ret );
+                  "mbedtls_ssl_tls13_generate_application_keys", ret );
             return( ret );
         }
 
@@ -1501,7 +1503,7 @@ static int ssl_tls13_finalize_finished_message( mbedtls_ssl_context *ssl )
 static int ssl_tls13_write_finished_message_body( mbedtls_ssl_context *ssl,
                                                   unsigned char *buf,
                                                   unsigned char *end,
-                                                  size_t *olen )
+                                                  size_t *out_len )
 {
     size_t verify_data_len = ssl->handshake->state_local.finished_out.digest_len;
     /*
@@ -1514,7 +1516,7 @@ static int ssl_tls13_write_finished_message_body( mbedtls_ssl_context *ssl,
     memcpy( buf, ssl->handshake->state_local.finished_out.digest,
             verify_data_len );
 
-    *olen = verify_data_len;
+    *out_len = verify_data_len;
     return( 0 );
 }
 
@@ -1539,8 +1541,8 @@ int mbedtls_ssl_tls13_write_finished_message( mbedtls_ssl_context *ssl )
     MBEDTLS_SSL_PROC_CHK( ssl_tls13_write_finished_message_body(
                               ssl, buf, buf + buf_len, &msg_len ) );
 
-    mbedtls_ssl_tls1_3_add_hs_msg_to_checksum( ssl, MBEDTLS_SSL_HS_FINISHED,
-                                               buf, msg_len );
+    mbedtls_ssl_tls13_add_hs_msg_to_checksum( ssl, MBEDTLS_SSL_HS_FINISHED,
+                                              buf, msg_len );
 
     MBEDTLS_SSL_PROC_CHK( ssl_tls13_finalize_finished_message( ssl ) );
     MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_tls13_finish_handshake_msg( ssl,
@@ -1578,29 +1580,29 @@ void mbedtls_ssl_tls13_handshake_wrapup( mbedtls_ssl_context *ssl )
  *
  */
 
-#if defined(MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE)
+#if defined(MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE)
 
  /* Main entry point; orchestrates the other functions */
-int mbedtls_ssl_write_change_cipher_spec_process( mbedtls_ssl_context* ssl );
+int mbedtls_ssl_write_change_cipher_spec_process( mbedtls_ssl_context *ssl );
 
 #define SSL_WRITE_CCS_NEEDED     0
 #define SSL_WRITE_CCS_SKIP       1
-static int ssl_write_change_cipher_spec_coordinate( mbedtls_ssl_context* ssl );
+static int ssl_write_change_cipher_spec_coordinate( mbedtls_ssl_context *ssl );
 
 #if !defined(MBEDTLS_SSL_USE_MPS)
-static int ssl_write_change_cipher_spec_write( mbedtls_ssl_context* ssl,
-    unsigned char* buf,
-    size_t buflen,
-    size_t* olen );
+static int ssl_write_change_cipher_spec_write( mbedtls_ssl_context *ssl,
+    unsigned char *buf,
+    size_t buf_len,
+    size_t *out_len );
 #endif /* !MBEDTLS_SSL_USE_MPS */
-static int ssl_write_change_cipher_spec_postprocess( mbedtls_ssl_context* ssl );
+static int ssl_write_change_cipher_spec_postprocess( mbedtls_ssl_context *ssl );
 
 
 /*
  * Implementation
  */
 
-int mbedtls_ssl_write_change_cipher_spec_process( mbedtls_ssl_context* ssl )
+int mbedtls_ssl_write_change_cipher_spec_process( mbedtls_ssl_context *ssl )
 {
     int ret;
 
@@ -1648,7 +1650,7 @@ cleanup:
     return( ret );
 }
 
-static int ssl_write_change_cipher_spec_coordinate( mbedtls_ssl_context* ssl )
+static int ssl_write_change_cipher_spec_coordinate( mbedtls_ssl_context *ssl )
 {
 #if !defined(MBEDTLS_SSL_SRV_C)
     ( ( void ) ssl );
@@ -1674,26 +1676,26 @@ static int ssl_write_change_cipher_spec_coordinate( mbedtls_ssl_context* ssl )
 }
 
 #if !defined(MBEDTLS_SSL_USE_MPS)
-static int ssl_write_change_cipher_spec_write( mbedtls_ssl_context* ssl,
-                                               unsigned char* buf,
-                                               size_t buflen,
-                                               size_t* olen )
+static int ssl_write_change_cipher_spec_write( mbedtls_ssl_context *ssl,
+                                               unsigned char *buf,
+                                               size_t buf_len,
+                                               size_t *out_len )
 {
     ((void) ssl);
 
-    if( buflen < 1 )
+    if( buf_len < 1 )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "buffer too small" ) );
         return( MBEDTLS_ERR_SSL_ALLOC_FAILED );
     }
 
     buf[0] = 1;
-    *olen = 1;
+    *out_len = 1;
     return( 0 );
 }
 #endif /* !MBEDTLS_SSL_USE_MPS */
 
-static int ssl_write_change_cipher_spec_postprocess( mbedtls_ssl_context* ssl )
+static int ssl_write_change_cipher_spec_postprocess( mbedtls_ssl_context *ssl )
 {
 
 #if defined(MBEDTLS_SSL_SRV_C)
@@ -1741,7 +1743,7 @@ static int ssl_write_change_cipher_spec_postprocess( mbedtls_ssl_context* ssl )
 
     return( 0 );
 }
-#endif /* MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE */
+#endif /* MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE */
 
 #if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
 
@@ -1779,7 +1781,7 @@ int mbedtls_ssl_parse_signature_algorithms_ext( mbedtls_ssl_context *ssl,
         MBEDTLS_SSL_DEBUG_MSG( 4, ( "received signature algorithm: 0x%x", signature_scheme ) );
 
         for( sig_alg = ssl->conf->tls13_sig_algs;
-             *sig_alg != MBEDTLS_TLS13_SIG_NONE; sig_alg++ )
+             *sig_alg != MBEDTLS_TLS1_3_SIG_NONE; sig_alg++ )
         {
             if( *sig_alg == signature_scheme )
             {
@@ -1799,7 +1801,7 @@ int mbedtls_ssl_parse_signature_algorithms_ext( mbedtls_ssl_context *ssl,
     }
 
     ssl->handshake->received_signature_schemes_list[common_idx] =
-        MBEDTLS_TLS13_SIG_NONE;
+        MBEDTLS_TLS1_3_SIG_NONE;
 
     return( 0 );
 }
@@ -1816,7 +1818,7 @@ int mbedtls_ssl_parse_signature_algorithms_ext( mbedtls_ssl_context *ssl,
  */
 
 /* Main entry point: orchestrates the other functions. */
-int mbedtls_ssl_write_certificate_verify_process( mbedtls_ssl_context* ssl );
+int mbedtls_ssl_write_certificate_verify_process( mbedtls_ssl_context *ssl );
 
 /* Coordinate: Check whether a certificate verify message should be sent.
  * Returns a negative value on failure, and otherwise
@@ -1826,20 +1828,20 @@ int mbedtls_ssl_write_certificate_verify_process( mbedtls_ssl_context* ssl );
  */
 #define SSL_WRITE_CERTIFICATE_VERIFY_SKIP 0
 #define SSL_WRITE_CERTIFICATE_VERIFY_SEND 1
-static int ssl_write_certificate_verify_coordinate( mbedtls_ssl_context* ssl );
+static int ssl_write_certificate_verify_coordinate( mbedtls_ssl_context *ssl );
 #if defined(MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED)
-static int ssl_certificate_verify_write( mbedtls_ssl_context* ssl,
-                                         unsigned char* buf,
-                                         size_t buflen,
-                                         size_t* olen );
+static int ssl_certificate_verify_write( mbedtls_ssl_context *ssl,
+                                         unsigned char *buf,
+                                         size_t buf_len,
+                                         size_t *out_len );
 #endif /* MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED */
-static int ssl_certificate_verify_postprocess( mbedtls_ssl_context* ssl );
+static int ssl_certificate_verify_postprocess( mbedtls_ssl_context *ssl );
 
 /*
  * Implementation
  */
 
-int mbedtls_ssl_write_certificate_verify_process( mbedtls_ssl_context* ssl )
+int mbedtls_ssl_write_certificate_verify_process( mbedtls_ssl_context *ssl )
 {
     int ret = 0;
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> write certificate verify" ) );
@@ -1858,7 +1860,7 @@ int mbedtls_ssl_write_certificate_verify_process( mbedtls_ssl_context* ssl )
         MBEDTLS_SSL_PROC_CHK( ssl_certificate_verify_write(
                                   ssl, buf, buf_len, &msg_len ) );
 
-        mbedtls_ssl_tls1_3_add_hs_msg_to_checksum(
+        mbedtls_ssl_tls13_add_hs_msg_to_checksum(
             ssl, MBEDTLS_SSL_HS_CERTIFICATE_VERIFY, buf, msg_len );
         /* Update state */
         MBEDTLS_SSL_PROC_CHK( ssl_certificate_verify_postprocess( ssl ) );
@@ -1877,7 +1879,7 @@ cleanup:
     return( ret );
 }
 
-static int ssl_write_certificate_verify_coordinate( mbedtls_ssl_context* ssl )
+static int ssl_write_certificate_verify_coordinate( mbedtls_ssl_context *ssl )
 {
     int have_own_cert = 1;
     int ret;
@@ -1944,10 +1946,10 @@ static int ssl_write_certificate_verify_coordinate( mbedtls_ssl_context* ssl )
 
 
 #if defined(MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED)
-static int ssl_certificate_verify_write( mbedtls_ssl_context* ssl,
-                                         unsigned char* buf,
-                                         size_t buflen,
-                                         size_t* olen )
+static int ssl_certificate_verify_write( mbedtls_ssl_context *ssl,
+                                         unsigned char *buf,
+                                         size_t buf_len,
+                                         size_t *out_len )
 {
     int ret;
     size_t n = 0;
@@ -1964,10 +1966,10 @@ static int ssl_certificate_verify_write( mbedtls_ssl_context* ssl,
     const mbedtls_md_info_t *md_info;
     /* Verify whether we can use signature algorithm */
     int signature_scheme_client;
-    unsigned char * const end = buf + buflen;
+    unsigned char * const end = buf + buf_len;
 
     p = buf;
-    if( buflen < 2 + MBEDTLS_MD_MAX_SIZE )
+    if( buf_len < 2 + MBEDTLS_MD_MAX_SIZE )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "buffer too short" ) );
         return( MBEDTLS_ERR_SSL_BUFFER_TOO_SMALL );
@@ -1997,11 +1999,11 @@ static int ssl_certificate_verify_write( mbedtls_ssl_context* ssl,
         {
             case 256:
                 md_alg  = MBEDTLS_MD_SHA256;
-                sig_alg = MBEDTLS_TLS13_SIG_ECDSA_SECP256R1_SHA256;
+                sig_alg = MBEDTLS_TLS1_3_SIG_ECDSA_SECP256R1_SHA256;
                 break;
             case 384:
                 md_alg  = MBEDTLS_MD_SHA384;
-                sig_alg = MBEDTLS_TLS13_SIG_ECDSA_SECP384R1_SHA384;
+                sig_alg = MBEDTLS_TLS1_3_SIG_ECDSA_SECP384R1_SHA384;
                 break;
             default:
                 MBEDTLS_SSL_DEBUG_MSG( 3, ( "unknown key size: %" MBEDTLS_PRINTF_SIZET " bits",
@@ -2015,10 +2017,10 @@ static int ssl_certificate_verify_write( mbedtls_ssl_context* ssl,
         return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
     }
 
-    signature_scheme_client = MBEDTLS_TLS13_SIG_NONE;
+    signature_scheme_client = MBEDTLS_TLS1_3_SIG_NONE;
 
     for( sig_scheme = ssl->handshake->received_signature_schemes_list;
-        *sig_scheme != MBEDTLS_TLS13_SIG_NONE; sig_scheme++ )
+        *sig_scheme != MBEDTLS_TLS1_3_SIG_NONE; sig_scheme++ )
     {
         if( *sig_scheme == sig_alg )
         {
@@ -2027,7 +2029,7 @@ static int ssl_certificate_verify_write( mbedtls_ssl_context* ssl,
         }
     }
 
-    if( signature_scheme_client == MBEDTLS_TLS13_SIG_NONE )
+    if( signature_scheme_client == MBEDTLS_TLS1_3_SIG_NONE )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "should never happen" ) );
         return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
@@ -2062,12 +2064,12 @@ static int ssl_certificate_verify_write( mbedtls_ssl_context* ssl,
 
     p += 2 + n;
 
-    *olen = (size_t)( p - buf );
+    *out_len = (size_t)( p - buf );
     return( ret );
 }
 #endif /* MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED */
 
-static int ssl_certificate_verify_postprocess( mbedtls_ssl_context* ssl )
+static int ssl_certificate_verify_postprocess( mbedtls_ssl_context *ssl )
 {
     if( ssl->conf->endpoint == MBEDTLS_SSL_IS_CLIENT )
     {
@@ -2092,7 +2094,7 @@ static int ssl_certificate_verify_postprocess( mbedtls_ssl_context* ssl )
  */
 
 /* Main state-handling entry point; orchestrates the other functions. */
-int mbedtls_ssl_write_certificate_process( mbedtls_ssl_context* ssl );
+int mbedtls_ssl_write_certificate_process( mbedtls_ssl_context *ssl );
 
 /* Check if a certificate should be written, and if yes,
  * if it is available.
@@ -2106,22 +2108,22 @@ int mbedtls_ssl_write_certificate_process( mbedtls_ssl_context* ssl );
 
 #define SSL_WRITE_CERTIFICATE_AVAILABLE  0
 #define SSL_WRITE_CERTIFICATE_SKIP       1
-static int ssl_write_certificate_coordinate( mbedtls_ssl_context* ssl );
+static int ssl_write_certificate_coordinate( mbedtls_ssl_context *ssl );
 #if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
 /* Write certificate message based on the configured certificate */
-static int ssl_write_certificate_write( mbedtls_ssl_context* ssl,
-                                        unsigned char* buf,
-                                        size_t buflen,
-                                        size_t* olen );
+static int ssl_write_certificate_write( mbedtls_ssl_context *ssl,
+                                        unsigned char *buf,
+                                        size_t buf_len,
+                                        size_t *out_len );
 #endif /* MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED */
 /* Update the state after handling the outgoing certificate message. */
-static int ssl_write_certificate_postprocess( mbedtls_ssl_context* ssl );
+static int ssl_write_certificate_postprocess( mbedtls_ssl_context *ssl );
 
 /*
  * Implementation
  */
 
-int mbedtls_ssl_write_certificate_process( mbedtls_ssl_context* ssl )
+int mbedtls_ssl_write_certificate_process( mbedtls_ssl_context *ssl )
 {
     int ret;
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> write certificate" ) );
@@ -2141,7 +2143,7 @@ int mbedtls_ssl_write_certificate_process( mbedtls_ssl_context* ssl )
         MBEDTLS_SSL_PROC_CHK( ssl_write_certificate_write(
                                   ssl, buf, buf_len, &msg_len ) );
 
-        mbedtls_ssl_tls1_3_add_hs_msg_to_checksum(
+        mbedtls_ssl_tls13_add_hs_msg_to_checksum(
             ssl, MBEDTLS_SSL_HS_CERTIFICATE, buf, msg_len );
 
         MBEDTLS_SSL_PROC_CHK( ssl_write_certificate_postprocess( ssl ) );
@@ -2162,7 +2164,7 @@ cleanup:
 }
 
 
-static int ssl_write_certificate_coordinate( mbedtls_ssl_context* ssl )
+static int ssl_write_certificate_coordinate( mbedtls_ssl_context *ssl )
 {
 #if defined(MBEDTLS_SSL_SRV_C)
     int have_own_cert = 1;
@@ -2237,17 +2239,17 @@ static int ssl_write_certificate_coordinate( mbedtls_ssl_context* ssl )
 
 
 #if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
-static int ssl_write_certificate_write( mbedtls_ssl_context* ssl,
-                                        unsigned char* buf,
-                                        size_t buflen,
-                                        size_t* olen )
+static int ssl_write_certificate_write( mbedtls_ssl_context *ssl,
+                                        unsigned char *buf,
+                                        size_t buf_len,
+                                        size_t *out_len )
 {
     size_t i=0, n, total_len;
-    const mbedtls_x509_crt* crt;
-    unsigned char* start;
+    const mbedtls_x509_crt *crt;
+    unsigned char *start;
 
     /* TODO: Add bounds checks! Only then remove the next line. */
-    ((void) buflen );
+    ((void) buf_len );
 
     /* empty certificate_request_context with length 0 */
     buf[i] = 0;
@@ -2285,7 +2287,7 @@ static int ssl_write_certificate_write( mbedtls_ssl_context* ssl,
     while ( crt != NULL )
     {
         n = crt->raw.len;
-        if( n > buflen - 3 - i )
+        if( n > buf_len - 3 - i )
         {
             MBEDTLS_SSL_DEBUG_MSG( 1, ( "certificate too large, %" MBEDTLS_PRINTF_SIZET " > %d",
                                         i + 3 + n, MBEDTLS_SSL_OUT_CONTENT_LEN ) );
@@ -2315,14 +2317,14 @@ static int ssl_write_certificate_write( mbedtls_ssl_context* ssl,
 empty_cert:
 #endif /* MBEDTLS_SSL_CLI_C */
 
-    *olen = i;
+    *out_len = i;
 
     return( 0 );
 }
 #endif /* MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED */
 
 /* Update the state after handling the outgoing certificate message. */
-static int ssl_write_certificate_postprocess( mbedtls_ssl_context* ssl )
+static int ssl_write_certificate_postprocess( mbedtls_ssl_context *ssl )
 {
 #if defined(MBEDTLS_SSL_CLI_C)
     if( ssl->conf->endpoint == MBEDTLS_SSL_IS_CLIENT )
@@ -2345,7 +2347,7 @@ static int ssl_write_certificate_postprocess( mbedtls_ssl_context* ssl )
 }
 
 #if defined(MBEDTLS_ZERO_RTT)
-void mbedtls_ssl_conf_early_data( mbedtls_ssl_config* conf, int early_data,
+void mbedtls_ssl_conf_early_data( mbedtls_ssl_config *conf, int early_data,
                                   size_t max_early_data,
                                   int(*early_data_callback)( mbedtls_ssl_context*,
                                                              const unsigned char*,
@@ -2379,7 +2381,7 @@ void mbedtls_ssl_conf_early_data( mbedtls_ssl_config* conf, int early_data,
 
 #if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
 void mbedtls_ssl_conf_signature_algorithms( mbedtls_ssl_config *conf,
-                     const uint16_t* sig_algs )
+                     const uint16_t *sig_algs )
 {
     /* TODO: Add available algorithm check */
     conf->tls13_sig_algs = sig_algs;
@@ -2402,11 +2404,11 @@ void mbedtls_ssl_conf_signature_algorithms( mbedtls_ssl_config *conf,
 int mbedtls_ssl_write_early_data_ext( mbedtls_ssl_context *ssl,
                                       unsigned char *buf,
                                       const unsigned char *end,
-                                      size_t *olen )
+                                      size_t *out_len )
 {
     unsigned char *p = buf;
 
-    *olen = 0;
+    *out_len = 0;
 
 #if defined(MBEDTLS_SSL_CLI_C)
     if( ssl->conf->endpoint == MBEDTLS_SSL_IS_CLIENT )
@@ -2429,7 +2431,7 @@ int mbedtls_ssl_write_early_data_ext( mbedtls_ssl_context *ssl,
             return( 0 );
 
         if( ssl->conf->tls13_kex_modes !=
-                   MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK ||
+                   MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK ||
             ssl->conf->early_data_enabled == MBEDTLS_SSL_EARLY_DATA_DISABLED )
         {
             MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= skip write early_data extension" ) );
@@ -2472,7 +2474,7 @@ int mbedtls_ssl_write_early_data_ext( mbedtls_ssl_context *ssl,
     *p++ = 0;
     *p++ = 0;
 
-    *olen = 4;
+    *out_len = 4;
     return( 0 );
 }
 #endif /* MBEDTLS_ZERO_RTT */
@@ -2487,7 +2489,7 @@ typedef mbedtls_ecdh_context mbedtls_ecdh_context_mbed;
     MBEDTLS_INTERNAL_VALIDATE_RET( cond, MBEDTLS_ERR_ECP_BAD_INPUT_DATA )
 
 static int ecdh_make_tls_13_params_internal( mbedtls_ecdh_context_mbed *ctx,
-                                      size_t *olen, int point_format,
+                                      size_t *out_len, int point_format,
                                       unsigned char *buf, size_t blen,
                                       int (*f_rng)(void *,
                                                    unsigned char *,
@@ -2522,21 +2524,21 @@ static int ecdh_make_tls_13_params_internal( mbedtls_ecdh_context_mbed *ctx,
 #endif /* MBEDTLS_ECP_RESTARTABLE */
 
     ret = mbedtls_ecp_point_write_binary( &ctx->grp, &ctx->Q, point_format,
-                                          olen, buf, blen );
+                                          out_len, buf, blen );
     if( ret != 0 )
         return( ret );
 
     return( 0 );
 }
 
-int mbedtls_ecdh_make_tls_13_params( mbedtls_ecdh_context *ctx, size_t *olen,
+int mbedtls_ecdh_make_tls_13_params( mbedtls_ecdh_context *ctx, size_t *out_len,
                               unsigned char *buf, size_t blen,
                               int (*f_rng)(void *, unsigned char *, size_t),
                               void *p_rng )
 {
     int restart_enabled = 0;
     ECDH_VALIDATE_RET( ctx != NULL );
-    ECDH_VALIDATE_RET( olen != NULL );
+    ECDH_VALIDATE_RET( out_len != NULL );
     ECDH_VALIDATE_RET( buf != NULL );
     ECDH_VALIDATE_RET( f_rng != NULL );
 
@@ -2547,18 +2549,18 @@ int mbedtls_ecdh_make_tls_13_params( mbedtls_ecdh_context *ctx, size_t *olen,
 #endif
 
 #if defined(MBEDTLS_ECDH_LEGACY_CONTEXT)
-    return( ecdh_make_tls_13_params_internal( ctx, olen, ctx->point_format, buf, blen,
+    return( ecdh_make_tls_13_params_internal( ctx, out_len, ctx->point_format, buf, blen,
                                        f_rng, p_rng, restart_enabled ) );
 #else
     switch( ctx->var )
     {
 #if defined(MBEDTLS_ECDH_VARIANT_EVEREST_ENABLED)
         case MBEDTLS_ECDH_VARIANT_EVEREST:
-            return( mbedtls_everest_make_params( &ctx->ctx.everest_ecdh, olen,
+            return( mbedtls_everest_make_params( &ctx->ctx.everest_ecdh, out_len,
                                                  buf, blen, f_rng, p_rng ) );
 #endif
         case MBEDTLS_ECDH_VARIANT_MBEDTLS_2_0:
-            return( ecdh_make_tls_13_params_internal( &ctx->ctx.mbed_ecdh, olen,
+            return( ecdh_make_tls_13_params_internal( &ctx->ctx.mbed_ecdh, out_len,
                                                ctx->point_format, buf, blen,
                                                f_rng, p_rng,
                                                restart_enabled ) );
@@ -2616,7 +2618,7 @@ int mbedtls_ecdh_import_public_raw( mbedtls_ecdh_context *ctx,
 }
 
 static int ecdh_make_tls_13_public_internal( mbedtls_ecdh_context_mbed *ctx,
-                                      size_t *olen, int point_format,
+                                      size_t *out_len, int point_format,
                                       unsigned char *buf, size_t blen,
                                       int (*f_rng)(void *,
                                                    unsigned char *,
@@ -2649,21 +2651,21 @@ static int ecdh_make_tls_13_public_internal( mbedtls_ecdh_context_mbed *ctx,
         return( ret );
 #endif /* MBEDTLS_ECP_RESTARTABLE */
 
-    return mbedtls_ecp_tls_13_write_point( &ctx->grp, &ctx->Q, point_format, olen,
+    return mbedtls_ecp_tls_13_write_point( &ctx->grp, &ctx->Q, point_format, out_len,
                                         buf, blen );
 }
 
 /*
  * Setup and export the client public value
  */
-int mbedtls_ecdh_make_tls_13_public( mbedtls_ecdh_context *ctx, size_t *olen,
+int mbedtls_ecdh_make_tls_13_public( mbedtls_ecdh_context *ctx, size_t *out_len,
                               unsigned char *buf, size_t blen,
                               int (*f_rng)(void *, unsigned char *, size_t),
                               void *p_rng )
 {
     int restart_enabled = 0;
     ECDH_VALIDATE_RET( ctx != NULL );
-    ECDH_VALIDATE_RET( olen != NULL );
+    ECDH_VALIDATE_RET( out_len != NULL );
     ECDH_VALIDATE_RET( buf != NULL );
     ECDH_VALIDATE_RET( f_rng != NULL );
 
@@ -2672,18 +2674,18 @@ int mbedtls_ecdh_make_tls_13_public( mbedtls_ecdh_context *ctx, size_t *olen,
 #endif
 
 #if defined(MBEDTLS_ECDH_LEGACY_CONTEXT)
-    return( ecdh_make_tls_13_public_internal( ctx, olen, ctx->point_format, buf, blen,
+    return( ecdh_make_tls_13_public_internal( ctx, out_len, ctx->point_format, buf, blen,
                                        f_rng, p_rng, restart_enabled ) );
 #else
     switch( ctx->var )
     {
 #if defined(MBEDTLS_ECDH_VARIANT_EVEREST_ENABLED)
         case MBEDTLS_ECDH_VARIANT_EVEREST:
-            return( mbedtls_everest_make_public( &ctx->ctx.everest_ecdh, olen,
+            return( mbedtls_everest_make_public( &ctx->ctx.everest_ecdh, out_len,
                                                  buf, blen, f_rng, p_rng ) );
 #endif
         case MBEDTLS_ECDH_VARIANT_MBEDTLS_2_0:
-            return( ecdh_make_tls_13_public_internal( &ctx->ctx.mbed_ecdh, olen,
+            return( ecdh_make_tls_13_public_internal( &ctx->ctx.mbed_ecdh, out_len,
                                                ctx->point_format, buf, blen,
                                                f_rng, p_rng,
                                                restart_enabled ) );
@@ -2772,13 +2774,13 @@ int mbedtls_ecp_tls_13_read_point( const mbedtls_ecp_group *grp,
 }
 
 int mbedtls_ecp_tls_13_write_point( const mbedtls_ecp_group *grp, const mbedtls_ecp_point *pt,
-                         int format, size_t *olen,
+                         int format, size_t *out_len,
                          unsigned char *buf, size_t blen )
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
     ECP_VALIDATE_RET( grp  != NULL );
     ECP_VALIDATE_RET( pt   != NULL );
-    ECP_VALIDATE_RET( olen != NULL );
+    ECP_VALIDATE_RET( out_len != NULL );
     ECP_VALIDATE_RET( buf  != NULL );
     ECP_VALIDATE_RET( format == MBEDTLS_ECP_PF_UNCOMPRESSED ||
                       format == MBEDTLS_ECP_PF_COMPRESSED );
@@ -2787,13 +2789,13 @@ int mbedtls_ecp_tls_13_write_point( const mbedtls_ecp_group *grp, const mbedtls_
         return( MBEDTLS_ERR_ECP_BAD_INPUT_DATA );
 
     if( ( ret = mbedtls_ecp_point_write_binary( grp, pt, format,
-                    olen, buf + 2, blen - 2) ) != 0 )
+                    out_len, buf + 2, blen - 2) ) != 0 )
         return( ret );
 
     // Length
-    *buf++ = (unsigned char)( ( *olen >> 8 ) & 0xFF );
-    *buf++ = (unsigned char)( ( *olen ) & 0xFF );
-    *olen += 2;
+    *buf++ = (unsigned char)( ( *out_len >> 8 ) & 0xFF );
+    *buf++ = (unsigned char)( ( *out_len ) & 0xFF );
+    *out_len += 2;
 
     return( 0 );
 }
@@ -2801,19 +2803,19 @@ int mbedtls_ecp_tls_13_write_point( const mbedtls_ecp_group *grp, const mbedtls_
 /*
  * Write the ECParameters record corresponding to a group (TLS 1.3)
  */
-int mbedtls_ecp_tls_13_write_group( const mbedtls_ecp_group *grp, size_t *olen,
+int mbedtls_ecp_tls_13_write_group( const mbedtls_ecp_group *grp, size_t *out_len,
                          unsigned char *buf, size_t blen )
 {
     const mbedtls_ecp_curve_info *curve_info;
     ECP_VALIDATE_RET( grp  != NULL );
     ECP_VALIDATE_RET( buf  != NULL );
-    ECP_VALIDATE_RET( olen != NULL );
+    ECP_VALIDATE_RET( out_len != NULL );
 
     if( ( curve_info = mbedtls_ecp_curve_info_from_grp_id( grp->id ) ) == NULL )
         return( MBEDTLS_ERR_ECP_BAD_INPUT_DATA );
 
-    *olen = 2;
-    if( blen < *olen )
+    *out_len = 2;
+    if( blen < *out_len )
         return( MBEDTLS_ERR_ECP_BUFFER_TOO_SMALL );
 
     // Two bytes for named curve

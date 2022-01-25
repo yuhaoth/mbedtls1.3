@@ -778,9 +778,9 @@
 #error "ZeroRTT requires MBEDTLS_ZERO_RTT and MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED to be defined."
 #endif
 
-#if defined(MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE) && \
+#if defined(MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE) && \
     !defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
-#error "MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE defined, but not all prerequesites."
+#error "MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE defined, but not all prerequesites."
 #endif
 
 /*

@@ -174,22 +174,13 @@
 #define MBEDTLS_ERR_LAST 0x7F80 /**< This definition points to the last error code to have a correct parsing in error.c */
 
 /*
- * TLS 1.3 NamedGroup values
- */
-#define MBEDTLS_SSL_TLS13_NAMED_GROUP_SEC256R1  0x0017
-#define MBEDTLS_SSL_TLS13_NAMED_GROUP_SEC384R1  0x0018
-#define MBEDTLS_SSL_TLS13_NAMED_GROUP_SEC521R1  0x0019
-#define MBEDTLS_SSL_TLS13_NAMED_GROUP_X25519    0x001D
-#define MBEDTLS_SSL_TLS13_NAMED_GROUP_X448      0x001E
-
-/*
  * Constants from RFC 8446 for TLS 1.3 PSK modes
  *
  * Those are used in the Pre-Shared Key Exchange Modes extension.
  * See Section 4.2.9 in RFC 8446.
  */
-#define MBEDTLS_SSL_TLS13_PSK_MODE_PURE  0 /* Pure PSK-based exchange  */
-#define MBEDTLS_SSL_TLS13_PSK_MODE_ECDHE 1 /* PSK+ECDHE-based exchange */
+#define MBEDTLS_SSL_TLS1_3_PSK_MODE_PURE  0 /* Pure PSK-based exchange  */
+#define MBEDTLS_SSL_TLS1_3_PSK_MODE_ECDHE 1 /* PSK+ECDHE-based exchange */
 
 /*
  * TLS 1.3 NamedGroup values
@@ -239,28 +230,28 @@
  * mbedtls_ssl_conf_tls13_key_exchange_modes().
  */
 
-#define MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_NONE                   0
-#define MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK            ( 1u << 0 ) /*!< Pure-PSK TLS 1.3 key exchange,
-                                                                        *   encompassing both externally agreed PSKs
-                                                                        *   as well as resumption PSKs. */
-#define MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_EPHEMERAL      ( 1u << 1 ) /*!< Pure-Ephemeral TLS 1.3 key exchanges,
-                                                                        *   including for example ECDHE and DHE
-                                                                        *   key exchanges. */
-#define MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_EPHEMERAL  ( 1u << 2 ) /*!< PSK-Ephemeral TLS 1.3 key exchanges,
-                                                                        *   using both a PSK and an ephemeral
-                                                                        *   key exchange. */
+#define MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_NONE                   0
+#define MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK            ( 1u << 0 ) /*!< Pure-PSK TLS 1.3 key exchange,
+                                                                         *   encompassing both externally agreed PSKs
+                                                                         *   as well as resumption PSKs. */
+#define MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL      ( 1u << 1 ) /*!< Pure-Ephemeral TLS 1.3 key exchanges,
+                                                                         *   including for example ECDHE and DHE
+                                                                         *   key exchanges. */
+#define MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_EPHEMERAL  ( 1u << 2 ) /*!< PSK-Ephemeral TLS 1.3 key exchanges,
+                                                                         *   using both a PSK and an ephemeral
+                                                                         *   key exchange. */
 
 /* Convenience macros for sets of key exchanges. */
-#define MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_ALL                         \
-    ( MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK              |            \
-      MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_EPHEMERAL    |            \
-      MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_EPHEMERAL )        /*!< All TLS 1.3 key exchanges           */
-#define MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_ALL                     \
-    ( MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK              |            \
-      MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_EPHEMERAL    ) /*!< All PSK-based TLS 1.3 key exchanges */
-#define MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_EPHEMERAL_ALL               \
-    ( MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_EPHEMERAL        |            \
-      MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_EPHEMERAL    ) /*!< All ephemeral TLS 1.3 key exchanges */
+#define MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_ALL                         \
+    ( MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK              |            \
+      MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_EPHEMERAL    |            \
+      MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL )        /*!< All TLS 1.3 key exchanges           */
+#define MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_ALL                     \
+    ( MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK              |            \
+      MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_EPHEMERAL    ) /*!< All PSK-based TLS 1.3 key exchanges */
+#define MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ALL               \
+    ( MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL        |            \
+      MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_EPHEMERAL    ) /*!< All ephemeral TLS 1.3 key exchanges */
 
 /*
  * Various constants
@@ -453,75 +444,40 @@
 #define MBEDTLS_SSL_SIG_RSA                  1
 #define MBEDTLS_SSL_SIG_ECDSA                3
 
- /*
- * TLS 1.3 signature algorithms
- * RFC 8446, Section 4.2.2
- */
-
-/* RSASSA-PKCS1-v1_5 algorithms */
-#define MBEDTLS_TLS13_SIG_RSA_PKCS1_SHA256 0x0401
-#define MBEDTLS_TLS13_SIG_RSA_PKCS1_SHA384 0x0501
-#define MBEDTLS_TLS13_SIG_RSA_PKCS1_SHA512 0x0601
-
-/* ECDSA algorithms */
-#define MBEDTLS_TLS13_SIG_ECDSA_SECP256R1_SHA256 0x0403
-#define MBEDTLS_TLS13_SIG_ECDSA_SECP384R1_SHA384 0x0503
-#define MBEDTLS_TLS13_SIG_ECDSA_SECP521R1_SHA512 0x0603
-
-/* RSASSA-PSS algorithms with public key OID rsaEncryption */
-#define MBEDTLS_TLS13_SIG_RSA_PSS_RSAE_SHA256 0x0804
-#define MBEDTLS_TLS13_SIG_RSA_PSS_RSAE_SHA384 0x0805
-#define MBEDTLS_TLS13_SIG_RSA_PSS_RSAE_SHA512 0x0806
-
-/* EdDSA algorithms */
-#define MBEDTLS_TLS13_SIG_ED25519 0x0807
-#define MBEDTLS_TLS13_SIG_ED448 0x0808
-
-/* RSASSA-PSS algorithms with public key OID RSASSA-PSS  */
-#define MBEDTLS_TLS13_SIG_RSA_PSS_PSS_SHA256 0x0809
-#define MBEDTLS_TLS13_SIG_RSA_PSS_PSS_SHA384 0x080A
-#define MBEDTLS_TLS13_SIG_RSA_PSS_PSS_SHA512 0x080B
-
-/* LEGACY ALGORITHMS */
-#define MBEDTLS_TLS13_SIG_RSA_PKCS1_SHA1 0x0201
-#define MBEDTLS_TLS13_SIG_ECDSA_SHA1     0x0203
-
-#define MBEDTLS_TLS13_SIG_NONE 0x0
-
 /*
  * TLS 1.3 signature algorithms
  * RFC 8446, Section 4.2.2
  */
 
 /* RSASSA-PKCS1-v1_5 algorithms */
-#define MBEDTLS_TLS13_SIG_RSA_PKCS1_SHA256 0x0401
-#define MBEDTLS_TLS13_SIG_RSA_PKCS1_SHA384 0x0501
-#define MBEDTLS_TLS13_SIG_RSA_PKCS1_SHA512 0x0601
+#define MBEDTLS_TLS1_3_SIG_RSA_PKCS1_SHA256 0x0401
+#define MBEDTLS_TLS1_3_SIG_RSA_PKCS1_SHA384 0x0501
+#define MBEDTLS_TLS1_3_SIG_RSA_PKCS1_SHA512 0x0601
 
 /* ECDSA algorithms */
-#define MBEDTLS_TLS13_SIG_ECDSA_SECP256R1_SHA256 0x0403
-#define MBEDTLS_TLS13_SIG_ECDSA_SECP384R1_SHA384 0x0503
-#define MBEDTLS_TLS13_SIG_ECDSA_SECP521R1_SHA512 0x0603
+#define MBEDTLS_TLS1_3_SIG_ECDSA_SECP256R1_SHA256 0x0403
+#define MBEDTLS_TLS1_3_SIG_ECDSA_SECP384R1_SHA384 0x0503
+#define MBEDTLS_TLS1_3_SIG_ECDSA_SECP521R1_SHA512 0x0603
 
 /* RSASSA-PSS algorithms with public key OID rsaEncryption */
-#define MBEDTLS_TLS13_SIG_RSA_PSS_RSAE_SHA256 0x0804
-#define MBEDTLS_TLS13_SIG_RSA_PSS_RSAE_SHA384 0x0805
-#define MBEDTLS_TLS13_SIG_RSA_PSS_RSAE_SHA512 0x0806
+#define MBEDTLS_TLS1_3_SIG_RSA_PSS_RSAE_SHA256 0x0804
+#define MBEDTLS_TLS1_3_SIG_RSA_PSS_RSAE_SHA384 0x0805
+#define MBEDTLS_TLS1_3_SIG_RSA_PSS_RSAE_SHA512 0x0806
 
 /* EdDSA algorithms */
-#define MBEDTLS_TLS13_SIG_ED25519 0x0807
-#define MBEDTLS_TLS13_SIG_ED448 0x0808
+#define MBEDTLS_TLS1_3_SIG_ED25519 0x0807
+#define MBEDTLS_TLS1_3_SIG_ED448 0x0808
 
 /* RSASSA-PSS algorithms with public key OID RSASSA-PSS  */
-#define MBEDTLS_TLS13_SIG_RSA_PSS_PSS_SHA256 0x0809
-#define MBEDTLS_TLS13_SIG_RSA_PSS_PSS_SHA384 0x080A
-#define MBEDTLS_TLS13_SIG_RSA_PSS_PSS_SHA512 0x080B
+#define MBEDTLS_TLS1_3_SIG_RSA_PSS_PSS_SHA256 0x0809
+#define MBEDTLS_TLS1_3_SIG_RSA_PSS_PSS_SHA384 0x080A
+#define MBEDTLS_TLS1_3_SIG_RSA_PSS_PSS_SHA512 0x080B
 
 /* LEGACY ALGORITHMS */
-#define MBEDTLS_TLS13_SIG_RSA_PKCS1_SHA1 0x0201
-#define MBEDTLS_TLS13_SIG_ECDSA_SHA1     0x0203
+#define MBEDTLS_TLS1_3_SIG_RSA_PKCS1_SHA1 0x0201
+#define MBEDTLS_TLS1_3_SIG_ECDSA_SHA1     0x0203
 
-#define MBEDTLS_TLS13_SIG_NONE 0x0
+#define MBEDTLS_TLS1_3_SIG_NONE 0x0
 
 /*
  * Client Certificate Types
@@ -586,7 +542,7 @@
 #define MBEDTLS_SSL_HS_NEW_SESSION_TICKET       4
 #define MBEDTLS_SSL_HS_END_OF_EARLY_DATA        5 // NEW IN TLS 1.3
 #define MBEDTLS_SSL_HS_HELLO_RETRY_REQUEST      6 // NEW IN TLS 1.3 (RESERVED)
-#define MBEDTLS_SSL_HS_ENCRYPTED_EXTENSION      8 // NEW IN TLS 1.3
+#define MBEDTLS_SSL_HS_ENCRYPTED_EXTENSIONS     8 // NEW IN TLS 1.3
 #define MBEDTLS_SSL_HS_CERTIFICATE             11
 #define MBEDTLS_SSL_HS_SERVER_KEY_EXCHANGE     12
 #define MBEDTLS_SSL_HS_CERTIFICATE_REQUEST     13
@@ -742,13 +698,13 @@ typedef enum
     MBEDTLS_SSL_ENCRYPTED_EXTENSIONS,
     MBEDTLS_SSL_HANDSHAKE_FINISH_ACK,
     MBEDTLS_SSL_CLIENT_NEW_SESSION_TICKET,
-#if defined(MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE)
+#if defined(MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE)
     MBEDTLS_SSL_CLIENT_CCS_BEFORE_2ND_CLIENT_HELLO,
     MBEDTLS_SSL_CLIENT_CCS_AFTER_SERVER_FINISHED,
     MBEDTLS_SSL_CLIENT_CCS_AFTER_CLIENT_HELLO,
     MBEDTLS_SSL_SERVER_CCS_AFTER_SERVER_HELLO,
     MBEDTLS_SSL_SERVER_CCS_AFTER_HRR,
-#endif /* MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE */
+#endif /* MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE */
     MBEDTLS_SSL_EARLY_APP_DATA
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 }
@@ -1207,7 +1163,7 @@ typedef struct
 #if defined(MBEDTLS_SSL_NEW_SESSION_TICKET)
     unsigned char resumption_master_secret           [ MBEDTLS_TLS1_3_MD_MAX_SIZE ];
 #endif /* MBEDTLS_SSL_NEW_SESSION_TICKET */
-} mbedtls_ssl_tls1_3_application_secrets;
+} mbedtls_ssl_tls13_application_secrets;
 
 #if defined(MBEDTLS_SSL_DTLS_SRTP)
 
@@ -1329,7 +1285,7 @@ struct mbedtls_ssl_session
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
-    mbedtls_ssl_tls1_3_application_secrets MBEDTLS_PRIVATE(app_secrets);
+    mbedtls_ssl_tls13_application_secrets MBEDTLS_PRIVATE(app_secrets);
 #endif
 };
 
@@ -1350,12 +1306,12 @@ typedef enum
 {
     MBEDTLS_SSL_KEY_EXPORT_TLS12_MASTER_SECRET = 0,
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
-    MBEDTLS_SSL_KEY_EXPORT_TLS13_CLIENT_EARLY_SECRET,
-    MBEDTLS_SSL_KEY_EXPORT_TLS13_EARLY_EXPORTER_SECRET,
-    MBEDTLS_SSL_KEY_EXPORT_TLS13_CLIENT_HANDSHAKE_TRAFFIC_SECRET,
-    MBEDTLS_SSL_KEY_EXPORT_TLS13_SERVER_HANDSHAKE_TRAFFIC_SECRET,
-    MBEDTLS_SSL_KEY_EXPORT_TLS13_CLIENT_APPLICATION_TRAFFIC_SECRET,
-    MBEDTLS_SSL_KEY_EXPORT_TLS13_SERVER_APPLICATION_TRAFFIC_SECRET,
+    MBEDTLS_SSL_KEY_EXPORT_TLS1_3_CLIENT_EARLY_SECRET,
+    MBEDTLS_SSL_KEY_EXPORT_TLS1_3_EARLY_EXPORTER_SECRET,
+    MBEDTLS_SSL_KEY_EXPORT_TLS1_3_CLIENT_HANDSHAKE_TRAFFIC_SECRET,
+    MBEDTLS_SSL_KEY_EXPORT_TLS1_3_SERVER_HANDSHAKE_TRAFFIC_SECRET,
+    MBEDTLS_SSL_KEY_EXPORT_TLS1_3_CLIENT_APPLICATION_TRAFFIC_SECRET,
+    MBEDTLS_SSL_KEY_EXPORT_TLS1_3_SERVER_APPLICATION_TRAFFIC_SECRET,
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 } mbedtls_ssl_key_export_type;
 
@@ -3101,20 +3057,20 @@ void mbedtls_ssl_conf_ciphersuites( mbedtls_ssl_config *conf,
  *
  * \param conf       The SSL configuration the change should apply to.
  * \param kex_modes  A bitwise combination of one or more of the following:
- *                   - MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK
+ *                   - MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK
  *                     This flag enables pure-PSK key exchanges.
- *                   - MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_EPHEMERAL
+ *                   - MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_EPHEMERAL
  *                     This flag enables combined PSK-ephemeral key exchanges.
- *                   - MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_EPHEMERAL
+ *                   - MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL
  *                     This flag enables pure-ephemeral key exchanges.
  *                   For convenience, the following pre-defined macros are
  *                   available for combinations of the above:
- *                   - MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_ALL
+ *                   - MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_ALL
  *                     Includes all of pure-PSK, PSK-ephemeral and pure-ephemeral.
- *                   - MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_ALL
+ *                   - MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_ALL
  *                     Includes both pure-PSK and combined PSK-ephemeral
  *                     key exchanges, but excludes pure-ephemeral key exchanges.
- *                   - MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_EPHEMERAL_ALL
+ *                   - MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ALL
  *                     Includes both pure-ephemeral and combined PSK-ephemeral
  *                     key exchanges.
  *
@@ -3329,21 +3285,21 @@ int mbedtls_ssl_conf_own_cert( mbedtls_ssl_config *conf,
  *      The SSL configuration the change should apply to.
  * \param key_exchange_mode
  *      A bitwise combination of one or more of the following:
- *      - MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK
+ *      - MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK
  *        This flag enables pure-PSK key exchanges.
- *      - MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_EPHEMERAL
+ *      - MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_EPHEMERAL
  *        This flag enables combined PSK-ephemeral key exchanges.
- *      - MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_EPHEMERAL
+ *      - MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL
  *        This flag enables pure-ephemeral key exchanges.
  *
  * \note For convenience, the following pre-defined macros are available
  *       for all combinations of the above:
- *       - MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_ALL
+ *       - MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_ALL
  *         Includes all of pure-PSK, PSK-ephemeral and pure-ephemeral.
- *       - MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_ALL
+ *       - MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_ALL
  *         Includes both pure-PSK and combined PSK-ephemeral key exchanges,
  *         but excludes pure-ephemeral key exchanges.
- *       - MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_EPHEMERAL_ALL
+ *       - MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ALL
  *         Includes both pure-ephemeral and combined PSK-ephemeral key exchanges,
  *
  * \note If a PSK-based key exchange mode shall be supported, applications
@@ -3684,7 +3640,7 @@ void MBEDTLS_DEPRECATED mbedtls_ssl_conf_curves( mbedtls_ssl_config *conf,
  * \param conf     SSL configuration
  * \param groups   List of allowed groups ordered by preference, terminated by 0.
  *                 Must contain valid IANA NamedGroup IDs (provided via either an integer
- *                 or using MBEDTLS_TLS13_NAMED_GROUP_XXX macros).
+ *                 or using MBEDTLS_TLS1_3_NAMED_GROUP_XXX macros).
  */
 void mbedtls_ssl_conf_groups( mbedtls_ssl_config *conf,
                               const uint16_t *groups );
@@ -3728,9 +3684,9 @@ void mbedtls_ssl_conf_sig_hashes( mbedtls_ssl_config *conf,
  *
  * \param conf     The SSL configuration to use.
  * \param sig_algs List of allowed IANA values for TLS 1.3 signature algorithms,
- *                 terminated by \c MBEDTLS_TLS13_SIG_NONE. The list must remain
+ *                 terminated by \c MBEDTLS_TLS1_3_SIG_NONE. The list must remain
  *                 available throughout the lifetime of the conf object. Supported
- *                 values are available as \c MBEDTLS_TLS13_SIG_XXXX
+ *                 values are available as \c MBEDTLS_TLS1_3_SIG_XXXX
  */
 void mbedtls_ssl_conf_sig_algs( mbedtls_ssl_config *conf,
                                 const uint16_t* sig_algs );
