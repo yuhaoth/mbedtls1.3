@@ -222,8 +222,7 @@ int mbedtls_ssl_tls13_parse_supported_groups_ext(
     const mbedtls_ecp_curve_info *curve_info, **curves;
 
     MBEDTLS_SSL_DEBUG_BUF( 3, "supported_groups extension", buf, len );
-
-    list_size = ( ( buf[0] << 8 ) | ( buf[1] ) );
+    list_size = MBEDTLS_GET_UINT16_BE( buf, 0 );
     if( list_size + 2 != len || list_size % 2 != 0 )
         return( MBEDTLS_ERR_SSL_DECODE_ERROR );
 
@@ -251,7 +250,7 @@ int mbedtls_ssl_tls13_parse_supported_groups_ext(
     p = buf + 2;
     while ( list_size > 0 && our_size > 1 )
     {
-        uint16_t tls_grp_id = p[0] << 8 | p[1];
+        uint16_t tls_grp_id = MBEDTLS_GET_UINT16_BE( p, 0 );
         curve_info = mbedtls_ecp_curve_info_from_tls_id( tls_grp_id );
 
         /* mbedtls_ecp_curve_info_from_tls_id() uses the mbedtls_ecp_curve_info
@@ -338,7 +337,7 @@ static int ssl_tls13_parse_key_shares_ext( mbedtls_ssl_context *ssl,
         return( MBEDTLS_ERR_SSL_DECODE_ERROR );
     }
 
-    total_ext_len = ( (size_t) p[0] << 8 ) | p[1];
+    total_ext_len = MBEDTLS_GET_UINT16_BE( p, 0 );
     p   += 2;
     len -= 2;
 
@@ -375,11 +374,11 @@ static int ssl_tls13_parse_key_shares_ext( mbedtls_ssl_context *ssl,
             return( MBEDTLS_ERR_SSL_DECODE_ERROR );
         }
 
-        their_group = ((size_t) p[0] << 8) | (size_t) p[1];
+        their_group = MBEDTLS_GET_UINT16_BE( p, 0 );
         p   += 2;
         len -= 2;
 
-        cur_share_len = ((size_t) p[0] << 8) | (size_t) p[1];
+        cur_share_len = MBEDTLS_GET_UINT16_BE( p, 0 );
         p   += 2;
         len -= 2;
 
@@ -551,7 +550,7 @@ int mbedtls_ssl_tls13_parse_client_psk_identity_ext(
 #endif /* MBEDTLS_SSL_NEW_SESSION_TICKET */
 
     /* Read length of array of identities */
-    item_array_length = ( buf[0] << 8 ) | buf[1];
+    item_array_length = MBEDTLS_GET_UINT16_BE( buf, 0 );
     length_so_far = item_array_length + 2;
     if( length_so_far > len )
     {
@@ -564,7 +563,7 @@ int mbedtls_ssl_tls13_parse_client_psk_identity_ext(
     while( sum < item_array_length + 2 )
     {
         /* Read to psk identity length */
-        item_length = ( buf[0] << 8 ) | buf[1];
+        item_length = MBEDTLS_GET_UINT16_BE( buf, 0 );
         sum = sum + 2 + item_length;
 
         if( sum > len )
@@ -805,7 +804,7 @@ psk_parsing_successful:
         return( ret );
 
     /* read length of psk binder array */
-    item_array_length = ( buf[0] << 8 ) | buf[1];
+    item_array_length = MBEDTLS_GET_UINT16_BE( buf, 0 );
     length_so_far += item_array_length;
     buf += 2;
 
@@ -993,7 +992,7 @@ static int ssl_tls13_parse_cookie_ext( mbedtls_ssl_context *ssl,
     {
         if( len >= 2 )
         {
-            cookie_len = ( buf[0] << 8 ) | buf[1];
+            cookie_len = MBEDTLS_GET_UINT16_BE( buf, 0 );
             buf += 2;
         }
         else
@@ -1051,7 +1050,7 @@ static int ssl_tls13_parse_servername_ext( mbedtls_ssl_context *ssl,
 
     MBEDTLS_SSL_DEBUG_MSG( 3, ( "Parse ServerName extension" ) );
 
-    servername_list_size = ( ( buf[0] << 8 ) | ( buf[1] ) );
+    servername_list_size = MBEDTLS_GET_UINT16_BE( buf, 0 );
     if( servername_list_size + 2 != len )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad client hello message" ) );
@@ -1061,7 +1060,7 @@ static int ssl_tls13_parse_servername_ext( mbedtls_ssl_context *ssl,
     p = buf + 2;
     while ( servername_list_size > 0 )
     {
-        hostname_len = ( ( p[1] << 8 ) | p[2] );
+        hostname_len = MBEDTLS_GET_UINT16_BE( p, 1 );
         if( hostname_len + 3 > servername_list_size )
         {
             MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad client hello message" ) );
@@ -1320,7 +1319,7 @@ static int ssl_tls13_parse_alpn_ext( mbedtls_ssl_context *ssl,
 
     if( len < 2 )
         return( MBEDTLS_ERR_SSL_DECODE_ERROR );
-    list_len = ( buf[0] << 8 ) | buf[1];
+    list_len = MBEDTLS_GET_UINT16_BE( buf, 0 );
     if( list_len != len - 2 )
         return( MBEDTLS_ERR_SSL_DECODE_ERROR );
 
@@ -2310,7 +2309,7 @@ static int ssl_tls13_client_hello_parse( mbedtls_ssl_context *ssl,
     memcpy( &ssl->session_negotiate->id[0], buf, sess_len ); /* write session id */
     buf += sess_len;
 
-    ciph_len = ( buf[0] << 8 ) | ( buf[1] );
+    ciph_len = MBEDTLS_GET_UINT16_BE( buf, 0 );
 
     /* Length check */
     if( buf + ciph_len > end )
@@ -2365,7 +2364,7 @@ static int ssl_tls13_client_hello_parse( mbedtls_ssl_context *ssl,
         return( MBEDTLS_ERR_SSL_DECODE_ERROR );
     }
 
-    ext_len = ( buf[0] << 8 )	| ( buf[1] );
+    ext_len = MBEDTLS_GET_UINT16_BE( buf, 0 );
 
     if( ( ext_len > 0 && ext_len < 4 ) ||
         buf + 2 + ext_len > end )
@@ -2398,8 +2397,8 @@ static int ssl_tls13_client_hello_parse( mbedtls_ssl_context *ssl,
             return( MBEDTLS_ERR_SSL_ILLEGAL_PARAMETER );
         }
 
-        ext_id   = ( ( (size_t) ext[0] << 8 ) | ( (size_t) ext[1] << 0 ) );
-        ext_size = ( ( (size_t) ext[2] << 8 ) | ( (size_t) ext[3] << 0 ) );
+        ext_id   = MBEDTLS_GET_UINT16_BE( ext, 0 );
+        ext_size = MBEDTLS_GET_UINT16_BE( ext, 2 );
 
         if( ext_size + 4 > ext_len )
         {
