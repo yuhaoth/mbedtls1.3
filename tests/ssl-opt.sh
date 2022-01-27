@@ -2529,7 +2529,7 @@ run_test    "TLS 1.3, TLS1-3-AES-128-CCM-SHA256 with ECDHE-ECDSA, SRV auth, HRR 
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
 requires_config_enabled MBEDTLS_DEBUG_C
 requires_config_enabled MBEDTLS_SSL_CLI_C
-run_test    "TLS 1.3 O-M, TLS1-3-AES-256-GCM-SHA384 with ECDHE-ECDSA, SRV auth, HRR enforcing group" \
+run_test    "TLS 1.3 m->O, TLS1-3-AES-256-GCM-SHA384 with ECDHE-ECDSA, SRV auth, HRR enforcing group" \
             "$O_SRV -msg -tls1_3 -ciphersuites TLS_AES_256_GCM_SHA384 -groups P-256 -num_tickets 0 -no_resume_ephemeral -no_cache -stateless" \
             "$P_CLI debug_level=4 force_version=tls1_3 server_name=localhost force_ciphersuite=TLS1-3-AES-256-GCM-SHA384 tls13_kex_modes=ephemeral named_groups=secp384r1,secp256r1" \
             0 \
@@ -2543,7 +2543,7 @@ run_test    "TLS 1.3 O-M, TLS1-3-AES-256-GCM-SHA384 with ECDHE-ECDSA, SRV auth, 
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
 requires_config_enabled MBEDTLS_DEBUG_C
 requires_config_enabled MBEDTLS_SSL_CLI_C
-run_test    "TLS 1.3 O-M, TLS1-3-AES-128-GCM-SHA256 with ECDHE-ECDSA, SRV auth, HRR enforcing group" \
+run_test    "TLS 1.3 m->O, TLS1-3-AES-128-GCM-SHA256 with ECDHE-ECDSA, SRV auth, HRR enforcing group" \
             "$O_SRV -msg -tls1_3 -ciphersuites TLS_AES_128_GCM_SHA256 -groups P-256 -num_tickets 0 -no_resume_ephemeral -no_cache -stateless" \
             "$P_CLI debug_level=4 force_version=tls1_3 server_name=localhost force_ciphersuite=TLS1-3-AES-128-GCM-SHA256 tls13_kex_modes=ephemeral named_groups=secp384r1,secp256r1" \
             0 \
