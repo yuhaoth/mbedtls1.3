@@ -758,11 +758,9 @@ static int ssl_tls13_write_max_fragment_length_ext( mbedtls_ssl_context *ssl,
 
     MBEDTLS_SSL_DEBUG_MSG( 3, ( "adding max_fragment_length extension" ) );
 
-    *p++ = (unsigned char)( ( MBEDTLS_TLS_EXT_MAX_FRAGMENT_LENGTH >> 8 ) & 0xFF );
-    *p++ = (unsigned char)( ( MBEDTLS_TLS_EXT_MAX_FRAGMENT_LENGTH ) & 0xFF );
-
-    *p++ = 0x00;
-    *p++ = 1;
+    MBEDTLS_PUT_UINT16_BE( MBEDTLS_TLS_EXT_MAX_FRAGMENT_LENGTH, p, 0 );
+    MBEDTLS_PUT_UINT16_BE( 1, p, 2 );
+    p += 4;
 
     *p++ = ssl->conf->mfl_code;
     MBEDTLS_SSL_DEBUG_MSG( 3, ( "Maximum fragment length = %d", ssl->conf->mfl_code ) );
@@ -801,7 +799,7 @@ static int ssl_tls13_write_alpn_ext( mbedtls_ssl_context *ssl,
     }
 
     for ( cur = ssl->conf->alpn_list; *cur != NULL; cur++ )
-        alpnlen += (unsigned char)( strlen( *cur ) & 0xFF ) + 1;
+        alpnlen += MBEDTLS_BYTE_0( strlen( *cur ) ) + 1;
 
     if( end < p || (size_t)( end - p ) < 6 + alpnlen )
     {
@@ -811,8 +809,8 @@ static int ssl_tls13_write_alpn_ext( mbedtls_ssl_context *ssl,
 
     MBEDTLS_SSL_DEBUG_MSG( 3, ( "client hello, adding alpn extension" ) );
 
-    *p++ = (unsigned char)( ( MBEDTLS_TLS_EXT_ALPN >> 8 ) & 0xFF );
-    *p++ = (unsigned char)( ( MBEDTLS_TLS_EXT_ALPN ) & 0xFF );
+    MBEDTLS_PUT_UINT16_BE( MBEDTLS_TLS_EXT_ALPN, p, 0 );
+    p += 2;
 
     /*
      * opaque ProtocolName<1..2^8-1>;
@@ -827,7 +825,7 @@ static int ssl_tls13_write_alpn_ext( mbedtls_ssl_context *ssl,
 
     for ( cur = ssl->conf->alpn_list; *cur != NULL; cur++ )
     {
-        *p = (unsigned char)( strlen( *cur ) & 0xFF );
+        *p = MBEDTLS_BYTE_0( strlen( *cur ) );
         memcpy( p + 1, *cur, *p );
         p += 1 + *p;
     }
@@ -835,12 +833,10 @@ static int ssl_tls13_write_alpn_ext( mbedtls_ssl_context *ssl,
     *out_len = p - buf;
 
     /* List length = out_len - 2 ( ext_type ) - 2 ( ext_len ) - 2 ( list_len ) */
-    buf[4] = (unsigned char)( ( ( *out_len - 6 ) >> 8 ) & 0xFF );
-    buf[5] = (unsigned char)( ( *out_len - 6 ) & 0xFF );
+    MBEDTLS_PUT_UINT16_BE( *out_len - 6, buf, 4 );
 
     /* Extension length = out_len - 2 ( ext_type ) - 2 ( ext_len ) */
-    buf[2] = (unsigned char)( ( ( *out_len - 4 ) >> 8 ) & 0xFF );
-    buf[3] = (unsigned char)( ( *out_len - 4 ) & 0xFF );
+    MBEDTLS_PUT_UINT16_BE( *out_len - 4, buf, 2 );
 
     return( 0 );
 }
@@ -883,8 +879,7 @@ static int ssl_tls13_write_psk_key_exchange_modes_ext( mbedtls_ssl_context *ssl,
     MBEDTLS_SSL_DEBUG_MSG( 3, ( "client hello, adding psk_key_exchange_modes extension" ) );
 
     /* Extension Type */
-    buf[0] = (unsigned char)( ( MBEDTLS_TLS_EXT_PSK_KEY_EXCHANGE_MODES >> 8 ) & 0xFF );
-    buf[1] = (unsigned char)( ( MBEDTLS_TLS_EXT_PSK_KEY_EXCHANGE_MODES >> 0 ) & 0xFF );
+    MBEDTLS_PUT_UINT16_BE( MBEDTLS_TLS_EXT_PSK_KEY_EXCHANGE_MODES, buf, 0 );
 
     /* Skip extension length (2 byte) and PSK mode list length (1 byte) for now. */
     p = buf + 5;
@@ -1074,20 +1069,17 @@ int mbedtls_ssl_tls13_write_pre_shared_key_ext(
         }
 
         /* Extension Type */
-        *p++ = (unsigned char)( ( MBEDTLS_TLS_EXT_PRE_SHARED_KEY >> 8 ) & 0xFF );
-        *p++ = (unsigned char)( ( MBEDTLS_TLS_EXT_PRE_SHARED_KEY >> 0 ) & 0xFF );
+        MBEDTLS_PUT_UINT16_BE( MBEDTLS_TLS_EXT_PRE_SHARED_KEY, p, 0 );
 
         /* Extension Length */
-        *p++ = (unsigned char)( ( ext_len >> 8 ) & 0xFF );
-        *p++ = (unsigned char)( ( ext_len >> 0 ) & 0xFF );
+        MBEDTLS_PUT_UINT16_BE( ext_len, p, 2 );
 
         /* 2 bytes length field for array of PskIdentity */
-        *p++ = (unsigned char)( ( ( psk_identity_len + 4 + 2 ) >> 8 ) & 0xFF );
-        *p++ = (unsigned char)( ( ( psk_identity_len + 4 + 2 ) >> 0 ) & 0xFF );
+        MBEDTLS_PUT_UINT16_BE( psk_identity_len + 4 + 2, p, 4 );
 
         /* 2 bytes length field for psk_identity */
-        *p++ = (unsigned char)( ( ( psk_identity_len ) >> 8 ) & 0xFF );
-        *p++ = (unsigned char)( ( ( psk_identity_len ) >> 0 ) & 0xFF );
+        MBEDTLS_PUT_UINT16_BE( psk_identity_len, p, 6 );
+        p += 8;
 
         /* actual psk_identity */
         memcpy( p, psk_identity, psk_identity_len );
@@ -1122,10 +1114,8 @@ int mbedtls_ssl_tls13_write_pre_shared_key_ext(
 #endif /* MBEDTLS_SSL_NEW_SESSION_TICKET */
 
         /* add obfuscated ticket age */
-        *p++ = ( obfuscated_ticket_age >> 24 ) & 0xFF;
-        *p++ = ( obfuscated_ticket_age >> 16 ) & 0xFF;
-        *p++ = ( obfuscated_ticket_age >> 8  ) & 0xFF;
-        *p++ = ( obfuscated_ticket_age >> 0  ) & 0xFF;
+        MBEDTLS_PUT_UINT32_BE( obfuscated_ticket_age, p, 0 );
+        p += 4;
 
         *bytes_written = ext_len_total - psk_binder_list_bytes;
         *total_ext_len = ext_len_total;
@@ -1142,11 +1132,11 @@ int mbedtls_ssl_tls13_write_pre_shared_key_ext(
         MBEDTLS_SSL_DEBUG_MSG( 3, ( "client hello, adding PSK binder list" ) );
 
         /* 2 bytes length field for array of psk binders */
-        *p++ = (unsigned char)( ( ( hash_len + 1 ) >> 8 ) & 0xFF );
-        *p++ = (unsigned char)( ( ( hash_len + 1 ) >> 0 ) & 0xFF );
+        MBEDTLS_PUT_UINT16_BE( hash_len + 1, p, 0 );
+        p += 2;
 
         /* 1 bytes length field for next psk binder */
-        *p++ = (unsigned char)( ( hash_len ) & 0xFF );
+        *p++ = MBEDTLS_BYTE_0( hash_len );
 
         if( ssl->handshake->resume == 1 )
             psk_type = MBEDTLS_SSL_TLS1_3_PSK_RESUMPTION;
@@ -1209,16 +1199,14 @@ static int ssl_tls13_write_cookie_ext( mbedtls_ssl_context *ssl,
     MBEDTLS_SSL_DEBUG_MSG( 3, ( "client hello, adding cookie extension" ) );
 
     /* Extension Type */
-    *p++ = (unsigned char)( ( MBEDTLS_TLS_EXT_COOKIE >> 8 ) & 0xFF );
-    *p++ = (unsigned char)( ( MBEDTLS_TLS_EXT_COOKIE ) & 0xFF );
+    MBEDTLS_PUT_UINT16_BE( MBEDTLS_TLS_EXT_COOKIE, p, 0 );
 
     /* Extension Length */
-    *p++ = (unsigned char)( ( ( ssl->handshake->verify_cookie_len + 2 ) >> 8 ) & 0xFF );
-    *p++ = (unsigned char)( ( ssl->handshake->verify_cookie_len + 2 ) & 0xFF );
+    MBEDTLS_PUT_UINT16_BE( ssl->handshake->verify_cookie_len + 2, p, 2 );
 
     /* Cookie Length */
-    *p++ = (unsigned char)( ( ssl->handshake->verify_cookie_len >> 8 ) & 0xFF );
-    *p++ = (unsigned char)( ssl->handshake->verify_cookie_len & 0xFF );
+    MBEDTLS_PUT_UINT16_BE( ssl->handshake->verify_cookie_len, p, 4 );
+    p += 6;
 
     /* Cookie */
     memcpy( p, ssl->handshake->verify_cookie, ssl->handshake->verify_cookie_len );
@@ -1654,7 +1642,7 @@ static int ssl_tls13_parse_server_psk_identity_ext( mbedtls_ssl_context *ssl,
         return( MBEDTLS_ERR_SSL_DECODE_ERROR );
     }
 
-    selected_identity = ( (size_t) buf[0] << 8 ) | (size_t) buf[1];
+    selected_identity = MBEDTLS_GET_UINT16_BE( buf, 0 );
 
     /* We have offered only one PSK, so the only valid choice
      * for the server is PSK index 0.
@@ -1779,7 +1767,7 @@ static int ssl_tls13_parse_alpn_ext( mbedtls_ssl_context *ssl,
     if( len < 4 )
         return( MBEDTLS_ERR_SSL_DECODE_ERROR );
 
-    list_len = ( buf[0] << 8 ) | buf[1];
+    list_len = MBEDTLS_GET_UINT16_BE( buf, 0 );
     if( list_len != len - 2 )
         return( MBEDTLS_ERR_SSL_DECODE_ERROR );
 
@@ -2307,7 +2295,7 @@ static int ssl_tls13_hrr_parse( mbedtls_ssl_context *ssl,
     }
 
     /* read server-selected ciphersuite, which follows random bytes */
-    i = ( buf[0] << 8 ) | buf[1];
+    i = MBEDTLS_GET_UINT16_BE( buf, 0 );
 
     /* skip ciphersuite */
     buf += 2;
@@ -2385,7 +2373,7 @@ static int ssl_tls13_hrr_parse( mbedtls_ssl_context *ssl,
         return( MBEDTLS_ERR_SSL_DECODE_ERROR );
     }
 
-    ext_len = ( ( buf[0] << 8 ) | ( buf[1] ) );
+    ext_len = MBEDTLS_GET_UINT16_BE( buf, 0 );
     buf += 2; /* skip extension length */
 
     /* Are we reading beyond the message buffer? */
@@ -2405,8 +2393,8 @@ static int ssl_tls13_hrr_parse( mbedtls_ssl_context *ssl,
 
     while ( ext_len )
     {
-        ext_id = ( ( ext[0] << 8 ) | ( ext[1] ) );
-        ext_size = ( ( ext[2] << 8 ) | ( ext[3] ) );
+        ext_id = MBEDTLS_GET_UINT16_BE( ext, 0 );
+        ext_size = MBEDTLS_GET_UINT16_BE( ext, 2 );
 
         if( ext_size + 4 > ext_len )
         {
@@ -2425,7 +2413,7 @@ static int ssl_tls13_hrr_parse( mbedtls_ssl_context *ssl,
                 if( ext_size >= 2 )
                 {
                     cookie = (unsigned char *) ( ext + 4 );
-                    cookie_len = ( cookie[0] << 8 ) | cookie[1];
+                    cookie_len = MBEDTLS_GET_UINT16_BE( cookie, 0 );
                     cookie += 2;
                 }
                 else
@@ -2476,7 +2464,7 @@ static int ssl_tls13_hrr_parse( mbedtls_ssl_context *ssl,
                 MBEDTLS_SSL_DEBUG_BUF( 3, "key_share extension", ext + 4, ext_size );
 
                 /* Read selected_group */
-                tls_id = ( ( ext[4] << 8 ) | ( ext[5] ) );
+                tls_id = MBEDTLS_GET_UINT16_BE( ext, 4 );
                 MBEDTLS_SSL_DEBUG_MSG( 3, ( "selected_group ( %d )", tls_id ) );
 
                 /* Upon receipt of this extension in a HelloRetryRequest, the
@@ -3558,7 +3546,7 @@ static int ssl_tls13_certificate_request_parse( mbedtls_ssl_context *ssl,
     /*
      * Parse extensions
      */
-    ext_len = ( (size_t) p[0] << 8 ) | ( (size_t) p[1] );
+    ext_len = MBEDTLS_GET_UINT16_BE( p, 0 );
 
     /* At least one extension needs to be present,
      * namely signature_algorithms ext. */
@@ -3576,8 +3564,8 @@ static int ssl_tls13_certificate_request_parse( mbedtls_ssl_context *ssl,
     ext = p; /* jump to extensions */
     while( ext_len )
     {
-        size_t ext_id = ( ( size_t ) ext[0] << 8 ) | ( ( size_t ) ext[1] );
-        size_t ext_size = ( ( size_t ) ext[2] << 8 ) | ( ( size_t ) ext[3] );
+        size_t ext_id = MBEDTLS_GET_UINT16_BE( ext, 0 );
+        size_t ext_size = MBEDTLS_GET_UINT16_BE( ext, 2 );
 
         if( ext_size + 4 > ext_len )
         {
@@ -3777,9 +3765,7 @@ static int ssl_tls13_new_session_ticket_early_data_ext_parse(
 
     if( ext_size == 4 && ssl->session != NULL )
     {
-        ssl->session->max_early_data_size =
-            ( (uint32_t) buf[0] << 24 ) | ( (uint32_t) buf[1] << 16 ) |
-            ( (uint32_t) buf[2] << 8  ) | ( (uint32_t) buf[3] );
+        ssl->session->max_early_data_size = MBEDTLS_GET_UINT32_BE( buf, 0 );
         MBEDTLS_SSL_DEBUG_MSG( 3, ( "ticket->max_early_data_size: %u",
                                     ssl->session->max_early_data_size ) );
         ssl->session->ticket_flags |= allow_early_data;
@@ -3805,8 +3791,8 @@ static int ssl_tls13_new_session_ticket_extensions_parse(
             return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
         }
 
-        ext_id   = ( ( (unsigned) buf[0] << 8 ) | ( (unsigned) buf[1] ) );
-        ext_size = ( ( (size_t)   buf[2] << 8 ) | ( (size_t)   buf[3] ) );
+        ext_id   = MBEDTLS_GET_UINT16_BE( buf, 0 );
+        ext_size = MBEDTLS_GET_UINT16_BE( buf, 2 );
 
         buf        += 4;
         buf_remain -= 4;
@@ -3872,20 +3858,14 @@ static int ssl_tls13_new_session_ticket_parse( mbedtls_ssl_context *ssl,
     }
 
     /* Ticket lifetime */
-    ssl->session->ticket_lifetime =
-        ( (unsigned) buf[i] << 24 ) | ( (unsigned) buf[i + 1] << 16 ) |
-        ( (unsigned) buf[i + 2] << 8  ) | ( (unsigned) buf[i + 3] << 0 );
+    ssl->session->ticket_lifetime = MBEDTLS_GET_UINT32_BE( buf, i );
     i += 4;
 
     MBEDTLS_SSL_DEBUG_MSG( 3, ( "ticket->lifetime: %u",
                                 ssl->session->ticket_lifetime ) );
 
     /* Ticket Age Add */
-    ssl->session->ticket_age_add =
-                     ( (unsigned) buf[i] << 24 ) |
-                     ( (unsigned) buf[i + 1] << 16 ) |
-                     ( (unsigned) buf[i + 2] << 8  ) |
-                     ( (unsigned) buf[i + 3] << 0  );
+    ssl->session->ticket_age_add = MBEDTLS_GET_UINT32_BE( buf, i );
     i += 4;
 
     MBEDTLS_SSL_DEBUG_MSG( 3, ( "ticket->ticket_age_add: %u",
@@ -3919,7 +3899,7 @@ static int ssl_tls13_new_session_ticket_parse( mbedtls_ssl_context *ssl,
     i += ticket_nonce_len;
 
     /* Ticket */
-    ticket_len = ( (size_t) buf[i] << 8 ) | ( (size_t) buf[i + 1] );
+    ticket_len = MBEDTLS_GET_UINT16_BE( buf, i );
     i += 2;
 
     used += ticket_len;
@@ -3955,8 +3935,7 @@ static int ssl_tls13_new_session_ticket_parse( mbedtls_ssl_context *ssl,
 
 
     /* Ticket Extension */
-    ext_len = ( (size_t) buf[ i + 0 ] << 8 ) |
-              ( (size_t) buf[ i + 1 ] );
+    ext_len = MBEDTLS_GET_UINT16_BE( buf, i );
     i += 2;
 
     used += ext_len;
