@@ -1339,11 +1339,11 @@ int mbedtls_ssl_write_record( mbedtls_ssl_context *ssl, uint8_t force_flush );
 #endif /* MBEDTLS_SSL_USE_MPS */
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
-int mbedtls_ssl_read_certificate_process(mbedtls_ssl_context* ssl);
-int mbedtls_ssl_write_certificate_process(mbedtls_ssl_context* ssl);
+int mbedtls_ssl_tls13_read_certificate_process(mbedtls_ssl_context* ssl);
+int mbedtls_ssl_tls13_write_certificate_process(mbedtls_ssl_context* ssl);
 
 #if defined(MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE)
-int mbedtls_ssl_write_change_cipher_spec_process( mbedtls_ssl_context* ssl );
+int mbedtls_ssl_tls13_write_change_cipher_spec_process( mbedtls_ssl_context* ssl );
 #endif  /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL && MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE */
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 
@@ -1381,7 +1381,7 @@ static inline int mbedtls_ssl_conf_tls13_0rtt_enabled( mbedtls_ssl_context *ssl 
 }
 
 int mbedtls_ssl_tls13_process_certificate_verify(mbedtls_ssl_context *ssl);
-int mbedtls_ssl_write_certificate_verify_process(mbedtls_ssl_context *ssl);
+int mbedtls_ssl_tls13_write_certificate_verify_process(mbedtls_ssl_context *ssl);
 
 int mbedtls_ssl_tls13_populate_transform( mbedtls_ssl_transform *transform,
                                           int endpoint,
@@ -1395,34 +1395,45 @@ int mbedtls_ssl_mps_remap_error( int ret );
 
 int mbedtls_ssl_reset_transcript_for_hrr( mbedtls_ssl_context *ssl );
 
-int mbedtls_ssl_write_encrypted_extension(mbedtls_ssl_context* ssl);
+int mbedtls_ssl_tls13_write_encrypted_extension(mbedtls_ssl_context* ssl);
 
 #if defined(MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE)
-int mbedtls_ssl_write_change_cipher_spec(mbedtls_ssl_context* ssl);
+int mbedtls_ssl_tls13_write_change_cipher_spec(mbedtls_ssl_context* ssl);
 #endif /* MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE */
 
 #if defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
-int mbedtls_ssl_write_pre_shared_key_ext(mbedtls_ssl_context* ssl,
-                                         unsigned char* buf, unsigned char* end,
-                                         size_t* olen,
-                                         size_t* binder_list_length,
-                                         int part );
+int mbedtls_ssl_tls13_write_pre_shared_key_ext(
+    mbedtls_ssl_context* ssl,
+    unsigned char* buf, unsigned char* end,
+    size_t* olen,
+    size_t* binder_list_length,
+    int part );
 #endif /* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED */
 #if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
-int mbedtls_ssl_parse_signature_algorithms_ext(mbedtls_ssl_context* ssl, const unsigned char* buf, size_t len);
-int mbedtls_ssl_check_signature_scheme(const mbedtls_ssl_context* ssl, int signature_scheme);
+int mbedtls_ssl_tls13_parse_signature_algorithms_ext(
+    mbedtls_ssl_context* ssl,
+    const unsigned char* buf, size_t len );
+int mbedtls_ssl_tls13_check_signature_scheme(
+    const mbedtls_ssl_context* ssl, int signature_scheme );
 #endif /* MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED */
 #if defined(MBEDTLS_ZERO_RTT)
-int mbedtls_ssl_write_early_data_ext(mbedtls_ssl_context* ssl, unsigned char* buf, const unsigned char *end, size_t* olen);
+int mbedtls_ssl_tls13_write_early_data_ext(
+    mbedtls_ssl_context* ssl,
+    unsigned char* buf, const unsigned char *end, size_t* olen);
 #endif /* MBEDTLS_ZERO_RTT */
 #if (defined(MBEDTLS_ECDH_C) || defined(MBEDTLS_ECDSA_C))
-int mbedtls_ssl_parse_supported_groups_ext(mbedtls_ssl_context* ssl, const unsigned char* buf, size_t len);
+int mbedtls_ssl_tls13_parse_supported_groups_ext(
+    mbedtls_ssl_context* ssl,
+    const unsigned char* buf, size_t len);
 #endif /* MBEDTLS_ECDH_C ||  MBEDTLS_ECDSA_C */
 #if defined(MBEDTLS_SSL_NEW_SESSION_TICKET)
-int mbedtls_ssl_parse_new_session_ticket_server(mbedtls_ssl_context* ssl, unsigned char* buf, size_t len);
+int mbedtls_ssl_tls13_parse_new_session_ticket_server(
+    mbedtls_ssl_context *ssl, unsigned char *buf, size_t len);
 #endif /* MBEDTLS_SSL_NEW_SESSION_TICKET */
 #if defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
-int mbedtls_ssl_parse_client_psk_identity_ext(mbedtls_ssl_context* ssl, const unsigned char* buf, size_t len);
+int mbedtls_ssl_tls13_parse_client_psk_identity_ext(
+    mbedtls_ssl_context *ssl,
+    const unsigned char *buf, size_t len);
 #endif /* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED */
 
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
@@ -1859,7 +1870,7 @@ static inline int mbedtls_ssl_conf_is_hybrid_tls12_tls13( const mbedtls_ssl_conf
  *                  operations was reached: see \c mbedtls_ecp_set_max_ops().
  * \return          Another \c MBEDTLS_ERR_ECP_XXX error code on failure.
  */
-int mbedtls_ecdh_make_tls_13_params( mbedtls_ecdh_context *ctx, size_t *olen,
+int mbedtls_ecdh_make_tls13_params( mbedtls_ecdh_context *ctx, size_t *olen,
                       unsigned char *buf, size_t blen,
                       int (*f_rng)(void *, unsigned char *, size_t),
                       void *p_rng );
@@ -1884,7 +1895,7 @@ int mbedtls_ecdh_make_tls_13_params( mbedtls_ecdh_context *ctx, size_t *olen,
  * \return          An \c MBEDTLS_ERR_ECP_XXX error code on failure.
  *
  */
-int mbedtls_ecdh_read_tls_13_params( mbedtls_ecdh_context *ctx,
+int mbedtls_ecdh_read_tls13_params( mbedtls_ecdh_context *ctx,
                               const unsigned char **buf,
                               const unsigned char *end );
 
@@ -1911,7 +1922,7 @@ int mbedtls_ecdh_read_tls_13_params( mbedtls_ecdh_context *ctx,
  *                  operations was reached: see \c mbedtls_ecp_set_max_ops().
  * \return          Another \c MBEDTLS_ERR_ECP_XXX error code on failure.
  */
-int mbedtls_ecdh_make_tls_13_public( mbedtls_ecdh_context *ctx, size_t *olen,
+int mbedtls_ecdh_make_tls13_public( mbedtls_ecdh_context *ctx, size_t *olen,
                       unsigned char *buf, size_t blen,
                       int (*f_rng)(void *, unsigned char *, size_t),
                       void *p_rng );
@@ -1931,7 +1942,7 @@ int mbedtls_ecdh_make_tls_13_public( mbedtls_ecdh_context *ctx, size_t *olen,
  * \return      \c 0 on success.
  * \return      An \c MBEDTLS_ERR_ECP_XXX error code on failure.
  */
-int mbedtls_ecdh_read_tls_13_public( mbedtls_ecdh_context *ctx,
+int mbedtls_ecdh_read_tls13_public( mbedtls_ecdh_context *ctx,
                               const unsigned char *buf, size_t blen );
 #endif /* MBEDTLS_ECDH_C */
 
@@ -1954,9 +1965,9 @@ int mbedtls_ecdh_read_tls_13_public( mbedtls_ecdh_context *ctx,
  *                  failure.
  * \return          #MBEDTLS_ERR_ECP_BAD_INPUT_DATA if input is invalid.
  */
-int mbedtls_ecp_tls_13_read_point( const mbedtls_ecp_group *grp,
-                                mbedtls_ecp_point *pt,
-                                const unsigned char **buf, size_t len );
+int mbedtls_ecp_tls13_read_point( const mbedtls_ecp_group *grp,
+                                  mbedtls_ecp_point *pt,
+                                  const unsigned char **buf, size_t len );
 
 /**
  * \brief           This function exports a point as defined in TLS 1.3.
@@ -1979,10 +1990,10 @@ int mbedtls_ecp_tls_13_read_point( const mbedtls_ecp_group *grp,
  *                  is too small to hold the exported point.
  * \return          Another negative error code on other kinds of failure.
  */
-int mbedtls_ecp_tls_13_write_point( const mbedtls_ecp_group *grp,
-                                 const mbedtls_ecp_point *pt,
-                                 int format, size_t *olen,
-                                 unsigned char *buf, size_t blen );
+int mbedtls_ecp_tls13_write_point( const mbedtls_ecp_group *grp,
+                                   const mbedtls_ecp_point *pt,
+                                   int format, size_t *olen,
+                                   unsigned char *buf, size_t blen );
 
 
 /**
@@ -2003,9 +2014,9 @@ int mbedtls_ecp_tls_13_write_point( const mbedtls_ecp_group *grp,
  *                  buffer is too small to hold the exported group.
  * \return          Another negative error code on other kinds of failure.
  */
-int mbedtls_ecp_tls_13_write_group( const mbedtls_ecp_group *grp,
-                                 size_t *olen,
-                                 unsigned char *buf, size_t blen );
+int mbedtls_ecp_tls13_write_group( const mbedtls_ecp_group *grp,
+                                   size_t *olen,
+                                   unsigned char *buf, size_t blen );
 #endif /* MBEDTLS_ECP_C */
 
 int mbedtls_ssl_tls13_process_finished_message( mbedtls_ssl_context *ssl );
