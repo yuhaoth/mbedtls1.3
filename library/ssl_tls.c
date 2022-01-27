@@ -634,40 +634,59 @@ int mbedtls_ssl_reset_transcript_for_hrr( mbedtls_ssl_context *ssl )
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
     unsigned char hash_transcript[ MBEDTLS_MD_MAX_SIZE + 4 ];
     size_t hash_olen;
+    const mbedtls_ssl_ciphersuite_t *ciphersuite_info;
+    uint16_t cipher_suite = ssl->session_negotiate->ciphersuite;
+    ciphersuite_info = mbedtls_ssl_ciphersuite_from_id( cipher_suite );
 
     MBEDTLS_SSL_DEBUG_MSG( 3, ( "Reset SSL session for HRR" ) );
 
+    if( ciphersuite_info->mac == MBEDTLS_MD_SHA256 )
+    {
 #if defined(MBEDTLS_SHA256_C)
-    ret = ssl_hash_transcript_core( ssl, MBEDTLS_MD_SHA256,
-                                    hash_transcript,
-                                    sizeof( hash_transcript ),
-                                    &hash_olen );
-    if( ret != 0 )
-    {
-        MBEDTLS_SSL_DEBUG_RET( 4, "ssl_hash_transcript_core", ret );
-        return( ret );
-    }
-    MBEDTLS_SSL_DEBUG_BUF( 4, "Truncated SHA-256 handshake transcript",
-                           hash_transcript, hash_olen );
+        ret = ssl_hash_transcript_core( ssl, MBEDTLS_MD_SHA256,
+                                        hash_transcript,
+                                        sizeof( hash_transcript ),
+                                        &hash_olen );
+        if( ret != 0 )
+        {
+            MBEDTLS_SSL_DEBUG_RET( 4, "ssl_hash_transcript_core", ret );
+            return( ret );
+        }
+        MBEDTLS_SSL_DEBUG_BUF( 4, "Truncated SHA-256 handshake transcript",
+                               hash_transcript, hash_olen );
 
-    mbedtls_sha256_starts( &ssl->handshake->fin_sha256, 0 );
-    ssl_update_checksum_sha256( ssl, hash_transcript, hash_olen );
+#if defined(MBEDTLS_USE_PSA_CRYPTO)
+        psa_hash_abort( &ssl->handshake->fin_sha256_psa );
+        psa_hash_setup( &ssl->handshake->fin_sha256_psa, PSA_ALG_SHA_256 );
+#else
+        mbedtls_sha256_starts( &ssl->handshake->fin_sha256, 0 );
+#endif
+        ssl_update_checksum_sha256( ssl, hash_transcript, hash_olen );
 #endif /* MBEDTLS_SHA256_C */
-
-#if defined(MBEDTLS_SHA512_C)
-    ret = ssl_hash_transcript_core( ssl, MBEDTLS_MD_SHA384,
-                                    hash_transcript,
-                                    sizeof( hash_transcript ),
-                                    &hash_olen );
-    if( ret != 0 )
-    {
-        MBEDTLS_SSL_DEBUG_RET( 4, "ssl_hash_transcript_core", ret );
-        return( ret );
     }
-    MBEDTLS_SSL_DEBUG_BUF( 4, "Truncated SHA-384 handshake transcript",
-                           hash_transcript, hash_olen );
+    else if( ciphersuite_info->mac == MBEDTLS_MD_SHA384 )
+    {
+#if defined(MBEDTLS_SHA512_C)
+        ret = ssl_hash_transcript_core( ssl, MBEDTLS_MD_SHA384,
+                                        hash_transcript,
+                                        sizeof( hash_transcript ),
+                                        &hash_olen );
+        if( ret != 0 )
+        {
+            MBEDTLS_SSL_DEBUG_RET( 4, "ssl_hash_transcript_core", ret );
+            return( ret );
+        }
+        MBEDTLS_SSL_DEBUG_BUF( 4, "Truncated SHA-384 handshake transcript",
+                               hash_transcript, hash_olen );
+#if defined(MBEDTLS_USE_PSA_CRYPTO)
+        psa_hash_abort( &ssl->handshake->fin_sha384_psa );
+        psa_hash_setup( &ssl->handshake->fin_sha384_psa, PSA_ALG_SHA_384 );
+#else
+        mbedtls_sha512_starts( &ssl->handshake->fin_sha512, 1 );
+#endif
+        ssl_update_checksum_sha384( ssl, hash_transcript, hash_olen );
 #endif /* MBEDTLS_SHA512_C */
-
+    }
     return( ret );
 }
 
