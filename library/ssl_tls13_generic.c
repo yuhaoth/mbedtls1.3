@@ -1764,7 +1764,7 @@ int mbedtls_ssl_tls13_parse_signature_algorithms_ext( mbedtls_ssl_context *ssl,
         return( MBEDTLS_ERR_SSL_DECODE_ERROR );
     }
 
-    sig_alg_list_size = ( ( size_t) buf[0] << 8 ) | ( (size_t) buf[1] );
+    sig_alg_list_size = MBEDTLS_GET_UINT16_BE( buf, 0 );
     if( sig_alg_list_size + 2 != buf_len ||
         sig_alg_list_size % 2 != 0 )
     {
@@ -1776,7 +1776,7 @@ int mbedtls_ssl_tls13_parse_signature_algorithms_ext( mbedtls_ssl_context *ssl,
 
     for( p = buf + 2; p < end && common_idx + 1 < MBEDTLS_SIGNATURE_SCHEMES_SIZE; p += 2 )
     {
-        signature_scheme = ( (int) p[0] << 8 ) | ( ( int ) p[1] );
+        signature_scheme = MBEDTLS_GET_UINT16_BE( p, 0 );
 
         MBEDTLS_SSL_DEBUG_MSG( 4, ( "received signature algorithm: 0x%x", signature_scheme ) );
 
@@ -2035,8 +2035,8 @@ static int ssl_tls13_certificate_verify_write( mbedtls_ssl_context *ssl,
         return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
     }
 
-    *(p++) = (unsigned char)( ( signature_scheme_client >> 8 ) & 0xFF );
-    *(p++) = (unsigned char)( ( signature_scheme_client >> 0 ) & 0xFF );
+    MBEDTLS_PUT_UINT16_BE( signature_scheme_client, p, 0 );
+    p += 2;
 
     /* Hash verify buffer with indicated hash function */
     md_info = mbedtls_md_info_from_type( md_alg );
@@ -2059,9 +2059,7 @@ static int ssl_tls13_certificate_verify_write( mbedtls_ssl_context *ssl,
         return( ret );
     }
 
-    p[0] = (unsigned char)( n >> 8 );
-    p[1] = (unsigned char)( n >> 0 );
-
+    MBEDTLS_PUT_UINT16_BE( n, p, 0 );
     p += 2 + n;
 
     *out_len = (size_t)( p - buf );
@@ -2294,10 +2292,7 @@ static int ssl_tls13_write_certificate_write( mbedtls_ssl_context *ssl,
             return( MBEDTLS_ERR_SSL_BUFFER_TOO_SMALL );
         }
 
-        buf[i] = (unsigned char)( n >> 16 );
-        buf[i + 1] = (unsigned char)( n >> 8 );
-        buf[i + 2] = (unsigned char)( n );
-
+        MBEDTLS_PUT_UINT24_BE( n, buf, i );
         i += 3; memcpy( buf + i, crt->raw.p, n );
         i += n; crt = crt->next;
 
@@ -2309,9 +2304,7 @@ static int ssl_tls13_write_certificate_write( mbedtls_ssl_context *ssl,
         i += 2;
     }
     total_len = &buf[i] - start - 3;
-    *start++ = (unsigned char)( ( total_len ) >> 16 );
-    *start++ = (unsigned char)( ( total_len ) >> 8 );
-    *start++ = (unsigned char)( ( total_len ) );
+    MBEDTLS_PUT_UINT24_BE( total_len, start, 0 );
 
 #if defined(MBEDTLS_SSL_CLI_C)
 empty_cert:
@@ -2468,12 +2461,10 @@ int mbedtls_ssl_tls13_write_early_data_ext( mbedtls_ssl_context *ssl,
     ssl->handshake->early_data = MBEDTLS_SSL_EARLY_DATA_ON;
 
     /* Write extension header */
-    *p++ = (unsigned char)( ( MBEDTLS_TLS_EXT_EARLY_DATA >> 8 ) & 0xFF );
-    *p++ = (unsigned char)( ( MBEDTLS_TLS_EXT_EARLY_DATA ) & 0xFF );
+    MBEDTLS_PUT_UINT16_BE( MBEDTLS_TLS_EXT_EARLY_DATA, p, 0 );
 
     /* Write total extension length */
-    *p++ = 0;
-    *p++ = 0;
+    MBEDTLS_PUT_UINT16_BE( 0, p, 2 );
 
     *out_len = 4;
     return( 0 );
@@ -2759,7 +2750,7 @@ int mbedtls_ecp_tls13_read_point( const mbedtls_ecp_group *grp,
     if( buf_len < 3 )
         return( MBEDTLS_ERR_ECP_BAD_INPUT_DATA );
 
-    data_len = ( *( *buf ) << 8 ) | *( *buf+1 );
+    data_len = MBEDTLS_GET_UINT16_BE( *buf, 0 );
     *buf += 2;
 
     if( data_len < 1 || data_len > buf_len - 2 )
@@ -2794,8 +2785,7 @@ int mbedtls_ecp_tls13_write_point( const mbedtls_ecp_group *grp, const mbedtls_e
         return( ret );
 
     // Length
-    *buf++ = (unsigned char)( ( *out_len >> 8 ) & 0xFF );
-    *buf++ = (unsigned char)( ( *out_len ) & 0xFF );
+    MBEDTLS_PUT_UINT16_BE( *out_len, buf, 0 );
     *out_len += 2;
 
     return( 0 );
@@ -2820,8 +2810,7 @@ int mbedtls_ecp_tls13_write_group( const mbedtls_ecp_group *grp, size_t *out_len
         return( MBEDTLS_ERR_ECP_BUFFER_TOO_SMALL );
 
     // Two bytes for named curve
-    buf[0] = curve_info->tls_id >> 8;
-    buf[1] = curve_info->tls_id & 0xFF;
+    MBEDTLS_PUT_UINT16_BE( curve_info->tls_id, buf, 0 );
 
     return( 0 );
 }
