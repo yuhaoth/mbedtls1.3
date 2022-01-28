@@ -1736,66 +1736,6 @@ int main( int argc, char *argv[] )
     }
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL && MBEDTLS_ECP_C */
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && defined(MBEDTLS_ECP_C)
-     if( opt.sig_algs != NULL )
-    {
-        p = (char *) opt.sig_algs;
-        i = 0;
-
-        /* Leave room for a final NULL in signature algorithm list */
-        while( i < SIG_ALG_LIST_SIZE - 1 && *p != '\0' )
-        {
-            q = p;
-
-            /* Terminate the current string */
-            while( *p != ',' && *p != '\0' )
-                p++;
-            if( *p == ',' )
-                *p++ = '\0';
-
-            if( strcmp( q, "ecdsa_secp256r1_sha256" ) == 0 )
-            {
-                sig_alg_list[i++] = MBEDTLS_TLS1_3_SIG_ECDSA_SECP256R1_SHA256;
-            }
-            else if( strcmp( q, "ecdsa_secp384r1_sha384" ) == 0 )
-            {
-                sig_alg_list[i++] = MBEDTLS_TLS1_3_SIG_ECDSA_SECP384R1_SHA384;
-            }
-            else if( strcmp( q, "ecdsa_secp521r1_sha512" ) == 0 )
-            {
-                sig_alg_list[i++] = MBEDTLS_TLS1_3_SIG_ECDSA_SECP521R1_SHA512;
-            }
-            else
-            {
-                mbedtls_printf( "unknown signature algorithm %s\n", q );
-                mbedtls_printf( "supported signature algorithms: " );
-#if defined(MBEDTLS_ECDSA_C)
-#if defined(MBEDTLS_SHA256_C) && defined(MBEDTLS_ECP_DP_SECP256R1_ENABLED)
-                mbedtls_printf( "ecdsa_secp256r1_sha256 " );
-#endif /* MBEDTLS_SHA256_C && MBEDTLS_ECP_DP_SECP256R1_ENABLED */
-#if defined(MBEDTLS_SHA512_C) && defined(MBEDTLS_ECP_DP_SECP384R1_ENABLED)
-                mbedtls_printf( "ecdsa_secp384r1_sha384 " );
-#endif /* MBEDTLS_SHA512_C && MBEDTLS_ECP_DP_SECP384R1_ENABLED */
-#if defined(MBEDTLS_SHA512_C) && defined(MBEDTLS_SHA512_C)
-                mbedtls_printf( "ecdsa_secp521r1_sha512 " );
-#endif /* MBEDTLS_SHA512_C && MBEDTLS_SHA512_C */
-#endif /* MBEDTLS_ECDSA_C */
-                mbedtls_printf( "\n" );
-                goto exit;
-            }
-        }
-
-        if( i == ( SIG_ALG_LIST_SIZE - 1 ) && *p != '\0' )
-        {
-            mbedtls_printf( "signature algorithm list too long, maximum %d",
-                            SIG_ALG_LIST_SIZE - 1 );
-            goto exit;
-        }
-
-        sig_alg_list[i] = MBEDTLS_TLS1_3_SIG_NONE;
-    }
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL && MBEDTLS_ECP_C */
-
     /*
      * 0. Initialize the RNG and the session data
      */
