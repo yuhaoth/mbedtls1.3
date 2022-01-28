@@ -271,7 +271,11 @@ requires_config_value_equals() {
 
 # Space-separated list of ciphersuites supported by this build of
 # Mbed TLS.
-P_CIPHERSUITES=" $($P_CLI --help 2>/dev/null |
+case $CONFIGS_ENABLED in
+    *" MBEDTLS_SSL_CLI_C "*) CMD=$P_CLI ;;
+    *) CMD=$P_SRV ;;
+esac
+P_CIPHERSUITES=" $($CMD --help 2>/dev/null |
                    grep 'TLS-\|TLS1-3' |
                    tr -s ' \n' ' ')"
 unset CMD
