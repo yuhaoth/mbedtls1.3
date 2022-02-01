@@ -52,22 +52,22 @@ static const int ciphersuite_preference[] =
 #if defined(MBEDTLS_SSL_CIPHERSUITES)
     MBEDTLS_SSL_CIPHERSUITES,
 #else
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3)
     /* TLS 1.3 ciphersuites */
     MBEDTLS_TLS1_3_AES_128_GCM_SHA256,
     MBEDTLS_TLS1_3_AES_256_GCM_SHA384,
     MBEDTLS_TLS1_3_CHACHA20_POLY1305_SHA256,
     MBEDTLS_TLS1_3_AES_128_CCM_SHA256,
     MBEDTLS_TLS1_3_AES_128_CCM_8_SHA256,
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
 
     /* Chacha-Poly ephemeral suites */
     MBEDTLS_TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256,
     MBEDTLS_TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256,
     MBEDTLS_TLS_DHE_RSA_WITH_CHACHA20_POLY1305_SHA256,
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3)
     MBEDTLS_TLS1_3_CHACHA20_POLY1305_SHA256,
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
 
     /* All AES-256 ephemeral suites */
     MBEDTLS_TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
@@ -83,9 +83,9 @@ static const int ciphersuite_preference[] =
     MBEDTLS_TLS_DHE_RSA_WITH_AES_256_CBC_SHA,
     MBEDTLS_TLS_ECDHE_ECDSA_WITH_AES_256_CCM_8,
     MBEDTLS_TLS_DHE_RSA_WITH_AES_256_CCM_8,
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3)
     MBEDTLS_TLS1_3_AES_256_GCM_SHA384,
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
 
     /* All CAMELLIA-256 ephemeral suites */
     MBEDTLS_TLS_ECDHE_ECDSA_WITH_CAMELLIA_256_GCM_SHA384,
@@ -118,11 +118,11 @@ static const int ciphersuite_preference[] =
     MBEDTLS_TLS_DHE_RSA_WITH_AES_128_CBC_SHA,
     MBEDTLS_TLS_ECDHE_ECDSA_WITH_AES_128_CCM_8,
     MBEDTLS_TLS_DHE_RSA_WITH_AES_128_CCM_8,
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3)
     MBEDTLS_TLS1_3_AES_128_GCM_SHA256,
     MBEDTLS_TLS1_3_AES_128_CCM_SHA256,
     MBEDTLS_TLS1_3_AES_128_CCM_8_SHA256,
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
 
     /* All CAMELLIA-128 ephemeral suites */
     MBEDTLS_TLS_ECDHE_ECDSA_WITH_CAMELLIA_128_GCM_SHA256,
@@ -303,7 +303,7 @@ static const int ciphersuite_preference[] =
 
 static const mbedtls_ssl_ciphersuite_t ciphersuite_definitions[] =
 {
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3)
 #if defined(MBEDTLS_AES_C)
 #if defined(MBEDTLS_GCM_C)
 #if defined(MBEDTLS_SHA384_C)
@@ -347,7 +347,7 @@ static const mbedtls_ssl_ciphersuite_t ciphersuite_definitions[] =
       MBEDTLS_SSL_MAJOR_VERSION_3, MBEDTLS_SSL_MINOR_VERSION_4,
       0 },
 #endif /* MBEDTLS_CHACHAPOLY_C && MBEDTLS_SHA256_C */
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
 
 #if defined(MBEDTLS_CHACHAPOLY_C) && \
     defined(MBEDTLS_SHA256_C) && \
@@ -2077,7 +2077,7 @@ int mbedtls_ssl_get_ciphersuite_id( const char *ciphersuite_name )
     return( cur->id );
 }
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3)
 unsigned int mbedtls_hash_size_for_ciphersuite(const mbedtls_ssl_ciphersuite_t* ciphersuite)
 {
     /* We assume that the input parameter, ciphersuite, is not NULL. */
@@ -2093,7 +2093,7 @@ unsigned int mbedtls_hash_size_for_ciphersuite(const mbedtls_ssl_ciphersuite_t* 
         return( 0 );
     }
 }
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
 
 #if defined(MBEDTLS_PK_C)
 mbedtls_pk_type_t mbedtls_ssl_get_ciphersuite_sig_pk_alg( const mbedtls_ssl_ciphersuite_t *info )

@@ -1531,6 +1531,7 @@ component_test_no_use_psa_crypto_full_cmake_asan() {
     scripts/config.py set MBEDTLS_ECP_RESTARTABLE  # not using PSA, so enable restartable ECC
     scripts/config.py unset MBEDTLS_PSA_CRYPTO_C
     scripts/config.py unset MBEDTLS_USE_PSA_CRYPTO
+    scripts/config.py unset MBEDTLS_SSL_PROTO_TLS1_3
     scripts/config.py unset MBEDTLS_PSA_ITS_FILE_C
     scripts/config.py unset MBEDTLS_PSA_CRYPTO_SE_C
     scripts/config.py unset MBEDTLS_PSA_CRYPTO_STORAGE_C
@@ -1866,8 +1867,8 @@ component_build_psa_accel_alg_hkdf() {
     scripts/config.py set MBEDTLS_PSA_CRYPTO_DRIVERS
     scripts/config.py unset MBEDTLS_USE_PSA_CRYPTO
     scripts/config.py unset MBEDTLS_HKDF_C
-    # Make sure to unset TLS1_3_EXPERIMENTAL since it requires HKDF_C and will not build properly without it.
-    scripts/config.py unset MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+    # Make sure to unset TLS1_3 since it requires HKDF_C and will not build properly without it.
+    scripts/config.py unset MBEDTLS_SSL_PROTO_TLS1_3
     # Need to define the correct symbol and include the test driver header path in order to build with the test driver
     make CC=gcc CFLAGS="$ASAN_CFLAGS -DPSA_CRYPTO_DRIVER_TEST -DMBEDTLS_PSA_ACCEL_ALG_HKDF -I../tests/include -O2" LDFLAGS="$ASAN_CFLAGS"
 }
@@ -2345,7 +2346,7 @@ component_test_malloc_0_null () {
 
 component_test_tls13 () {
     msg "build: TLS 1.3 (ASanDbg) "
-    scripts/config.py   set MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+    scripts/config.py   set MBEDTLS_SSL_PROTO_TLS1_3
     scripts/config.py   set MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
     scripts/config.py   set MBEDTLS_SSL_USE_MPS
     scripts/config.py   set MBEDTLS_RSA_C
@@ -2363,7 +2364,7 @@ component_test_tls13 () {
 
 component_test_tls13_no_mps () {
     msg "build: TLS 1.3 without MPS (ASanDbg) "
-    scripts/config.py   set MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+    scripts/config.py   set MBEDTLS_SSL_PROTO_TLS1_3
     scripts/config.py   set MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
     scripts/config.py unset MBEDTLS_SSL_USE_MPS
     scripts/config.py   set MBEDTLS_RSA_C
@@ -2381,7 +2382,7 @@ component_test_tls13_no_mps () {
 
 component_test_tls13_no_compatibility_mode () {
     msg "build: TLS 1.3 (ASanDbg) without TLS 1.2 compatibility mode"
-    scripts/config.py   set MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+    scripts/config.py   set MBEDTLS_SSL_PROTO_TLS1_3
     scripts/config.py unset MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
     scripts/config.py   set MBEDTLS_SSL_USE_MPS
     scripts/config.py   set MBEDTLS_RSA_C
@@ -2396,7 +2397,7 @@ component_test_tls13_no_compatibility_mode () {
 
 component_test_tls13_no_mps_no_compatibility_mode () {
     msg "build: TLS 1.3 without MPS (ASanDbg) and without TLS 1.2 compatibility mode"
-    scripts/config.py   set MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+    scripts/config.py   set MBEDTLS_SSL_PROTO_TLS1_3
     scripts/config.py unset MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
     scripts/config.py unset MBEDTLS_SSL_USE_MPS
     scripts/config.py   set MBEDTLS_RSA_C
@@ -2411,7 +2412,7 @@ component_test_tls13_no_mps_no_compatibility_mode () {
 
 component_test_tls13_with_padding () {
     msg "build: TLS 1.3 (ASanDbg) "
-    scripts/config.py   set MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+    scripts/config.py   set MBEDTLS_SSL_PROTO_TLS1_3
     scripts/config.py   set MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
     scripts/config.py   set MBEDTLS_SSL_USE_MPS
     scripts/config.py   set MBEDTLS_RSA_C
@@ -2429,7 +2430,7 @@ component_test_tls13_with_padding () {
 
 component_test_tls13_no_mps_with_padding () {
     msg "build: TLS 1.3 without MPS (ASanDbg) "
-    scripts/config.py   set MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+    scripts/config.py   set MBEDTLS_SSL_PROTO_TLS1_3
     scripts/config.py   set MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
     scripts/config.py unset MBEDTLS_SSL_USE_MPS
     scripts/config.py   set MBEDTLS_RSA_C
@@ -2447,7 +2448,7 @@ component_test_tls13_no_mps_with_padding () {
 
 component_test_tls13_client_only () {
     msg "build: TLS 1.3 client-only (ASanDbg) "
-    scripts/config.py   set MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+    scripts/config.py   set MBEDTLS_SSL_PROTO_TLS1_3
     scripts/config.py   set MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
     scripts/config.py   set MBEDTLS_SSL_USE_MPS
     scripts/config.py unset MBEDTLS_SSL_SRV_C
@@ -2463,7 +2464,7 @@ component_test_tls13_client_only () {
 
 component_test_tls13_client_only_no_mps () {
     msg "build: TLS 1.3 client-only (ASanDbg) "
-    scripts/config.py   set MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+    scripts/config.py   set MBEDTLS_SSL_PROTO_TLS1_3
     scripts/config.py   set MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
     scripts/config.py unset MBEDTLS_SSL_USE_MPS
     scripts/config.py unset MBEDTLS_SSL_SRV_C
@@ -2479,7 +2480,7 @@ component_test_tls13_client_only_no_mps () {
 
 component_test_tls13_server_only () {
     msg "build: TLS 1.3 server-only (ASanDbg) "
-    scripts/config.py   set MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+    scripts/config.py   set MBEDTLS_SSL_PROTO_TLS1_3
     scripts/config.py   set MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
     scripts/config.py   set MBEDTLS_SSL_USE_MPS
     scripts/config.py   set MBEDTLS_SSL_SRV_C
@@ -2495,7 +2496,7 @@ component_test_tls13_server_only () {
 
 component_test_tls13_server_only_no_mps () {
     msg "build: TLS 1.3 server-only (ASanDbg) "
-    scripts/config.py   set MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+    scripts/config.py   set MBEDTLS_SSL_PROTO_TLS1_3
     scripts/config.py   set MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
     scripts/config.py unset MBEDTLS_SSL_USE_MPS
     scripts/config.py   set MBEDTLS_SSL_SRV_C

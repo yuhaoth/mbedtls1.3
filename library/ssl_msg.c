@@ -314,8 +314,7 @@ void mbedtls_ssl_reset_retransmit_timeout( mbedtls_ssl_context *ssl )
  * Encryption/decryption functions
  */
 
-#if defined(MBEDTLS_SSL_DTLS_CONNECTION_ID) ||  \
-    defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+#if defined(MBEDTLS_SSL_DTLS_CONNECTION_ID) || defined(MBEDTLS_SSL_PROTO_TLS1_3)
 
 static size_t ssl_compute_padding_length( size_t len,
                                           size_t granularity )
@@ -397,8 +396,7 @@ static int ssl_parse_inner_plaintext( unsigned char const *content,
 
     return( 0 );
 }
-#endif /* MBEDTLS_SSL_DTLS_CONNECTION_ID ||
-          MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+#endif /* MBEDTLS_SSL_DTLS_CONNECTION_ID || MBEDTLS_SSL_PROTO_TLS1_3 */
 
 /* `add_data` must have size 13 Bytes if the CID extension is disabled,
  * and 13 + 1 + CID-length Bytes if the CID extension is enabled. */
@@ -443,7 +441,7 @@ static void ssl_extract_add_data_from_record( unsigned char* add_data,
     unsigned char *cur = add_data;
     size_t ad_len_field = rec->data_len;
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3)
     if( minor_ver == MBEDTLS_SSL_MINOR_VERSION_4 )
     {
         /* In TLS 1.3, the AAD contains the length of the TLSCiphertext,
@@ -452,7 +450,7 @@ static void ssl_extract_add_data_from_record( unsigned char* add_data,
         ad_len_field += taglen;
     }
     else
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
     {
         ((void) minor_ver);
         ((void) taglen);
@@ -748,7 +746,7 @@ int mbedtls_ssl_encrypt_buf( mbedtls_ssl_context *ssl,
      * since they apply to different versions of the protocol. There
      * is hence no risk of double-addition of the inner plaintext.
      */
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3)
     if( transform->minor_ver == MBEDTLS_SSL_MINOR_VERSION_4 )
     {
         size_t padding =
@@ -765,7 +763,7 @@ int mbedtls_ssl_encrypt_buf( mbedtls_ssl_context *ssl,
 
         rec->type = MBEDTLS_SSL_MSG_APPLICATION_DATA;
     }
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
 
 #if defined(MBEDTLS_SSL_DTLS_CONNECTION_ID)
     /*
@@ -1614,7 +1612,7 @@ int mbedtls_ssl_decrypt_buf( mbedtls_ssl_context const *ssl,
         return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
     }
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3)
     if( transform->minor_ver == MBEDTLS_SSL_MINOR_VERSION_4 )
     {
         /* Remove inner padding and infer true content type. */
@@ -1624,7 +1622,7 @@ int mbedtls_ssl_decrypt_buf( mbedtls_ssl_context const *ssl,
         if( ret != 0 )
             return( MBEDTLS_ERR_SSL_INVALID_RECORD );
     }
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
 
 #if defined(MBEDTLS_SSL_DTLS_CONNECTION_ID)
     if( rec->cid_len != 0 )
@@ -2499,12 +2497,12 @@ int mbedtls_ssl_write_record( mbedtls_ssl_context *ssl, uint8_t force_flush )
          * as it may change when using the CID extension. */
 
         int minor_ver = ssl->minor_ver;
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3)
         /* TLS 1.3 still uses the TLS 1.2 version identifier
          * for backwards compatibility. */
         if( minor_ver == MBEDTLS_SSL_MINOR_VERSION_4 )
             minor_ver = MBEDTLS_SSL_MINOR_VERSION_3;
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
         mbedtls_ssl_write_version( ssl->major_ver, minor_ver,
                                    ssl->conf->transport, ssl->out_hdr + 1 );
 
@@ -3520,14 +3518,14 @@ static int ssl_prepare_record_content( mbedtls_ssl_context *ssl,
      * as unencrypted. The only thing we do with them is
      * check the length and content and ignore them.
      */
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3)
     if( ssl->transform_in != NULL &&
         ssl->transform_in->minor_ver == MBEDTLS_SSL_MINOR_VERSION_4 )
     {
         if( rec->type == MBEDTLS_SSL_MSG_CHANGE_CIPHER_SPEC )
             done = 1;
     }
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
 
     if( !done && ssl->transform_in != NULL )
     {
@@ -3560,8 +3558,7 @@ static int ssl_prepare_record_content( mbedtls_ssl_context *ssl,
         MBEDTLS_SSL_DEBUG_BUF( 4, "input payload after decrypt",
                                rec->buf + rec->data_offset, rec->data_len );
 
-#if defined(MBEDTLS_SSL_DTLS_CONNECTION_ID) ||  \
-    defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+#if defined(MBEDTLS_SSL_DTLS_CONNECTION_ID) || defined(MBEDTLS_SSL_PROTO_TLS1_3)
         /* We have already checked the record content type
          * in ssl_parse_record_header(), failing or silently
          * dropping the record in the case of an unknown type.
@@ -3574,8 +3571,7 @@ static int ssl_prepare_record_content( mbedtls_ssl_context *ssl,
             MBEDTLS_SSL_DEBUG_MSG( 1, ( "unknown record type" ) );
             return( MBEDTLS_ERR_SSL_INVALID_RECORD );
         }
-#endif /* MBEDTLS_SSL_DTLS_CONNECTION_ID ||
-          MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+#endif /* MBEDTLS_SSL_DTLS_CONNECTION_ID || MBEDTLS_SSL_PROTO_TLS1_3 */
 
         if( rec->data_len == 0 )
         {
@@ -4586,7 +4582,7 @@ int mbedtls_ssl_handle_message_type( mbedtls_ssl_context *ssl )
         }
 #endif
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3)
         if( ssl->minor_ver == MBEDTLS_SSL_MINOR_VERSION_4 )
         {
 #if defined(MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE)
@@ -4599,7 +4595,7 @@ int mbedtls_ssl_handle_message_type( mbedtls_ssl_context *ssl )
             return( MBEDTLS_ERR_SSL_INVALID_RECORD );
 #endif /* MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE */
         }
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
     }
 
     if( ssl->in_msgtype == MBEDTLS_SSL_MSG_ALERT )
@@ -4972,12 +4968,12 @@ size_t mbedtls_ssl_get_bytes_avail( const mbedtls_ssl_context *ssl )
 
 int mbedtls_ssl_check_pending( const mbedtls_ssl_context *ssl )
 {
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3)
     if( ssl->minor_ver == MBEDTLS_SSL_MINOR_VERSION_4 )
     {
         return( MBEDTLS_ERR_SSL_FEATURE_UNAVAILABLE );
     }
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER)
     /*
@@ -5138,19 +5134,19 @@ static int ssl_check_ctr_renegotiate( mbedtls_ssl_context *ssl )
 static int ssl_handle_hs_message_post_handshake_tls12( mbedtls_ssl_context *ssl );
 #endif
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3)
 static int ssl_handle_hs_message_post_handshake_tls13( mbedtls_ssl_context *ssl );
 #endif
 
 static int ssl_handle_hs_message_post_handshake( mbedtls_ssl_context *ssl )
 {
     /* Check protocol version and dispatch accordingly. */
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3)
     if( ssl->minor_ver == MBEDTLS_SSL_MINOR_VERSION_4 )
     {
         return( ssl_handle_hs_message_post_handshake_tls13( ssl ) );
     }
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER)
     if( ssl->minor_ver <= MBEDTLS_SSL_MINOR_VERSION_3 )
@@ -5163,7 +5159,7 @@ static int ssl_handle_hs_message_post_handshake( mbedtls_ssl_context *ssl )
     return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
 }
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3)
 
 #if defined(MBEDTLS_SSL_NEW_SESSION_TICKET) && defined(MBEDTLS_SSL_CLI_C)
 static int ssl_check_new_session_ticket( mbedtls_ssl_context *ssl )
@@ -5218,7 +5214,7 @@ static int ssl_handle_hs_message_post_handshake_tls13( mbedtls_ssl_context *ssl 
     /* Fail in all other cases. */
     return( MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE );
 }
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER)
 static int ssl_handle_hs_message_post_handshake_tls12( mbedtls_ssl_context *ssl )

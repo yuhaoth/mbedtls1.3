@@ -212,13 +212,13 @@ int main( void )
 #define USAGE_TICKETS ""
 #endif /* MBEDTLS_SSL_SESSION_TICKETS */
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3)
 /* Support for EAP-TLS 1.3 has not been implemented yet. */
 #define USAGE_EAP_TLS ""
 #else
 #define USAGE_EAP_TLS                                       \
     "    eap_tls=%%d          default: 0 (disabled)\n"
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
 
 #define USAGE_NSS_KEYLOG                                    \
     "    nss_keylog=%%d          default: 0 (disabled)\n"               \
@@ -275,7 +275,7 @@ int main( void )
 #define USAGE_CURVES ""
 #endif
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && \
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3) && \
     defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
 #define USAGE_SIG_ALGS \
     "    sig_algs=a,b,c,d      default: \"default\" (library default)\n"  \
@@ -350,29 +350,29 @@ int main( void )
 #define USAGE_SERIALIZATION ""
 #endif
 
-#if defined(MBEDTLS_ZERO_RTT) && defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+#if defined(MBEDTLS_ZERO_RTT) && defined(MBEDTLS_SSL_PROTO_TLS1_3)
 #define USAGE_EARLY_DATA \
     "    early_data=%%d        default: 0 (disabled)\n"      \
     "                        options: 0 (disabled), 1 (enabled)\n"
 #else
 #define USAGE_EARLY_DATA ""
-#endif /* MBEDTLS_ZERO_RTT && MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+#endif /* MBEDTLS_ZERO_RTT && MBEDTLS_SSL_PROTO_TLS1_3 */
 
-#if defined(MBEDTLS_ECP_C) && defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+#if defined(MBEDTLS_ECP_C) && defined(MBEDTLS_SSL_PROTO_TLS1_3)
 #define USAGE_NAMED_GROUP \
     "    named_groups=%%s    default: secp256r1\n"      \
     "                        options: secp256r1, secp384r1, secp521r1, all\n"
 #else
 #define USAGE_NAMED_GROUP ""
-#endif /* MBEDTLS_ECP_C && MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+#endif /* MBEDTLS_ECP_C && MBEDTLS_SSL_PROTO_TLS1_3 */
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3)
 #define USAGE_TLS1_3_KEY_EXCHANGE_MODES \
     "    tls13_kex_modes=%%s   default: all\n"     \
     "                          options: psk, psk_ephemeral, ephemeral, ephemeral_all, psk_all, all\n"
 #else
 #define USAGE_TLS1_3_KEY_EXCHANGE_MODES ""
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
 
 /* USAGE is arbitrarily split to stay under the portable string literal
  * length limit: 4095 bytes in C99. */
@@ -438,11 +438,11 @@ int main( void )
     USAGE_DHMLEN                                            \
     "\n"
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3)
 #define TLS1_3_VERSION_OPTIONS  ", tls13, dtls13"
-#else /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+#else
 #define TLS1_3_VERSION_OPTIONS  ""
-#endif /* !MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+#endif
 
 #define USAGE4 \
     "    allow_sha1=%%d       default: 0\n"                                   \
@@ -497,9 +497,9 @@ struct options
     const char *ecjpake_pw;     /* the EC J-PAKE password                   */
     int ec_max_ops;             /* EC consecutive operations limit          */
     int force_ciphersuite[2];   /* protocol/ciphersuite to use, or all      */
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3)
     int tls13_kex_modes;        /* supported TLS 1.3 key exchange modes     */
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
     int renegotiation;          /* enable / disable renegotiation           */
     int allow_legacy;           /* allow legacy renegotiation               */
     int renegotiate;            /* attempt renegotiation?                   */
@@ -596,7 +596,7 @@ static int my_verify( void *data, mbedtls_x509_crt *crt,
 }
 #endif /* MBEDTLS_X509_CRT_PARSE_C */
 
-#if defined(MBEDTLS_ECP_C) && defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+#if defined(MBEDTLS_ECP_C) && defined(MBEDTLS_SSL_PROTO_TLS1_3)
 static uint16_t ssl_tls13_sig_algs_for_test[] = {
 #if defined(MBEDTLS_SHA256_C) && defined(MBEDTLS_ECDSA_C) && defined(MBEDTLS_ECP_DP_SECP256R1_ENABLED)
     MBEDTLS_TLS1_3_SIG_ECDSA_SECP256R1_SHA256,
@@ -612,7 +612,7 @@ static uint16_t ssl_tls13_sig_algs_for_test[] = {
 #endif
     MBEDTLS_TLS1_3_SIG_NONE
 };
-#endif /* MBEDTLS_ECP_C && MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+#endif /* MBEDTLS_ECP_C && MBEDTLS_SSL_PROTO_TLS1_3 */
 
 #if defined(MBEDTLS_SSL_DTLS_CONNECTION_ID)
 int report_cid_usage( mbedtls_ssl_context *ssl,
@@ -700,11 +700,10 @@ int main( int argc, char *argv[] )
     mbedtls_net_context server_fd;
     io_ctx_t io_ctx;
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && \
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3) && \
     defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
     uint16_t sig_alg_list[SIG_ALG_LIST_SIZE];
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL &&
-          MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED */
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3 && MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED */
 
     unsigned char buf[MAX_REQUEST_SIZE + 1];
 
@@ -753,12 +752,11 @@ int main( int argc, char *argv[] )
     mbedtls_ssl_context ssl;
     mbedtls_ssl_config conf;
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && \
-    defined(MBEDTLS_ECP_C)
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3) && defined(MBEDTLS_ECP_C)
     /* list of named groups */
     mbedtls_ecp_group_id named_groups_list[NAMED_GROUPS_LIST_SIZE];
     char *start;
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL && MBEDTLS_ECP_C */
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3 && MBEDTLS_ECP_C */
 
 #if defined(MBEDTLS_ZERO_RTT)
     char early_data[] = "early data test";
@@ -821,13 +819,13 @@ int main( int argc, char *argv[] )
     mbedtls_ssl_init( &ssl );
     mbedtls_ssl_config_init( &conf );
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3)
 
 #if defined(MBEDTLS_ECP_C)
     memset( (void *) named_groups_list, MBEDTLS_ECP_DP_NONE, sizeof( named_groups_list ) );
 #endif /* MBEDTLS_ECP_C */
 
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
 
     memset( &saved_session, 0, sizeof( mbedtls_ssl_session ) );
     rng_init( &rng );
@@ -913,9 +911,9 @@ int main( int argc, char *argv[] )
     opt.ecjpake_pw          = DFL_ECJPAKE_PW;
     opt.ec_max_ops          = DFL_EC_MAX_OPS;
     opt.force_ciphersuite[0]= DFL_FORCE_CIPHER;
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3)
     opt.tls13_kex_modes     = DFL_TLS1_3_KEX_MODES;
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
     opt.renegotiation       = DFL_RENEGOTIATION;
     opt.allow_legacy        = DFL_ALLOW_LEGACY;
     opt.renegotiate         = DFL_RENEGOTIATE;
@@ -1165,12 +1163,11 @@ int main( int argc, char *argv[] )
         }
         else if( strcmp( p, "curves" ) == 0 )
             opt.curves = q;
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && \
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3) && \
     defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
         else if( strcmp( p, "sig_algs" ) == 0 )
             opt.sig_algs = q;
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL &&
-          MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED */
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3 && MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED */
         else if( strcmp( p, "etm" ) == 0 )
         {
             switch( atoi( q ) )
@@ -1180,7 +1177,7 @@ int main( int argc, char *argv[] )
                 default: goto usage;
             }
         }
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3)
 #if defined(MBEDTLS_ZERO_RTT)
         else if( strcmp( p, "early_data" ) == 0 )
         {
@@ -1219,17 +1216,17 @@ int main( int argc, char *argv[] )
                 opt.tls13_kex_modes = MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_ALL;
             else goto usage;
         }
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
         else if( strcmp( p, "min_version" ) == 0 )
         {
             if( strcmp( q, "tls12" ) == 0 ||
                      strcmp( q, "dtls12" ) == 0 )
                 opt.min_version = MBEDTLS_SSL_MINOR_VERSION_3;
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3)
             else if( strcmp( q, "tls13" ) == 0 ||
                      strcmp( q, "dtls13" ) == 0 )
                 opt.min_version = MBEDTLS_SSL_MINOR_VERSION_4;
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
             else
                 goto usage;
         }
@@ -1238,11 +1235,11 @@ int main( int argc, char *argv[] )
             if( strcmp( q, "tls12" ) == 0 ||
                 strcmp( q, "dtls12" ) == 0 )
                 opt.max_version = MBEDTLS_SSL_MINOR_VERSION_3;
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3)
             else if( strcmp( q, "tls13" ) == 0 ||
                      strcmp( q, "dtls13" ) == 0 )
                 opt.max_version = MBEDTLS_SSL_MINOR_VERSION_4;
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
             else
                 goto usage;
         }
@@ -1268,7 +1265,7 @@ int main( int argc, char *argv[] )
                 opt.max_version = MBEDTLS_SSL_MINOR_VERSION_3;
                 opt.transport = MBEDTLS_SSL_TRANSPORT_DATAGRAM;
             }
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3)
             else if( strcmp( q, "tls13" ) == 0 )
             {
                 opt.min_version = MBEDTLS_SSL_MINOR_VERSION_4;
@@ -1280,7 +1277,7 @@ int main( int argc, char *argv[] )
                 opt.max_version = MBEDTLS_SSL_MINOR_VERSION_4;
                 opt.transport = MBEDTLS_SSL_TRANSPORT_DATAGRAM;
             }
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
             else
                 goto usage;
         }
@@ -1372,7 +1369,7 @@ int main( int argc, char *argv[] )
         }
         else if( strcmp( p, "eap_tls" ) == 0 )
         {
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3)
             mbedtls_printf( "Error: eap_tls is not supported in TLS 1.3.\n" );
             goto usage;
 #else
@@ -1611,7 +1608,7 @@ int main( int argc, char *argv[] )
     }
 #endif /* MBEDTLS_ECP_C */
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && \
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3) && \
     defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
     if( opt.sig_algs != NULL )
     {
@@ -1672,8 +1669,7 @@ int main( int argc, char *argv[] )
 
         sig_alg_list[i] = MBEDTLS_TLS1_3_SIG_NONE;
     }
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL &&
-          MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED */
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3 && MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED */
 
 #if defined(MBEDTLS_SSL_ALPN)
     if( opt.alpn_string != NULL )
@@ -1695,7 +1691,7 @@ int main( int argc, char *argv[] )
     }
 #endif /* MBEDTLS_SSL_ALPN */
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && defined(MBEDTLS_ECP_C)
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3) && defined(MBEDTLS_ECP_C)
     if( opt.named_groups_string != NULL )
     {
         p = (char *)opt.named_groups_string;
@@ -1734,7 +1730,7 @@ int main( int argc, char *argv[] )
 
         if( i == 0 ) goto usage;
     }
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL && MBEDTLS_ECP_C */
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3 && MBEDTLS_ECP_C */
 
     /*
      * 0. Initialize the RNG and the session data
@@ -1893,9 +1889,9 @@ int main( int argc, char *argv[] )
 
 #endif /* MBEDTLS_X509_CRT_PARSE_C */
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3) && defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
     mbedtls_ssl_conf_signature_algorithms( &conf, ssl_tls13_sig_algs_for_test );
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL && MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED */
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3 && MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED */
 
 #if defined(MBEDTLS_SSL_DTLS_CONNECTION_ID)
     if( opt.cid_enabled == 1 || opt.cid_enabled_renego == 1 )
@@ -2022,9 +2018,9 @@ int main( int argc, char *argv[] )
     if( opt.force_ciphersuite[0] != DFL_FORCE_CIPHER )
         mbedtls_ssl_conf_ciphersuites( &conf, opt.force_ciphersuite );
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3)
     mbedtls_ssl_conf_tls13_key_exchange_modes( &conf, opt.tls13_kex_modes );
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
 
     if( opt.allow_legacy != DFL_ALLOW_LEGACY )
         mbedtls_ssl_conf_legacy_renegotiation( &conf, opt.allow_legacy );
@@ -2056,10 +2052,10 @@ int main( int argc, char *argv[] )
 #endif  /* MBEDTLS_X509_CRT_PARSE_C */
 
 #if defined(MBEDTLS_ECP_C)
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3)
     if( named_groups_list[0] != MBEDTLS_ECP_DP_NONE )
         mbedtls_ssl_conf_curves(&conf, named_groups_list);
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
     if( opt.curves != NULL &&
         strcmp( opt.curves, "default" ) != 0 )
     {
@@ -2067,17 +2063,17 @@ int main( int argc, char *argv[] )
     }
 #endif /* MBEDTLS_ECP_C */
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && defined(MBEDTLS_ECP_C)
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3) && defined(MBEDTLS_ECP_C)
     if( opt.sig_algs != NULL )
     {
         mbedtls_ssl_conf_signature_algorithms( &conf, sig_alg_list );
     }
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL && MBEDTLS_ECP_C */
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3 && MBEDTLS_ECP_C */
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3)
     if( opt.sig_algs != NULL )
         mbedtls_ssl_conf_sig_algs( &conf, sig_alg_list );
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
 
 #if defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
@@ -2127,11 +2123,11 @@ int main( int argc, char *argv[] )
         mbedtls_ssl_conf_max_version( &conf, MBEDTLS_SSL_MAJOR_VERSION_3,
                                       opt.max_version );
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && defined(MBEDTLS_ZERO_RTT)
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3) && defined(MBEDTLS_ZERO_RTT)
     mbedtls_ssl_conf_early_data( &conf, opt.early_data, 0, NULL );
     mbedtls_ssl_set_early_data( &ssl, (const unsigned char*) early_data,
                                 strlen( early_data ) );
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL && MBEDTLS_ZERO_RTT */
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3 && MBEDTLS_ZERO_RTT */
 
     if( ( ret = mbedtls_ssl_setup( &ssl, &conf ) ) != 0 )
     {
@@ -2465,10 +2461,10 @@ int main( int argc, char *argv[] )
     }
 #endif /* MBEDTLS_SSL_DTLS_SRTP */
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && \
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3) && \
     defined(MBEDTLS_ZERO_RTT) && defined(MBEDTLS_SSL_CLI_C)
     mbedtls_printf( "early data status = %d\n", mbedtls_ssl_get_early_data_status( &ssl ) );
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL && MBEDTLS_ZERO_RTT && MBEDTLS_SSL_CLI_C */
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3 && MBEDTLS_ZERO_RTT && MBEDTLS_SSL_CLI_C */
 
 #if defined(MBEDTLS_X509_CRT_PARSE_C)
     /*
@@ -2744,7 +2740,7 @@ send_request:
                         mbedtls_printf( " connection was reset by peer\n" );
                         ret = 0;
                         goto reconnect;
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3)
 
                     case MBEDTLS_ERR_SSL_CONN_EOF:
                         mbedtls_printf( " connnection eof \n" );
@@ -2760,7 +2756,7 @@ send_request:
 
 #endif /* MBEDTLS_SSL_NEW_SESSION_TICKET */
 
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
                     default:
                         mbedtls_printf( " mbedtls_ssl_read returned -0x%x\n",
                                         (unsigned int) -ret );
@@ -3187,16 +3183,16 @@ reconnect:
             goto exit;
         }
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3)
         // Configure key exchange mode to use PSK-ephemeral
         mbedtls_ssl_conf_tls13_key_exchange_modes(
             &conf, MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_EPHEMERAL );
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && defined(MBEDTLS_ZERO_RTT)
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3) && defined(MBEDTLS_ZERO_RTT)
         mbedtls_ssl_set_early_data( &ssl, (const unsigned char*) early_data,
                                     strlen( early_data ) );
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL && MBEDTLS_ZERO_RTT */
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3 && MBEDTLS_ZERO_RTT */
 
 
         if( ( ret = mbedtls_net_connect( &server_fd,
@@ -3234,11 +3230,11 @@ reconnect:
 
         mbedtls_printf( " ok\n" );
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && \
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3) && \
     defined(MBEDTLS_ZERO_RTT) && defined(MBEDTLS_SSL_CLI_C)
         mbedtls_printf( "early data status, reconnect = %d\n",
                         mbedtls_ssl_get_early_data_status( &ssl ) );
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL && MBEDTLS_ZERO_RTT && MBEDTLS_SSL_CLI_C */
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3 && MBEDTLS_ZERO_RTT && MBEDTLS_SSL_CLI_C */
 
         goto send_request;
     }

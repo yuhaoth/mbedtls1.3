@@ -62,9 +62,9 @@ typedef struct
     unsigned char MBEDTLS_PRIVATE(active);           /*!< index of the currently active key  */
 
     uint32_t MBEDTLS_PRIVATE(ticket_lifetime);       /*!< lifetime of tickets in seconds     */
-#if defined(MBEDTLS_SSL_NEW_SESSION_TICKET) && defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+#if defined(MBEDTLS_SSL_NEW_SESSION_TICKET) && defined(MBEDTLS_SSL_PROTO_TLS1_3)
     mbedtls_ssl_ticket_flags MBEDTLS_PRIVATE(flags); /*!< ticket flags                       */
-#endif /* MBEDTLS_SSL_NEW_SESSION_TICKET && MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL  */
+#endif /* MBEDTLS_SSL_NEW_SESSION_TICKET && MBEDTLS_SSL_PROTO_TLS1_3  */
 
     /** Callback for getting (pseudo-)random numbers                        */
     int  (*MBEDTLS_PRIVATE(f_rng))(void *, unsigned char *, size_t);
