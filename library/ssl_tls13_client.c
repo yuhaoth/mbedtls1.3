@@ -1285,16 +1285,11 @@ static int ssl_tls13_write_client_hello_body( mbedtls_ssl_context *ssl,
      * vector ( i.e., a zero-valued single byte length field ).
      */
 #if defined(MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE)
-    /* Write session id length */
     MBEDTLS_SSL_CHK_BUF_PTR( p, end, ssl->session_negotiate->id_len + 1 );
     *p++ = (unsigned char)ssl->session_negotiate->id_len;
-
-    /* Write session id */
     memcpy( p, ssl->session_negotiate->id, ssl->session_negotiate->id_len );
     p += ssl->session_negotiate->id_len;
 
-    MBEDTLS_SSL_DEBUG_MSG( 3, ( "session id len.: %" MBEDTLS_PRINTF_SIZET,
-                                ssl->session_negotiate->id_len ) );
     MBEDTLS_SSL_DEBUG_BUF( 3, "session id", ssl->session_negotiate->id,
                               ssl->session_negotiate->id_len );
 #else
@@ -1488,7 +1483,10 @@ static int ssl_tls13_prepare_client_hello( mbedtls_ssl_context *ssl )
     }
 
 #if defined(MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE)
-    /* Determine whether session id has not been created already */
+    /*
+     * Create a session identifier for the purpose of middlebox compatibility
+     * only if one has not been created already.
+     */
     if( ssl->session_negotiate->id_len == 0 )
     {
         /* Creating a session id with 32 byte length */
@@ -1498,9 +1496,8 @@ static int ssl_tls13_prepare_client_hello( mbedtls_ssl_context *ssl )
             MBEDTLS_SSL_DEBUG_RET( 1, "creating session id failed", ret );
             return( ret );
         }
+        ssl->session_negotiate->id_len = 32;
     }
-
-    ssl->session_negotiate->id_len = 32;
 #endif /* MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE */
 
     return( 0 );

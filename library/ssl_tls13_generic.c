@@ -1579,77 +1579,10 @@ void mbedtls_ssl_tls13_handshake_wrapup( mbedtls_ssl_context *ssl )
  * STATE HANDLING: Write ChangeCipherSpec
  *
  */
-
 #if defined(MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE)
-
- /* Main entry point; orchestrates the other functions */
-int mbedtls_ssl_tls13_write_change_cipher_spec_process( mbedtls_ssl_context *ssl );
 
 #define SSL_WRITE_CCS_NEEDED     0
 #define SSL_WRITE_CCS_SKIP       1
-static int ssl_tls13_write_change_cipher_spec_coordinate( mbedtls_ssl_context *ssl );
-
-#if !defined(MBEDTLS_SSL_USE_MPS)
-static int ssl_tls13_write_change_cipher_spec_write( mbedtls_ssl_context *ssl,
-    unsigned char *buf,
-    size_t buf_len,
-    size_t *out_len );
-#endif /* !MBEDTLS_SSL_USE_MPS */
-static int ssl_tls13_write_change_cipher_spec_postprocess( mbedtls_ssl_context *ssl );
-
-
-/*
- * Implementation
- */
-
-int mbedtls_ssl_tls13_write_change_cipher_spec_process( mbedtls_ssl_context *ssl )
-{
-    int ret;
-
-    MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> write change cipher spec" ) );
-
-    MBEDTLS_SSL_PROC_CHK_NEG( ssl_tls13_write_change_cipher_spec_coordinate( ssl ) );
-
-    if( ret == SSL_WRITE_CCS_NEEDED )
-    {
-#if defined(MBEDTLS_SSL_USE_MPS)
-
-        MBEDTLS_SSL_PROC_CHK( mbedtls_mps_flush( &ssl->mps->l4 ) );
-        MBEDTLS_SSL_PROC_CHK( mbedtls_mps_write_ccs( &ssl->mps->l4 ) );
-        MBEDTLS_SSL_PROC_CHK( mbedtls_mps_dispatch( &ssl->mps->l4 ) );
-        MBEDTLS_SSL_PROC_CHK( ssl_tls13_write_change_cipher_spec_postprocess( ssl ) );
-
-#else /* MBEDTLS_SSL_USE_MPS */
-        /* Make sure we can write a new message. */
-        MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_flush_output( ssl ) );
-
-        /* Write CCS message */
-        MBEDTLS_SSL_PROC_CHK( ssl_tls13_write_change_cipher_spec_write( ssl, ssl->out_msg,
-            MBEDTLS_SSL_OUT_CONTENT_LEN,
-            &ssl->out_msglen ) );
-
-        ssl->out_msgtype = MBEDTLS_SSL_MSG_CHANGE_CIPHER_SPEC;
-
-        /* Update state */
-        MBEDTLS_SSL_PROC_CHK( ssl_tls13_write_change_cipher_spec_postprocess( ssl ) );
-
-        /* Dispatch message */
-        MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_write_record( ssl, SSL_FORCE_FLUSH ) );
-
-#endif /* MBEDTLS_SSL_USE_MPS */
-    }
-    else
-    {
-        /* Update state */
-        MBEDTLS_SSL_PROC_CHK( ssl_tls13_write_change_cipher_spec_postprocess( ssl ) );
-    }
-
-cleanup:
-
-    MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= write change cipher spec" ) );
-    return( ret );
-}
-
 static int ssl_tls13_write_change_cipher_spec_coordinate( mbedtls_ssl_context *ssl )
 {
 #if !defined(MBEDTLS_SSL_SRV_C)
@@ -1676,21 +1609,17 @@ static int ssl_tls13_write_change_cipher_spec_coordinate( mbedtls_ssl_context *s
 }
 
 #if !defined(MBEDTLS_SSL_USE_MPS)
-static int ssl_tls13_write_change_cipher_spec_write( mbedtls_ssl_context *ssl,
-                                                     unsigned char *buf,
-                                                     size_t buf_len,
-                                                     size_t *out_len )
+static int ssl_tls13_write_change_cipher_spec_body( mbedtls_ssl_context *ssl,
+                                                    unsigned char *buf,
+                                                    unsigned char *end,
+                                                    size_t *olen )
 {
     ((void) ssl);
 
-    if( buf_len < 1 )
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "buffer too small" ) );
-        return( MBEDTLS_ERR_SSL_ALLOC_FAILED );
-    }
-
+    MBEDTLS_SSL_CHK_BUF_PTR( buf, end, 1 );
     buf[0] = 1;
-    *out_len = 1;
+    *olen = 1;
+
     return( 0 );
 }
 #endif /* !MBEDTLS_SSL_USE_MPS */
@@ -1742,6 +1671,55 @@ static int ssl_tls13_write_change_cipher_spec_postprocess( mbedtls_ssl_context *
 #endif /* MBEDTLS_SSL_CLI_C */
 
     return( 0 );
+}
+
+int mbedtls_ssl_tls13_write_change_cipher_spec_process( mbedtls_ssl_context *ssl )
+{
+    int ret;
+
+    MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> write change cipher spec" ) );
+
+    MBEDTLS_SSL_PROC_CHK_NEG( ssl_tls13_write_change_cipher_spec_coordinate( ssl ) );
+
+    if( ret == SSL_WRITE_CCS_NEEDED )
+    {
+#if defined(MBEDTLS_SSL_USE_MPS)
+
+        MBEDTLS_SSL_PROC_CHK( mbedtls_mps_flush( &ssl->mps->l4 ) );
+        MBEDTLS_SSL_PROC_CHK( mbedtls_mps_write_ccs( &ssl->mps->l4 ) );
+        MBEDTLS_SSL_PROC_CHK( mbedtls_mps_dispatch( &ssl->mps->l4 ) );
+        MBEDTLS_SSL_PROC_CHK( ssl_tls13_write_change_cipher_spec_postprocess( ssl ) );
+
+#else /* MBEDTLS_SSL_USE_MPS */
+        /* Make sure we can write a new message. */
+        MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_flush_output( ssl ) );
+
+        /* Write CCS message */
+        MBEDTLS_SSL_PROC_CHK( ssl_tls13_write_change_cipher_spec_body(
+                                  ssl, ssl->out_msg,
+                                  ssl->out_msg + MBEDTLS_SSL_OUT_CONTENT_LEN,
+                                  &ssl->out_msglen ) );
+
+        ssl->out_msgtype = MBEDTLS_SSL_MSG_CHANGE_CIPHER_SPEC;
+
+        /* Update state */
+        MBEDTLS_SSL_PROC_CHK( ssl_tls13_write_change_cipher_spec_postprocess( ssl ) );
+
+        /* Dispatch message */
+        MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_write_record( ssl, SSL_FORCE_FLUSH ) );
+
+#endif /* MBEDTLS_SSL_USE_MPS */
+    }
+    else
+    {
+        /* Update state */
+        MBEDTLS_SSL_PROC_CHK( ssl_tls13_write_change_cipher_spec_postprocess( ssl ) );
+    }
+
+cleanup:
+
+    MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= write change cipher spec" ) );
+    return( ret );
 }
 #endif /* MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE */
 

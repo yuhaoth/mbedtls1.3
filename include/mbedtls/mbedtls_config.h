@@ -1512,11 +1512,12 @@
  */
 #define MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
 
-/* \def MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
+/**
+ * \def MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
  *
  * Enable TLS 1.3 middlebox compatibility mode.
  *
- * As specified in Section D.4 of RFC 8449, TLS 1.3 offers a compatibility
+ * As specified in Section D.4 of RFC 8446, TLS 1.3 offers a compatibility
  * mode to make a TLS 1.3 connection more likely to pass through middle boxes
  * expecting TLS 1.2 traffic.
  *
@@ -1526,12 +1527,12 @@
  * you know that middlebox compatibility issues won't occur, it is therefore
  * recommended to set this option.
  *
- * Comment to disable compatibility mode for TLS 1.3.
- *
- * Requires: MBEDTLS_SSL_PROTO_TLS1_3
+ * Comment to disable compatibility mode for TLS 1.3. If
+ * MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL is not enabled, this option does not
+ * have any effect on the build.
  *
  */
-#define MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
+//#define MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 
 /**
 *  \def MBEDTLS_SSL_EARLY_DATA_MAX_DELAY
@@ -1586,7 +1587,6 @@
 *  - use them in TLS 1.3 clients.
 */
 #define MBEDTLS_SSL_NEW_SESSION_TICKET
-
 
 /**
  * \def MBEDTLS_SSL_PROTO_DTLS
