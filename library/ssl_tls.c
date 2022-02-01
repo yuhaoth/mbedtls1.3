@@ -512,19 +512,37 @@ static int tls_prf_generic( mbedtls_md_type_t md_type,
     if ( ( ret = mbedtls_md_setup( &md_ctx, md_info, 1 ) ) != 0 )
         goto exit;
 
-    mbedtls_md_hmac_starts( &md_ctx, secret, slen );
-    mbedtls_md_hmac_update( &md_ctx, tmp + md_len, nb );
-    mbedtls_md_hmac_finish( &md_ctx, tmp );
+    ret = mbedtls_md_hmac_starts( &md_ctx, secret, slen );
+    if( ret != 0 )
+        goto exit;
+    ret = mbedtls_md_hmac_update( &md_ctx, tmp + md_len, nb );
+    if( ret != 0 )
+        goto exit;
+    ret = mbedtls_md_hmac_finish( &md_ctx, tmp );
+    if( ret != 0 )
+        goto exit;
 
     for( i = 0; i < dlen; i += md_len )
     {
-        mbedtls_md_hmac_reset ( &md_ctx );
-        mbedtls_md_hmac_update( &md_ctx, tmp, md_len + nb );
-        mbedtls_md_hmac_finish( &md_ctx, h_i );
+        ret = mbedtls_md_hmac_reset ( &md_ctx );
+        if( ret != 0 )
+            goto exit;
+        ret = mbedtls_md_hmac_update( &md_ctx, tmp, md_len + nb );
+        if( ret != 0 )
+            goto exit;
+        ret = mbedtls_md_hmac_finish( &md_ctx, h_i );
+        if( ret != 0 )
+            goto exit;
 
-        mbedtls_md_hmac_reset ( &md_ctx );
-        mbedtls_md_hmac_update( &md_ctx, tmp, md_len );
-        mbedtls_md_hmac_finish( &md_ctx, tmp );
+        ret = mbedtls_md_hmac_reset ( &md_ctx );
+        if( ret != 0 )
+            goto exit;
+        ret = mbedtls_md_hmac_update( &md_ctx, tmp, md_len );
+        if( ret != 0 )
+            goto exit;
+        ret = mbedtls_md_hmac_finish( &md_ctx, tmp );
+        if( ret != 0 )
+            goto exit;
 
         k = ( i + md_len > dlen ) ? dlen % md_len : md_len;
 
@@ -1068,8 +1086,12 @@ static int ssl_tls12_populate_transform( mbedtls_ssl_transform *transform,
        For AEAD-based ciphersuites, there is nothing to do here. */
     if( mac_key_len != 0 )
     {
-        mbedtls_md_hmac_starts( &transform->md_ctx_enc, mac_enc, mac_key_len );
-        mbedtls_md_hmac_starts( &transform->md_ctx_dec, mac_dec, mac_key_len );
+        ret = mbedtls_md_hmac_starts( &transform->md_ctx_enc, mac_enc, mac_key_len );
+        if( ret != 0 )
+            goto end;
+        ret = mbedtls_md_hmac_starts( &transform->md_ctx_dec, mac_dec, mac_key_len );
+        if( ret != 0 )
+            goto end;
     }
 #endif
 #endif /* MBEDTLS_SSL_SOME_SUITES_USE_MAC */
@@ -3125,7 +3147,7 @@ int mbedtls_ssl_write_finished( mbedtls_ssl_context *ssl )
 int mbedtls_ssl_parse_finished( mbedtls_ssl_context *ssl )
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
-    unsigned int hash_len;
+    unsigned int hash_len = 12;
     unsigned char buf[SSL_MAX_HASH_LEN];
 
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> parse finished" ) );
@@ -3135,7 +3157,7 @@ int mbedtls_ssl_parse_finished( mbedtls_ssl_context *ssl )
     if( ( ret = mbedtls_ssl_read_record( ssl, 1 ) ) != 0 )
     {
         MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_read_record", ret );
-        return( ret );
+        goto exit;
     }
 
     if( ssl->in_msgtype != MBEDTLS_SSL_MSG_HANDSHAKE )
@@ -3143,16 +3165,16 @@ int mbedtls_ssl_parse_finished( mbedtls_ssl_context *ssl )
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad finished message" ) );
         mbedtls_ssl_send_alert_message( ssl, MBEDTLS_SSL_ALERT_LEVEL_FATAL,
                                         MBEDTLS_SSL_ALERT_MSG_UNEXPECTED_MESSAGE );
-        return( MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE );
+        ret = MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE;
+        goto exit;
     }
-
-    hash_len = 12;
 
     if( ssl->in_msg[0] != MBEDTLS_SSL_HS_FINISHED  )
     {
         mbedtls_ssl_send_alert_message( ssl, MBEDTLS_SSL_ALERT_LEVEL_FATAL,
                                         MBEDTLS_SSL_ALERT_MSG_UNEXPECTED_MESSAGE );
-        return( MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE );
+        ret = MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE;
+        goto exit;
     }
 
     if( ssl->in_hslen  != mbedtls_ssl_hs_hdr_len( ssl ) + hash_len )
@@ -3160,7 +3182,8 @@ int mbedtls_ssl_parse_finished( mbedtls_ssl_context *ssl )
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad finished message" ) );
         mbedtls_ssl_send_alert_message( ssl, MBEDTLS_SSL_ALERT_LEVEL_FATAL,
                                         MBEDTLS_SSL_ALERT_MSG_DECODE_ERROR );
-        return( MBEDTLS_ERR_SSL_DECODE_ERROR );
+        ret = MBEDTLS_ERR_SSL_DECODE_ERROR;
+        goto exit;
     }
 
     if( mbedtls_ct_memcmp( ssl->in_msg + mbedtls_ssl_hs_hdr_len( ssl ),
@@ -3169,7 +3192,8 @@ int mbedtls_ssl_parse_finished( mbedtls_ssl_context *ssl )
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad finished message" ) );
         mbedtls_ssl_send_alert_message( ssl, MBEDTLS_SSL_ALERT_LEVEL_FATAL,
                                         MBEDTLS_SSL_ALERT_MSG_DECRYPT_ERROR );
-        return( MBEDTLS_ERR_SSL_HANDSHAKE_FAILURE );
+        ret = MBEDTLS_ERR_SSL_HANDSHAKE_FAILURE;
+        goto exit;
     }
 
 #if defined(MBEDTLS_SSL_RENEGOTIATION)
@@ -3198,7 +3222,9 @@ int mbedtls_ssl_parse_finished( mbedtls_ssl_context *ssl )
 
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= parse finished" ) );
 
-    return( 0 );
+exit:
+    mbedtls_platform_zeroize( buf, hash_len );
+    return( ret );
 }
 #endif /* defined(MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER) */
 
