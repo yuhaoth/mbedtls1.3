@@ -10155,18 +10155,18 @@ run_test    "TLS 1.3: minimal feature sets - openssl" \
             "$O_NEXT_SRV -msg -tls1_3 -num_tickets 0 -no_resume_ephemeral -no_cache" \
             "$P_CLI debug_level=3 min_version=tls13 max_version=tls13" \
             0 \
-            -c "tls13 client state: 0"     \
-            -c "tls13 client state: 2"     \
-            -c "tls13 client state: 26"    \
-            -c "tls13 client state: 5"     \
-            -c "tls13 client state: 3"     \
-            -c "tls13 client state: 9"     \
-            -c "tls13 client state: 13"    \
-            -c "tls13 client state: 7"     \
-            -c "tls13 client state: 25"    \
-            -c "tls13 client state: 11"    \
-            -c "tls13 client state: 14"    \
-            -c "tls13 client state: 15"    \
+            -c "tls13 client state: MBEDTLS_SSL_HELLO_REQUEST(0)"               \
+            -c "tls13 client state: MBEDTLS_SSL_SERVER_HELLO(2)"                \
+            -c "tls13 client state: MBEDTLS_SSL_ENCRYPTED_EXTENSIONS(26)"       \
+            -c "tls13 client state: MBEDTLS_SSL_CERTIFICATE_REQUEST(5)"         \
+            -c "tls13 client state: MBEDTLS_SSL_SERVER_CERTIFICATE(3)"          \
+            -c "tls13 client state: MBEDTLS_SSL_CERTIFICATE_VERIFY(9)"          \
+            -c "tls13 client state: MBEDTLS_SSL_SERVER_FINISHED(13)"            \
+            -c "tls13 client state: MBEDTLS_SSL_CLIENT_CERTIFICATE(7)"          \
+            -c "tls13 client state: MBEDTLS_SSL_CLIENT_CERTIFICATE_VERIFY(25)"  \
+            -c "tls13 client state: MBEDTLS_SSL_CLIENT_FINISHED(11)"            \
+            -c "tls13 client state: MBEDTLS_SSL_FLUSH_BUFFERS(14)"              \
+            -c "tls13 client state: MBEDTLS_SSL_HANDSHAKE_WRAPUP(15)"           \
             -c "<= ssl_tls13_process_server_hello" \
             -c "server hello, chosen ciphersuite: ( 1301 ) - TLS1-3-AES-128-GCM-SHA256" \
             -c "ECDH curve: x25519"         \
@@ -10191,18 +10191,18 @@ run_test    "TLS 1.3: minimal feature sets - gnutls" \
             "$P_CLI debug_level=3 min_version=tls13 max_version=tls13" \
             0 \
             -s "SERVER HELLO was queued"    \
-            -c "tls13 client state: 0"     \
-            -c "tls13 client state: 2"     \
-            -c "tls13 client state: 26"    \
-            -c "tls13 client state: 5"     \
-            -c "tls13 client state: 3"     \
-            -c "tls13 client state: 9"     \
-            -c "tls13 client state: 13"    \
-            -c "tls13 client state: 7"     \
-            -c "tls13 client state: 25"    \
-            -c "tls13 client state: 11"    \
-            -c "tls13 client state: 14"    \
-            -c "tls13 client state: 15"    \
+            -c "tls13 client state: MBEDTLS_SSL_HELLO_REQUEST(0)"               \
+            -c "tls13 client state: MBEDTLS_SSL_SERVER_HELLO(2)"                \
+            -c "tls13 client state: MBEDTLS_SSL_ENCRYPTED_EXTENSIONS(26)"       \
+            -c "tls13 client state: MBEDTLS_SSL_CERTIFICATE_REQUEST(5)"         \
+            -c "tls13 client state: MBEDTLS_SSL_SERVER_CERTIFICATE(3)"          \
+            -c "tls13 client state: MBEDTLS_SSL_CERTIFICATE_VERIFY(9)"          \
+            -c "tls13 client state: MBEDTLS_SSL_SERVER_FINISHED(13)"            \
+            -c "tls13 client state: MBEDTLS_SSL_CLIENT_CERTIFICATE(7)"          \
+            -c "tls13 client state: MBEDTLS_SSL_CLIENT_CERTIFICATE_VERIFY(25)"  \
+            -c "tls13 client state: MBEDTLS_SSL_CLIENT_FINISHED(11)"            \
+            -c "tls13 client state: MBEDTLS_SSL_FLUSH_BUFFERS(14)"              \
+            -c "tls13 client state: MBEDTLS_SSL_HANDSHAKE_WRAPUP(15)"           \
             -c "<= ssl_tls13_process_server_hello" \
             -c "server hello, chosen ciphersuite: ( 1301 ) - TLS1-3-AES-128-GCM-SHA256" \
             -c "ECDH curve: x25519"         \
