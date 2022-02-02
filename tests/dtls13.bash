@@ -560,8 +560,8 @@ echo "*** Default Ciphersuite (PSK, DTLS 1.3)  *** "
 echo ""
 
 run_test    "PSK" \
-            "$P_SRV $MBEDTLS_DEBUG_LEVEL force_version=dtls1_3 psk=010203 psk_identity=0a0b0c key_exchange_modes=psk" \
-            "$P_CLI $MBEDTLS_DEBUG_LEVEL force_version=dtls1_3 psk=010203 psk_identity=0a0b0c key_exchange_modes=psk" \
+            "$P_SRV $MBEDTLS_DEBUG_LEVEL force_version=dtls13 psk=010203 psk_identity=0a0b0c key_exchange_modes=psk" \
+            "$P_CLI $MBEDTLS_DEBUG_LEVEL force_version=dtls13 psk=010203 psk_identity=0a0b0c key_exchange_modes=psk" \
             0 \
             -s "Protocol is DTLSv1.3"
 
@@ -570,8 +570,8 @@ echo "*** Default Ciphersuite (Public Key, DTLS 1.3)  *** "
 echo ""
 
 run_test    "ECDHE-ECDSA (server auth only)" \
-            "$P_SRV $MBEDTLS_DEBUG_LEVEL force_version=dtls1_3  key_exchange_modes=ecdhe_ecdsa" \
-            "$P_CLI $MBEDTLS_DEBUG_LEVEL force_version=dtls1_3 server_name=server.example.com key_exchange_modes=ecdhe_ecdsa" \
+            "$P_SRV $MBEDTLS_DEBUG_LEVEL force_version=dtls13  key_exchange_modes=ecdhe_ecdsa" \
+            "$P_CLI $MBEDTLS_DEBUG_LEVEL force_version=dtls13 server_name=server.example.com key_exchange_modes=ecdhe_ecdsa" \
             0 \
 			-s "Certificate verification was skipped" \
 			-c "subject name      : CN=server.example.com" \
@@ -587,8 +587,8 @@ echo ""
 # - the PSK-based ciphersuite exchange is executed
 # - AES-128-CCM is negotiated 
 run_test    "TLS_AES_128_CCM_SHA256 with PSK" \
-            "$P_SRV $MBEDTLS_DEBUG_LEVEL force_version=dtls1_3 psk=010203 psk_identity=0a0b0c key_exchange_modes=psk" \
-            "$P_CLI $MBEDTLS_DEBUG_LEVEL force_version=dtls1_3 force_ciphersuite=TLS_AES_128_CCM_SHA256 psk=010203 psk_identity=0a0b0c key_exchange_modes=psk" \
+            "$P_SRV $MBEDTLS_DEBUG_LEVEL force_version=dtls13 psk=010203 psk_identity=0a0b0c key_exchange_modes=psk" \
+            "$P_CLI $MBEDTLS_DEBUG_LEVEL force_version=dtls13 force_ciphersuite=TLS_AES_128_CCM_SHA256 psk=010203 psk_identity=0a0b0c key_exchange_modes=psk" \
             0 \
             -s "Protocol is DTLSv1.3" \
             -s "Ciphersuite is TLS_AES_128_CCM_SHA256" 
@@ -596,8 +596,8 @@ run_test    "TLS_AES_128_CCM_SHA256 with PSK" \
 # - the PSK-based ciphersuite exchange is executed
 # - AES-128-GCM is negotiated 
 run_test    "TLS_AES_128_GCM_SHA256 with PSK" \
-            "$P_SRV $MBEDTLS_DEBUG_LEVEL force_version=dtls1_3 psk=010203 psk_identity=0a0b0c key_exchange_modes=psk" \
-            "$P_CLI $MBEDTLS_DEBUG_LEVEL force_version=dtls1_3 force_ciphersuite=TLS_AES_128_GCM_SHA256 psk=010203 psk_identity=0a0b0c key_exchange_modes=psk" \
+            "$P_SRV $MBEDTLS_DEBUG_LEVEL force_version=dtls13 psk=010203 psk_identity=0a0b0c key_exchange_modes=psk" \
+            "$P_CLI $MBEDTLS_DEBUG_LEVEL force_version=dtls13 force_ciphersuite=TLS_AES_128_GCM_SHA256 psk=010203 psk_identity=0a0b0c key_exchange_modes=psk" \
             0 \
             -s "Protocol is DTLSv1.3" \
             -s "Ciphersuite is TLS_AES_128_GCM_SHA256" 
@@ -606,8 +606,8 @@ run_test    "TLS_AES_128_GCM_SHA256 with PSK" \
 # - the PSK-based ciphersuite exchange is executed
 # - AES-128-CCM-8 is negotiated 
 run_test    "TLS_AES_128_CCM_8_SHA256 with PSK" \
-            "$P_SRV $MBEDTLS_DEBUG_LEVEL force_version=dtls1_3 psk=010203 psk_identity=0a0b0c key_exchange_modes=psk" \
-            "$P_CLI $MBEDTLS_DEBUG_LEVEL force_version=dtls1_3 force_ciphersuite=TLS_AES_128_CCM_8_SHA256 psk=010203 psk_identity=0a0b0c key_exchange_modes=psk" \
+            "$P_SRV $MBEDTLS_DEBUG_LEVEL force_version=dtls13 psk=010203 psk_identity=0a0b0c key_exchange_modes=psk" \
+            "$P_CLI $MBEDTLS_DEBUG_LEVEL force_version=dtls13 force_ciphersuite=TLS_AES_128_CCM_8_SHA256 psk=010203 psk_identity=0a0b0c key_exchange_modes=psk" \
             0 \
             -s "Protocol is DTLSv1.3" \
             -s "Ciphersuite is TLS_AES_128_CCM_8_SHA256" 
@@ -616,8 +616,8 @@ run_test    "TLS_AES_128_CCM_8_SHA256 with PSK" \
 # - the PSK-based ciphersuite exchange is executed
 # - AES-256-GCM is negotiated 
 run_test    "TLS_AES_256_GCM_SHA384 with PSK" \
-            "$P_SRV $MBEDTLS_DEBUG_LEVEL force_version=dtls1_3 psk=010203 psk_identity=0a0b0c key_exchange_modes=psk" \
-            "$P_CLI $MBEDTLS_DEBUG_LEVEL force_version=dtls1_3 force_ciphersuite=TLS_AES_256_GCM_SHA384 psk=010203 psk_identity=0a0b0c key_exchange_modes=psk" \
+            "$P_SRV $MBEDTLS_DEBUG_LEVEL force_version=dtls13 psk=010203 psk_identity=0a0b0c key_exchange_modes=psk" \
+            "$P_CLI $MBEDTLS_DEBUG_LEVEL force_version=dtls13 force_ciphersuite=TLS_AES_256_GCM_SHA384 psk=010203 psk_identity=0a0b0c key_exchange_modes=psk" \
             0 \
             -s "Protocol is DTLSv1.3" \
             -s "Ciphersuite is TLS_AES_256_GCM_SHA384" 
@@ -630,8 +630,8 @@ echo ""
 # - the PSK-ECDHE-based ciphersuite exchange is executed
 # - AES-128-CCM is negotiated 
 run_test    "TLS_AES_128_CCM_SHA256 with PSK-ECDHE" \
-            "$P_SRV $MBEDTLS_DEBUG_LEVEL force_version=dtls1_3 psk=010203 psk_identity=0a0b0c key_exchange_modes=psk_dhe" \
-            "$P_CLI $MBEDTLS_DEBUG_LEVEL force_version=dtls1_3 force_ciphersuite=TLS_AES_128_CCM_SHA256 psk=010203 psk_identity=0a0b0c key_exchange_modes=psk_dhe" \
+            "$P_SRV $MBEDTLS_DEBUG_LEVEL force_version=dtls13 psk=010203 psk_identity=0a0b0c key_exchange_modes=psk_dhe" \
+            "$P_CLI $MBEDTLS_DEBUG_LEVEL force_version=dtls13 force_ciphersuite=TLS_AES_128_CCM_SHA256 psk=010203 psk_identity=0a0b0c key_exchange_modes=psk_dhe" \
             0 \
             -s "Protocol is DTLSv1.3" \
             -s "Ciphersuite is TLS_AES_128_CCM_SHA256" 
@@ -639,8 +639,8 @@ run_test    "TLS_AES_128_CCM_SHA256 with PSK-ECDHE" \
 # - the PSK-ECDHE-based ciphersuite exchange is executed
 # - AES-128-GCM is negotiated 
 run_test    "TLS_AES_128_GCM_SHA256 with PSK-ECDHE" \
-            "$P_SRV $MBEDTLS_DEBUG_LEVEL force_version=dtls1_3 psk=010203 psk_identity=0a0b0c key_exchange_modes=psk_dhe" \
-            "$P_CLI $MBEDTLS_DEBUG_LEVEL force_version=dtls1_3 force_ciphersuite=TLS_AES_128_GCM_SHA256 psk=010203 psk_identity=0a0b0c key_exchange_modes=psk_dhe" \
+            "$P_SRV $MBEDTLS_DEBUG_LEVEL force_version=dtls13 psk=010203 psk_identity=0a0b0c key_exchange_modes=psk_dhe" \
+            "$P_CLI $MBEDTLS_DEBUG_LEVEL force_version=dtls13 force_ciphersuite=TLS_AES_128_GCM_SHA256 psk=010203 psk_identity=0a0b0c key_exchange_modes=psk_dhe" \
             0 \
             -s "Protocol is DTLSv1.3" \
             -s "Ciphersuite is TLS_AES_128_GCM_SHA256" 
@@ -648,8 +648,8 @@ run_test    "TLS_AES_128_GCM_SHA256 with PSK-ECDHE" \
 # - the PSK-ECDHE-based ciphersuite exchange is executed
 # - AES-128-CCM-8 is negotiated 
 run_test    "TLS_AES_128_CCM_8_SHA256 with PSK-ECDHE" \
-            "$P_SRV $MBEDTLS_DEBUG_LEVEL force_version=dtls1_3 psk=010203 psk_identity=0a0b0c key_exchange_modes=psk_dhe" \
-            "$P_CLI $MBEDTLS_DEBUG_LEVEL force_version=dtls1_3 force_ciphersuite=TLS_AES_128_CCM_8_SHA256 psk=010203 psk_identity=0a0b0c key_exchange_modes=psk_dhe" \
+            "$P_SRV $MBEDTLS_DEBUG_LEVEL force_version=dtls13 psk=010203 psk_identity=0a0b0c key_exchange_modes=psk_dhe" \
+            "$P_CLI $MBEDTLS_DEBUG_LEVEL force_version=dtls13 force_ciphersuite=TLS_AES_128_CCM_8_SHA256 psk=010203 psk_identity=0a0b0c key_exchange_modes=psk_dhe" \
             0 \
             -s "Protocol is DTLSv1.3" \
             -s "Ciphersuite is TLS_AES_128_CCM_8_SHA256" 
@@ -657,8 +657,8 @@ run_test    "TLS_AES_128_CCM_8_SHA256 with PSK-ECDHE" \
 # - the PSK-ECDHE-based ciphersuite exchange is executed
 # - AES-256-GCM is negotiated 
 run_test    "TLS_AES_256_GCM_SHA384 with PSK-ECDHE" \
-            "$P_SRV $MBEDTLS_DEBUG_LEVEL force_version=dtls1_3 psk=010203 psk_identity=0a0b0c key_exchange_modes=psk_dhe" \
-            "$P_CLI $MBEDTLS_DEBUG_LEVEL force_version=dtls1_3 force_ciphersuite=TLS_AES_256_GCM_SHA384 psk=010203 psk_identity=0a0b0c key_exchange_modes=psk_dhe" \
+            "$P_SRV $MBEDTLS_DEBUG_LEVEL force_version=dtls13 psk=010203 psk_identity=0a0b0c key_exchange_modes=psk_dhe" \
+            "$P_CLI $MBEDTLS_DEBUG_LEVEL force_version=dtls13 force_ciphersuite=TLS_AES_256_GCM_SHA384 psk=010203 psk_identity=0a0b0c key_exchange_modes=psk_dhe" \
             0 \
             -s "Protocol is DTLSv1.3" \
             -s "Ciphersuite is TLS_AES_256_GCM_SHA384" 
@@ -675,8 +675,8 @@ echo ""
 # - the ECDHE-ECDSA-based ciphersuite exchange is executed
 # - AES-128-CCM is negotiated 
 run_test    "TLS_AES_128_CCM_SHA256 with ECDHE-ECDSA (server auth only)" \
-            "$P_SRV $MBEDTLS_DEBUG_LEVEL force_version=dtls1_3  key_exchange_modes=ecdhe_ecdsa" \
-            "$P_CLI $MBEDTLS_DEBUG_LEVEL force_version=dtls1_3 server_name=server.example.com force_ciphersuite=TLS_AES_128_CCM_SHA256 key_exchange_modes=ecdhe_ecdsa" \
+            "$P_SRV $MBEDTLS_DEBUG_LEVEL force_version=dtls13  key_exchange_modes=ecdhe_ecdsa" \
+            "$P_CLI $MBEDTLS_DEBUG_LEVEL force_version=dtls13 server_name=server.example.com force_ciphersuite=TLS_AES_128_CCM_SHA256 key_exchange_modes=ecdhe_ecdsa" \
             0 \
 			-s "Certificate verification was skipped" \
 			-c "subject name      : CN=server.example.com" \
@@ -687,8 +687,8 @@ run_test    "TLS_AES_128_CCM_SHA256 with ECDHE-ECDSA (server auth only)" \
 # - the ECDHE-ECDSA-based ciphersuite exchange is executed
 # - AES-128-GCM is negotiated 
 run_test    "TLS_AES_128_GCM_SHA256 with ECDHE-ECDSA (server auth only)" \
-            "$P_SRV $MBEDTLS_DEBUG_LEVEL force_version=dtls1_3 key_exchange_modes=ecdhe_ecdsa" \
-            "$P_CLI $MBEDTLS_DEBUG_LEVEL force_version=dtls1_3 server_name=server.example.com force_ciphersuite=TLS_AES_128_GCM_SHA256 key_exchange_modes=ecdhe_ecdsa" \
+            "$P_SRV $MBEDTLS_DEBUG_LEVEL force_version=dtls13 key_exchange_modes=ecdhe_ecdsa" \
+            "$P_CLI $MBEDTLS_DEBUG_LEVEL force_version=dtls13 server_name=server.example.com force_ciphersuite=TLS_AES_128_GCM_SHA256 key_exchange_modes=ecdhe_ecdsa" \
             0 \
 			-s "Certificate verification was skipped" \
 			-c "subject name      : CN=server.example.com" \
@@ -699,8 +699,8 @@ run_test    "TLS_AES_128_GCM_SHA256 with ECDHE-ECDSA (server auth only)" \
 # - the ECDHE-ECDSA-based ciphersuite exchange is executed
 # - AES-128-CCM-8 is negotiated 
 run_test    "TLS_AES_128_CCM_8_SHA256 with ECDHE-ECDSA (server auth only)" \
-            "$P_SRV $MBEDTLS_DEBUG_LEVEL force_version=dtls1_3  key_exchange_modes=ecdhe_ecdsa" \
-            "$P_CLI $MBEDTLS_DEBUG_LEVEL force_version=dtls1_3 server_name=server.example.com force_ciphersuite=TLS_AES_128_CCM_8_SHA256 key_exchange_modes=ecdhe_ecdsa" \
+            "$P_SRV $MBEDTLS_DEBUG_LEVEL force_version=dtls13  key_exchange_modes=ecdhe_ecdsa" \
+            "$P_CLI $MBEDTLS_DEBUG_LEVEL force_version=dtls13 server_name=server.example.com force_ciphersuite=TLS_AES_128_CCM_8_SHA256 key_exchange_modes=ecdhe_ecdsa" \
             0 \
 			-s "Certificate verification was skipped" \
 			-c "subject name      : CN=server.example.com" \
@@ -711,8 +711,8 @@ run_test    "TLS_AES_128_CCM_8_SHA256 with ECDHE-ECDSA (server auth only)" \
 # - the ECDHE-ECDSA-based ciphersuite exchange is executed
 # - AES-256-GCM is negotiated 
 run_test    "TLS_AES_256_GCM_SHA384 with ECDHE-ECDSA (server auth only)" \
-            "$P_SRV $MBEDTLS_DEBUG_LEVEL force_version=dtls1_3 key_exchange_modes=ecdhe_ecdsa" \
-            "$P_CLI $MBEDTLS_DEBUG_LEVEL force_version=dtls1_3 server_name=server.example.com force_ciphersuite=TLS_AES_256_GCM_SHA384 key_exchange_modes=ecdhe_ecdsa" \
+            "$P_SRV $MBEDTLS_DEBUG_LEVEL force_version=dtls13 key_exchange_modes=ecdhe_ecdsa" \
+            "$P_CLI $MBEDTLS_DEBUG_LEVEL force_version=dtls13 server_name=server.example.com force_ciphersuite=TLS_AES_256_GCM_SHA384 key_exchange_modes=ecdhe_ecdsa" \
             0 \
 			-s "Certificate verification was skipped" \
 			-c "subject name      : CN=server.example.com" \
@@ -733,8 +733,8 @@ echo ""
 # - the ECDHE-ECDSA-based ciphersuite exchange is executed
 # - AES-128-CCM is negotiated 
 run_test    "TLS_AES_128_CCM_SHA256 with ECDHE-ECDSA (mutual auth)" \
-            "$P_SRV $MBEDTLS_DEBUG_LEVEL force_version=dtls1_3 auth_mode=required key_exchange_modes=ecdhe_ecdsa" \
-            "$P_CLI $MBEDTLS_DEBUG_LEVEL force_version=dtls1_3 server_name=server.example.com force_ciphersuite=TLS_AES_128_CCM_SHA256 key_exchange_modes=ecdhe_ecdsa" \
+            "$P_SRV $MBEDTLS_DEBUG_LEVEL force_version=dtls13 auth_mode=required key_exchange_modes=ecdhe_ecdsa" \
+            "$P_CLI $MBEDTLS_DEBUG_LEVEL force_version=dtls13 server_name=server.example.com force_ciphersuite=TLS_AES_128_CCM_SHA256 key_exchange_modes=ecdhe_ecdsa" \
             0 \
 			-s "Verifying peer X.509 certificate... ok" \
 			-s "subject name      : CN=client.example.com" \
@@ -746,8 +746,8 @@ run_test    "TLS_AES_128_CCM_SHA256 with ECDHE-ECDSA (mutual auth)" \
 # - the ECDHE-ECDSA-based ciphersuite exchange is executed
 # - AES-128-GCM is negotiated 
 run_test    "TLS_AES_128_GCM_SHA256 with ECDHE-ECDSA (mutual auth)" \
-            "$P_SRV $MBEDTLS_DEBUG_LEVEL force_version=dtls1_3 auth_mode=required key_exchange_modes=ecdhe_ecdsa" \
-            "$P_CLI $MBEDTLS_DEBUG_LEVEL force_version=dtls1_3 server_name=server.example.com force_ciphersuite=TLS_AES_128_GCM_SHA256 key_exchange_modes=ecdhe_ecdsa" \
+            "$P_SRV $MBEDTLS_DEBUG_LEVEL force_version=dtls13 auth_mode=required key_exchange_modes=ecdhe_ecdsa" \
+            "$P_CLI $MBEDTLS_DEBUG_LEVEL force_version=dtls13 server_name=server.example.com force_ciphersuite=TLS_AES_128_GCM_SHA256 key_exchange_modes=ecdhe_ecdsa" \
             0 \
 			-s "Verifying peer X.509 certificate... ok" \
 			-s "subject name      : CN=client.example.com" \
@@ -759,8 +759,8 @@ run_test    "TLS_AES_128_GCM_SHA256 with ECDHE-ECDSA (mutual auth)" \
 # - the ECDHE-ECDSA-based ciphersuite exchange is executed
 # - AES-128-CCM-8 is negotiated 
 run_test    "TLS_AES_128_CCM_8_SHA256 with ECDHE-ECDSA (mutual auth)" \
-            "$P_SRV $MBEDTLS_DEBUG_LEVEL force_version=dtls1_3 auth_mode=required key_exchange_modes=ecdhe_ecdsa" \
-            "$P_CLI $MBEDTLS_DEBUG_LEVEL force_version=dtls1_3 server_name=server.example.com force_ciphersuite=TLS_AES_128_CCM_8_SHA256 key_exchange_modes=ecdhe_ecdsa" \
+            "$P_SRV $MBEDTLS_DEBUG_LEVEL force_version=dtls13 auth_mode=required key_exchange_modes=ecdhe_ecdsa" \
+            "$P_CLI $MBEDTLS_DEBUG_LEVEL force_version=dtls13 server_name=server.example.com force_ciphersuite=TLS_AES_128_CCM_8_SHA256 key_exchange_modes=ecdhe_ecdsa" \
             0 \
 			-s "Verifying peer X.509 certificate... ok" \
 			-s "subject name      : CN=client.example.com" \
@@ -772,8 +772,8 @@ run_test    "TLS_AES_128_CCM_8_SHA256 with ECDHE-ECDSA (mutual auth)" \
 # - the ECDHE-ECDSA-based ciphersuite exchange is executed
 # - AES-256-GCM is negotiated 
 run_test    "TLS_AES_256_GCM_SHA384 with ECDHE-ECDSA (mutual auth)" \
-            "$P_SRV $MBEDTLS_DEBUG_LEVEL force_version=dtls1_3 auth_mode=required key_exchange_modes=ecdhe_ecdsa" \
-            "$P_CLI $MBEDTLS_DEBUG_LEVEL force_version=dtls1_3 server_name=server.example.com force_ciphersuite=TLS_AES_256_GCM_SHA384 key_exchange_modes=ecdhe_ecdsa" \
+            "$P_SRV $MBEDTLS_DEBUG_LEVEL force_version=dtls13 auth_mode=required key_exchange_modes=ecdhe_ecdsa" \
+            "$P_CLI $MBEDTLS_DEBUG_LEVEL force_version=dtls13 server_name=server.example.com force_ciphersuite=TLS_AES_256_GCM_SHA384 key_exchange_modes=ecdhe_ecdsa" \
             0 \
 			-s "Verifying peer X.509 certificate... ok" \
 			-s "subject name      : CN=client.example.com" \
@@ -798,8 +798,8 @@ echo ""
 # - Server accepts the lack of client authentication 
 
 run_test    "TLS_AES_128_GCM_SHA256 with ECDHE-ECDSA (empty client certificate)" \
-            "$P_SRV $MBEDTLS_DEBUG_LEVEL force_version=dtls1_3 auth_mode=optional key_exchange_modes=ecdhe_ecdsa" \
-            "$P_CLI $MBEDTLS_DEBUG_LEVEL force_version=dtls1_3 server_name=server.example.com force_ciphersuite=TLS_AES_128_GCM_SHA256 key_exchange_modes=ecdhe_ecdsa auth_mode=none" \
+            "$P_SRV $MBEDTLS_DEBUG_LEVEL force_version=dtls13 auth_mode=optional key_exchange_modes=ecdhe_ecdsa" \
+            "$P_CLI $MBEDTLS_DEBUG_LEVEL force_version=dtls13 server_name=server.example.com force_ciphersuite=TLS_AES_128_GCM_SHA256 key_exchange_modes=ecdhe_ecdsa auth_mode=none" \
             0 \
 			-s "client has no certificate" \
 			-c "subject name      : CN=server.example.com" \
@@ -814,8 +814,8 @@ run_test    "TLS_AES_128_GCM_SHA256 with ECDHE-ECDSA (empty client certificate)"
 # - Server accepts the lack of client authentication 
 
 run_test    "TLS_AES_128_CCM_SHA256 with ECDHE-ECDSA (empty client certificate)" \
-            "$P_SRV $MBEDTLS_DEBUG_LEVEL force_version=dtls1_3 auth_mode=optional key_exchange_modes=ecdhe_ecdsa" \
-            "$P_CLI $MBEDTLS_DEBUG_LEVEL force_version=dtls1_3 server_name=server.example.com force_ciphersuite=TLS_AES_128_CCM_SHA256 key_exchange_modes=ecdhe_ecdsa auth_mode=none" \
+            "$P_SRV $MBEDTLS_DEBUG_LEVEL force_version=dtls13 auth_mode=optional key_exchange_modes=ecdhe_ecdsa" \
+            "$P_CLI $MBEDTLS_DEBUG_LEVEL force_version=dtls13 server_name=server.example.com force_ciphersuite=TLS_AES_128_CCM_SHA256 key_exchange_modes=ecdhe_ecdsa auth_mode=none" \
             0 \
 			-s "client has no certificate" \
 			-c "subject name      : CN=server.example.com" \
@@ -837,8 +837,8 @@ run_test    "TLS_AES_128_CCM_SHA256 with ECDHE-ECDSA (empty client certificate)"
 # - Server **DOES NOT** accept the lack of client authentication 
 
 run_test    "TLS_AES_128_GCM_SHA256 with ECDHE-ECDSA (empty client certificate), failed auth due to missing client-side authentication" \
-            "$P_SRV $MBEDTLS_DEBUG_LEVEL force_version=dtls1_3 auth_mode=required key_exchange_modes=ecdhe_ecdsa" \
-            "$P_CLI $MBEDTLS_DEBUG_LEVEL force_version=dtls1_3 server_name=server.example.com force_ciphersuite=TLS_AES_128_GCM_SHA256 key_exchange_modes=ecdhe_ecdsa auth_mode=none" \
+            "$P_SRV $MBEDTLS_DEBUG_LEVEL force_version=dtls13 auth_mode=required key_exchange_modes=ecdhe_ecdsa" \
+            "$P_CLI $MBEDTLS_DEBUG_LEVEL force_version=dtls13 server_name=server.example.com force_ciphersuite=TLS_AES_128_GCM_SHA256 key_exchange_modes=ecdhe_ecdsa auth_mode=none" \
             1 \
 			-s "mbedtls_ssl_parse_certificate() returned -29824 (-0x7480)" \
 			-s "client has no certificate" \
@@ -851,8 +851,8 @@ run_test    "TLS_AES_128_GCM_SHA256 with ECDHE-ECDSA (empty client certificate),
 # - Server **DOES NOT** accept the lack of client authentication 
 
 run_test    "TLS_AES_128_CCM_SHA256 with ECDHE-ECDSA (empty client certificate), failed auth due to missing client-side authentication" \
-            "$P_SRV $MBEDTLS_DEBUG_LEVEL force_version=dtls1_3 auth_mode=required key_exchange_modes=ecdhe_ecdsa" \
-            "$P_CLI $MBEDTLS_DEBUG_LEVEL force_version=dtls1_3 server_name=server.example.com force_ciphersuite=TLS_AES_128_CCM_SHA256 key_exchange_modes=ecdhe_ecdsa auth_mode=none" \
+            "$P_SRV $MBEDTLS_DEBUG_LEVEL force_version=dtls13 auth_mode=required key_exchange_modes=ecdhe_ecdsa" \
+            "$P_CLI $MBEDTLS_DEBUG_LEVEL force_version=dtls13 server_name=server.example.com force_ciphersuite=TLS_AES_128_CCM_SHA256 key_exchange_modes=ecdhe_ecdsa auth_mode=none" \
             1 \
 			-s "mbedtls_ssl_parse_certificate() returned -29824 (-0x7480)" \
 			-s "client has no certificate" \
@@ -871,8 +871,8 @@ echo ""
 # - the ECDHE-ECDSA-based ciphersuite exchange is executed
 # - AES-256-GCM is negotiated 
 run_test    "TLS_AES_256_GCM_SHA384 with ECDHE-ECDSA (server auth only)" \
-            "$P_SRV $MBEDTLS_DEBUG_LEVEL force_version=dtls1_3 key_exchange_modes=ecdhe_ecdsa ca_file=certs/ca.crt crt_file=certs/server.crt key_file=certs/server.key" \
-            "$P_CLI $MBEDTLS_DEBUG_LEVEL force_version=dtls1_3 server_name=localhost force_ciphersuite=TLS_AES_256_GCM_SHA384 key_exchange_modes=ecdhe_ecdsa ca_file=certs/ca.crt crt_file=none key_file=none" \
+            "$P_SRV $MBEDTLS_DEBUG_LEVEL force_version=dtls13 key_exchange_modes=ecdhe_ecdsa ca_file=certs/ca.crt crt_file=certs/server.crt key_file=certs/server.key" \
+            "$P_CLI $MBEDTLS_DEBUG_LEVEL force_version=dtls13 server_name=localhost force_ciphersuite=TLS_AES_256_GCM_SHA384 key_exchange_modes=ecdhe_ecdsa ca_file=certs/ca.crt crt_file=none key_file=none" \
             0 \
 			-s "Verifying peer X.509 certificate... failed" \
 			-s "Certificate verification was skipped" \
@@ -894,8 +894,8 @@ echo ""
 # - the ECDHE-ECDSA-based ciphersuite exchange is executed
 # - AES-128-CCM is negotiated 
 run_test    "TLS_AES_128_CCM_SHA256 with ECDHE-ECDSA (mutual auth) with ticket" \
-            "$P_SRV $MBEDTLS_DEBUG_LEVEL force_version=dtls1_3 auth_mode=required key_exchange_modes=all tickets=1" \
-            "$P_CLI $MBEDTLS_DEBUG_LEVEL force_version=dtls1_3 server_name=server.example.com force_ciphersuite=TLS_AES_128_CCM_SHA256 key_exchange_modes=ecdhe_ecdsa reconnect=1 tickets=1" \
+            "$P_SRV $MBEDTLS_DEBUG_LEVEL force_version=dtls13 auth_mode=required key_exchange_modes=all tickets=1" \
+            "$P_CLI $MBEDTLS_DEBUG_LEVEL force_version=dtls13 server_name=server.example.com force_ciphersuite=TLS_AES_128_CCM_SHA256 key_exchange_modes=ecdhe_ecdsa reconnect=1 tickets=1" \
             0 \
 			-s "Verifying peer X.509 certificate... ok" \
 			-s "subject name      : CN=client.example.com" \
@@ -912,8 +912,8 @@ run_test    "TLS_AES_128_CCM_SHA256 with ECDHE-ECDSA (mutual auth) with ticket" 
 # - the ECDHE-ECDSA-based ciphersuite exchange is executed
 # - AES-128-GCM is negotiated 
 run_test    "TLS_AES_128_GCM_SHA256 with ECDHE-ECDSA (mutual auth) with ticket" \
-            "$P_SRV $MBEDTLS_DEBUG_LEVEL force_version=dtls1_3 auth_mode=required key_exchange_modes=all tickets=1" \
-            "$P_CLI $MBEDTLS_DEBUG_LEVEL force_version=dtls1_3 server_name=server.example.com force_ciphersuite=TLS_AES_128_GCM_SHA256 key_exchange_modes=ecdhe_ecdsa reconnect=1 tickets=1" \
+            "$P_SRV $MBEDTLS_DEBUG_LEVEL force_version=dtls13 auth_mode=required key_exchange_modes=all tickets=1" \
+            "$P_CLI $MBEDTLS_DEBUG_LEVEL force_version=dtls13 server_name=server.example.com force_ciphersuite=TLS_AES_128_GCM_SHA256 key_exchange_modes=ecdhe_ecdsa reconnect=1 tickets=1" \
             0 \
 			-s "Verifying peer X.509 certificate... ok" \
 			-s "subject name      : CN=client.example.com" \
@@ -930,8 +930,8 @@ run_test    "TLS_AES_128_GCM_SHA256 with ECDHE-ECDSA (mutual auth) with ticket" 
 # - the ECDHE-ECDSA-based ciphersuite exchange is executed
 # - AES-128-CCM-8 is negotiated 
 run_test    "TLS_AES_128_CCM_8_SHA256 with ECDHE-ECDSA (mutual auth) with ticket" \
-            "$P_SRV $MBEDTLS_DEBUG_LEVEL force_version=dtls1_3 auth_mode=required key_exchange_modes=all tickets=1" \
-            "$P_CLI $MBEDTLS_DEBUG_LEVEL force_version=dtls1_3 server_name=server.example.com force_ciphersuite=TLS_AES_128_CCM_8_SHA256 key_exchange_modes=ecdhe_ecdsa reconnect=1 tickets=1" \
+            "$P_SRV $MBEDTLS_DEBUG_LEVEL force_version=dtls13 auth_mode=required key_exchange_modes=all tickets=1" \
+            "$P_CLI $MBEDTLS_DEBUG_LEVEL force_version=dtls13 server_name=server.example.com force_ciphersuite=TLS_AES_128_CCM_8_SHA256 key_exchange_modes=ecdhe_ecdsa reconnect=1 tickets=1" \
             0 \
 			-s "Verifying peer X.509 certificate... ok" \
 			-s "subject name      : CN=client.example.com" \
@@ -948,8 +948,8 @@ run_test    "TLS_AES_128_CCM_8_SHA256 with ECDHE-ECDSA (mutual auth) with ticket
 # - the ECDHE-ECDSA-based ciphersuite exchange is executed
 # - AES-256-GCM is negotiated 
 run_test    "TLS_AES_256_GCM_SHA384 with ECDHE-ECDSA (mutual auth) with ticket" \
-            "$P_SRV $MBEDTLS_DEBUG_LEVEL force_version=dtls1_3 auth_mode=required key_exchange_modes=all tickets=1" \
-            "$P_CLI $MBEDTLS_DEBUG_LEVEL force_version=dtls1_3 server_name=server.example.com force_ciphersuite=TLS_AES_256_GCM_SHA384 key_exchange_modes=ecdhe_ecdsa reconnect=1 tickets=1" \
+            "$P_SRV $MBEDTLS_DEBUG_LEVEL force_version=dtls13 auth_mode=required key_exchange_modes=all tickets=1" \
+            "$P_CLI $MBEDTLS_DEBUG_LEVEL force_version=dtls13 server_name=server.example.com force_ciphersuite=TLS_AES_256_GCM_SHA384 key_exchange_modes=ecdhe_ecdsa reconnect=1 tickets=1" \
             0 \
 			-s "Verifying peer X.509 certificate... ok" \
 			-s "subject name      : CN=client.example.com" \
@@ -972,8 +972,8 @@ echo ""
 # - the ECDHE-ECDSA-based ciphersuite exchange is executed
 # - AES-256-GCM is negotiated 
 run_test    "TLS_AES_256_GCM_SHA384 with ECDHE-ECDSA (server auth only) with ticket" \
-            "$P_SRV $MBEDTLS_DEBUG_LEVEL force_version=dtls1_3 key_exchange_modes=all tickets=1 ca_file=certs/ca.crt crt_file=certs/server.crt key_file=certs/server.key" \
-            "$P_CLI $MBEDTLS_DEBUG_LEVEL force_version=dtls1_3 server_name=localhost force_ciphersuite=TLS_AES_256_GCM_SHA384 key_exchange_modes=ecdhe_ecdsa ca_file=certs/ca.crt crt_file=none key_file=none reconnect=1 tickets=1" \
+            "$P_SRV $MBEDTLS_DEBUG_LEVEL force_version=dtls13 key_exchange_modes=all tickets=1 ca_file=certs/ca.crt crt_file=certs/server.crt key_file=certs/server.key" \
+            "$P_CLI $MBEDTLS_DEBUG_LEVEL force_version=dtls13 server_name=localhost force_ciphersuite=TLS_AES_256_GCM_SHA384 key_exchange_modes=ecdhe_ecdsa ca_file=certs/ca.crt crt_file=none key_file=none reconnect=1 tickets=1" \
             0 \
 			-s "Verifying peer X.509 certificate... failed" \
 			-s "Certificate verification was skipped" \
@@ -1000,8 +1000,8 @@ echo ""
 # - the PSK-based ciphersuite exchange is executed
 # - AES-256-GCM with SHA384 is negotiated 
 run_test    "TLS_AES_256_GCM_SHA384 with external PSK (+early data)" \
-            "$P_SRV $MBEDTLS_DEBUG_LEVEL force_version=dtls1_3 early_data=enabled key_exchange_modes=psk psk=010203 psk_identity=0a0b0c" \
-            "$P_CLI $MBEDTLS_DEBUG_LEVEL force_version=dtls1_3 force_ciphersuite=TLS_AES_256_GCM_SHA384 key_exchange_modes=psk early_data=enabled psk=010203 psk_identity=0a0b0c" \
+            "$P_SRV $MBEDTLS_DEBUG_LEVEL force_version=dtls13 early_data=enabled key_exchange_modes=psk psk=010203 psk_identity=0a0b0c" \
+            "$P_CLI $MBEDTLS_DEBUG_LEVEL force_version=dtls13 force_ciphersuite=TLS_AES_256_GCM_SHA384 key_exchange_modes=psk early_data=enabled psk=010203 psk_identity=0a0b0c" \
             0 \
 			-s "found early_data extension" \
 			-s "Derive Early Secret with 'ext binder'" \
@@ -1016,8 +1016,8 @@ run_test    "TLS_AES_256_GCM_SHA384 with external PSK (+early data)" \
 # - the PSK-based ciphersuite exchange is executed
 # - AES-128-CCM with SHA256 is negotiated 
 run_test    "TLS_AES_128_CCM_SHA256 with external PSK (+early data)" \
-            "$P_SRV $MBEDTLS_DEBUG_LEVEL force_version=dtls1_3 early_data=enabled key_exchange_modes=psk psk=010203 psk_identity=0a0b0c" \
-            "$P_CLI $MBEDTLS_DEBUG_LEVEL force_version=dtls1_3 force_ciphersuite=TLS_AES_128_CCM_SHA256 key_exchange_modes=psk early_data=enabled psk=010203 psk_identity=0a0b0c" \
+            "$P_SRV $MBEDTLS_DEBUG_LEVEL force_version=dtls13 early_data=enabled key_exchange_modes=psk psk=010203 psk_identity=0a0b0c" \
+            "$P_CLI $MBEDTLS_DEBUG_LEVEL force_version=dtls13 force_ciphersuite=TLS_AES_128_CCM_SHA256 key_exchange_modes=psk early_data=enabled psk=010203 psk_identity=0a0b0c" \
             0 \
 			-s "found early_data extension" \
 			-s "Derive Early Secret with 'ext binder'" \
@@ -1033,8 +1033,8 @@ run_test    "TLS_AES_128_CCM_SHA256 with external PSK (+early data)" \
 # - the PSK-based ciphersuite exchange is executed
 # - AES-128-GCM with SHA256 is negotiated 
 run_test    "TLS_AES_128_GCM_SHA256 with external PSK (+early data)" \
-            "$P_SRV $MBEDTLS_DEBUG_LEVEL force_version=dtls1_3 early_data=enabled key_exchange_modes=psk psk=010203 psk_identity=0a0b0c" \
-            "$P_CLI $MBEDTLS_DEBUG_LEVEL force_version=dtls1_3 force_ciphersuite=TLS_AES_128_GCM_SHA256 key_exchange_modes=psk early_data=enabled psk=010203 psk_identity=0a0b0c" \
+            "$P_SRV $MBEDTLS_DEBUG_LEVEL force_version=dtls13 early_data=enabled key_exchange_modes=psk psk=010203 psk_identity=0a0b0c" \
+            "$P_CLI $MBEDTLS_DEBUG_LEVEL force_version=dtls13 force_ciphersuite=TLS_AES_128_GCM_SHA256 key_exchange_modes=psk early_data=enabled psk=010203 psk_identity=0a0b0c" \
             0 \
 			-s "found early_data extension" \
 			-s "Derive Early Secret with 'ext binder'" \
@@ -1049,8 +1049,8 @@ run_test    "TLS_AES_128_GCM_SHA256 with external PSK (+early data)" \
 # - the PSK-based ciphersuite exchange is executed
 # - AES-128-CCM-8 with SHA256 is negotiated 
 run_test    "TLS_AES_128_CCM_8_SHA256 with external PSK (+early data)" \
-            "$P_SRV $MBEDTLS_DEBUG_LEVEL force_version=dtls1_3 early_data=enabled key_exchange_modes=psk psk=010203 psk_identity=0a0b0c" \
-            "$P_CLI $MBEDTLS_DEBUG_LEVEL force_version=dtls1_3 force_ciphersuite=TLS_AES_128_CCM_8_SHA256 key_exchange_modes=psk early_data=enabled psk=010203 psk_identity=0a0b0c" \
+            "$P_SRV $MBEDTLS_DEBUG_LEVEL force_version=dtls13 early_data=enabled key_exchange_modes=psk psk=010203 psk_identity=0a0b0c" \
+            "$P_CLI $MBEDTLS_DEBUG_LEVEL force_version=dtls13 force_ciphersuite=TLS_AES_128_CCM_8_SHA256 key_exchange_modes=psk early_data=enabled psk=010203 psk_identity=0a0b0c" \
             0 \
 			-s "found early_data extension" \
 			-s "Derive Early Secret with 'ext binder'" \
@@ -1073,8 +1073,8 @@ echo ""
 # - AES-128-CCM-8 is negotiated 
 # - HRR is initiated
 run_test    "TLS_AES_128_CCM_8_SHA256 with ECDHE-ECDSA (mutual auth)" \
-            "$P_SRV $MBEDTLS_DEBUG_LEVEL force_version=dtls1_3 auth_mode=required key_exchange_modes=ecdhe_ecdsa tickets=0 cookies=2" \
-            "$P_CLI $MBEDTLS_DEBUG_LEVEL force_version=dtls1_3 server_name=server.example.com force_ciphersuite=TLS_AES_128_CCM_8_SHA256 key_exchange_modes=ecdhe_ecdsa" \
+            "$P_SRV $MBEDTLS_DEBUG_LEVEL force_version=dtls13 auth_mode=required key_exchange_modes=ecdhe_ecdsa tickets=0 cookies=2" \
+            "$P_CLI $MBEDTLS_DEBUG_LEVEL force_version=dtls13 server_name=server.example.com force_ciphersuite=TLS_AES_128_CCM_8_SHA256 key_exchange_modes=ecdhe_ecdsa" \
             0 \
 			-s "Cookie extension missing. Need to send a HRR." \
 			-s "write hello retry request" \

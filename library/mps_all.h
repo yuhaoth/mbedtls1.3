@@ -24,7 +24,7 @@
 #ifndef MBEDTLS_MPS_ALL_H
 #define MBEDTLS_MPS_ALL_H
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && defined(MBEDTLS_SSL_USE_MPS)
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3) && defined(MBEDTLS_SSL_USE_MPS)
 
 #include "mps_common.h"
 #include "mps_allocator.h"

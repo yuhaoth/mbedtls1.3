@@ -598,9 +598,16 @@
 #error "MBEDTLS_SSL_PROTO_TLS1_2 defined, but not all prerequisites"
 #endif
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && ( !defined(MBEDTLS_HKDF_C) && \
-    !defined(MBEDTLS_SHA256_C) && !defined(MBEDTLS_SHA512_C) )
-#error "MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL defined, but not all prerequisites"
+/*
+ * HKDF is mandatory for TLS 1.3.
+ * Otherwise support for at least one ciphersuite mandates either SHA_256 or
+ * SHA_384.
+ */
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3) && \
+    ( ( !defined(MBEDTLS_HKDF_C) ) || \
+      ( !defined(MBEDTLS_SHA256_C) && !defined(MBEDTLS_SHA384_C) ) || \
+      ( !defined(MBEDTLS_PSA_CRYPTO_C) ) )
+#error "MBEDTLS_SSL_PROTO_TLS1_3 defined, but not all prerequisites"
 #endif
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_2) &&                                    \
@@ -637,7 +644,7 @@
 #error "MBEDTLS_SSL_SRV_C defined, but not all prerequisites"
 #endif
 
-#if defined(MBEDTLS_SSL_TLS_C) && !defined(MBEDTLS_SSL_PROTO_TLS1_2) && !defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+#if defined(MBEDTLS_SSL_TLS_C) && !defined(MBEDTLS_SSL_PROTO_TLS1_2) && !defined(MBEDTLS_SSL_PROTO_TLS1_3)
 #error "MBEDTLS_SSL_TLS_C defined, but no protocols are active"
 #endif
 
@@ -771,16 +778,16 @@
 #error "MBEDTLS_SSL_VARIABLE_BUFFER_LENGTH defined, but not all prerequisites"
 #endif
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) &&           \
-    defined(MBEDTLS_ZERO_RTT)         &&                        \
-    ( !defined(MBEDTLS_KEY_EXCHANGE_PSK_ENABLED) ||             \
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3) && \
+    defined(MBEDTLS_ZERO_RTT)         && \
+    ( !defined(MBEDTLS_KEY_EXCHANGE_PSK_ENABLED) || \
       !defined(MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED) )
 #error "ZeroRTT requires MBEDTLS_ZERO_RTT and MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED to be defined."
 #endif
 
-#if defined(MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE) && \
-    !defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
-#error "MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE defined, but not all prerequesites."
+#if defined(MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE) && \
+    !defined(MBEDTLS_SSL_PROTO_TLS1_3)
+#error "MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE defined, but not all prerequesites."
 #endif
 
 /*
@@ -797,17 +804,17 @@
  */
 
  /* Encrypt-then-Mac extension is not applicable to TLS 1.3 */
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && defined(MBEDTLS_SSL_ENCRYPT_THEN_MAC)
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3) && defined(MBEDTLS_SSL_ENCRYPT_THEN_MAC)
 #error "Encrypt-then-Mac extension is not applicable to TLS 1.3"
 #endif
 
 /* Key derivation works differently in TLS 1.3 */
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && defined(MBEDTLS_SSL_EXTENDED_MASTER_SECRET)
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3) && defined(MBEDTLS_SSL_EXTENDED_MASTER_SECRET)
 #error "Extended master secret extension is not applicable to TLS 1.3"
 #endif
 
  /* Secure renegotiation support in TLS 1.3 */
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && defined(MBEDTLS_SSL_RENEGOTIATION)
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3) && defined(MBEDTLS_SSL_RENEGOTIATION)
 #error "Renegotiation is not supported in TLS 1.3"
 #endif
 
@@ -815,13 +822,13 @@
  * Hence, when TLS 1.3 is used then MBEDTLS_SSL_SESSION_TICKETS cannot be enabled.
  *
  */
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && defined(MBEDTLS_SSL_SESSION_TICKETS)
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3) && defined(MBEDTLS_SSL_SESSION_TICKETS)
 #error "RFC 5077 is not supported with TLS 1.3"
 #endif
 
  /* JPAKE extension does not work with TLS 1.3
  */
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && defined(MBEDTLS_ECJPAKE_C)
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3) && defined(MBEDTLS_ECJPAKE_C)
 #error " JPAKE extension does not work with TLS 1.3"
 #endif
 
@@ -829,7 +836,7 @@
  /* The following C processor directives are not applicable to TLS 1.3
  */
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && defined(MBEDTLS_KEY_EXCHANGE_ECDH_ECDSA_ENABLED)
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3) && defined(MBEDTLS_KEY_EXCHANGE_ECDH_ECDSA_ENABLED)
 #error "No ECDH-ECDSA ciphersuite available in TLS 1.3"
 #endif
 
@@ -837,31 +844,31 @@
  /* The following functionality is not yet supported with this TLS 1.3 implementation.
  */
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && ( defined(MBEDTLS_KEY_EXCHANGE_ECDHE_RSA_ENABLED) || defined(MBEDTLS_KEY_EXCHANGE_DHE_RSA_ENABLED) || defined(MBEDTLS_KEY_EXCHANGE_RSA_ENABLED))
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3) && ( defined(MBEDTLS_KEY_EXCHANGE_ECDHE_RSA_ENABLED) || defined(MBEDTLS_KEY_EXCHANGE_DHE_RSA_ENABLED) || defined(MBEDTLS_KEY_EXCHANGE_RSA_ENABLED))
 #error "RSA-based ciphersuites not supported with this TLS 1.3 implementation"
 #endif
 
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && defined(MBEDTLS_KEY_EXCHANGE_DHE_PSK)
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3) && defined(MBEDTLS_KEY_EXCHANGE_DHE_PSK)
 #error "DHE-PSK-based ciphersuites not supported with this TLS 1.3 implementation"
 #endif
 
  /* Caching in TLS 1.3 works differently than in TLS 1.2
   * Hence, SSL Cache MUST NOT be enabled.
  */
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && defined(MBEDTLS_SSL_CACHE_C)
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3) && defined(MBEDTLS_SSL_CACHE_C)
 #error "SSL Caching not supported with TLS 1.3"
 #endif
 
 
-#if  defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && defined(MBEDTLS_SSL_NEW_SESSION_TICKET) && defined(MBEDTLS_SSL_SESSION_TICKETS)
+#if  defined(MBEDTLS_SSL_PROTO_TLS1_3) && defined(MBEDTLS_SSL_NEW_SESSION_TICKET) && defined(MBEDTLS_SSL_SESSION_TICKETS)
 #error "The new session ticket concept is only available with TLS 1.3 and is not compatible with RFC 5077-style session tickets."
 #endif
 
  /* Either SHA-256 or SHA-512 must be enabled.
   *
   */
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && ( !defined(MBEDTLS_SHA256_C) && !defined(MBEDTLS_SHA512_C) )
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3) && ( !defined(MBEDTLS_SHA256_C) && !defined(MBEDTLS_SHA512_C) )
 #error "With TLS 1.3 SHA-256 and/or SHA-384 must be enabled"
 #endif
 
@@ -869,7 +876,7 @@
 #error "MBEDTLS_PSK_MAX_LEN needs to be set to 48 bytes"
 #endif
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && !defined(MBEDTLS_HKDF_C)
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3) && !defined(MBEDTLS_HKDF_C)
 #error "MBEDTLS_HKDF_C is required for TLS 1_3 to work. "
 #endif
 #if defined(MBEDTLS_SSL_DTLS_SRTP) && ( !defined(MBEDTLS_SSL_PROTO_DTLS) )
