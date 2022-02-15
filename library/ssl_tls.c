@@ -918,12 +918,6 @@ static int ssl_conf_version_check( const mbedtls_ssl_context *ssl )
              return( MBEDTLS_ERR_SSL_FEATURE_UNAVAILABLE );
         }
 
-        if( conf->endpoint == MBEDTLS_SSL_IS_SERVER )
-        {
-            MBEDTLS_SSL_DEBUG_MSG( 1, ( "TLS 1.3 server is not supported yet." ) );
-            return( MBEDTLS_ERR_SSL_FEATURE_UNAVAILABLE );
-        }
-
         MBEDTLS_SSL_DEBUG_MSG( 4, ( "The SSL configuration is tls13 only." ) );
         return( 0 );
     }
@@ -948,7 +942,7 @@ static int ssl_conf_version_check( const mbedtls_ssl_context *ssl )
 
         if( conf->endpoint == MBEDTLS_SSL_IS_SERVER )
         {
-            MBEDTLS_SSL_DEBUG_MSG( 1, ( "TLS 1.3 server is not supported yet." ) );
+            MBEDTLS_SSL_DEBUG_MSG( 1, ( "TLS 1.3 server not yet supported in Hybrid TLS 1.3 + TLS 1.2" ) );
             return( MBEDTLS_ERR_SSL_FEATURE_UNAVAILABLE );
         }
 
