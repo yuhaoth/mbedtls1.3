@@ -1300,7 +1300,7 @@ static int ssl_tls13_parse_supported_versions_ext( mbedtls_ssl_context *ssl,
 static int ssl_tls13_parse_alpn_ext( mbedtls_ssl_context *ssl,
                                      const unsigned char *buf, size_t len )
 {
-    const unsigned char *end const = buf + len;
+    const unsigned char *end = buf + len;
     size_t list_len;
 
     const char **cur_ours;
@@ -1347,7 +1347,7 @@ static int ssl_tls13_parse_alpn_ext( mbedtls_ssl_context *ssl,
             cur_cli_len = *cur_cli++;
 
             if( cur_cli_len == cur_ours_len &&
-                memcmp( cur_cli, *cur_ours, cur_len ) == 0 )
+                memcmp( cur_cli, *cur_ours, cur_ours_len ) == 0 )
             {
                 ssl->alpn_chosen = *cur_ours;
                 return( 0 );
@@ -2568,7 +2568,7 @@ static int ssl_tls13_client_hello_parse( mbedtls_ssl_context *ssl,
                     MBEDTLS_SSL_DEBUG_RET( 1, ( "ssl_tls13_parse_alpn_ext" ), ret );
                     return( ret );
                 }
-                ssl->handshake->extensions_present |= ALPN_EXTENSION;
+                ssl->handshake->extensions_present |= MBEDTLS_SSL_EXT_ALPN;
                 break;
 #endif /* MBEDTLS_SSL_ALPN */
 
@@ -2865,7 +2865,7 @@ static int ssl_tls13_write_alpn_ext(
 {
     *olen = 0;
 
-    if( ( ssl->handshake->extensions_present & ALPN_EXTENSION ) == 0 ||
+    if( ( ssl->handshake->extensions_present & MBEDTLS_SSL_EXT_ALPN ) == 0 ||
         ssl->alpn_chosen == NULL )
     {
         return( 0 );
