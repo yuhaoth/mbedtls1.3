@@ -119,7 +119,7 @@
 # Abort on errors (even on the left-hand side of a pipe).
 # Treat uninitialised variables as errors.
 set -e -o pipefail -u
-
+ALL_COMPONENTS=""
 pre_check_environment () {
     if [ -d library -a -d include -a -d tests ]; then :; else
         echo "Must be run from mbed TLS root" >&2
@@ -188,7 +188,7 @@ pre_initialize_variables () {
     # defined in this script whose name starts with "component_".
     # Parse the script with sed. This way we get the functions in the order
     # they are defined.
-    ALL_COMPONENTS=$(sed -n 's/^ *component_\([0-9A-Z_a-z]*\) *().*/\1/p' <"$0")
+    ALL_COMPONENTS="$ALL_COMPONENTS $(sed -n 's/^ *component_\([0-9A-Z_a-z]*\) *().*/\1/p' <"$0")"
 
     # Exclude components that are not supported on this platform.
     SUPPORTED_COMPONENTS=
@@ -1355,7 +1355,7 @@ component_test_valgrind_constant_flow () {
     # this only shows a summary of the results (how many of each type)
     # details are left in Testing/<date>/DynamicAnalysis.xml
     msg "test: main suites (valgrind + constant flow)"
-    make memcheck
+    make memcheck -j4
 }
 
 component_test_default_no_deprecated () {
@@ -1439,16 +1439,17 @@ component_build_crypto_baremetal () {
   are_empty_libraries library/libmbedx509.* library/libmbedtls.*
 }
 
-component_test_depends_curves () {
-    msg "test/build: curves.pl (gcc)" # ~ 4 min
-    tests/scripts/curves.pl
-}
+# component_test_depends_curves () {
+#     msg "test/build: curves.pl (gcc)" # ~ 4 min
+#     tests/scripts/curves.pl
+# }
 
-component_test_depends_curves_psa () {
-    msg "test/build: curves.pl with MBEDTLS_USE_PSA_CRYPTO defined (gcc)"
-    scripts/config.py set MBEDTLS_USE_PSA_CRYPTO
-    tests/scripts/curves.pl
-}
+# component_test_depends_curves_psa () {
+#     msg "test/build: curves.pl with MBEDTLS_USE_PSA_CRYPTO defined (gcc)"
+#     scripts/config.py set MBEDTLS_USE_PSA_CRYPTO
+#     tests/scripts/curves.pl
+# }
+eval "`PYTHONPATH=scripts python3 tests/scripts/generate_curves_test.py`"
 
 component_test_depends_hashes () {
     msg "test/build: depends-hashes.pl (gcc)" # ~ 2 min
