@@ -1225,6 +1225,9 @@ component_test_everest () {
     # Exclude some symmetric ciphers that are redundant here to gain time.
     tests/compat.sh -f ECDH -V NO -e 'ARIA\|CAMELLIA\|CHACHA\|DES'
 }
+support_test_everest () {
+    depend_on_clang
+}
 
 component_test_everest_curve25519_only () {
     msg "build: Everest ECDH context, only Curve25519" # ~ 6 min
@@ -1317,7 +1320,9 @@ component_test_full_cmake_clang () {
     msg "test: compat.sh ARIA + ChachaPoly"
     env OPENSSL_CMD="$OPENSSL_NEXT" tests/compat.sh -e '^$' -f 'ARIA\|CHACHA'
 }
-
+support_test_full_cmake_clang () {
+    depend_on_clang
+}
 component_test_memsan_constant_flow () {
     # This tests both (1) accesses to undefined memory, and (2) branches or
     # memory access depending on secret values. To distinguish between those:
@@ -1336,7 +1341,12 @@ component_test_memsan_constant_flow () {
     msg "test: main suites (full minus MBEDTLS_USE_PSA_CRYPTO, Msan + constant flow)"
     make test
 }
-
+support_test_memsan_constant_flow () {
+    depend_on_clang
+}
+support_test_memsan_constant_flow_psa () {
+    depend_on_clang
+}
 component_test_memsan_constant_flow_psa () {
     # This tests both (1) accesses to undefined memory, and (2) branches or
     # memory access depending on secret values. To distinguish between those:
@@ -1493,6 +1503,10 @@ support_build_baremetal () {
     # Older Glibc versions include time.h from other headers such as stdlib.h,
     # which makes the no-time.h-in-baremetal check fail. Ubuntu 16.04 has this
     # problem, Ubuntu 18.04 is ok.
+    if [ ! -f /usr/include/x86_64-linux-gnu/sys/types.h ]
+    then
+        return 1
+    fi
     ! grep -q -F time.h /usr/include/x86_64-linux-gnu/sys/types.h
 }
 
@@ -1541,6 +1555,12 @@ component_test_make_cxx () {
 
     msg "test: cpp_dummy_build"
     programs/test/cpp_dummy_build
+}
+support_test_make_cxx () {
+    case $(uname -m) in
+        amd64|x86_64) true;;
+        *) false;;
+    esac
 }
 
 component_build_module_alt () {
@@ -2459,6 +2479,9 @@ component_test_se_default () {
     msg "test: default config + MBEDTLS_PSA_CRYPTO_SE_C"
     make test
 }
+support_test_se_default () {
+    depend_on_clang
+}
 
 component_test_psa_crypto_drivers () {
     msg "build: MBEDTLS_PSA_CRYPTO_DRIVERS w/ driver hooks"
@@ -2510,6 +2533,10 @@ component_test_clang_opt () {
     test_build_opt 'full config' clang -O0 -Os -O2
 }
 
+support_test_clang_opt () {
+    depend_on_clang
+}
+
 component_test_gcc_opt () {
     scripts/config.py full
     test_build_opt 'full config' gcc -O0 -Os -O2
@@ -2537,10 +2564,7 @@ component_test_m32_o0 () {
     make test
 }
 support_test_m32_o0 () {
-    case $(uname -m) in
-        *64*) true;;
-        *) false;;
-    esac
+    echo "" | gcc -xc -m32 -c - 2>/dev/null
 }
 
 component_test_m32_o2 () {
@@ -2682,6 +2706,9 @@ component_build_arm_none_eabi_gcc () {
     msg "size: ${ARM_NONE_EABI_GCC_PREFIX}gcc -O1"
     ${ARM_NONE_EABI_GCC_PREFIX}size library/*.o
 }
+support_build_arm_none_eabi_gcc () {
+    arm_none_eabi_gcc_exist
+}
 
 component_build_arm_linux_gnueabi_gcc_arm5vte () {
     msg "build: ${ARM_LINUX_GNUEABI_GCC_PREFIX}gcc -march=arm5vte" # ~ 10s
@@ -2711,7 +2738,12 @@ component_build_arm_none_eabi_gcc_arm5vte () {
     msg "size: ${ARM_NONE_EABI_GCC_PREFIX}gcc -march=armv5te -O1"
     ${ARM_NONE_EABI_GCC_PREFIX}size library/*.o
 }
-
+arm_none_eabi_gcc_exist () {
+    ( which ${ARM_NONE_EABI_GCC_PREFIX}gcc ) 2>&1 >/dev/null
+}
+support_build_arm_none_eabi_gcc_arm5vte () {
+    arm_none_eabi_gcc_exist
+}
 component_build_arm_none_eabi_gcc_m0plus () {
     msg "build: ${ARM_NONE_EABI_GCC_PREFIX}gcc -mthumb -mcpu=cortex-m0plus" # ~ 10s
     scripts/config.py baremetal
@@ -2720,7 +2752,9 @@ component_build_arm_none_eabi_gcc_m0plus () {
     msg "size: ${ARM_NONE_EABI_GCC_PREFIX}gcc -mthumb -mcpu=cortex-m0plus -Os"
     ${ARM_NONE_EABI_GCC_PREFIX}size library/*.o
 }
-
+support_build_arm_none_eabi_gcc_m0plus () {
+    arm_none_eabi_gcc_exist
+}
 component_build_arm_none_eabi_gcc_no_udbl_division () {
     msg "build: ${ARM_NONE_EABI_GCC_PREFIX}gcc -DMBEDTLS_NO_UDBL_DIVISION, make" # ~ 10s
     scripts/config.py baremetal
@@ -2729,7 +2763,9 @@ component_build_arm_none_eabi_gcc_no_udbl_division () {
     echo "Checking that software 64-bit division is not required"
     not grep __aeabi_uldiv library/*.o
 }
-
+support_build_arm_none_eabi_gcc_no_udbl_division () {
+    arm_none_eabi_gcc_exist
+}
 component_build_arm_none_eabi_gcc_no_64bit_multiplication () {
     msg "build: ${ARM_NONE_EABI_GCC_PREFIX}gcc MBEDTLS_NO_64BIT_MULTIPLICATION, make" # ~ 10s
     scripts/config.py baremetal
@@ -2738,7 +2774,9 @@ component_build_arm_none_eabi_gcc_no_64bit_multiplication () {
     echo "Checking that software 64-bit multiplication is not required"
     not grep __aeabi_lmul library/*.o
 }
-
+support_build_arm_none_eabi_gcc_no_64bit_multiplication () {
+    arm_none_eabi_gcc_exist
+}
 component_build_armcc () {
     msg "build: ARM Compiler 5"
     scripts/config.py baremetal
@@ -2763,6 +2801,14 @@ component_build_armcc () {
 
     # ARM Compiler 6 - Target ARMv8-A - AArch64
     armc6_build_test "--target=aarch64-arm-none-eabi -march=armv8.2-a+crypto"
+}
+
+support_build_armcc () {
+    if [ -z ${ARMC5_CC:-} ] || [ -z ${ARMC6_CC:-} ]
+    then
+        return 1
+    fi
+    ( which $ARMC5_CC  && which $ARMC6_CC ) 2>&1 >/dev/null
 }
 
 component_test_tls13_only () {
@@ -2880,6 +2926,20 @@ component_test_memsan () {
         msg "test: compat.sh (MSan)" # ~ 6 min 20s
         tests/compat.sh
     fi
+}
+depend_on_clang () {
+    case $(uname -m) in
+        amd64|x86_64) true;;
+        *) false;;
+    esac
+}
+support_test_memsan () {
+    depend_on_clang
+
+}
+
+support_test_valgrind () {
+    depend_on_clang
 }
 
 component_test_valgrind () {
@@ -3021,6 +3081,9 @@ component_test_zeroize () {
             make clean
         done
     done
+}
+support_test_zeroize () {
+    depend_on_clang
 }
 
 component_test_psa_compliance () {

@@ -81,6 +81,14 @@
 #include "mbedtls/config_psa.h"
 #endif
 
+#if defined(MBEDTLS_SHA256_USE_A64_CRYPTO_IF_PRESENT) || \
+    defined(MBEDTLS_SHA256_USE_A64_CRYPTO_ONLY)
+#if defined(__aarch64__) && !defined(__ARM_FEATURE_CRYPTO)
+#pragma GCC target ("arch=armv8-a+crypto")
+#endif
+#endif /* MBEDTLS_SHA256_USE_A64_CRYPTO_IF_PRESENT ||
+          MBEDTLS_SHA256_USE_A64_CRYPTO_ONLY */
+
 #include "mbedtls/check_config.h"
 
 #endif /* MBEDTLS_BUILD_INFO_H */
