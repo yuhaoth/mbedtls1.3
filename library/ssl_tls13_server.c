@@ -1200,8 +1200,9 @@ static int ssl_tls13_write_hrr_key_share_ext( mbedtls_ssl_context *ssl,
             /* Write selected group */
             MBEDTLS_PUT_UINT16_BE( selected_group, buf, 4 );
 
-            MBEDTLS_SSL_DEBUG_MSG( 3, ( "NamedGroup in HRR: %s",
-                                        (*curve)->name ) );
+            MBEDTLS_SSL_DEBUG_MSG( 3,
+                ( "NamedGroup in HRR: %s",
+                  mbedtls_ssl_named_group_to_str( selected_group ) ) );
 
             *out_len = 6;
             return( 0 );
