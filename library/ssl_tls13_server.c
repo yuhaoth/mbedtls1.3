@@ -1224,11 +1224,6 @@ static int ssl_tls13_write_hello_retry_request_body( mbedtls_ssl_context *ssl,
     unsigned char *start = buf;
     size_t output_len;
     unsigned char *extension_start;
-    const uint8_t magic_hrr_string[32] =
-               { 0xCF, 0x21, 0xAD, 0x74, 0xE5, 0x9A, 0x61, 0x11, 0xBE,
-                 0x1D, 0x8C, 0x02, 0x1E, 0x65, 0xB8, 0x91, 0xC2, 0xA2,
-                 0x11, 0x16, 0x7A, 0xBB, 0x8C, 0x5E, 0x07, 0x9E, 0x09,
-                 0xE2, 0xC8, 0xA8, 0x33 ,0x9C };
 
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> write hello retry request" ) );
 
@@ -1259,7 +1254,8 @@ static int ssl_tls13_write_hello_retry_request_body( mbedtls_ssl_context *ssl,
 
     /* write magic string (as a replacement for the random value) */
     MBEDTLS_SSL_CHK_BUF_PTR( p, end, MBEDTLS_SERVER_HELLO_RANDOM_LEN );
-    memcpy( p, magic_hrr_string, MBEDTLS_SERVER_HELLO_RANDOM_LEN );
+    memcpy( p, mbedtls_ssl_tls13_hello_retry_requst_magic,
+            MBEDTLS_SERVER_HELLO_RANDOM_LEN );
     MBEDTLS_SSL_DEBUG_BUF( 3, "client hello, random bytes",
                            p, MBEDTLS_SERVER_HELLO_RANDOM_LEN );
     p += MBEDTLS_SERVER_HELLO_RANDOM_LEN;
