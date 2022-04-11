@@ -1151,10 +1151,7 @@ static int ssl_tls13_write_hrr_key_share_ext( mbedtls_ssl_context *ssl,
                                               unsigned char *end,
                                               size_t *out_len )
 {
-    const uint16_t *group_list;
-    const mbedtls_ecp_curve_info **curve = NULL;
 
-    size_t total_len = 0;
 
     /* key_share Extension
      *
@@ -1182,41 +1179,37 @@ static int ssl_tls13_write_hrr_key_share_ext( mbedtls_ssl_context *ssl,
         return( 0 );
     }
 
-    total_len = 6; /* extension header, extension length, NamedGroup value */
-
-    if( (size_t)( end - buf ) < total_len )
-        return( MBEDTLS_ERR_SSL_BUFFER_TOO_SMALL );
-
-    /* Write extension header */
-    MBEDTLS_PUT_UINT16_BE( MBEDTLS_TLS_EXT_KEY_SHARE, buf, 0 );
-    /* Write extension length */
-    MBEDTLS_PUT_UINT16_BE( 2, buf, 2 );
-    buf += 4;
-
     /* Find common curve */
-    for( group_list = mbedtls_ssl_get_groups( ssl );
-         *group_list != 0; group_list++ )
+
+    for( const mbedtls_ecp_curve_info **curve = ssl->handshake->curves;
+            *curve != NULL; curve++ )
     {
-        for( curve = ssl->handshake->curves; *curve != NULL; curve++ )
+        if( mbedtls_ssl_check_curve_tls_id( ssl, (*curve)->tls_id ) == 0 )
         {
-            if( (*curve)->tls_id == *group_list )
-                goto curve_matching_done;
+            uint16_t selected_group = (*curve)->tls_id ;
+
+            /* extension header, extension length, NamedGroup value */
+            MBEDTLS_SSL_CHK_BUF_READ_PTR( buf, end, 6 );
+
+            /* Write extension header */
+            MBEDTLS_PUT_UINT16_BE( MBEDTLS_TLS_EXT_KEY_SHARE, buf, 0 );
+
+            /* Write extension length */
+            MBEDTLS_PUT_UINT16_BE( 2, buf, 2 );
+
+            /* Write selected group */
+            MBEDTLS_PUT_UINT16_BE( selected_group, buf, 4 );
+
+            MBEDTLS_SSL_DEBUG_MSG( 3, ( "NamedGroup in HRR: %s",
+                                        (*curve)->name ) );
+
+            *out_len = 6;
+            return( 0 );
         }
     }
 
-curve_matching_done:
-    if( curve == NULL || *curve == NULL )
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "no matching named group found" ) );
-        return( MBEDTLS_ERR_SSL_HANDSHAKE_FAILURE );
-    }
-
-    /* Write selected group */
-    MBEDTLS_PUT_UINT16_BE( (*curve)->tls_id, buf, 0 );
-
-    MBEDTLS_SSL_DEBUG_MSG( 3, ( "NamedGroup in HRR: %s", (*curve)->name ) );
-    *out_len = total_len;
-    return( 0 );
+    MBEDTLS_SSL_DEBUG_MSG( 1, ( "no matching named group found" ) );
+    return( MBEDTLS_ERR_SSL_HANDSHAKE_FAILURE );
 }
 
 static int ssl_tls13_write_hello_retry_request_body( mbedtls_ssl_context *ssl,
