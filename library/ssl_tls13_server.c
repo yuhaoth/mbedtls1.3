@@ -235,7 +235,7 @@ static int ssl_tls13_parse_key_shares_ext( mbedtls_ssl_context *ssl,
      * dismiss it and send a HelloRetryRequest message.
      */
 
-    for( ; p < extentions_end; p += key_share_len )
+    for( ; p < extentions_end; p += key_share_len + 4 )
     {
         uint16_t group;
 
@@ -248,16 +248,17 @@ static int ssl_tls13_parse_key_shares_ext( mbedtls_ssl_context *ssl,
         MBEDTLS_SSL_CHK_BUF_READ_PTR( p, extentions_end, 4 );
 
         group = MBEDTLS_GET_UINT16_BE( p, 0 );
-        p += 2;
+        key_share_len = MBEDTLS_GET_UINT16_BE( p, 2 );
 
-        key_share_len = MBEDTLS_GET_UINT16_BE( p, 0 );
-        p += 2;
 
         /* Continue parsing even if we have already found a match,
          * for input validation purposes.
          */
         if( match_found == 1 )
+        {
+            // p += 2 ;
             continue;
+        }
 
         /*
          * NamedGroup matching
@@ -269,6 +270,7 @@ static int ssl_tls13_parse_key_shares_ext( mbedtls_ssl_context *ssl,
          * - Check if we recognize the group
          * - Check if it's supported
          */
+        match_found = 1;
 
         if( mbedtls_ssl_tls13_named_group_is_ecdhe( group ) )
         {
@@ -280,19 +282,23 @@ static int ssl_tls13_parse_key_shares_ext( mbedtls_ssl_context *ssl,
                 return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
             }
 
-            match_found = 1;
+
 
             MBEDTLS_SSL_DEBUG_MSG( 2, ( "ECDH curve: %s", curve_info->name ) );
 
-            ret = mbedtls_ssl_tls13_read_public_ecdhe_share( ssl, p, end - p );
+            ret = mbedtls_ssl_tls13_read_public_ecdhe_share( ssl, p + 2,
+                                                             end - p - 2 );
             if( ret != 0 )
+            {
+                MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_tls13_read_public_ecdhe_share", ret );
                 return( ret );
+            }
         }
         else
         {
             MBEDTLS_SSL_DEBUG_MSG( 4, ( "Unrecognized NamedGroup %u",
                                         (unsigned) group ) );
-            continue;
+            return( MBEDTLS_ERR_SSL_FEATURE_UNAVAILABLE );
         }
 
         ssl->handshake->offered_group_id = group;
@@ -679,6 +685,8 @@ static int ssl_tls13_parse_client_hello( mbedtls_ssl_context *ssl,
 
         }
     }
+
+
 
     return( MBEDTLS_ERR_SSL_HANDSHAKE_FAILURE );
 
