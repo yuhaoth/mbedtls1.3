@@ -521,15 +521,15 @@ static int ssl_tls13_parse_client_hello( mbedtls_ssl_context *ssl,
      * uint8 legacy_compression_method = 0;
      * ...
      */
-    MBEDTLS_SSL_CHK_BUF_READ_PTR( p, end, 1 );
-    if( p[0] != 0 )
+    MBEDTLS_SSL_CHK_BUF_READ_PTR( p, end, 2 );
+    if( p[0] != 1 || p[1] != MBEDTLS_SSL_COMPRESS_NULL )
     {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad legacy compression method" ) );
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad legacy compression method (%d)", p[0] ) );
         MBEDTLS_SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_ILLEGAL_PARAMETER,
                                       MBEDTLS_ERR_SSL_ILLEGAL_PARAMETER );
         return ( MBEDTLS_ERR_SSL_ILLEGAL_PARAMETER );
     }
-    p++;
+    p += 2;
 
     /*
      * Check the extensions length
