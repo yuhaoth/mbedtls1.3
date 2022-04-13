@@ -2071,6 +2071,19 @@ static inline int mbedtls_ssl_tls13_get_pk_type_and_md_alg_from_sig_alg(
 }
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
 
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3)
+static inline int mbedtls_ssl_tls13_sig_alg_is_supported(
+                                                const mbedtls_ssl_context *ssl,
+                                                const uint16_t sig_alg )
+{
+    mbedtls_pk_type_t pk_type;
+    mbedtls_md_type_t md_alg;
+    ((void) ssl);
+    return( ! mbedtls_ssl_tls13_get_pk_type_and_md_alg_from_sig_alg(
+                                                sig_alg, &pk_type, &md_alg ) );
+}
+#endif
+
 static inline int mbedtls_ssl_sig_alg_is_supported(
                                                 const mbedtls_ssl_context *ssl,
                                                 const uint16_t sig_alg )
@@ -2142,10 +2155,7 @@ static inline int mbedtls_ssl_sig_alg_is_supported(
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3)
     if( ssl->minor_ver == MBEDTLS_SSL_MINOR_VERSION_4)
     {
-        mbedtls_pk_type_t pk_type;
-        mbedtls_md_type_t md_alg;
-        return( ! mbedtls_ssl_tls13_get_pk_type_and_md_alg_from_sig_alg(
-                                                sig_alg, &pk_type, &md_alg ) );
+        return mbedtls_ssl_tls13_sig_alg_is_supported( ssl, sig_alg );
     }
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
     ((void) ssl);

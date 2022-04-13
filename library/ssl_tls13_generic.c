@@ -116,7 +116,7 @@ int mbedtls_ssl_tls13_parse_sig_alg_ext( mbedtls_ssl_context *ssl,
                                     sig_alg ) );
 
         if( ! mbedtls_ssl_sig_alg_is_offered( ssl, sig_alg ) ||
-            ! mbedtls_ssl_sig_alg_is_supported( ssl, sig_alg ) )
+            ! mbedtls_ssl_tls13_sig_alg_is_supported( ssl, sig_alg ) )
             continue;
 
         if( common_idx + 1 < MBEDTLS_RECEIVED_SIG_ALGS_SIZE )
