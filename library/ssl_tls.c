@@ -4247,21 +4247,18 @@ int mbedtls_ssl_config_defaults( mbedtls_ssl_config *conf,
         case MBEDTLS_SSL_PRESET_SUITEB:
             conf->min_major_ver = MBEDTLS_SSL_MIN_MAJOR_VERSION;
             conf->max_major_ver = MBEDTLS_SSL_MAX_MAJOR_VERSION;
-
+#if defined(MBEDTLS_SSL_PROTO_TLS1_2)
             if( ( endpoint == MBEDTLS_SSL_IS_SERVER ) ||
                 ( transport == MBEDTLS_SSL_TRANSPORT_DATAGRAM ) )
-#if defined(MBEDTLS_SSL_PROTO_TLS1_2)
             {
                 conf->min_minor_ver = MBEDTLS_SSL_MINOR_VERSION_3;
                 conf->max_minor_ver = MBEDTLS_SSL_MINOR_VERSION_3;
             }
-#else
+#elif defined(MBEDTLS_SSL_PROTO_TLS1_3)
+            if( endpoint == MBEDTLS_SSL_IS_SERVER )
             {
-                conf->min_major_ver = 0;
-                conf->max_major_ver = 0;
-                conf->min_minor_ver = 0;
-                conf->max_minor_ver = 0;
-                return( MBEDTLS_ERR_SSL_FEATURE_UNAVAILABLE );
+                conf->min_minor_ver = MBEDTLS_SSL_MINOR_VERSION_3;
+                conf->max_minor_ver = MBEDTLS_SSL_MINOR_VERSION_4;
             }
 #endif
             else
@@ -4299,21 +4296,18 @@ int mbedtls_ssl_config_defaults( mbedtls_ssl_config *conf,
         default:
             conf->min_major_ver = MBEDTLS_SSL_MIN_MAJOR_VERSION;
             conf->max_major_ver = MBEDTLS_SSL_MAX_MAJOR_VERSION;
-
+#if defined(MBEDTLS_SSL_PROTO_TLS1_2)
             if( ( endpoint == MBEDTLS_SSL_IS_SERVER ) ||
                 ( transport == MBEDTLS_SSL_TRANSPORT_DATAGRAM ) )
-#if defined(MBEDTLS_SSL_PROTO_TLS1_2)
             {
                 conf->min_minor_ver = MBEDTLS_SSL_MINOR_VERSION_3;
                 conf->max_minor_ver = MBEDTLS_SSL_MINOR_VERSION_3;
             }
-#else
+#elif defined(MBEDTLS_SSL_PROTO_TLS1_3)
+            if( endpoint == MBEDTLS_SSL_IS_SERVER )
             {
-                conf->min_major_ver = 0;
-                conf->max_major_ver = 0;
-                conf->min_minor_ver = 0;
-                conf->max_minor_ver = 0;
-                return( MBEDTLS_ERR_SSL_FEATURE_UNAVAILABLE );
+                conf->min_minor_ver = MBEDTLS_SSL_MINOR_VERSION_3;
+                conf->max_minor_ver = MBEDTLS_SSL_MINOR_VERSION_4;
             }
 #endif
             else
