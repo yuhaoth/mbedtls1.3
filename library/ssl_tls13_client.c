@@ -169,41 +169,6 @@ static int ssl_tls13_parse_alpn_ext( mbedtls_ssl_context *ssl,
 }
 #endif /* MBEDTLS_SSL_ALPN */
 
-static int ssl_tls13_reset_key_share( mbedtls_ssl_context *ssl )
-{
-    uint16_t group_id = ssl->handshake->offered_group_id;
-
-    if( group_id == 0 )
-        return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
-
-#if defined(MBEDTLS_ECDH_C)
-    if( mbedtls_ssl_tls13_named_group_is_ecdhe( group_id ) )
-    {
-        int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
-        psa_status_t status = PSA_ERROR_CORRUPTION_DETECTED;
-
-        /* Destroy generated private key. */
-        status = psa_destroy_key( ssl->handshake->ecdh_psa_privkey );
-        if( status != PSA_SUCCESS )
-        {
-            ret = psa_ssl_status_to_mbedtls( status );
-            MBEDTLS_SSL_DEBUG_RET( 1, "psa_destroy_key", ret );
-            return( ret );
-        }
-
-        ssl->handshake->ecdh_psa_privkey = MBEDTLS_SVC_KEY_ID_INIT;
-        return( 0 );
-    }
-    else
-#endif /* MBEDTLS_ECDH_C */
-    if( 0 /* other KEMs? */ )
-    {
-        /* Do something */
-    }
-
-    return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
-}
-
 /*
  * Functions for writing key_share extension.
  */
@@ -792,7 +757,7 @@ static int ssl_tls13_server_hello_coordinate( mbedtls_ssl_context *ssl,
 
         if( mbedtls_ssl_conf_tls13_some_ephemeral_enabled( ssl ) )
         {
-            ret = ssl_tls13_reset_key_share( ssl );
+            ret = mbedtls_ssl_tls13_reset_key_share( ssl );
             if( ret != 0 )
                 return( ret );
         }
@@ -1303,7 +1268,7 @@ static int ssl_tls13_postprocess_hrr( mbedtls_ssl_context *ssl )
      * generated a shared secret in the first client hello.
      * Thus, reset the shared secret.
      */
-    ret = ssl_tls13_reset_key_share( ssl );
+    ret = mbedtls_ssl_tls13_reset_key_share( ssl );
     if( ret != 0 )
         return( ret );
 

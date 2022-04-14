@@ -1593,4 +1593,39 @@ int mbedtls_ssl_tls13_generate_and_write_ecdh_key_exchange(
 }
 #endif /* MBEDTLS_ECDH_C */
 
+int mbedtls_ssl_tls13_reset_key_share( mbedtls_ssl_context *ssl )
+{
+    uint16_t group_id = ssl->handshake->offered_group_id;
+
+    if( group_id == 0 )
+        return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
+
+#if defined(MBEDTLS_ECDH_C)
+    if( mbedtls_ssl_tls13_named_group_is_ecdhe( group_id ) )
+    {
+        int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
+        psa_status_t status = PSA_ERROR_CORRUPTION_DETECTED;
+
+        /* Destroy generated private key. */
+        status = psa_destroy_key( ssl->handshake->ecdh_psa_privkey );
+        if( status != PSA_SUCCESS )
+        {
+            ret = psa_ssl_status_to_mbedtls( status );
+            MBEDTLS_SSL_DEBUG_RET( 1, "psa_destroy_key", ret );
+            return( ret );
+        }
+
+        ssl->handshake->ecdh_psa_privkey = MBEDTLS_SVC_KEY_ID_INIT;
+        return( 0 );
+    }
+    else
+#endif /* MBEDTLS_ECDH_C */
+    if( 0 /* other KEMs? */ )
+    {
+        /* Do something */
+    }
+
+    return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
+}
+
 #endif /* MBEDTLS_SSL_TLS_C && MBEDTLS_SSL_PROTO_TLS1_3 */

@@ -1844,6 +1844,7 @@ int mbedtls_ssl_tls13_generate_and_write_ecdh_key_exchange(
                 size_t *out_len );
 #endif /* MBEDTLS_ECDH_C */
 
+int mbedtls_ssl_tls13_reset_key_share( mbedtls_ssl_context *ssl );
 
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
 
