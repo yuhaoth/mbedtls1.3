@@ -420,6 +420,7 @@ static int ssl_tls13_parse_client_hello( mbedtls_ssl_context *ssl,
                                          const unsigned char *end )
 {
     int ret;
+    int hrr_required = SSL_CLIENT_HELLO_OK;
     size_t i, j;
     size_t legacy_session_id_len;
     size_t cipher_suites_len;
@@ -603,10 +604,10 @@ static int ssl_tls13_parse_client_hello( mbedtls_ssl_context *ssl,
                 if( ret == MBEDTLS_ERR_SSL_HRR_REQUIRED )
                 {
                     MBEDTLS_SSL_DEBUG_MSG( 2, ( "HRR needed " ) );
-                    ret = MBEDTLS_ERR_SSL_FEATURE_UNAVAILABLE;
+                    hrr_required = SSL_CLIENT_HELLO_HRR_REQUIRED;
                 }
 
-                if( ret != 0 )
+                if( ret < 0 )
                     return( ret );
 
                 ssl->handshake->extensions_present |= MBEDTLS_SSL_EXT_KEY_SHARE;
@@ -727,7 +728,7 @@ have_ciphersuite:
         return( MBEDTLS_ERR_SSL_ILLEGAL_PARAMETER );
     }
 
-    return( 0 );
+    return( hrr_required );
 }
 
 /* Update the handshake state machine */
