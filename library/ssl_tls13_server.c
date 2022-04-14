@@ -1131,6 +1131,16 @@ cleanup:
 }
 
 /*
+ * State Handler: MBEDTLS_SSL_HELLO_RETRY_REQUEST
+ */
+
+static int ssl_tls13_write_hello_retry_request( mbedtls_ssl_context *ssl )
+{
+    ((void) ssl);
+    return( MBEDTLS_ERR_SSL_FEATURE_UNAVAILABLE );
+}
+
+/*
  * TLS 1.3 State Machine -- server side
  */
 int mbedtls_ssl_tls13_handshake_server_step( mbedtls_ssl_context *ssl )
@@ -1161,6 +1171,16 @@ int mbedtls_ssl_tls13_handshake_server_step( mbedtls_ssl_context *ssl )
         /* ----- WRITE SERVER HELLO ----*/
         case MBEDTLS_SSL_SERVER_HELLO:
             ret = ssl_tls13_write_server_hello( ssl );
+            break;
+
+        /* ----- WRITE HELLO RETRY REQUEST ----*/
+        case MBEDTLS_SSL_HELLO_RETRY_REQUEST:
+            ret = ssl_tls13_write_hello_retry_request( ssl );
+            if( ret != 0 )
+            {
+                MBEDTLS_SSL_DEBUG_RET( 1, "ssl_tls13_write_hello_retry_request", ret );
+                return( ret );
+            }
             break;
 
         default:
