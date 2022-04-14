@@ -1300,10 +1300,10 @@ static int ssl_tls13_write_hello_retry_request_body( mbedtls_ssl_context *ssl,
     p += 2;
 
     /* Add supported_version extension */
-    if( ( ret = ssl_tls13_write_supported_versions_ext(
+    if( ( ret = ssl_tls13_write_selected_version_ext(
                                             ssl, p, end, &output_len ) ) != 0 )
     {
-        MBEDTLS_SSL_DEBUG_RET( 1, "ssl_tls13_write_supported_versions_ext",
+        MBEDTLS_SSL_DEBUG_RET( 1, "ssl_tls13_write_selected_version_ext",
                                ret );
         return( ret );
     }
