@@ -33,6 +33,7 @@
 #include "ecdh_misc.h"
 #include "ssl_client.h"
 #include "ssl_tls13_keys.h"
+#include "ssl_debug_helpers.h"
 
 /* Write extensions */
 
@@ -253,6 +254,8 @@ static int ssl_tls13_write_key_share_ext( mbedtls_ssl_context *ssl,
                                                               &group_id ) );
     }
 
+    MBEDTLS_SSL_DEBUG_MSG( 4, ( "Offered group:%s",
+                                mbedtls_ssl_named_group_to_str( group_id ) ) );
     /*
      * Dispatch to type-specific key generation function.
      *

@@ -255,12 +255,21 @@ static int ssl_tls13_parse_key_shares_ext( mbedtls_ssl_context *ssl,
         /* Continue parsing even if we have already found a match,
          * for input validation purposes.
          */
-        if( match_found == 1 )
+        MBEDTLS_SSL_DEBUG_MSG(
+                2, ( "got key share group: %s(%d)",
+                     mbedtls_ssl_named_group_to_str( group ),
+                     group ) );
+        if( match_found == 1 ||
+            ! mbedtls_ssl_named_group_is_offered( ssl, group ) ||
+            ! mbedtls_ssl_named_group_is_supported( group ) )
         {
-            // p += 2 ;
             continue;
         }
 
+        MBEDTLS_SSL_DEBUG_MSG(
+                2, ( "Group(%s - %d) is offered and supported",
+                     mbedtls_ssl_named_group_to_str( group ),
+                     group ) );
         /*
          * NamedGroup matching
          *
@@ -271,29 +280,25 @@ static int ssl_tls13_parse_key_shares_ext( mbedtls_ssl_context *ssl,
          * - Check if we recognize the group
          * - Check if it's supported
          */
-        match_found = 1;
-
         if( mbedtls_ssl_tls13_named_group_is_ecdhe( group ) )
         {
-            const mbedtls_ecp_curve_info *curve_info =
-                mbedtls_ecp_curve_info_from_tls_id( group );
-            if( curve_info == NULL )
-            {
-                MBEDTLS_SSL_DEBUG_MSG( 1, ( "Invalid TLS curve group id" ) );
-                return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
-            }
 
-
-
-            MBEDTLS_SSL_DEBUG_MSG( 2, ( "ECDH curve: %s", curve_info->name ) );
+            MBEDTLS_SSL_DEBUG_MSG(
+                2, ( "ECDH group: %s",
+                     mbedtls_ssl_named_group_to_str( group ) ) );
 
             ret = mbedtls_ssl_tls13_read_public_ecdhe_share( ssl, p + 2,
                                                              end - p - 2 );
             if( ret != 0 )
             {
-                MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_tls13_read_public_ecdhe_share", ret );
+                MBEDTLS_SSL_DEBUG_RET(
+                    1, "mbedtls_ssl_tls13_read_public_ecdhe_share", ret );
                 return( ret );
             }
+
+            match_found = 1;
+
+            ssl->handshake->offered_group_id = group;
         }
         else
         {
@@ -301,8 +306,6 @@ static int ssl_tls13_parse_key_shares_ext( mbedtls_ssl_context *ssl,
                                         (unsigned) group ) );
             return( MBEDTLS_ERR_SSL_FEATURE_UNAVAILABLE );
         }
-
-        ssl->handshake->offered_group_id = group;
     }
 
     if( match_found == 0 )

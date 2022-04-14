@@ -1923,6 +1923,38 @@ static inline int mbedtls_ssl_tls13_named_group_is_dhe( uint16_t named_group )
             named_group <= MBEDTLS_SSL_IANA_TLS_GROUP_FFDHE8192 );
 }
 
+static inline int mbedtls_ssl_named_group_is_offered(
+                        const mbedtls_ssl_context *ssl, uint16_t named_group )
+{
+    const uint16_t *group_list = mbedtls_ssl_get_groups( ssl );
+
+    if( group_list == NULL )
+        return( 0 );
+
+    for( ; *group_list != 0; group_list++ )
+    {
+        if( *group_list == named_group )
+            return( 1 );
+    }
+
+    return( 0 );
+}
+
+static inline int mbedtls_ssl_named_group_is_supported( uint16_t named_group )
+{
+#if defined(MBEDTLS_ECDH_C)
+    if( mbedtls_ssl_tls13_named_group_is_ecdhe( named_group ) )
+    {
+        const mbedtls_ecp_curve_info *curve_info =
+            mbedtls_ecp_curve_info_from_tls_id( named_group );
+        if( curve_info != NULL )
+            return( 1 );
+    }
+#endif /* MBEDTLS_ECDH_C */
+    ((void) named_group);
+    return( 0 );
+}
+
 /*
  * Return supported signature algorithms.
  *
