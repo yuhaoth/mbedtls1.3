@@ -1137,7 +1137,7 @@ cleanup:
 static int ssl_tls13_write_hello_retry_request_coordinate(
                                                     mbedtls_ssl_context *ssl )
 {
-    if( ssl->handshake->hello_retry_requests_sent > 1 )
+    if( ssl->handshake->hello_retry_request_count > 1 )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "Too many HRRs" ) );
         return( MBEDTLS_ERR_SSL_HANDSHAKE_FAILURE );
@@ -1321,7 +1321,7 @@ static int ssl_tls13_finalize_hello_retry_request( mbedtls_ssl_context *ssl )
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
 
-    ssl->handshake->hello_retry_requests_sent++;
+    ssl->handshake->hello_retry_request_count++;
 
     /* Reset everything that's going to be re-generated in the new ClientHello.
      *
@@ -1382,6 +1382,7 @@ int mbedtls_ssl_tls13_handshake_server_step( mbedtls_ssl_context *ssl )
     {
         /* start state */
         case MBEDTLS_SSL_HELLO_REQUEST:
+            ssl->handshake->hello_retry_request_count = 0;
             mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_CLIENT_HELLO );
             break;
 

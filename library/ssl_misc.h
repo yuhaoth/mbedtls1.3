@@ -608,12 +608,9 @@ struct mbedtls_ssl_handshake_params
      */
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3)
     int tls13_kex_modes; /*!< key exchange modes for TLS 1.3 */
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
-
-#if defined(MBEDTLS_SSL_CLI_C)
-    /*!<  Number of Hello Retry Request messages received from the server.  */
+    /*!<  Number of Hello Retry Request messages received/sent from the server.  */
     int hello_retry_request_count;
-#endif /* MBEDTLS_SSL_CLI_C */
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_2) && \
     defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
