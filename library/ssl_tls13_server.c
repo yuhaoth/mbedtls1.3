@@ -833,7 +833,7 @@ static int ssl_tls13_parse_client_hello( mbedtls_ssl_context *ssl,
      * - The entire content of the CH message, if no PSK extension is present
      * - The content up to but excluding the PSK extension, if present.
      */
-    mbedtls_ssl_add_hs_msg_to_checksum( ssl, MBEDTLS_SSL_HS_SERVER_HELLO,
+    mbedtls_ssl_add_hs_msg_to_checksum( ssl, MBEDTLS_SSL_HS_CLIENT_HELLO,
                                         buf, p - buf );
     /*
      * Search for a matching ciphersuite
