@@ -122,68 +122,66 @@ static int ssl_tls13_parse_supported_versions_ext( mbedtls_ssl_context *ssl,
  *       NamedGroup named_group_list<2..2^16-1>;
  *   } NamedGroupList;
  */
-static int ssl_tls13_parse_supported_groups_ext(
-                mbedtls_ssl_context *ssl,
-                const unsigned char *buf, const unsigned char *end )
+static int ssl_tls13_named_group_is_duplicated( mbedtls_ssl_context *ssl,
+                                                uint16_t named_group )
+{
+    for( int i = 0; i < MBEDTLS_RECEIVED_NAMED_GROUP_SIZE ; i++ )
+    {
+        if( named_group == ssl->handshake->received_named_groups[i] )
+        {
+            return( 1 );
+        }
+    }
+    return( 0 );
+}
+
+static int ssl_tls13_parse_supported_groups_ext( mbedtls_ssl_context *ssl,
+                                                 const unsigned char *buf,
+                                                 const unsigned char *end )
 {
 
-    size_t named_group_list_len, curve_list_len;
+    size_t named_group_list_len;
     const unsigned char *p = buf;
-    const mbedtls_ecp_curve_info *curve_info, **curves;
-    const unsigned char *extentions_end;
+    const unsigned char *extension_end;
 
+    MBEDTLS_SSL_CHK_BUF_READ_PTR( p, end, 2 );
     MBEDTLS_SSL_DEBUG_BUF( 3, "supported_groups extension", p, end - buf );
     named_group_list_len = MBEDTLS_GET_UINT16_BE( p, 0 );
     p += 2;
-    MBEDTLS_SSL_CHK_BUF_READ_PTR( p, end, named_group_list_len );
-    if( named_group_list_len % 2 != 0 )
-        return( MBEDTLS_ERR_SSL_DECODE_ERROR );
 
-    /*       At the moment, this can happen when receiving a second
-     *       ClientHello after an HRR. We should properly reset the
-     *       state upon receiving an HRR, in which case we should
-     *       not observe handshake->curves already being allocated. */
-    if( ssl->handshake->curves != NULL )
+    extension_end = p + named_group_list_len;
+
+    memset( ssl->handshake->received_named_groups, 0,
+            sizeof( ssl->handshake->received_named_groups ) );
+
+    for(int i = 0 ;p < extension_end ; p += 2 )
     {
-        mbedtls_free( (void *) ssl->handshake->curves );
-        ssl->handshake->curves = NULL;
-    }
+        MBEDTLS_SSL_CHK_BUF_READ_PTR( p, end, 2 );
+        uint16_t named_group = MBEDTLS_GET_UINT16_BE( p, 0 );
+        MBEDTLS_SSL_DEBUG_MSG(
+                2, ( "got named group: %s(%d)",
+                     mbedtls_ssl_named_group_to_str( named_group ),
+                     named_group ) );
 
-    /* Don't allow our peer to make us allocate too much memory,
-     * and leave room for a final 0
-     */
-    curve_list_len = named_group_list_len / 2 + 1;
-    if( curve_list_len > MBEDTLS_ECP_DP_MAX )
-        curve_list_len = MBEDTLS_ECP_DP_MAX;
-
-    if( ( curves = mbedtls_calloc( curve_list_len, sizeof( *curves ) ) ) == NULL )
-        return( MBEDTLS_ERR_SSL_ALLOC_FAILED );
-
-    extentions_end = p + named_group_list_len;
-    ssl->handshake->curves = curves;
-
-    while ( p < extentions_end && curve_list_len > 1 )
-    {
-        uint16_t tls_grp_id = MBEDTLS_GET_UINT16_BE( p, 0 );
-        curve_info = mbedtls_ecp_curve_info_from_tls_id( tls_grp_id );
-
-        /* mbedtls_ecp_curve_info_from_tls_id() uses the mbedtls_ecp_curve_info
-         * data structure (defined in ecp.c), which only includes the list of
-         * curves implemented. Hence, we only add curves that are also supported
-         * and implemented by the server.
-         */
-        if( curve_info != NULL )
+        if( ! mbedtls_ssl_named_group_is_offered( ssl, named_group ) ||
+            ! mbedtls_ssl_named_group_is_supported( named_group ) ||
+            ssl_tls13_named_group_is_duplicated( ssl, named_group ) ||
+            i >= MBEDTLS_RECEIVED_NAMED_GROUP_SIZE )
         {
-            *curves++ = curve_info;
-            MBEDTLS_SSL_DEBUG_MSG( 4, ( "supported curve: %s", curve_info->name ) );
-            curve_list_len--;
+            continue;
         }
+        MBEDTLS_SSL_DEBUG_MSG(
+                2, ( "add named group(%s - %d) into received list.",
+                     mbedtls_ssl_named_group_to_str( named_group ),
+                     named_group ) );
 
-        p += 2;
+        ssl->handshake->received_named_groups[i] = named_group;
+        i++;
     }
 
+    if( p != extension_end)
+        return( MBEDTLS_ERR_SSL_DECODE_ERROR );
     return( 0 );
-
 }
 #endif /* MBEDTLS_ECDH_C || ( MBEDTLS_ECDSA_C */
 
@@ -609,8 +607,7 @@ static int ssl_tls13_parse_client_hello( mbedtls_ssl_context *ssl,
                     MBEDTLS_SSL_DEBUG_MSG( 2, ( "HRR needed " ) );
                     hrr_required = SSL_CLIENT_HELLO_HRR_REQUIRED;
                 }
-
-                if( ret < 0 )
+                else if( ret < 0 )
                     return( ret );
 
                 ssl->handshake->extensions_present |= MBEDTLS_SSL_EXT_KEY_SHARE;
@@ -736,9 +733,29 @@ have_ciphersuite:
 
 /* Update the handshake state machine */
 
-static int ssl_tls13_postprocess_client_hello( mbedtls_ssl_context* ssl )
+static int ssl_tls13_postprocess_client_hello( mbedtls_ssl_context* ssl,
+                                               int hrr_required )
 {
     int ret = 0;
+
+    if( hrr_required == SSL_CLIENT_HELLO_HRR_REQUIRED )
+    {
+        /*
+         * Create stateless transcript hash for HRR
+         */
+        MBEDTLS_SSL_DEBUG_MSG( 4, ( "Reset transcript for HRR" ) );
+        ret = mbedtls_ssl_reset_transcript_for_hrr( ssl );
+        if( ret != 0 )
+        {
+            MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_reset_transcript_for_hrr", ret );
+            return( ret );
+        }
+        mbedtls_ssl_session_reset_msg_layer( ssl, 0 );
+
+        /* Transmit Hello Retry Request */
+        mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_HELLO_RETRY_REQUEST );
+        return( 0 );
+    }
 
     ret = mbedtls_ssl_tls13_key_schedule_stage_early( ssl );
     if( ret != 0 )
@@ -773,7 +790,7 @@ static int ssl_tls13_process_client_hello( mbedtls_ssl_context *ssl )
     MBEDTLS_SSL_PROC_CHK_NEG( ssl_tls13_parse_client_hello( ssl, buf,
                                                             buf + buflen ) );
 
-    MBEDTLS_SSL_PROC_CHK( ssl_tls13_postprocess_client_hello( ssl ) );
+    MBEDTLS_SSL_PROC_CHK( ssl_tls13_postprocess_client_hello( ssl, ret ) );
 
 cleanup:
 
@@ -1185,32 +1202,34 @@ static int ssl_tls13_write_hrr_key_share_ext( mbedtls_ssl_context *ssl,
 
     /* Find common curve */
 
-    for( const mbedtls_ecp_curve_info **curve = ssl->handshake->curves;
-            *curve != NULL; curve++ )
+    for( int i = 0; i < MBEDTLS_RECEIVED_NAMED_GROUP_SIZE; i++ )
     {
-        if( mbedtls_ssl_check_curve_tls_id( ssl, (*curve)->tls_id ) == 0 )
+        uint16_t selected_group = ssl->handshake->received_named_groups[i] ;
+        if( ! mbedtls_ssl_named_group_is_offered( ssl, selected_group ) ||
+            ! mbedtls_ssl_named_group_is_supported( selected_group ) )
         {
-            uint16_t selected_group = (*curve)->tls_id ;
-
-            /* extension header, extension length, NamedGroup value */
-            MBEDTLS_SSL_CHK_BUF_READ_PTR( buf, end, 6 );
-
-            /* Write extension header */
-            MBEDTLS_PUT_UINT16_BE( MBEDTLS_TLS_EXT_KEY_SHARE, buf, 0 );
-
-            /* Write extension length */
-            MBEDTLS_PUT_UINT16_BE( 2, buf, 2 );
-
-            /* Write selected group */
-            MBEDTLS_PUT_UINT16_BE( selected_group, buf, 4 );
-
-            MBEDTLS_SSL_DEBUG_MSG( 3,
-                ( "NamedGroup in HRR: %s",
-                  mbedtls_ssl_named_group_to_str( selected_group ) ) );
-
-            *out_len = 6;
-            return( 0 );
+            continue;
         }
+
+        /* extension header, extension length, NamedGroup value */
+        MBEDTLS_SSL_CHK_BUF_READ_PTR( buf, end, 6 );
+
+        /* Write extension header */
+        MBEDTLS_PUT_UINT16_BE( MBEDTLS_TLS_EXT_KEY_SHARE, buf, 0 );
+
+        /* Write extension length */
+        MBEDTLS_PUT_UINT16_BE( 2, buf, 2 );
+
+        /* Write selected group */
+        MBEDTLS_PUT_UINT16_BE( selected_group, buf, 4 );
+
+        MBEDTLS_SSL_DEBUG_MSG( 3,
+            ( "HRR selected_group: %s (%x)",
+              mbedtls_ssl_named_group_to_str( selected_group ),
+              selected_group ) );
+
+        *out_len = 6;
+        return( 0 );
     }
 
     MBEDTLS_SSL_DEBUG_MSG( 1, ( "no matching named group found" ) );
@@ -1354,10 +1373,16 @@ static int ssl_tls13_finalize_hello_retry_request( mbedtls_ssl_context *ssl )
      * was fine with it. Once we have separated key share generation from
      * key share writing, we can confine this to the case where the server
      * requested a different share. */
-    ret = mbedtls_ssl_tls13_reset_key_share( ssl );
-    if( ret != 0 )
-        return( ret );
+    if( ssl->handshake->offered_group_id != 0 )
+    {
+        ret = mbedtls_ssl_tls13_reset_key_share( ssl );
 
+        if( ret != 0 )
+        {
+            MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_tls13_reset_key_share", ret );
+            return( ret );
+        }
+    }
     mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_CLIENT_HELLO );
 
     return( 0 );

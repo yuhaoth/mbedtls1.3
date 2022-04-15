@@ -265,6 +265,7 @@
 #define MBEDTLS_SSL_MAX_CURVE_LIST_LEN         65535
 
 #define MBEDTLS_RECEIVED_SIG_ALGS_SIZE         20
+#define MBEDTLS_RECEIVED_NAMED_GROUP_SIZE      20
 
 /*
  * Check that we obey the standard's message size bounds
@@ -610,6 +611,8 @@ struct mbedtls_ssl_handshake_params
     int tls13_kex_modes; /*!< key exchange modes for TLS 1.3 */
     /*!<  Number of Hello Retry Request messages received/sent from the server.  */
     int hello_retry_request_count;
+    /*!< Set of received named group */
+    uint16_t received_named_groups[MBEDTLS_RECEIVED_SIG_ALGS_SIZE];
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_2) && \
