@@ -32,6 +32,18 @@
 #include "ecdh_misc.h"
 #include "ssl_tls13_keys.h"
 
+#if defined(MBEDTLS_ECP_C)
+#include "mbedtls/ecp.h"
+#endif /* MBEDTLS_ECP_C */
+
+#if defined(MBEDTLS_PLATFORM_C)
+#include "mbedtls/platform.h"
+#else
+#include <stdlib.h>
+#define mbedtls_calloc    calloc
+#define mbedtls_free       free
+#endif /* MBEDTLS_PLATFORM_C */
+
 #if defined(MBEDTLS_SSL_SERVER_NAME_INDICATION)
 /*
  * struct {
@@ -175,11 +187,7 @@ static int ssl_tls13_process_encrypted_extensions( mbedtls_ssl_context *ssl )
 
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> write encrypted extension" ) );
 
-    if( ssl->handshake->state_local.encrypted_extensions_out.preparation_done == 0 )
-    {
-        MBEDTLS_SSL_PROC_CHK( ssl_tls13_prepare_encrypted_extensions( ssl ) );
-        ssl->handshake->state_local.encrypted_extensions_out.preparation_done = 1;
-    }
+    MBEDTLS_SSL_PROC_CHK( ssl_tls13_prepare_encrypted_extensions( ssl ) );
 
     MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_start_handshake_msg( ssl,
                        MBEDTLS_SSL_HS_ENCRYPTED_EXTENSIONS, &buf, &buf_len ) );
@@ -201,19 +209,6 @@ cleanup:
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= write encrypted extension" ) );
     return( ret );
 }
-
-
-#if defined(MBEDTLS_ECP_C)
-#include "mbedtls/ecp.h"
-#endif /* MBEDTLS_ECP_C */
-
-#if defined(MBEDTLS_PLATFORM_C)
-#include "mbedtls/platform.h"
-#else
-#include <stdlib.h>
-#define mbedtls_calloc    calloc
-#define mbedtls_free       free
-#endif /* MBEDTLS_PLATFORM_C */
 
 /* From RFC 8446:
  *   struct {
