@@ -33,7 +33,7 @@
 
 #include "ssl_misc.h"
 #include "ssl_tls13_keys.h"
-#include "ssl_debug_helpers_generated.h"
+#include "ssl_debug_helpers.h"
 
 #if defined(MBEDTLS_SSL_USE_MPS)
 #include "mps_all.h"
