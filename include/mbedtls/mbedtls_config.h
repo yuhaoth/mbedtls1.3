@@ -256,7 +256,7 @@
  */
 //#define MBEDTLS_DEPRECATED_REMOVED
 
-/* \} name SECTION: System support */
+/** \} name SECTION: System support */
 
 /**
  * \name SECTION: mbed TLS feature support
@@ -1081,7 +1081,7 @@
  * which is currently hard-coded to be int32_t.
  *
  * Note that this option is meant for internal use only and may be removed
- * without notice. It is incompatible with MBEDTLS_USE_PSA_CRYPTO.
+ * without notice.
  */
 //#define MBEDTLS_PSA_CRYPTO_KEY_ID_ENCODES_OWNER
 
@@ -1890,7 +1890,7 @@
  * Comment this macro to disallow using RSASSA-PSS in certificates.
  */
 //#define MBEDTLS_X509_RSASSA_PSS_SUPPORT
-/* \} name SECTION: mbed TLS feature support */
+/** \} name SECTION: mbed TLS feature support */
 
 /**
  * \name SECTION: mbed TLS modules
@@ -3082,7 +3082,7 @@
  */
 #define MBEDTLS_X509_CSR_WRITE_C
 
-/* \} name SECTION: mbed TLS modules */
+/** \} name SECTION: mbed TLS modules */
 
 /**
  * \name SECTION: Module configuration options
@@ -3393,4 +3393,4 @@
  */
 //#define MBEDTLS_LIBOQS_ENABLE
 
-/* \} name SECTION: Customisation configuration options */
+/** \} name SECTION: Customisation configuration options */

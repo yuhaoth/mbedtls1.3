@@ -3814,7 +3814,7 @@ static int ssl_tls13_certificate_request_write( mbedtls_ssl_context *ssl,
 
     /* The extensions must contain the signature_algorithms. */
     /* Currently we don't use any other extension */
-    ret = mbedtls_ssl_tls13_write_sig_alg_ext( ssl, p + 2, end, &ext_size );
+    ret = mbedtls_ssl_write_sig_alg_ext( ssl, p + 2, end, &ext_size );
     if( ret != 0 )
         return( ret );
 
