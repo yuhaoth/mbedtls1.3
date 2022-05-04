@@ -3911,12 +3911,10 @@ int mbedtls_ssl_tls13_handshake_server_step( mbedtls_ssl_context *ssl )
 
 #if defined(MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE)
         case MBEDTLS_SSL_SERVER_CCS_AFTER_HRR:
-
-            ret = mbedtls_ssl_tls13_write_change_cipher_spec_process( ssl );
-
+            ret = mbedtls_ssl_tls13_write_change_cipher_spec( ssl );
             if( ret != 0 )
             {
-                MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_tls13_write_change_cipher_spec_process", ret );
+                MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_tls13_write_change_cipher_spec", ret );
                 return( ret );
             }
 
@@ -3961,12 +3959,10 @@ int mbedtls_ssl_tls13_handshake_server_step( mbedtls_ssl_context *ssl )
 
 #if defined(MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE)
         case MBEDTLS_SSL_SERVER_CCS_AFTER_SERVER_HELLO:
-
-            ret = mbedtls_ssl_tls13_write_change_cipher_spec_process(ssl);
-
+            ret = mbedtls_ssl_tls13_write_change_cipher_spec(ssl);
             if( ret != 0 )
             {
-                MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_tls13_write_change_cipher_spec_process", ret );
+                MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_tls13_write_change_cipher_spec", ret );
                 return( ret );
             }
 

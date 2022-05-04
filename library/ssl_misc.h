@@ -651,6 +651,11 @@ struct mbedtls_ssl_handshake_params
 #endif /* MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE */
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
 
+#if defined(MBEDTLS_SSL_CLI_C)
+    /*!<  Number of Hello Retry Request messages received from the server.  */
+    int hello_retry_request_count;
+#endif /* MBEDTLS_SSL_CLI_C */
+
 #if defined(MBEDTLS_SSL_PROTO_TLS1_2) && \
     defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
     mbedtls_ssl_sig_hash_set_t hash_algs;             /*!<  Set of suitable sig-hash pairs */
@@ -745,23 +750,19 @@ struct mbedtls_ssl_handshake_params
 
     } buffering;
 
-#if (defined(MBEDTLS_SSL_PROTO_DTLS) || defined(MBEDTLS_SSL_PROTO_TLS1_3))
-   /* Prior to TLS 1.3 cookies were only used with DTLS. In TLS 1.3 a cookie
-    * mechanism has been introduced.
-    */
-
-    unsigned char* verify_cookie;       /*!<  Cli: HelloVerifyRequest cookie
-                                          Srv: unused                    */
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3)
-    size_t verify_cookie_len;
-#else
-    unsigned char verify_cookie_len;    /*!<  Cli: cookie length
-                                              Srv: flag for sending a cookie */
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
+#if defined(MBEDTLS_SSL_PROTO_DTLS) || defined(MBEDTLS_SSL_PROTO_TLS1_3)
+    unsigned char *verify_cookie;       /*!<  Cli: HelloVerifyRequest cookie
+                                         *    for dtls / tls 1.3
+                                         *    Srv: unused                    */
+    uint16_t verify_cookie_len;         /*!<  Cli: cookie length for
+                                         *    dtls / tls 1.3
+                                         *    Srv: flag for sending a cookie */
 #endif /* MBEDTLS_SSL_PROTO_DTLS || MBEDTLS_SSL_PROTO_TLS1_3 */
+
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
     unsigned int out_msg_seq;           /*!<  Outgoing handshake sequence number */
     unsigned int in_msg_seq;            /*!<  Incoming handshake sequence number */
+
     uint32_t retransmit_timeout;        /*!<  Current value of timeout       */
     mbedtls_ssl_flight_item *flight;    /*!<  Current outgoing flight        */
     mbedtls_ssl_flight_item *cur_msg;   /*!<  Current message in flight      */
@@ -1376,7 +1377,7 @@ int mbedtls_ssl_tls13_read_certificate_process(mbedtls_ssl_context* ssl);
 int mbedtls_ssl_tls13_write_certificate_process(mbedtls_ssl_context* ssl);
 
 #if defined(MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE)
-int mbedtls_ssl_tls13_write_change_cipher_spec_process( mbedtls_ssl_context* ssl );
+int mbedtls_ssl_tls13_write_change_cipher_spec( mbedtls_ssl_context *ssl );
 #endif  /* MBEDTLS_SSL_PROTO_TLS1_3 && MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE */
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
 
@@ -1425,8 +1426,6 @@ int mbedtls_ssl_tls13_populate_transform( mbedtls_ssl_transform *transform,
 int mbedtls_ssl_mps_hs_consume_full_hs_msg( mbedtls_ssl_context *ssl );
 
 int mbedtls_ssl_mps_remap_error( int ret );
-
-int mbedtls_ssl_reset_transcript_for_hrr( mbedtls_ssl_context *ssl );
 
 int mbedtls_ssl_tls13_write_encrypted_extension(mbedtls_ssl_context* ssl);
 
@@ -1791,7 +1790,8 @@ void mbedtls_ssl_update_out_pointers( mbedtls_ssl_context *ssl,
 void mbedtls_ssl_update_in_pointers( mbedtls_ssl_context *ssl );
 
 int mbedtls_ssl_session_reset_int( mbedtls_ssl_context *ssl, int partial );
-void mbedtls_ssl_session_reset_msg_layer( mbedtls_ssl_context *ssl, int partial );
+void mbedtls_ssl_session_reset_msg_layer( mbedtls_ssl_context *ssl,
+                                          int partial );
 
 /*
  * Send pending alert
@@ -2278,6 +2278,8 @@ void mbedtls_ssl_tls13_add_hs_msg_to_checksum( mbedtls_ssl_context *ssl,
                                                unsigned hs_type,
                                                unsigned char const *msg,
                                                size_t msg_len );
+
+int mbedtls_ssl_reset_transcript_for_hrr( mbedtls_ssl_context *ssl );
 
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
 

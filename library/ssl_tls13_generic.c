@@ -1536,23 +1536,7 @@ static int ssl_tls13_write_change_cipher_spec_coordinate( mbedtls_ssl_context *s
     return( ret );
 }
 
-#if !defined(MBEDTLS_SSL_USE_MPS)
-static int ssl_tls13_write_change_cipher_spec_body( mbedtls_ssl_context *ssl,
-                                                    unsigned char *buf,
-                                                    unsigned char *end,
-                                                    size_t *olen )
-{
-    ((void) ssl);
-
-    MBEDTLS_SSL_CHK_BUF_PTR( buf, end, 1 );
-    buf[0] = 1;
-    *olen = 1;
-
-    return( 0 );
-}
-#endif /* !MBEDTLS_SSL_USE_MPS */
-
-static int ssl_tls13_write_change_cipher_spec_postprocess( mbedtls_ssl_context *ssl )
+static int ssl_tls13_finalize_change_cipher_spec( mbedtls_ssl_context *ssl )
 {
 
 #if defined(MBEDTLS_SSL_SRV_C)
@@ -1601,7 +1585,23 @@ static int ssl_tls13_write_change_cipher_spec_postprocess( mbedtls_ssl_context *
     return( 0 );
 }
 
-int mbedtls_ssl_tls13_write_change_cipher_spec_process( mbedtls_ssl_context *ssl )
+#if !defined(MBEDTLS_SSL_USE_MPS)
+static int ssl_tls13_write_change_cipher_spec_body( mbedtls_ssl_context *ssl,
+                                                    unsigned char *buf,
+                                                    unsigned char *end,
+                                                    size_t *olen )
+{
+    ((void) ssl);
+
+    MBEDTLS_SSL_CHK_BUF_PTR( buf, end, 1 );
+    buf[0] = 1;
+    *olen = 1;
+
+    return( 0 );
+}
+#endif /* !MBEDTLS_SSL_USE_MPS */
+
+int mbedtls_ssl_tls13_write_change_cipher_spec( mbedtls_ssl_context *ssl )
 {
     int ret;
 
@@ -1616,7 +1616,7 @@ int mbedtls_ssl_tls13_write_change_cipher_spec_process( mbedtls_ssl_context *ssl
         MBEDTLS_SSL_PROC_CHK( mbedtls_mps_flush( &ssl->mps->l4 ) );
         MBEDTLS_SSL_PROC_CHK( mbedtls_mps_write_ccs( &ssl->mps->l4 ) );
         MBEDTLS_SSL_PROC_CHK( mbedtls_mps_dispatch( &ssl->mps->l4 ) );
-        MBEDTLS_SSL_PROC_CHK( ssl_tls13_write_change_cipher_spec_postprocess( ssl ) );
+        MBEDTLS_SSL_PROC_CHK( ssl_tls13_finalize_change_cipher_spec( ssl ) );
 
 #else /* MBEDTLS_SSL_USE_MPS */
         /* Make sure we can write a new message. */
@@ -1631,7 +1631,7 @@ int mbedtls_ssl_tls13_write_change_cipher_spec_process( mbedtls_ssl_context *ssl
         ssl->out_msgtype = MBEDTLS_SSL_MSG_CHANGE_CIPHER_SPEC;
 
         /* Update state */
-        MBEDTLS_SSL_PROC_CHK( ssl_tls13_write_change_cipher_spec_postprocess( ssl ) );
+        MBEDTLS_SSL_PROC_CHK( ssl_tls13_finalize_change_cipher_spec( ssl ) );
 
         /* Dispatch message */
         MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_write_record( ssl, SSL_FORCE_FLUSH ) );
@@ -1642,7 +1642,7 @@ int mbedtls_ssl_tls13_write_change_cipher_spec_process( mbedtls_ssl_context *ssl
     {
         MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= skip write change cipher spec" ) );
         /* Update state */
-        MBEDTLS_SSL_PROC_CHK( ssl_tls13_write_change_cipher_spec_postprocess( ssl ) );
+        MBEDTLS_SSL_PROC_CHK( ssl_tls13_finalize_change_cipher_spec( ssl ) );
     }
 
 cleanup:
@@ -2708,6 +2708,80 @@ int mbedtls_ecp_tls13_write_group( const mbedtls_ecp_group *grp, size_t *out_len
 }
 
 #endif /* MBEDTLS_ECP_C */
+
+/* Reset SSL context and update hash for handling HRR.
+ *
+ * Replace Transcript-Hash(X) by
+ * Transcript-Hash( message_hash     ||
+ *                 00 00 Hash.length ||
+ *                 X )
+ * A few states of the handshake are preserved, including:
+ *   - session ID
+ *   - session ticket
+ *   - negotiated ciphersuite
+ */
+int mbedtls_ssl_reset_transcript_for_hrr( mbedtls_ssl_context *ssl )
+{
+    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
+    unsigned char hash_transcript[ MBEDTLS_MD_MAX_SIZE + 4 ];
+    size_t hash_len;
+    const mbedtls_ssl_ciphersuite_t *ciphersuite_info;
+    uint16_t cipher_suite = ssl->session_negotiate->ciphersuite;
+    ciphersuite_info = mbedtls_ssl_ciphersuite_from_id( cipher_suite );
+
+    MBEDTLS_SSL_DEBUG_MSG( 3, ( "Reset SSL session for HRR" ) );
+
+    ret = mbedtls_ssl_get_handshake_transcript( ssl, ciphersuite_info->mac,
+                                                hash_transcript + 4,
+                                                MBEDTLS_MD_MAX_SIZE,
+                                                &hash_len );
+    if( ret != 0 )
+    {
+        MBEDTLS_SSL_DEBUG_RET( 4, "mbedtls_ssl_get_handshake_transcript", ret );
+        return( ret );
+    }
+
+    hash_transcript[0] = MBEDTLS_SSL_HS_MESSAGE_HASH;
+    hash_transcript[1] = 0;
+    hash_transcript[2] = 0;
+    hash_transcript[3] = (unsigned char) hash_len;
+
+    hash_len += 4;
+
+    if( ciphersuite_info->mac == MBEDTLS_MD_SHA256 )
+    {
+#if defined(MBEDTLS_SHA256_C)
+        MBEDTLS_SSL_DEBUG_BUF( 4, "Truncated SHA-256 handshake transcript",
+                               hash_transcript, hash_len );
+
+#if defined(MBEDTLS_USE_PSA_CRYPTO)
+        psa_hash_abort( &ssl->handshake->fin_sha256_psa );
+        psa_hash_setup( &ssl->handshake->fin_sha256_psa, PSA_ALG_SHA_256 );
+#else
+        mbedtls_sha256_starts( &ssl->handshake->fin_sha256, 0 );
+#endif
+#endif /* MBEDTLS_SHA256_C */
+    }
+    else if( ciphersuite_info->mac == MBEDTLS_MD_SHA384 )
+    {
+#if defined(MBEDTLS_SHA384_C)
+        MBEDTLS_SSL_DEBUG_BUF( 4, "Truncated SHA-384 handshake transcript",
+                               hash_transcript, hash_len );
+
+#if defined(MBEDTLS_USE_PSA_CRYPTO)
+        psa_hash_abort( &ssl->handshake->fin_sha384_psa );
+        psa_hash_setup( &ssl->handshake->fin_sha384_psa, PSA_ALG_SHA_384 );
+#else
+        mbedtls_sha512_starts( &ssl->handshake->fin_sha512, 1 );
+#endif
+#endif /* MBEDTLS_SHA384_C */
+    }
+
+#if defined(MBEDTLS_SHA256_C) || defined(MBEDTLS_SHA384_C)
+    ssl->handshake->update_checksum( ssl, hash_transcript, hash_len );
+#endif /* MBEDTLS_SHA256_C || MBEDTLS_SHA384_C */
+    return( ret );
+}
 
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
 
