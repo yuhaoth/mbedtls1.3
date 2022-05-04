@@ -582,16 +582,18 @@ print_name() {
 
 # record_outcome <outcome> [<failure-reason>]
 # The test name must be in $NAME.
+# Use $TEST_SUITE_NAME as the test suite name if set.
 record_outcome() {
     echo "$1"
     if [ -n "$MBEDTLS_TEST_OUTCOME_FILE" ]; then
         printf '%s;%s;%s;%s;%s;%s\n' \
                "$MBEDTLS_TEST_PLATFORM" "$MBEDTLS_TEST_CONFIGURATION" \
-               "ssl-opt" "$NAME" \
+               "${TEST_SUITE_NAME:-ssl-opt}" "$NAME" \
                "$1" "${2-}" \
                >>"$MBEDTLS_TEST_OUTCOME_FILE"
     fi
 }
+unset TEST_SUITE_NAME
 
 # True if the presence of the given pattern in a log definitely indicates
 # that the test has failed. False if the presence is inconclusive.
@@ -3648,6 +3650,22 @@ run_test    "CBC Record splitting: TLS 1.2, no splitting" \
 requires_config_disabled MBEDTLS_SSL_PROTO_TLS1_3
 run_test    "Session resume using tickets: basic" \
             "$P_SRV debug_level=3 tickets=1" \
+            "$P_CLI debug_level=3 tickets=1 reconnect=1" \
+            0 \
+            -c "client hello, adding session ticket extension" \
+            -s "found session ticket extension" \
+            -s "server hello, adding session ticket extension" \
+            -c "found session_ticket extension" \
+            -c "parse new session ticket" \
+            -S "session successfully restored from cache" \
+            -s "session successfully restored from ticket" \
+            -s "a session has been resumed" \
+            -c "a session has been resumed"
+
+requires_config_disabled MBEDTLS_SSL_PROTO_TLS1_3
+requires_config_disabled MBEDTLS_USE_PSA_CRYPTO
+run_test    "Session resume using tickets: manual rotation" \
+            "$P_SRV debug_level=3 tickets=1 ticket_rotate=1" \
             "$P_CLI debug_level=3 tickets=1 reconnect=1" \
             0 \
             -c "client hello, adding session ticket extension" \
@@ -10394,7 +10412,6 @@ requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_DEBUG_C
 requires_config_enabled MBEDTLS_SSL_CLI_C
-requires_config_disabled MBEDTLS_USE_PSA_CRYPTO
 run_test    "TLS 1.3: minimal feature sets - openssl" \
             "$O_NEXT_SRV -msg -tls1_3 -num_tickets 0 -no_resume_ephemeral -no_cache" \
             "$P_CLI debug_level=3 min_version=tls13 max_version=tls13" \
@@ -10429,7 +10446,6 @@ requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_DEBUG_C
 requires_config_enabled MBEDTLS_SSL_CLI_C
-requires_config_disabled MBEDTLS_USE_PSA_CRYPTO
 run_test    "TLS 1.3: minimal feature sets - gnutls" \
             "$G_NEXT_SRV --debug=4 --priority=NORMAL:-VERS-ALL:+VERS-TLS1.3:+CIPHER-ALL:%NO_TICKETS --disable-client-cert" \
             "$P_CLI debug_level=3 min_version=tls13 max_version=tls13" \
@@ -10541,7 +10557,6 @@ requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_DEBUG_C
 requires_config_enabled MBEDTLS_SSL_CLI_C
-requires_config_disabled MBEDTLS_USE_PSA_CRYPTO
 requires_openssl_tls1_3
 run_test    "TLS 1.3: HelloRetryRequest check, ciphersuite TLS_AES_128_GCM_SHA256 - openssl" \
             "$O_NEXT_SRV -ciphersuites TLS_AES_128_GCM_SHA256  -sigalgs ecdsa_secp256r1_sha256 -groups P-256 -msg -tls1_3 -num_tickets 0 -no_resume_ephemeral -no_cache" \
@@ -10556,7 +10571,6 @@ requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_DEBUG_C
 requires_config_enabled MBEDTLS_SSL_CLI_C
-requires_config_disabled MBEDTLS_USE_PSA_CRYPTO
 requires_openssl_tls1_3
 run_test    "TLS 1.3: HelloRetryRequest check, ciphersuite TLS_AES_256_GCM_SHA384 - openssl" \
             "$O_NEXT_SRV -ciphersuites TLS_AES_256_GCM_SHA384  -sigalgs ecdsa_secp256r1_sha256 -groups P-256 -msg -tls1_3 -num_tickets 0 -no_resume_ephemeral -no_cache" \
@@ -10573,7 +10587,6 @@ requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_DEBUG_C
 requires_config_enabled MBEDTLS_SSL_CLI_C
-requires_config_disabled MBEDTLS_USE_PSA_CRYPTO
 run_test    "TLS 1.3: HelloRetryRequest check, ciphersuite TLS_AES_128_GCM_SHA256 - gnutls" \
             "$G_NEXT_SRV -d 4 --priority=NONE:+GROUP-SECP256R1:+AES-128-GCM:+SHA256:+AEAD:+SIGN-ECDSA-SECP256R1-SHA256:+VERS-TLS1.3:%NO_TICKETS --disable-client-cert" \
             "$P_CLI debug_level=4 force_version=tls13" \
@@ -10589,7 +10602,6 @@ requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_DEBUG_C
 requires_config_enabled MBEDTLS_SSL_CLI_C
-requires_config_disabled MBEDTLS_USE_PSA_CRYPTO
 run_test    "TLS 1.3: HelloRetryRequest check, ciphersuite TLS_AES_256_GCM_SHA384 - gnutls" \
             "$G_NEXT_SRV -d 4 --priority=NONE:+GROUP-SECP256R1:+AES-256-GCM:+SHA384:+AEAD:+SIGN-ECDSA-SECP256R1-SHA256:+VERS-TLS1.3:%NO_TICKETS --disable-client-cert" \
             "$P_CLI debug_level=4 force_version=tls13" \
@@ -10599,17 +10611,19 @@ run_test    "TLS 1.3: HelloRetryRequest check, ciphersuite TLS_AES_256_GCM_SHA38
             -c "tls13 client state: MBEDTLS_SSL_CLIENT_HELLO" \
             -c "HTTP/1.0 200 OK"
 
-for i in $(ls opt-testcases/*.sh)
+for i in opt-testcases/*.sh
 do
-    . $i
+    TEST_SUITE_NAME=${i##*/}
+    TEST_SUITE_NAME=${TEST_SUITE_NAME%.*}
+    . "$i"
 done
+unset TEST_SUITE_NAME
 
 requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_disabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_DEBUG_C
 requires_config_enabled MBEDTLS_SSL_CLI_C
-requires_config_disabled MBEDTLS_USE_PSA_CRYPTO
 run_test    "TLS 1.3 m->O both peers do not support middlebox compatibility" \
             "$O_NEXT_SRV -msg -tls1_3 -no_middlebox -num_tickets 0 -no_resume_ephemeral -no_cache" \
             "$P_CLI debug_level=3 min_version=tls13 max_version=tls13" \
@@ -10621,7 +10635,6 @@ requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_disabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_DEBUG_C
 requires_config_enabled MBEDTLS_SSL_CLI_C
-requires_config_disabled MBEDTLS_USE_PSA_CRYPTO
 run_test    "TLS 1.3 m->O server with middlebox compat support, not client" \
             "$O_NEXT_SRV -msg -tls1_3 -num_tickets 0 -no_resume_ephemeral -no_cache" \
             "$P_CLI debug_level=3 min_version=tls13 max_version=tls13" \
@@ -10634,7 +10647,6 @@ requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_disabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_DEBUG_C
 requires_config_enabled MBEDTLS_SSL_CLI_C
-requires_config_disabled MBEDTLS_USE_PSA_CRYPTO
 run_test    "TLS 1.3 m->G both peers do not support middlebox compatibility" \
             "$G_NEXT_SRV --priority=NORMAL:-VERS-ALL:+VERS-TLS1.3:+CIPHER-ALL:%NO_TICKETS:%DISABLE_TLS13_COMPAT_MODE --disable-client-cert" \
             "$P_CLI debug_level=3 min_version=tls13 max_version=tls13" \
@@ -10647,7 +10659,6 @@ requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_disabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_DEBUG_C
 requires_config_enabled MBEDTLS_SSL_CLI_C
-requires_config_disabled MBEDTLS_USE_PSA_CRYPTO
 run_test    "TLS 1.3 m->G server with middlebox compat support, not client" \
             "$G_NEXT_SRV --priority=NORMAL:-VERS-ALL:+VERS-TLS1.3:+CIPHER-ALL:%NO_TICKETS --disable-client-cert" \
             "$P_CLI debug_level=3 min_version=tls13 max_version=tls13" \

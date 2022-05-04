@@ -119,6 +119,7 @@ int main( void )
 #define DFL_MFL_CODE            MBEDTLS_SSL_MAX_FRAG_LEN_NONE
 #define DFL_TRUNC_HMAC          -1
 #define DFL_TICKETS             MBEDTLS_SSL_SESSION_TICKETS_ENABLED
+#define DFL_TICKET_ROTATE       0
 #define DFL_TICKET_TIMEOUT      86400
 #define DFL_TICKET_AEAD         MBEDTLS_CIPHER_AES_256_GCM
 #define DFL_CACHE_MAX           -1
@@ -289,6 +290,7 @@ int main( void )
 #if defined(MBEDTLS_SSL_SESSION_TICKETS) || defined(MBEDTLS_SSL_NEW_SESSION_TICKET)
 #define USAGE_TICKETS                                       \
     "    tickets=%%d          default: 1 (enabled)\n"       \
+    "    ticket_rotate=%%d    default: 0 (disabled)\n"      \
     "    ticket_timeout=%%d   default: 86400 (one day)\n"   \
     "    ticket_aead=%%s      default: \"AES-256-GCM\"\n"
 #else
@@ -652,6 +654,7 @@ struct options
     unsigned char mfl_code;     /* code for maximum fragment length         */
     int trunc_hmac;             /* accept truncated hmac?                   */
     int tickets;                /* enable / disable session tickets         */
+    int ticket_rotate;          /* session ticket rotate (code coverage)    */
     int ticket_timeout;         /* session ticket lifetime                  */
 #if defined(MBEDTLS_SSL_NEW_SESSION_TICKET)
     mbedtls_ssl_ticket_flags ticket_flags;   /* ticket flags                */
@@ -1648,6 +1651,7 @@ int main( int argc, char *argv[] )
     opt.mfl_code            = DFL_MFL_CODE;
     opt.trunc_hmac          = DFL_TRUNC_HMAC;
     opt.tickets             = DFL_TICKETS;
+    opt.ticket_rotate       = DFL_TICKET_ROTATE;
     opt.ticket_timeout      = DFL_TICKET_TIMEOUT;
     opt.ticket_aead         = DFL_TICKET_AEAD;
     opt.cache_max           = DFL_CACHE_MAX;
@@ -2050,6 +2054,12 @@ int main( int argc, char *argv[] )
         {
             opt.tickets = atoi( q );
             if( opt.tickets < 0 || opt.tickets > 1 )
+                goto usage;
+        }
+        else if( strcmp( p, "ticket_rotate" ) == 0 )
+        {
+            opt.ticket_rotate = atoi( q );
+            if( opt.ticket_rotate < 0 || opt.ticket_rotate > 1 )
                 goto usage;
         }
         else if( strcmp( p, "ticket_timeout" ) == 0 )
@@ -2964,6 +2974,22 @@ int main( int argc, char *argv[] )
         mbedtls_ssl_conf_session_tickets( &conf, opt.tickets );
 #endif /* MBEDTLS_SSL_NEW_SESSION_TICKET */
 
+        /* exercise manual ticket rotation (not required for typical use)
+         * (used for external synchronization of session ticket encryption keys)
+         */
+        if( opt.ticket_rotate ) {
+            unsigned char kbuf[MBEDTLS_SSL_TICKET_MAX_KEY_BYTES];
+            unsigned char name[MBEDTLS_SSL_TICKET_KEY_NAME_BYTES];
+            if( ( ret = rng_get( &rng, name, sizeof( name ) ) ) != 0 ||
+                ( ret = rng_get( &rng, kbuf, sizeof( kbuf ) ) ) != 0 ||
+                ( ret = mbedtls_ssl_ticket_rotate( &ticket_ctx,
+                        name, sizeof(name), kbuf, sizeof(kbuf),
+                        opt.ticket_timeout ) ) != 0 )
+            {
+                mbedtls_printf( " failed\n  ! mbedtls_ssl_ticket_rotate returned %d\n\n", ret );
+                goto exit;
+            }
+        }
     }
 
 #endif /* MBEDTLS_SSL_SESSION_TICKETS || MBEDTLS_SSL_NEW_SESSION_TICKET */
