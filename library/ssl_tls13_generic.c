@@ -243,6 +243,80 @@ void mbedtls_ssl_tls13_add_hs_hdr_to_checksum( mbedtls_ssl_context *ssl,
 }
 
 #if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
+/* mbedtls_ssl_tls13_parse_sig_alg_ext()
+ *
+ * enum {
+ *    ....
+ *   ecdsa_secp256r1_sha256( 0x0403 ),
+ *   ecdsa_secp384r1_sha384( 0x0503 ),
+ *   ecdsa_secp521r1_sha512( 0x0603 ),
+ *    ....
+ * } SignatureScheme;
+ *
+ * struct {
+ *    SignatureScheme supported_signature_algorithms<2..2^16-2>;
+ * } SignatureSchemeList;
+ */
+int mbedtls_ssl_tls13_parse_sig_alg_ext( mbedtls_ssl_context *ssl,
+                                         const unsigned char *buf,
+                                         const unsigned char *end )
+{
+    const unsigned char *p = buf;
+    size_t supported_sig_algs_len = 0;
+    const unsigned char *supported_sig_algs_end;
+    uint16_t sig_alg;
+    uint32_t common_idx = 0;
+
+    MBEDTLS_SSL_CHK_BUF_READ_PTR( p, end, 2 );
+    supported_sig_algs_len = MBEDTLS_GET_UINT16_BE( p, 0 );
+    p += 2;
+
+    memset( ssl->handshake->received_sig_algs, 0,
+            sizeof(ssl->handshake->received_sig_algs) );
+
+    MBEDTLS_SSL_CHK_BUF_READ_PTR( p, end, supported_sig_algs_len );
+    supported_sig_algs_end = p + supported_sig_algs_len;
+    while( p < supported_sig_algs_end )
+    {
+        MBEDTLS_SSL_CHK_BUF_READ_PTR( p, supported_sig_algs_end, 2 );
+        sig_alg = MBEDTLS_GET_UINT16_BE( p, 0 );
+        p += 2;
+
+        MBEDTLS_SSL_DEBUG_MSG( 4, ( "received signature algorithm: 0x%x",
+                                    sig_alg ) );
+
+        if( ! mbedtls_ssl_sig_alg_is_offered( ssl, sig_alg ) ||
+            ! mbedtls_ssl_sig_alg_is_supported( ssl, sig_alg ) )
+            continue;
+
+        if( common_idx + 1 < MBEDTLS_RECEIVED_SIG_ALGS_SIZE )
+        {
+            ssl->handshake->received_sig_algs[common_idx] = sig_alg;
+            common_idx += 1;
+        }
+    }
+    /* Check that we consumed all the message. */
+    if( p != end )
+    {
+        MBEDTLS_SSL_DEBUG_MSG( 1,
+            ( "Signature algorithms extension length misaligned" ) );
+        MBEDTLS_SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_DECODE_ERROR,
+                                      MBEDTLS_ERR_SSL_DECODE_ERROR );
+        return( MBEDTLS_ERR_SSL_DECODE_ERROR );
+    }
+
+    if( common_idx == 0 )
+    {
+        MBEDTLS_SSL_DEBUG_MSG( 3, ( "no signature algorithm in common" ) );
+        MBEDTLS_SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_HANDSHAKE_FAILURE,
+                                      MBEDTLS_ERR_SSL_HANDSHAKE_FAILURE );
+        return( MBEDTLS_ERR_SSL_HANDSHAKE_FAILURE );
+    }
+
+    ssl->handshake->received_sig_algs[common_idx] = MBEDTLS_TLS1_3_SIG_NONE;
+    return( 0 );
+}
+
 /*
  * STATE HANDLING: Read CertificateVerify
  */
@@ -1652,62 +1726,6 @@ cleanup:
 }
 #endif /* MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE */
 
-#if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
-
-int mbedtls_ssl_tls13_parse_signature_algorithms_ext( mbedtls_ssl_context *ssl,
-                                                      const unsigned char *buf,
-                                                      size_t buf_len )
-{
-    size_t sig_alg_list_size; /* size of receive signature algorithms list */
-    const unsigned char *p; /* pointer to individual signature algorithm */
-    const unsigned char *end = buf + buf_len; /* end of buffer */
-    int signature_scheme; /* store received signature algorithm scheme */
-    uint32_t common_idx = 0; /* iterate through received_signature_schemes_list */
-
-    if( buf_len < 2 )
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad signature_algorithms extension" ) );
-        return( MBEDTLS_ERR_SSL_DECODE_ERROR );
-    }
-
-    sig_alg_list_size = MBEDTLS_GET_UINT16_BE( buf, 0 );
-    if( sig_alg_list_size + 2 != buf_len ||
-        sig_alg_list_size % 2 != 0 )
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad signature_algorithms extension" ) );
-        return( MBEDTLS_ERR_SSL_DECODE_ERROR );
-    }
-    memset( ssl->handshake->received_signature_schemes_list,
-        0, sizeof( ssl->handshake->received_signature_schemes_list ) );
-
-    for( p = buf + 2; p < end && common_idx + 1 < MBEDTLS_SIGNATURE_SCHEMES_SIZE; p += 2 )
-    {
-        signature_scheme = MBEDTLS_GET_UINT16_BE( p, 0 );
-
-        MBEDTLS_SSL_DEBUG_MSG( 4, ( "received signature algorithm: 0x%x", signature_scheme ) );
-
-        if( mbedtls_ssl_sig_alg_is_offered( ssl, signature_scheme ) )
-        {
-            ssl->handshake->received_signature_schemes_list[common_idx] = signature_scheme;
-            common_idx++;
-        }
-    }
-
-    if( common_idx == 0 )
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 3, ( "no signature algorithm in common" ) );
-        MBEDTLS_SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_HANDSHAKE_FAILURE,
-                                      MBEDTLS_ERR_SSL_HANDSHAKE_FAILURE );
-        return( MBEDTLS_ERR_SSL_HANDSHAKE_FAILURE );
-    }
-
-    ssl->handshake->received_signature_schemes_list[common_idx] =
-        MBEDTLS_TLS1_3_SIG_NONE;
-
-    return( 0 );
-}
-#endif /* MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED */
-
 /*
  *
  * STATE HANDLING: Write CertificateVerify
@@ -1855,7 +1873,7 @@ static int ssl_tls13_certificate_verify_write( mbedtls_ssl_context *ssl,
     int ret;
     size_t n = 0;
     unsigned char verify_buffer[ MBEDTLS_SSL_VERIFY_STRUCT_MAX_SIZE ];
-    const int *sig_scheme; /* iterate through configured signature schemes */
+    const uint16_t *sig_algs;
     size_t verify_buffer_len;
     mbedtls_pk_context *own_key;
     size_t own_key_size;
@@ -1920,12 +1938,12 @@ static int ssl_tls13_certificate_verify_write( mbedtls_ssl_context *ssl,
 
     signature_scheme_client = MBEDTLS_TLS1_3_SIG_NONE;
 
-    for( sig_scheme = ssl->handshake->received_signature_schemes_list;
-        *sig_scheme != MBEDTLS_TLS1_3_SIG_NONE; sig_scheme++ )
+    for( sig_algs = ssl->handshake->received_sig_algs;
+        *sig_algs != MBEDTLS_TLS1_3_SIG_NONE; sig_algs++ )
     {
-        if( *sig_scheme == sig_alg )
+        if( *sig_algs == sig_alg )
         {
-            signature_scheme_client = *sig_scheme;
+            signature_scheme_client = sig_alg;
             break;
         }
     }

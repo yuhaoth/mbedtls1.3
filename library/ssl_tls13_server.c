@@ -2050,6 +2050,7 @@ static int ssl_tls13_client_hello_process( mbedtls_ssl_context *ssl )
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> parse client hello" ) );
 
     ssl->major_ver = MBEDTLS_SSL_MAJOR_VERSION_3;
+    ssl->minor_ver = MBEDTLS_SSL_MINOR_VERSION_4;
     MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_tls13_fetch_handshake_msg(
                               ssl, MBEDTLS_SSL_HS_CLIENT_HELLO,
                               &buf, &buflen ) );
@@ -2576,10 +2577,10 @@ static int ssl_tls13_client_hello_parse( mbedtls_ssl_context *ssl,
             case MBEDTLS_TLS_EXT_SIG_ALG:
                 MBEDTLS_SSL_DEBUG_MSG( 3, ( "found signature_algorithms extension" ) );
 
-                ret = mbedtls_ssl_tls13_parse_signature_algorithms_ext( ssl, ext + 4, ext_size );
+                ret = mbedtls_ssl_tls13_parse_sig_alg_ext( ssl, ext + 4, ext + 4 + ext_size );
                 if( ret != 0 )
                 {
-                    MBEDTLS_SSL_DEBUG_MSG( 1, ( "mbedtls_ssl_tls13_parse_signature_algorithms_ext ( %d )", ret ) );
+                    MBEDTLS_SSL_DEBUG_MSG( 1, ( "mbedtls_ssl_tls13_parse_sig_alg_ext ( %d )", ret ) );
                     return( ret );
                 }
                 ssl->handshake->extensions_present |= MBEDTLS_SSL_EXT_SIG_ALG;
