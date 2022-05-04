@@ -1816,9 +1816,10 @@ static int ssl_tls13_write_certificate_verify_coordinate( mbedtls_ssl_context *s
     if( mbedtls_ssl_own_cert( ssl ) == NULL )
         have_own_cert = 0;
 
+#if defined(MBEDTLS_SSL_CLI_C)
     if( ssl->conf->endpoint == MBEDTLS_SSL_IS_CLIENT )
     {
-        if( ssl->client_auth == 0 ||
+        if( ssl->handshake->client_auth == 0 ||
             have_own_cert == 0 ||
             ssl->conf->authmode == MBEDTLS_SSL_VERIFY_NONE )
         {
@@ -1826,14 +1827,16 @@ static int ssl_tls13_write_certificate_verify_coordinate( mbedtls_ssl_context *s
             return( SSL_WRITE_CERTIFICATE_VERIFY_SKIP );
         }
     }
+#endif /* MBEDTLS_SSL_CLI_C */
 
+#if defined(MBEDTLS_SSL_SRV_C)
     if( have_own_cert == 0 &&
-        ssl->client_auth == 1 &&
         ssl->conf->authmode != MBEDTLS_SSL_VERIFY_NONE )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "got no certificate" ) );
         return( MBEDTLS_ERR_SSL_PRIVATE_KEY_REQUIRED );
     }
+#endif /* MBEDTLS_SSL_SRV_C */
 
     /*
      * Check whether the signature scheme corresponds to the key we are using
@@ -2131,7 +2134,7 @@ static int ssl_tls13_write_certificate_coordinate( mbedtls_ssl_context *ssl )
          * client_auth indicates whether the server had requested
          * client authentication.
          */
-        if( ssl->client_auth == 0 )
+        if( ssl->handshake->client_auth == 0 )
         {
             MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= skip write certificate" ) );
             return( SSL_WRITE_CERTIFICATE_SKIP );
