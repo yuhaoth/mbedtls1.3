@@ -589,32 +589,19 @@ static int tls_prf_sha384( const unsigned char *secret, size_t slen,
 #endif /* MBEDTLS_SSL_PROTO_TLS1_2 */
 
 static void ssl_update_checksum_start( mbedtls_ssl_context *, const unsigned char *, size_t );
+static void ssl_update_checksum_sha256( mbedtls_ssl_context *, const unsigned char *, size_t );
+static void ssl_update_checksum_sha384( mbedtls_ssl_context *, const unsigned char *, size_t );
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_2)
 #if defined(MBEDTLS_SHA256_C)
-static void ssl_update_checksum_sha256( mbedtls_ssl_context *, const unsigned char *, size_t );
 static void ssl_calc_verify_tls_sha256( const mbedtls_ssl_context *,unsigned char*, size_t * );
 static void ssl_calc_finished_tls_sha256( mbedtls_ssl_context *,unsigned char *, int );
 #endif
 
 #if defined(MBEDTLS_SHA384_C)
-static void ssl_update_checksum_sha384( mbedtls_ssl_context *, const unsigned char *, size_t );
 static void ssl_calc_verify_tls_sha384( const mbedtls_ssl_context *, unsigned char*, size_t * );
 static void ssl_calc_finished_tls_sha384( mbedtls_ssl_context *, unsigned char *, int );
 #endif
-#endif /* MBEDTLS_SSL_PROTO_TLS1_2 */
-
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3)
-
-#if defined(MBEDTLS_SHA256_C)
-static void ssl_update_checksum_sha256( mbedtls_ssl_context *, const unsigned char *, size_t );
-#endif
-
-#if defined(MBEDTLS_SHA512_C)
-static void ssl_update_checksum_sha384( mbedtls_ssl_context *, const unsigned char *, size_t );
-#endif
-
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
 
 #if defined(MBEDTLS_KEY_EXCHANGE_PSK_ENABLED) && \
     defined(MBEDTLS_USE_PSA_CRYPTO)
@@ -637,6 +624,8 @@ static int ssl_use_opaque_psk( mbedtls_ssl_context const *ssl )
 }
 #endif /* MBEDTLS_USE_PSA_CRYPTO &&
           MBEDTLS_KEY_EXCHANGE_PSK_ENABLED */
+
+#endif /* MBEDTLS_SSL_PROTO_TLS1_2 */
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER)
 static mbedtls_tls_prf_types tls_prf_get_type( mbedtls_ssl_tls_prf_cb *tls_prf )
@@ -2469,7 +2458,6 @@ void mbedtls_ssl_optimize_checksum( mbedtls_ssl_context *ssl,
 {
     ((void) ciphersuite_info);
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_2) || defined(MBEDTLS_SSL_PROTO_TLS1_3)
 #if defined(MBEDTLS_SHA384_C)
     if( ciphersuite_info->mac == MBEDTLS_MD_SHA384 )
         ssl->handshake->update_checksum = ssl_update_checksum_sha384;
@@ -2480,17 +2468,14 @@ void mbedtls_ssl_optimize_checksum( mbedtls_ssl_context *ssl,
         ssl->handshake->update_checksum = ssl_update_checksum_sha256;
     else
 #endif
-#endif /* MBEDTLS_SSL_PROTO_TLS1_2 */
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "should never happen" ) );
         return;
     }
 }
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER)
 void mbedtls_ssl_reset_checksum( mbedtls_ssl_context *ssl )
 {
-#if defined(MBEDTLS_SSL_PROTO_TLS1_2)
 #if defined(MBEDTLS_SHA256_C)
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
     psa_hash_abort( &ssl->handshake->fin_sha256_psa );
@@ -2507,68 +2492,11 @@ void mbedtls_ssl_reset_checksum( mbedtls_ssl_context *ssl )
     mbedtls_sha512_starts( &ssl->handshake->fin_sha512, 1 );
 #endif
 #endif
-#endif /* MBEDTLS_SSL_PROTO_TLS1_2 */
 }
-#endif /* defined(MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER) */
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3)
-static void ssl_update_checksum_start_tls13( mbedtls_ssl_context *ssl,
-                                             const unsigned char *buf, size_t len )
+static void ssl_update_checksum_start( mbedtls_ssl_context* ssl,
+                                       const unsigned char* buf, size_t len )
 {
-#if defined(MBEDTLS_SSL_DEBUG_HANDSHAKE_HASHES)
-#if defined(MBEDTLS_SHA256_C)
-    mbedtls_sha256_context sha256_debug;
-#endif /* MBEDTLS_SHA256_C */
-#if defined(MBEDTLS_SHA512_C)
-    mbedtls_sha512_context sha512_debug;
-#endif /* MBEDTLS_SHA512_C */
-    unsigned char padbuf[MBEDTLS_MD_MAX_SIZE];
-#endif /* MBEDTLS_SSL_DEBUG_HANDSHAKE_HASHES */
-
-#if defined(MBEDTLS_SHA256_C)
-    MBEDTLS_SSL_DEBUG_BUF( 4, "Transcript state (before)",
-          (unsigned char*) ssl->handshake->fin_sha256.state, 32 );
-    mbedtls_sha256_update( &ssl->handshake->fin_sha256, buf, len );
-    MBEDTLS_SSL_DEBUG_BUF( 4, "Input to handshake hash", buf, len );
-    MBEDTLS_SSL_DEBUG_BUF( 4, "Transcript state (after)", ( unsigned char* )
-                           ssl->handshake->fin_sha256.state, 32 );
-
-#if defined(MBEDTLS_SSL_DEBUG_HANDSHAKE_HASHES)
-    mbedtls_sha256_init( &sha256_debug );
-    mbedtls_sha256_clone( &sha256_debug, &ssl->handshake->fin_sha256 );
-    mbedtls_sha256_finish( &sha256_debug, padbuf );
-    mbedtls_sha256_free( &sha256_debug );
-    MBEDTLS_SSL_DEBUG_BUF( 4, "SHA-256 handshake hash", (unsigned char*)
-                           padbuf, 32 );
-#endif /* MBEDTLS_SSL_DEBUG_HANDSHAKE_HASHES */
-#endif /* MBEDTLS_SHA256_C */
-
-#if defined(MBEDTLS_SHA512_C)
-    MBEDTLS_SSL_DEBUG_BUF( 4, "Transcript state (before)", (unsigned char*)
-                           ssl->handshake->fin_sha512.state, 48 );
-    mbedtls_sha512_update( &ssl->handshake->fin_sha512, buf, len );
-    MBEDTLS_SSL_DEBUG_BUF( 4, "Input to handshake hash", buf, len );
-    MBEDTLS_SSL_DEBUG_BUF( 4, "Transcript state (after)", ( unsigned char* )
-                           ssl->handshake->fin_sha512.state, 48 );
-
-#if defined(MBEDTLS_SSL_DEBUG_HANDSHAKE_HASHES)
-    mbedtls_sha512_init( &sha512_debug );
-    mbedtls_sha512_starts( &sha512_debug, 1 );
-    mbedtls_sha512_clone( &sha512_debug, &ssl->handshake->fin_sha512 );
-    mbedtls_sha512_finish( &sha512_debug, padbuf );
-    mbedtls_sha512_free( &sha512_debug );
-    MBEDTLS_SSL_DEBUG_BUF( 4, "SHA-384 handshake hash", ( unsigned char* )
-                           padbuf, 48 );
-#endif /* MBEDTLS_SSL_DEBUG_HANDSHAKE_HASHES */
-#endif /* MBEDTLS_SHA512_C */
-}
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
-
-#if defined(MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER)
-static void ssl_update_checksum_start_tls12( mbedtls_ssl_context* ssl,
-                                             const unsigned char* buf, size_t len )
-{
-#if defined(MBEDTLS_SSL_PROTO_TLS1_2)
 #if defined(MBEDTLS_SHA256_C)
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
     psa_hash_update( &ssl->handshake->fin_sha256_psa, buf, len );
@@ -2583,12 +2511,10 @@ static void ssl_update_checksum_start_tls12( mbedtls_ssl_context* ssl,
     mbedtls_sha512_update( &ssl->handshake->fin_sha512, buf, len );
 #endif
 #endif
-#endif /* MBEDTLS_SSL_PROTO_TLS1_2 */
 }
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_2)
 #if defined(MBEDTLS_SHA256_C)
-static void ssl_update_checksum_sha256_tls12( mbedtls_ssl_context *ssl,
+static void ssl_update_checksum_sha256( mbedtls_ssl_context *ssl,
                                         const unsigned char *buf, size_t len )
 {
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
@@ -2600,7 +2526,7 @@ static void ssl_update_checksum_sha256_tls12( mbedtls_ssl_context *ssl,
 #endif
 
 #if defined(MBEDTLS_SHA384_C)
-static void ssl_update_checksum_sha384_tls12( mbedtls_ssl_context *ssl,
+static void ssl_update_checksum_sha384( mbedtls_ssl_context *ssl,
                                         const unsigned char *buf, size_t len )
 {
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
@@ -2610,105 +2536,6 @@ static void ssl_update_checksum_sha384_tls12( mbedtls_ssl_context *ssl,
 #endif
 }
 #endif
-#endif /* MBEDTLS_SSL_PROTO_TLS1_2 */
-#endif /* defined(MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER) */
-
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3)
-
-#if defined(MBEDTLS_SHA256_C)
-static void ssl_update_checksum_sha256_tls13( mbedtls_ssl_context* ssl,
-    const unsigned char* buf, size_t len )
-{
-    int ret = 0;
-
-#if defined(MBEDTLS_SSL_DEBUG_HANDSHAKE_HASHES)
-    mbedtls_sha256_context sha256;
-    unsigned char padbuf[32];
-
-#endif /* MBEDTLS_SSL_DEBUG_HANDSHAKE_HASHES */
-
-    if( ( ret = mbedtls_sha256_update( &ssl->handshake->fin_sha256,
-                                           buf,
-                                           len ) ) != 0 )
-    {
-        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_sha256_update", ret );
-        goto exit;
-    }
-    MBEDTLS_SSL_DEBUG_BUF( 4, "Input to handshake hash", buf, len );
-    MBEDTLS_SSL_DEBUG_BUF( 4, "Transcript state", ( unsigned char* )
-        ssl->handshake->fin_sha256.state, 32 );
-
-#if defined(MBEDTLS_SSL_DEBUG_HANDSHAKE_HASHES)
-    mbedtls_sha256_init( &sha256 );
-    mbedtls_sha256_clone( &sha256, &ssl->handshake->fin_sha256 );
-
-    if( ( ret = mbedtls_sha256_finish( &sha256,
-                                           padbuf ) ) != 0 )
-    {
-        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_sha256_finish", ret );
-        goto exit;
-    }
-    MBEDTLS_SSL_DEBUG_BUF( 4, "Handshake hash", ( unsigned char* )
-        padbuf, 32 );
-#endif /* MBEDTLS_SSL_DEBUG_HANDSHAKE_HASHES */
-
-
-exit:;
-#if defined(MBEDTLS_SSL_DEBUG_HANDSHAKE_HASHES)
-    mbedtls_sha256_free( &sha256 );
-#endif /* MBEDTLS_SSL_DEBUG_HANDSHAKE_HASHES */
-}
-#endif /* MBEDTLS_SHA256_C */
-
-#if defined(MBEDTLS_SHA512_C)
-static void ssl_update_checksum_sha384_tls13( mbedtls_ssl_context* ssl,
-    const unsigned char* buf, size_t len )
-{
-    int ret = 0;
-
-#if defined(MBEDTLS_SSL_DEBUG_HANDSHAKE_HASHES)
-    mbedtls_sha512_context sha512;
-    unsigned char padbuf[48];
-#endif /* MBEDTLS_SSL_DEBUG_HANDSHAKE_HASHES */
-
-    if( ( ret = mbedtls_sha512_update( &ssl->handshake->fin_sha512,
-                                           buf,
-                                           len ) ) != 0 )
-    {
-        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_sha512_update", ret );
-        goto exit;
-    }
-    MBEDTLS_SSL_DEBUG_BUF( 4, "Input to handshake hash", buf, len );
-    MBEDTLS_SSL_DEBUG_BUF( 4, "Transcript hash", ( unsigned char* )
-        ssl->handshake->fin_sha512.state, 48 );
-
-#if defined(MBEDTLS_SSL_DEBUG_HANDSHAKE_HASHES)
-    mbedtls_sha512_init( &sha512 );
-
-    if( ( ret = mbedtls_sha512_starts( &sha512, 1 ) ) != 0 )
-    {
-        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_sha512_starts", ret );
-        goto exit;
-    }
-
-    mbedtls_sha512_clone( &sha512, &ssl->handshake->fin_sha512 );
-
-    if( ( ret = mbedtls_sha512_finish( &sha512, padbuf ) ) != 0 )
-    {
-        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_sha512_finish", ret );
-        goto exit;
-    }
-    MBEDTLS_SSL_DEBUG_BUF( 4, "Handshake hash", ( unsigned char* )padbuf, 48 );
-#endif /* MBEDTLS_SSL_DEBUG_HANDSHAKE_HASHES */
-
-exit:;
-#if defined(MBEDTLS_SSL_DEBUG_HANDSHAKE_HASHES)
-    mbedtls_sha512_free( &sha512);
-#endif /* MBEDTLS_SSL_DEBUG_HANDSHAKE_HASHES */
-}
-#endif /* MBEDTLS_SHA512_C */
-
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER)
 
@@ -3157,7 +2984,6 @@ static void ssl_handshake_params_init( mbedtls_ssl_handshake_params *handshake )
 {
     memset( handshake, 0, sizeof( mbedtls_ssl_handshake_params ) );
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_2) || defined(MBEDTLS_SSL_PROTO_TLS1_3)
 #if defined(MBEDTLS_SHA256_C)
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
     handshake->fin_sha256_psa = psa_hash_operation_init();
@@ -3176,7 +3002,6 @@ static void ssl_handshake_params_init( mbedtls_ssl_handshake_params *handshake )
     mbedtls_sha512_starts( &handshake->fin_sha512, 1 );
 #endif
 #endif
-#endif /* MBEDTLS_SSL_PROTO_TLS1_2 || MBEDTLS_SSL_PROTO_TLS1_3 */
 
     handshake->update_checksum = ssl_update_checksum_start;
 
@@ -6563,22 +6388,20 @@ void mbedtls_ssl_handshake_free( mbedtls_ssl_context *ssl )
     }
 #endif /* MBEDTLS_SSL_ASYNC_PRIVATE */
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_2)
 #if defined(MBEDTLS_SHA256_C)
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
     psa_hash_abort( &handshake->fin_sha256_psa );
 #else
-    mbedtls_sha256_free(   &handshake->fin_sha256    );
+    mbedtls_sha256_free( &handshake->fin_sha256 );
 #endif
 #endif
 #if defined(MBEDTLS_SHA384_C)
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
     psa_hash_abort( &handshake->fin_sha384_psa );
 #else
-    mbedtls_sha512_free(   &handshake->fin_sha512    );
+    mbedtls_sha512_free( &handshake->fin_sha512 );
 #endif
 #endif
-#endif /* MBEDTLS_SSL_PROTO_TLS1_2 */
 
 #if defined(MBEDTLS_DHM_C)
     mbedtls_dhm_free( &handshake->dhm_ctx );
@@ -8319,75 +8142,6 @@ exit:
 #endif /* MBEDTLS_USE_PSA_CRYPTO */
 
 #endif /* MBEDTLS_SSL_PROTO_TLS1_2 */
-
-#if defined(MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER) && defined(MBEDTLS_SSL_PROTO_TLS1_3)
-static void ssl_update_checksum_start( mbedtls_ssl_context* ssl,
-                                       const unsigned char* buf, size_t len )
-{
-    if( ssl->minor_ver==MBEDTLS_SSL_MINOR_VERSION_4 )
-        ssl_update_checksum_start_tls13( ssl, buf, len );
-    else
-        ssl_update_checksum_start_tls12( ssl, buf, len );
-}
-
-static void ssl_update_checksum_sha384( mbedtls_ssl_context* ssl,
-                                       const unsigned char* buf, size_t len )
-{
-    if( ssl->minor_ver==MBEDTLS_SSL_MINOR_VERSION_4 )
-        ssl_update_checksum_sha384_tls13( ssl, buf, len );
-    else
-        ssl_update_checksum_sha384_tls12( ssl, buf, len );
-}
-
-static void ssl_update_checksum_sha256( mbedtls_ssl_context* ssl,
-                                        const unsigned char* buf, size_t len )
-{
-    if( ssl->minor_ver==MBEDTLS_SSL_MINOR_VERSION_4 )
-        ssl_update_checksum_sha256_tls13( ssl, buf, len );
-    else
-        ssl_update_checksum_sha256_tls12( ssl, buf, len );
-}
-
-#elif defined(MBEDTLS_SSL_PROTO_TLS1_3)
-static void ssl_update_checksum_start( mbedtls_ssl_context* ssl,
-                                       const unsigned char* buf, size_t len )
-{
-    ssl_update_checksum_start_tls13( ssl, buf, len );
-}
-
-static void ssl_update_checksum_sha384( mbedtls_ssl_context* ssl,
-                                        const unsigned char* buf, size_t len )
-{
-    ssl_update_checksum_sha384_tls13( ssl, buf, len );
-}
-
-static void ssl_update_checksum_sha256( mbedtls_ssl_context* ssl,
-                                        const unsigned char* buf, size_t len )
-{
-    ssl_update_checksum_sha256_tls13( ssl, buf, len );
-}
-
-#elif defined(MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER)
-static void ssl_update_checksum_start( mbedtls_ssl_context* ssl,
-                                       const unsigned char* buf, size_t len )
-{
-    ssl_update_checksum_start_tls12( ssl, buf, len );
-}
-
-static void ssl_update_checksum_sha384( mbedtls_ssl_context* ssl,
-                                       const unsigned char* buf, size_t len )
-{
-    ssl_update_checksum_sha384_tls12( ssl, buf, len );
-}
-
-static void ssl_update_checksum_sha256( mbedtls_ssl_context* ssl,
-                                       const unsigned char* buf, size_t len )
-{
-    ssl_update_checksum_sha256_tls12( ssl, buf, len );
-}
-
-
-#endif /* MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER && MBEDTLS_SSL_PROTO_TLS1_3 */
 
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
 int mbedtls_ssl_get_handshake_transcript( mbedtls_ssl_context *ssl,

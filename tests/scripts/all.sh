@@ -2333,7 +2333,7 @@ component_test_tls13 () {
     scripts/config.py   set MBEDTLS_SSL_USE_MPS
     scripts/config.py   set MBEDTLS_RSA_C
     scripts/config.py   set MBEDTLS_X509_RSASSA_PSS_SUPPORT
-    scripts/config.pl   set MBEDTLS_SSL_CID_TLS1_3_PADDING_GRANULARITY 1
+    scripts/config.py   set MBEDTLS_SSL_CID_TLS1_3_PADDING_GRANULARITY 1
     cmake CC=gcc CMAKE_BUILD_TYPE=ASanDbg .
     make
 
@@ -2349,6 +2349,8 @@ component_test_tls13_no_mps () {
     scripts/config.py   set MBEDTLS_SSL_PROTO_TLS1_3
     scripts/config.py   set MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
     scripts/config.py unset MBEDTLS_SSL_USE_MPS
+    scripts/config.py   set MBEDTLS_PSA_CRYPTO_C
+    scripts/config.py   set MBEDTLS_USE_PSA_CRYPTO
     scripts/config.py   set MBEDTLS_RSA_C
     scripts/config.py   set MBEDTLS_X509_RSASSA_PSS_SUPPORT
     scripts/config.pl   set MBEDTLS_SSL_CID_TLS1_3_PADDING_GRANULARITY 1
@@ -2382,6 +2384,8 @@ component_test_tls13_no_mps_no_compatibility_mode () {
     scripts/config.py   set MBEDTLS_SSL_PROTO_TLS1_3
     scripts/config.py unset MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
     scripts/config.py unset MBEDTLS_SSL_USE_MPS
+    scripts/config.py   set MBEDTLS_PSA_CRYPTO_C
+    scripts/config.py   set MBEDTLS_USE_PSA_CRYPTO
     scripts/config.py   set MBEDTLS_RSA_C
     scripts/config.py   set MBEDTLS_X509_RSASSA_PSS_SUPPORT
     scripts/config.pl   set MBEDTLS_SSL_CID_TLS1_3_PADDING_GRANULARITY 1
@@ -2415,6 +2419,8 @@ component_test_tls13_no_mps_with_padding () {
     scripts/config.py   set MBEDTLS_SSL_PROTO_TLS1_3
     scripts/config.py   set MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
     scripts/config.py unset MBEDTLS_SSL_USE_MPS
+    scripts/config.py   set MBEDTLS_PSA_CRYPTO_C
+    scripts/config.py   set MBEDTLS_USE_PSA_CRYPTO
     scripts/config.py   set MBEDTLS_RSA_C
     scripts/config.py   set MBEDTLS_X509_RSASSA_PSS_SUPPORT
     scripts/config.pl   set MBEDTLS_SSL_CID_TLS1_3_PADDING_GRANULARITY 1
@@ -2449,6 +2455,8 @@ component_test_tls13_client_only_no_mps () {
     scripts/config.py   set MBEDTLS_SSL_PROTO_TLS1_3
     scripts/config.py   set MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
     scripts/config.py unset MBEDTLS_SSL_USE_MPS
+    scripts/config.py   set MBEDTLS_PSA_CRYPTO_C
+    scripts/config.py   set MBEDTLS_USE_PSA_CRYPTO
     scripts/config.py unset MBEDTLS_SSL_SRV_C
     scripts/config.py   set MBEDTLS_SSL_CLI_C
     scripts/config.py   set MBEDTLS_RSA_C
@@ -2481,6 +2489,8 @@ component_test_tls13_server_only_no_mps () {
     scripts/config.py   set MBEDTLS_SSL_PROTO_TLS1_3
     scripts/config.py   set MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
     scripts/config.py unset MBEDTLS_SSL_USE_MPS
+    scripts/config.py   set MBEDTLS_PSA_CRYPTO_C
+    scripts/config.py   set MBEDTLS_USE_PSA_CRYPTO
     scripts/config.py   set MBEDTLS_SSL_SRV_C
     scripts/config.py unset MBEDTLS_SSL_CLI_C
     scripts/config.py   set MBEDTLS_RSA_C
