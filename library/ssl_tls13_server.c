@@ -19,12 +19,10 @@
 
 #include "common.h"
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3)
+#if defined(MBEDTLS_SSL_SRV_C) && defined(MBEDTLS_SSL_PROTO_TLS1_3)
 
 #define SSL_DONT_FORCE_FLUSH 0
 #define SSL_FORCE_FLUSH      1
-
-#if defined(MBEDTLS_SSL_SRV_C)
 
 #include "mbedtls/debug.h"
 #include "mbedtls/ssl.h"
@@ -4092,6 +4090,4 @@ int mbedtls_ssl_tls13_handshake_server_step( mbedtls_ssl_context *ssl )
     return( ret );
 }
 
-#endif /* MBEDTLS_SSL_SRV_C */
-
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
+#endif /* MBEDTLS_SSL_SRV_C && MBEDTLS_SSL_PROTO_TLS1_3 */
