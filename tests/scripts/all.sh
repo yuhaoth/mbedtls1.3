@@ -2327,15 +2327,14 @@ component_test_malloc_0_null () {
 }
 
 component_test_tls13 () {
-    msg "build: TLS 1.3 (ASanDbg) "
-    scripts/config.py   set MBEDTLS_SSL_PROTO_TLS1_3
-    scripts/config.py   set MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
+    msg "build: TLS 1.3"
     scripts/config.py   set MBEDTLS_SSL_USE_MPS
-    scripts/config.py   set MBEDTLS_RSA_C
-    scripts/config.py   set MBEDTLS_X509_RSASSA_PSS_SUPPORT
+    scripts/config.py   set MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
     scripts/config.py   set MBEDTLS_SSL_CID_TLS1_3_PADDING_GRANULARITY 1
-    cmake CC=gcc CMAKE_BUILD_TYPE=ASanDbg .
-    make
+    scripts/config.py unset MBEDTLS_USE_PSA_CRYPTO
+
+    CFLAGS="'-DMBEDTLS_USER_CONFIG_FILE=\"../tests/configs/tls13-only.h\"'"
+    make CFLAGS="$CFLAGS $ASAN_CFLAGS" LDFLAGS="$ASAN_CFLAGS"
 
     msg "test: TLS 1.3 compat.sh"
     if_build_succeeded tests/compat.sh -m tls13 -t ECDSA
@@ -2345,17 +2344,14 @@ component_test_tls13 () {
 }
 
 component_test_tls13_no_mps () {
-    msg "build: TLS 1.3 without MPS (ASanDbg) "
-    scripts/config.py   set MBEDTLS_SSL_PROTO_TLS1_3
-    scripts/config.py   set MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
+    msg "build: TLS 1.3 without MPS"
     scripts/config.py unset MBEDTLS_SSL_USE_MPS
-    scripts/config.py   set MBEDTLS_PSA_CRYPTO_C
+    scripts/config.py   set MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
+    scripts/config.py   set MBEDTLS_SSL_CID_TLS1_3_PADDING_GRANULARITY 1
     scripts/config.py   set MBEDTLS_USE_PSA_CRYPTO
-    scripts/config.py   set MBEDTLS_RSA_C
-    scripts/config.py   set MBEDTLS_X509_RSASSA_PSS_SUPPORT
-    scripts/config.pl   set MBEDTLS_SSL_CID_TLS1_3_PADDING_GRANULARITY 1
-    cmake CC=gcc CMAKE_BUILD_TYPE=ASanDbg .
-    make
+
+    CFLAGS="'-DMBEDTLS_USER_CONFIG_FILE=\"../tests/configs/tls13-only.h\"'"
+    make CFLAGS="$CFLAGS $ASAN_CFLAGS" LDFLAGS="$ASAN_CFLAGS"
 
     msg "test: TLS 1.3 without MPS compat.sh"
     if_build_succeeded tests/compat.sh -m tls13 -t ECDSA
@@ -2366,14 +2362,13 @@ component_test_tls13_no_mps () {
 
 component_test_tls13_no_compatibility_mode () {
     msg "build: TLS 1.3 (ASanDbg) without TLS 1.2 compatibility mode"
-    scripts/config.py   set MBEDTLS_SSL_PROTO_TLS1_3
-    scripts/config.py unset MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
     scripts/config.py   set MBEDTLS_SSL_USE_MPS
-    scripts/config.py   set MBEDTLS_RSA_C
-    scripts/config.py   set MBEDTLS_X509_RSASSA_PSS_SUPPORT
-    scripts/config.pl   set MBEDTLS_SSL_CID_TLS1_3_PADDING_GRANULARITY 1
-    cmake CC=gcc CMAKE_BUILD_TYPE=ASanDbg .
-    make
+    scripts/config.py unset MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
+    scripts/config.py   set MBEDTLS_SSL_CID_TLS1_3_PADDING_GRANULARITY 1
+    scripts/config.py unset MBEDTLS_USE_PSA_CRYPTO
+
+    CFLAGS="'-DMBEDTLS_USER_CONFIG_FILE=\"../tests/configs/tls13-only.h\"'"
+    make CFLAGS="$CFLAGS $ASAN_CFLAGS" LDFLAGS="$ASAN_CFLAGS"
 
     msg "test: TLS 1.3 ssl-opt.sh"
     if_build_succeeded tests/ssl-opt.sh -f "TLS 1.3"
@@ -2381,16 +2376,13 @@ component_test_tls13_no_compatibility_mode () {
 
 component_test_tls13_no_mps_no_compatibility_mode () {
     msg "build: TLS 1.3 without MPS (ASanDbg) and without TLS 1.2 compatibility mode"
-    scripts/config.py   set MBEDTLS_SSL_PROTO_TLS1_3
-    scripts/config.py unset MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
     scripts/config.py unset MBEDTLS_SSL_USE_MPS
-    scripts/config.py   set MBEDTLS_PSA_CRYPTO_C
+    scripts/config.py unset MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
+    scripts/config.py   set MBEDTLS_SSL_CID_TLS1_3_PADDING_GRANULARITY 1
     scripts/config.py   set MBEDTLS_USE_PSA_CRYPTO
-    scripts/config.py   set MBEDTLS_RSA_C
-    scripts/config.py   set MBEDTLS_X509_RSASSA_PSS_SUPPORT
-    scripts/config.pl   set MBEDTLS_SSL_CID_TLS1_3_PADDING_GRANULARITY 1
-    cmake CC=gcc CMAKE_BUILD_TYPE=ASanDbg .
-    make
+
+    CFLAGS="'-DMBEDTLS_USER_CONFIG_FILE=\"../tests/configs/tls13-only.h\"'"
+    make CFLAGS="$CFLAGS $ASAN_CFLAGS" LDFLAGS="$ASAN_CFLAGS"
 
     msg "test: TLS 1.3 without MPS ssl-opt.sh"
     if_build_succeeded tests/ssl-opt.sh -f "TLS 1.3"
@@ -2398,14 +2390,13 @@ component_test_tls13_no_mps_no_compatibility_mode () {
 
 component_test_tls13_with_padding () {
     msg "build: TLS 1.3 (ASanDbg) "
-    scripts/config.py   set MBEDTLS_SSL_PROTO_TLS1_3
-    scripts/config.py   set MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
     scripts/config.py   set MBEDTLS_SSL_USE_MPS
-    scripts/config.py   set MBEDTLS_RSA_C
-    scripts/config.py   set MBEDTLS_X509_RSASSA_PSS_SUPPORT
-    scripts/config.pl   set MBEDTLS_SSL_CID_TLS1_3_PADDING_GRANULARITY 16
-    cmake CC=gcc CMAKE_BUILD_TYPE=ASanDbg .
-    make
+    scripts/config.py   set MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
+    scripts/config.py   set MBEDTLS_SSL_CID_TLS1_3_PADDING_GRANULARITY 16
+    scripts/config.py unset MBEDTLS_USE_PSA_CRYPTO
+
+    CFLAGS="'-DMBEDTLS_USER_CONFIG_FILE=\"../tests/configs/tls13-only.h\"'"
+    make CFLAGS="$CFLAGS $ASAN_CFLAGS" LDFLAGS="$ASAN_CFLAGS"
 
     msg "test: TLS 1.3 compat.sh"
     if_build_succeeded tests/compat.sh -m tls13 -t ECDSA
@@ -2416,16 +2407,13 @@ component_test_tls13_with_padding () {
 
 component_test_tls13_no_mps_with_padding () {
     msg "build: TLS 1.3 without MPS (ASanDbg) "
-    scripts/config.py   set MBEDTLS_SSL_PROTO_TLS1_3
-    scripts/config.py   set MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
     scripts/config.py unset MBEDTLS_SSL_USE_MPS
-    scripts/config.py   set MBEDTLS_PSA_CRYPTO_C
+    scripts/config.py   set MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
+    scripts/config.py   set MBEDTLS_SSL_CID_TLS1_3_PADDING_GRANULARITY 16
     scripts/config.py   set MBEDTLS_USE_PSA_CRYPTO
-    scripts/config.py   set MBEDTLS_RSA_C
-    scripts/config.py   set MBEDTLS_X509_RSASSA_PSS_SUPPORT
-    scripts/config.pl   set MBEDTLS_SSL_CID_TLS1_3_PADDING_GRANULARITY 1
-    cmake CC=gcc CMAKE_BUILD_TYPE=ASanDbg .
-    make
+
+    CFLAGS="'-DMBEDTLS_USER_CONFIG_FILE=\"../tests/configs/tls13-only.h\"'"
+    make CFLAGS="$CFLAGS $ASAN_CFLAGS" LDFLAGS="$ASAN_CFLAGS"
 
     msg "test: TLS 1.3 without MPS compat.sh"
     if_build_succeeded tests/compat.sh -m tls13 -t ECDSA
@@ -2436,15 +2424,15 @@ component_test_tls13_no_mps_with_padding () {
 
 component_test_tls13_client_only () {
     msg "build: TLS 1.3 client-only (ASanDbg) "
-    scripts/config.py   set MBEDTLS_SSL_PROTO_TLS1_3
-    scripts/config.py   set MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
     scripts/config.py   set MBEDTLS_SSL_USE_MPS
+    scripts/config.py   set MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
+    scripts/config.py   set MBEDTLS_SSL_CID_TLS1_3_PADDING_GRANULARITY 1
+    scripts/config.py unset MBEDTLS_USE_PSA_CRYPTO
+
     scripts/config.py unset MBEDTLS_SSL_SRV_C
-    scripts/config.py   set MBEDTLS_SSL_CLI_C
-    scripts/config.py   set MBEDTLS_RSA_C
-    scripts/config.py   set MBEDTLS_X509_RSASSA_PSS_SUPPORT
-    cmake CC=gcc CMAKE_BUILD_TYPE=ASanDbg .
-    make
+
+    CFLAGS="'-DMBEDTLS_USER_CONFIG_FILE=\"../tests/configs/tls13-only.h\"'"
+    make CFLAGS="$CFLAGS $ASAN_CFLAGS" LDFLAGS="$ASAN_CFLAGS"
 
     msg "test: TLS 1.3 client-only, ssl-opt.sh"
     if_build_succeeded tests/ssl-opt.sh -f "TLS 1.3"
@@ -2452,17 +2440,15 @@ component_test_tls13_client_only () {
 
 component_test_tls13_client_only_no_mps () {
     msg "build: TLS 1.3 client-only (ASanDbg) "
-    scripts/config.py   set MBEDTLS_SSL_PROTO_TLS1_3
-    scripts/config.py   set MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
     scripts/config.py unset MBEDTLS_SSL_USE_MPS
-    scripts/config.py   set MBEDTLS_PSA_CRYPTO_C
+    scripts/config.py   set MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
+    scripts/config.py   set MBEDTLS_SSL_CID_TLS1_3_PADDING_GRANULARITY 1
     scripts/config.py   set MBEDTLS_USE_PSA_CRYPTO
+
     scripts/config.py unset MBEDTLS_SSL_SRV_C
-    scripts/config.py   set MBEDTLS_SSL_CLI_C
-    scripts/config.py   set MBEDTLS_RSA_C
-    scripts/config.py   set MBEDTLS_X509_RSASSA_PSS_SUPPORT
-    cmake CC=gcc CMAKE_BUILD_TYPE=ASanDbg .
-    make
+
+    CFLAGS="'-DMBEDTLS_USER_CONFIG_FILE=\"../tests/configs/tls13-only.h\"'"
+    make CFLAGS="$CFLAGS $ASAN_CFLAGS" LDFLAGS="$ASAN_CFLAGS"
 
     msg "test: TLS 1.3 client-only, ssl-opt.sh"
     if_build_succeeded tests/ssl-opt.sh -f "TLS 1.3"
@@ -2470,15 +2456,15 @@ component_test_tls13_client_only_no_mps () {
 
 component_test_tls13_server_only () {
     msg "build: TLS 1.3 server-only (ASanDbg) "
-    scripts/config.py   set MBEDTLS_SSL_PROTO_TLS1_3
-    scripts/config.py   set MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
     scripts/config.py   set MBEDTLS_SSL_USE_MPS
-    scripts/config.py   set MBEDTLS_SSL_SRV_C
+    scripts/config.py   set MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
+    scripts/config.py   set MBEDTLS_SSL_CID_TLS1_3_PADDING_GRANULARITY 1
+    scripts/config.py unset MBEDTLS_USE_PSA_CRYPTO
+
     scripts/config.py unset MBEDTLS_SSL_CLI_C
-    scripts/config.py   set MBEDTLS_RSA_C
-    scripts/config.py   set MBEDTLS_X509_RSASSA_PSS_SUPPORT
-    cmake CC=gcc CMAKE_BUILD_TYPE=ASanDbg .
-    make
+
+    CFLAGS="'-DMBEDTLS_USER_CONFIG_FILE=\"../tests/configs/tls13-only.h\"'"
+    make CFLAGS="$CFLAGS $ASAN_CFLAGS" LDFLAGS="$ASAN_CFLAGS"
 
     msg "test: TLS 1.3 server-only, ssl-opt.sh"
     if_build_succeeded tests/ssl-opt.sh -f "TLS 1.3"
@@ -2486,17 +2472,15 @@ component_test_tls13_server_only () {
 
 component_test_tls13_server_only_no_mps () {
     msg "build: TLS 1.3 server-only (ASanDbg) "
-    scripts/config.py   set MBEDTLS_SSL_PROTO_TLS1_3
-    scripts/config.py   set MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
     scripts/config.py unset MBEDTLS_SSL_USE_MPS
-    scripts/config.py   set MBEDTLS_PSA_CRYPTO_C
+    scripts/config.py   set MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
+    scripts/config.py   set MBEDTLS_SSL_CID_TLS1_3_PADDING_GRANULARITY 1
     scripts/config.py   set MBEDTLS_USE_PSA_CRYPTO
-    scripts/config.py   set MBEDTLS_SSL_SRV_C
+
     scripts/config.py unset MBEDTLS_SSL_CLI_C
-    scripts/config.py   set MBEDTLS_RSA_C
-    scripts/config.py   set MBEDTLS_X509_RSASSA_PSS_SUPPORT
-    cmake CC=gcc CMAKE_BUILD_TYPE=ASanDbg .
-    make
+
+    CFLAGS="'-DMBEDTLS_USER_CONFIG_FILE=\"../tests/configs/tls13-only.h\"'"
+    make CFLAGS="$CFLAGS $ASAN_CFLAGS" LDFLAGS="$ASAN_CFLAGS"
 
     msg "test: TLS 1.3 server-only, ssl-opt.sh"
     if_build_succeeded tests/ssl-opt.sh -f "TLS 1.3"

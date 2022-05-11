@@ -1396,6 +1396,11 @@ static void set_transform_pointers()
 
 /* END_HEADER */
 
+/* BEGIN_DEPENDENCIES
+ * depends_on:MBEDTLS_SSL_PROTO_TLS1_3
+ * END_DEPENDENCIES
+ */
+
 /* BEGIN_CASE depends_on:TEST_SUITE_MPS_READER */
 void mbedtls_mps_reader_feed_empty( int option )
 {
@@ -4531,7 +4536,7 @@ void mbedtls_mps_l2_bad_record( int mode,
         if( failure_type != 1 )
             min_ver = MBEDTLS_SSL_MINOR_VERSION_3;
         else
-            min_ver = MBEDTLS_SSL_MINOR_VERSION_1;
+            min_ver = MBEDTLS_SSL_MINOR_VERSION_0;
         if( failure_type != 2 )
             maj_ver = MBEDTLS_SSL_MAJOR_VERSION_3;
         else

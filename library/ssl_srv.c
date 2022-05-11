@@ -48,24 +48,6 @@
 #endif
 
 #if defined(MBEDTLS_SSL_DTLS_HELLO_VERIFY)
-int mbedtls_ssl_set_client_transport_id( mbedtls_ssl_context *ssl,
-                                 const unsigned char *info,
-                                 size_t ilen )
-{
-    if( ssl->conf->endpoint != MBEDTLS_SSL_IS_SERVER )
-        return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
-
-    mbedtls_free( ssl->cli_id );
-
-    if( ( ssl->cli_id = mbedtls_calloc( 1, ilen ) ) == NULL )
-        return( MBEDTLS_ERR_SSL_ALLOC_FAILED );
-
-    memcpy( ssl->cli_id, info, ilen );
-    ssl->cli_id_len = ilen;
-
-    return( 0 );
-}
-
 void mbedtls_ssl_conf_dtls_cookies( mbedtls_ssl_config *conf,
                            mbedtls_ssl_cookie_write_t *f_cookie_write,
                            mbedtls_ssl_cookie_check_t *f_cookie_check,

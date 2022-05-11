@@ -2323,6 +2323,28 @@ void mbedtls_ssl_get_dtls_srtp_negotiation_result( const mbedtls_ssl_context *ss
 }
 #endif /* MBEDTLS_SSL_DTLS_SRTP */
 
+#if ( defined(MBEDTLS_SSL_DTLS_HELLO_VERIFY) || \
+      ( defined(MBEDTLS_SSL_PROTO_TLS1_3) && defined(MBEDTLS_SSL_COOKIE_C) ) ) \
+    && defined(MBEDTLS_SSL_SRV_C)
+int mbedtls_ssl_set_client_transport_id( mbedtls_ssl_context *ssl,
+                                        const unsigned char *info,
+                                        size_t ilen )
+{
+    if( ssl->conf->endpoint != MBEDTLS_SSL_IS_SERVER )
+        return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
+
+    mbedtls_free( ssl->cli_id );
+
+    if( ( ssl->cli_id = mbedtls_calloc( 1, ilen ) ) == NULL )
+        return( MBEDTLS_ERR_SSL_ALLOC_FAILED );
+
+    memcpy( ssl->cli_id, info, ilen );
+    ssl->cli_id_len = ilen;
+
+    return( 0 );
+}
+#endif
+
 void mbedtls_ssl_conf_max_version( mbedtls_ssl_config *conf, int major, int minor )
 {
     conf->max_major_ver = major;

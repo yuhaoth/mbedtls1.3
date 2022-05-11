@@ -69,6 +69,7 @@ void nss_keylog_export( void *p_expkey,
         case MBEDTLS_SSL_KEY_EXPORT_TLS12_MASTER_SECRET:
             strcpy(label, "CLIENT RANDOM ");
             break;
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3)
         case MBEDTLS_SSL_KEY_EXPORT_TLS1_3_CLIENT_EARLY_SECRET:
             strcpy(label, "CLIENT_EARLY_TRAFFIC_SECRET ");
             break;
@@ -87,6 +88,7 @@ void nss_keylog_export( void *p_expkey,
         case MBEDTLS_SSL_KEY_EXPORT_TLS1_3_SERVER_APPLICATION_TRAFFIC_SECRET:
             strcpy(label, "SERVER_TRAFFIC_SECRET_0 ");
             break;
+#endif
     }
     len += sprintf( nss_keylog_line + len,
                     "%s", label );

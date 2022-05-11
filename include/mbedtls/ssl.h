@@ -863,16 +863,12 @@ typedef struct mbedtls_ssl_flight_item mbedtls_ssl_flight_item;
 int mbedtls_ssl_get_early_data_status( mbedtls_ssl_context *ssl );
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3 && MBEDTLS_ZERO_RTT && MBEDTLS_SSL_CLI_C */
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3) && defined(MBEDTLS_SSL_NEW_SESSION_TICKET)
-
 typedef enum
 {
     allow_early_data = 1,
     allow_dhe_resumption = 2,
     allow_psk_resumption = 4,
 } mbedtls_ssl_ticket_flags;
-
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3 && MBEDTLS_SSL_NEW_SESSION_TICKET */
 
 /**
  * \brief          Callback type: server-side session cache getter
@@ -1160,9 +1156,7 @@ typedef struct
     unsigned char client_application_traffic_secret_N[ MBEDTLS_TLS1_3_MD_MAX_SIZE ];
     unsigned char server_application_traffic_secret_N[ MBEDTLS_TLS1_3_MD_MAX_SIZE ];
     unsigned char exporter_master_secret             [ MBEDTLS_TLS1_3_MD_MAX_SIZE ];
-#if defined(MBEDTLS_SSL_NEW_SESSION_TICKET)
     unsigned char resumption_master_secret           [ MBEDTLS_TLS1_3_MD_MAX_SIZE ];
-#endif /* MBEDTLS_SSL_NEW_SESSION_TICKET */
 } mbedtls_ssl_tls13_application_secrets;
 
 #if defined(MBEDTLS_SSL_DTLS_SRTP)

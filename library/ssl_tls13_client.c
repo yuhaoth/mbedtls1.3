@@ -2751,10 +2751,6 @@ int ssl_tls13_write_early_data_process( mbedtls_ssl_context *ssl )
 #endif /* MBEDTLS_SSL_USE_MPS */
 
 #else /* MBEDTLS_ZERO_RTT */
-        ((void) buf);
-        ((void) buf_len);
-        ((void) msg);
-        ((void) msg_len);
         /* Should never happen */
         return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
 
@@ -3796,6 +3792,7 @@ int mbedtls_ssl_tls13_handshake_client_step( mbedtls_ssl_context *ssl )
         /*
          *  <==   NewSessionTicket
          */
+#if defined(MBEDTLS_SSL_NEW_SESSION_TICKET)
         case MBEDTLS_SSL_CLIENT_NEW_SESSION_TICKET:
 
             ret = ssl_tls13_new_session_ticket_process( ssl );
@@ -3804,6 +3801,7 @@ int mbedtls_ssl_tls13_handshake_client_step( mbedtls_ssl_context *ssl )
 
             ret = MBEDTLS_ERR_SSL_RECEIVED_NEW_SESSION_TICKET;
             break;
+#endif
 
         /*
          * Injection of dummy-CCS's for middlebox compatibility

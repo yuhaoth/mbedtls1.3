@@ -943,27 +943,6 @@ static int ssl_tls13_write_server_pre_shared_key_ext( mbedtls_ssl_context *ssl,
 }
 #endif	/* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED  */
 
-
-#if defined(MBEDTLS_SSL_COOKIE_C)
-int mbedtls_ssl_set_client_transport_id( mbedtls_ssl_context *ssl,
-                                        const unsigned char *info,
-                                        size_t ilen )
-{
-    if( ssl->conf->endpoint != MBEDTLS_SSL_IS_SERVER )
-        return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
-
-    mbedtls_free( ssl->cli_id );
-
-    if( ( ssl->cli_id = mbedtls_calloc( 1, ilen ) ) == NULL )
-        return( MBEDTLS_ERR_SSL_ALLOC_FAILED );
-
-    memcpy( ssl->cli_id, info, ilen );
-    ssl->cli_id_len = ilen;
-
-    return( 0 );
-}
-#endif /* MBEDTLS_SSL_COOKIE_C */
-
 #if defined(MBEDTLS_SSL_COOKIE_C)
 void mbedtls_ssl_conf_cookies( mbedtls_ssl_config *conf,
                                mbedtls_ssl_cookie_write_t *f_cookie_write,
@@ -2541,7 +2520,7 @@ static int ssl_tls13_client_hello_parse( mbedtls_ssl_context *ssl,
                     MBEDTLS_SSL_DEBUG_RET( 1, ( "ssl_tls13_parse_max_fragment_length_ext" ), ret );
                     return( ret );
                 }
-                ssl->handshake->extensions_present |= MAX_FRAGMENT_LENGTH_EXTENSION;
+                ssl->handshake->extensions_present |= MBEDTLS_SSL_EXT_MAX_FRAGMENT_LENGTH;
                 break;
 #endif /* MBEDTLS_SSL_MAX_FRAGMENT_LENGTH */
 
@@ -2829,8 +2808,8 @@ static int ssl_tls13_write_max_fragment_length_ext( mbedtls_ssl_context *ssl,
 
     *olen = 0;
 
-    if( ( ssl->handshake->extensions_present & MAX_FRAGMENT_LENGTH_EXTENSION )
-        == 0 )
+    if( ( ssl->handshake->extensions_present &
+          MBEDTLS_SSL_EXT_MAX_FRAGMENT_LENGTH ) == 0 )
     {
         return( 0 );
     }

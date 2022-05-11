@@ -665,7 +665,6 @@ int mbedtls_ssl_tls13_derive_application_secrets(
     return( 0 );
 }
 
-#if defined(MBEDTLS_SSL_NEW_SESSION_TICKET)
 /* Generate resumption_master_secret for use with the ticket exchange.
  *
  * This is not integrated with mbedtls_ssl_tls13_derive_application_secrets()
@@ -743,16 +742,6 @@ int mbedtls_ssl_tls13_generate_resumption_master_secret(
           ( "<= mbedtls_ssl_tls13_generate_resumption_master_secret" ) );
     return( 0 );
 }
-#else /* MBEDTLS_SSL_NEW_SESSION_TICKET */
-int mbedtls_ssl_tls13_generate_resumption_master_secret(
-    mbedtls_ssl_context *ssl )
-{
-    /* Erase master secrets */
-    mbedtls_platform_zeroize( &ssl->handshake->tls13_master_secrets,
-                              sizeof( ssl->handshake->tls13_master_secrets ) );
-    return( 0 );
-}
-#endif /* MBEDTLS_SSL_NEW_SESSION_TICKET */
 
 int mbedtls_ssl_tls13_key_schedule_stage_application(
     mbedtls_ssl_context *ssl )
