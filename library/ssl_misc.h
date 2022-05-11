@@ -192,8 +192,6 @@
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_2)
 
-#define MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER
-
 /* This macro determines whether CBC is supported. */
 #if defined(MBEDTLS_CIPHER_MODE_CBC) &&                               \
     ( defined(MBEDTLS_AES_C)      ||                                  \
@@ -613,17 +611,17 @@ struct mbedtls_ssl_handshake_params
     size_t ecrs_n;                      /*!< place for saving a length      */
 #endif
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER)
-    size_t pmslen;                      /*!<  premaster length        */
-#endif /* defined(MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER) */
+#if defined(MBEDTLS_SSL_PROTO_TLS1_2)
+    size_t pmslen;                      /*!<  premaster length              */
+#endif
 
     mbedtls_ssl_ciphersuite_t const *ciphersuite_info;
 
     void (*update_checksum)(mbedtls_ssl_context *, const unsigned char *, size_t);
-#if defined(MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER)
+#if defined(MBEDTLS_SSL_PROTO_TLS1_2)
     void (*calc_verify)(const mbedtls_ssl_context *, unsigned char *, size_t *);
     void (*calc_finished)(mbedtls_ssl_context *, unsigned char *, int);
-#endif /* defined(MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER) */
+#endif
     mbedtls_ssl_tls_prf_cb *tls_prf;
 
     /*
@@ -957,9 +955,9 @@ struct mbedtls_ssl_handshake_params
 
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER)
-    unsigned char premaster[MBEDTLS_PREMASTER_SIZE];        /*!<  premaster secret        */
-#endif /* defined(MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER) */
+#if defined(MBEDTLS_SSL_PROTO_TLS1_2)
+    unsigned char premaster[MBEDTLS_PREMASTER_SIZE]; /*!<  premaster secret */
+#endif
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3)
     int extensions_present;             /*!< extension presence; Each bitfield
@@ -1393,14 +1391,14 @@ int mbedtls_ssl_tls13_write_change_cipher_spec( mbedtls_ssl_context *ssl );
 #endif  /* MBEDTLS_SSL_PROTO_TLS1_3 && MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE */
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER)
+#if defined(MBEDTLS_SSL_PROTO_TLS1_2)
 int mbedtls_ssl_parse_certificate( mbedtls_ssl_context *ssl );
 int mbedtls_ssl_write_certificate( mbedtls_ssl_context *ssl );
 int mbedtls_ssl_parse_change_cipher_spec( mbedtls_ssl_context *ssl );
 int mbedtls_ssl_write_change_cipher_spec( mbedtls_ssl_context *ssl );
 int mbedtls_ssl_parse_finished( mbedtls_ssl_context *ssl );
 int mbedtls_ssl_write_finished( mbedtls_ssl_context *ssl );
-#endif /* defined(MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER) */
+#endif
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3) && \
     defined(MBEDTLS_ZERO_RTT) && defined(MBEDTLS_SSL_CLI_C)

@@ -5191,7 +5191,7 @@ int mbedtls_ssl_check_pending( const mbedtls_ssl_context *ssl )
     }
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER)
+#if defined(MBEDTLS_SSL_PROTO_TLS1_2)
     /*
      * Case A: We're currently holding back
      * a message for further processing.
@@ -5244,7 +5244,7 @@ int mbedtls_ssl_check_pending( const mbedtls_ssl_context *ssl )
     MBEDTLS_SSL_DEBUG_MSG( 3, ( "ssl_check_pending: nothing pending" ) );
     return( 0 );
 
-#endif /* MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER */
+#endif /* MBEDTLS_SSL_PROTO_TLS1_2 */
 
     return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
 }
@@ -5388,7 +5388,7 @@ static int ssl_check_ctr_renegotiate( mbedtls_ssl_context *ssl )
  * trigger renegotiations. In (D)TLS 1.3, renegotiation has been replaced
  * by a number of specific post-handshake messages.
  */
-#if defined(MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER)
+#if defined(MBEDTLS_SSL_PROTO_TLS1_2)
 static int ssl_handle_hs_message_post_handshake_tls12( mbedtls_ssl_context *ssl );
 #endif
 
@@ -5406,12 +5406,12 @@ static int ssl_handle_hs_message_post_handshake( mbedtls_ssl_context *ssl )
     }
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER)
+#if defined(MBEDTLS_SSL_PROTO_TLS1_2)
     if( ssl->minor_ver <= MBEDTLS_SSL_MINOR_VERSION_3 )
     {
         return( ssl_handle_hs_message_post_handshake_tls12( ssl ) );
     }
-#endif /* MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER */
+#endif /* MBEDTLS_SSL_PROTO_TLS1_2 */
 
     /* Should never happen */
     return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
@@ -5474,7 +5474,7 @@ static int ssl_handle_hs_message_post_handshake_tls13( mbedtls_ssl_context *ssl 
 }
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER)
+#if defined(MBEDTLS_SSL_PROTO_TLS1_2)
 static int ssl_handle_hs_message_post_handshake_tls12( mbedtls_ssl_context *ssl )
 {
     /*
@@ -5597,7 +5597,7 @@ static int ssl_handle_hs_message_post_handshake_tls12( mbedtls_ssl_context *ssl 
 
     return( 0 );
 }
-#endif /* MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER */
+#endif /* MBEDTLS_SSL_PROTO_TLS1_2 */
 
 void mbedtls_ssl_transform_free( mbedtls_ssl_transform *transform )
 {

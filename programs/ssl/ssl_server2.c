@@ -1041,7 +1041,7 @@ void term_handler( int sig )
 }
 #endif
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER)
+#if defined(MBEDTLS_SSL_PROTO_TLS1_2)
 #if defined(MBEDTLS_X509_CRT_PARSE_C)
 static int ssl_sig_hashes_for_test[] = {
 #if defined(MBEDTLS_SHA512_C)
@@ -1059,7 +1059,7 @@ static int ssl_sig_hashes_for_test[] = {
     MBEDTLS_MD_NONE
 };
 #endif /* MBEDTLS_X509_CRT_PARSE_C */
-#endif /* defined(MBEDTLS_SSL_PROTO_TLS1_2_OR_EARLIER) */
+#endif /* defined(MBEDTLS_SSL_PROTO_TLS1_2) */
 
 /** Return true if \p ret is a status code indicating that there is an
  * operation in progress on an SSL connection, and false if it indicates
