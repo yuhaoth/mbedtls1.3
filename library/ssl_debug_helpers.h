@@ -33,6 +33,8 @@
 
 const char *mbedtls_ssl_states_str( mbedtls_ssl_states in );
 
+const char *mbedtls_ssl_protocol_version_str( mbedtls_ssl_protocol_version in );
+
 const char *mbedtls_tls_prf_types_str( mbedtls_tls_prf_types in );
 
 const char *mbedtls_ssl_ticket_flags_str( mbedtls_ssl_ticket_flags in );

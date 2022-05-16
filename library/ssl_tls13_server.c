@@ -3962,13 +3962,13 @@ int mbedtls_ssl_tls13_handshake_server_step( mbedtls_ssl_context *ssl )
             /* ----- WRITE SERVER CERTIFICATE ----*/
 
         case MBEDTLS_SSL_SERVER_CERTIFICATE:
-            ret = mbedtls_ssl_tls13_write_certificate_process( ssl );
+            ret = mbedtls_ssl_tls13_write_certificate( ssl );
             break;
 
             /* ----- WRITE SERVER CERTIFICATE VERIFY ----*/
 
         case MBEDTLS_SSL_CERTIFICATE_VERIFY:
-            ret = mbedtls_ssl_tls13_write_certificate_verify_process( ssl );
+            ret = mbedtls_ssl_tls13_write_certificate_verify( ssl );
             break;
 
             /* ----- WRITE FINISHED ----*/
