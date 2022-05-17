@@ -65,7 +65,7 @@ int main( void )
 #include <windows.h>
 #endif
 
-#if defined(MBEDTLS_USE_PSA_CRYPTO)
+#if defined(MBEDTLS_USE_PSA_CRYPTO) || defined(MBEDTLS_SSL_PROTO_TLS1_3)
 #include "test/psa_crypto_helpers.h"
 #endif
 
@@ -1455,7 +1455,7 @@ int main( int argc, char *argv[] )
     int i;
     char *p, *q;
     const int *list;
-#if defined(MBEDTLS_USE_PSA_CRYPTO)
+#if defined(MBEDTLS_USE_PSA_CRYPTO) || defined(MBEDTLS_SSL_PROTO_TLS1_3)
     psa_status_t status;
 #endif
 #if defined(MBEDTLS_SSL_PROTO_TLS1_2)
@@ -1527,7 +1527,7 @@ int main( int argc, char *argv[] )
     mbedtls_ssl_cookie_init( &cookie_ctx );
 #endif
 
-#if defined(MBEDTLS_USE_PSA_CRYPTO)
+#if defined(MBEDTLS_USE_PSA_CRYPTO) || defined(MBEDTLS_SSL_PROTO_TLS1_3)
     status = psa_crypto_init();
     if( status != PSA_SUCCESS )
     {
@@ -1536,7 +1536,7 @@ int main( int argc, char *argv[] )
         ret = MBEDTLS_ERR_SSL_HW_ACCEL_FAILED;
         goto exit;
     }
-#endif  /* MBEDTLS_USE_PSA_CRYPTO */
+#endif  /* MBEDTLS_USE_PSA_CRYPTO || MBEDTLS_SSL_PROTO_TLS1_3 */
 #if defined(MBEDTLS_PSA_CRYPTO_EXTERNAL_RNG)
     mbedtls_test_enable_insecure_external_rng( );
 #endif  /* MBEDTLS_PSA_CRYPTO_EXTERNAL_RNG */
