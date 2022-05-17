@@ -1438,17 +1438,6 @@ static int ssl_tls13_write_client_hello_body( mbedtls_ssl_context *ssl,
     return( 0 );
 }
 
-static int ssl_tls13_finalize_client_hello( mbedtls_ssl_context *ssl )
-{
-#if defined(MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE)
-    mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_CLIENT_CCS_AFTER_CLIENT_HELLO );
-#else
-    mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_EARLY_APP_DATA );
-#endif /* MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE */
-
-    return( 0 );
-}
-
 static int ssl_tls13_prepare_client_hello( mbedtls_ssl_context *ssl )
 {
     int ret;
@@ -1537,10 +1526,15 @@ static int ssl_tls13_write_client_hello( mbedtls_ssl_context *ssl )
     }
 #endif /* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED */
 
-    MBEDTLS_SSL_PROC_CHK( ssl_tls13_finalize_client_hello( ssl ) );
     MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_tls13_finish_handshake_msg( ssl,
                                                                   buf_len,
                                                                   msg_len ) );
+
+#if defined(MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE)
+    mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_CLIENT_CCS_AFTER_CLIENT_HELLO );
+#else
+    mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_EARLY_APP_DATA );
+#endif /* MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE */
 
 cleanup:
 
@@ -2995,12 +2989,7 @@ static int ssl_tls13_write_end_of_early_data_postprocess( mbedtls_ssl_context *s
         ssl,
         MBEDTLS_SSL_CLIENT_CCS_AFTER_SERVER_FINISHED );
 #else
-#if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
     mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_CLIENT_CERTIFICATE );
-#else
-    mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_CLIENT_FINISHED );
-#endif /* MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED */
-
 #endif /* MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE */
 
     return( 0 );
@@ -3298,27 +3287,12 @@ static int ssl_tls13_process_server_finished( mbedtls_ssl_context *ssl )
 }
 
 /*
- * Handler for MBEDTLS_SSL_CLIENT_CCS_AFTER_SERVER_FINISHED
- */
-#if defined(MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE)
-static int ssl_tls13_write_change_cipher_spec( mbedtls_ssl_context *ssl )
-{
-    int ret;
-
-    ret = mbedtls_ssl_tls13_write_change_cipher_spec( ssl );
-    if( ret != 0 )
-        return( ret );
-
-    return( 0 );
-}
-#endif /* MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE */
-
-#if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
-/*
  * Handler for MBEDTLS_SSL_CLIENT_CERTIFICATE
  */
 static int ssl_tls13_write_client_certificate( mbedtls_ssl_context *ssl )
 {
+    int non_empty_certificate_msg = 0;
+
     MBEDTLS_SSL_DEBUG_MSG( 1,
                   ( "Switch to handshake traffic keys for outbound traffic" ) );
 
@@ -3336,15 +3310,45 @@ static int ssl_tls13_write_client_certificate( mbedtls_ssl_context *ssl )
     mbedtls_ssl_set_outbound_transform( ssl, ssl->handshake->transform_handshake );
 #endif /* MBEDTLS_SSL_USE_MPS */
 
-    return( mbedtls_ssl_tls13_write_certificate( ssl ) );
+#if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
+    if( ssl->handshake->client_auth )
+    {
+        int ret = mbedtls_ssl_tls13_write_certificate( ssl );
+        if( ret != 0 )
+            return( ret );
+
+        if( mbedtls_ssl_own_cert( ssl ) != NULL )
+            non_empty_certificate_msg = 1;
+    }
+    else
+    {
+        MBEDTLS_SSL_DEBUG_MSG( 2, ( "No certificate message to send." ) );
+    }
+#endif
+
+   if( non_empty_certificate_msg )
+   {
+        mbedtls_ssl_handshake_set_state( ssl,
+                                         MBEDTLS_SSL_CLIENT_CERTIFICATE_VERIFY );
+   }
+   else
+        mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_CLIENT_FINISHED );
+
+    return( 0 );
 }
 
+#if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
 /*
  * Handler for MBEDTLS_SSL_CLIENT_CERTIFICATE_VERIFY
  */
 static int ssl_tls13_write_client_certificate_verify( mbedtls_ssl_context *ssl )
 {
-    return( mbedtls_ssl_tls13_write_certificate_verify( ssl ) );
+    int ret = mbedtls_ssl_tls13_write_certificate_verify( ssl );
+
+    if( ret == 0 )
+        mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_CLIENT_FINISHED );
+
+    return( ret );
 }
 #endif /* MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED */
 
@@ -3750,9 +3754,6 @@ int mbedtls_ssl_tls13_handshake_client_step( mbedtls_ssl_context *ssl )
                                 mbedtls_ssl_states_str( ssl->state ),
                                 ssl->state ) );
 
-    if( ( ret = mbedtls_ssl_flush_output( ssl ) ) != 0 )
-        return( ret );
-
     switch( ssl->state )
     {
         case MBEDTLS_SSL_HELLO_REQUEST:
@@ -3815,11 +3816,11 @@ int mbedtls_ssl_tls13_handshake_client_step( mbedtls_ssl_context *ssl )
             ret = ssl_tls13_write_end_of_early_data_process( ssl );
             break;
 
-#if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
         case MBEDTLS_SSL_CLIENT_CERTIFICATE:
             ret = ssl_tls13_write_client_certificate( ssl );
             break;
 
+#if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
         case MBEDTLS_SSL_CLIENT_CERTIFICATE_VERIFY:
             ret = ssl_tls13_write_client_certificate_verify( ssl );
             break;
@@ -3848,9 +3849,21 @@ int mbedtls_ssl_tls13_handshake_client_step( mbedtls_ssl_context *ssl )
          */
 #if defined(MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE)
         case MBEDTLS_SSL_CLIENT_CCS_AFTER_CLIENT_HELLO:
+            ret = mbedtls_ssl_tls13_write_change_cipher_spec( ssl );
+            if( ret == 0 )
+                mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_EARLY_APP_DATA );
+            break;
+
         case MBEDTLS_SSL_CLIENT_CCS_BEFORE_2ND_CLIENT_HELLO:
+            ret = mbedtls_ssl_tls13_write_change_cipher_spec( ssl );
+            if( ret == 0 )
+                mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_CLIENT_HELLO );
+            break;
+
         case MBEDTLS_SSL_CLIENT_CCS_AFTER_SERVER_FINISHED:
-            ret = ssl_tls13_write_change_cipher_spec( ssl );
+            ret = mbedtls_ssl_tls13_write_change_cipher_spec( ssl );
+            if( ret == 0 )
+                mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_CLIENT_CERTIFICATE );
             break;
 #endif /* MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE */
 

@@ -3877,11 +3877,6 @@ int mbedtls_ssl_tls13_handshake_server_step( mbedtls_ssl_context *ssl )
                                 mbedtls_ssl_states_str( ssl->state ),
                                 ssl->state ) );
 
-#if !defined(MBEDTLS_SSL_USE_MPS)
-    if( ( ret = mbedtls_ssl_flush_output( ssl ) ) != 0 )
-        return( ret );
-#endif /* !MBEDTLS_SSL_USE_MPS */
-
     switch( ssl->state )
     {
         /* start state */
