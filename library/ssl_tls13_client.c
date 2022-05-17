@@ -2645,7 +2645,15 @@ static int ssl_tls13_parse_encrypted_extensions( mbedtls_ssl_context *ssl,
 
 static int ssl_tls13_postprocess_encrypted_extensions( mbedtls_ssl_context *ssl )
 {
-    mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_CERTIFICATE_REQUEST );
+#if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
+    if( mbedtls_ssl_tls13_some_psk_enabled( ssl ) )
+        mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_SERVER_FINISHED );
+    else
+        mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_CERTIFICATE_REQUEST );
+#else
+    ((void) ssl);
+    mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_SERVER_FINISHED );
+#endif
     return( 0 );
 }
 
@@ -3357,26 +3365,6 @@ static int ssl_tls13_write_client_certificate_verify( mbedtls_ssl_context *ssl )
  */
 static int ssl_tls13_write_client_finished( mbedtls_ssl_context *ssl )
 {
-    if( !ssl->handshake->client_auth )
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 1,
-                  ( "Switch to handshake traffic keys for outbound traffic" ) );
-#if defined(MBEDTLS_SSL_USE_MPS)
-        {
-            int ret;
-
-            /* Use new transform for outgoing data. */
-            ret = mbedtls_mps_set_outgoing_keys( &ssl->mps->l4,
-                                                 ssl->handshake->epoch_handshake );
-            if( ret != 0 )
-                return( ret );
-        }
-#else
-        mbedtls_ssl_set_outbound_transform( ssl,
-                                            ssl->handshake->transform_handshake );
-#endif /* MBEDTLS_SSL_USE_MPS */
-    }
-
     return( mbedtls_ssl_tls13_write_finished_message( ssl ) );
 }
 
