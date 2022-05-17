@@ -1312,7 +1312,7 @@
  *
  * TODO: Document
  */
-#define MBEDTLS_SSL_USE_MPS
+//#define MBEDTLS_SSL_USE_MPS
 
 /**
  * \def MBEDTLS_SSL_DTLS_CONNECTION_ID
@@ -1528,7 +1528,7 @@
  * effect on the build.
  *
  */
-#define MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
+//#define MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 
 /**
 *  \def MBEDTLS_SSL_EARLY_DATA_MAX_DELAY
@@ -2899,7 +2899,7 @@
  *
  * This module is required for SSL/TLS server support.
  */
-//#define MBEDTLS_SSL_SRV_C
+#define MBEDTLS_SSL_SRV_C
 
 /**
  * \def MBEDTLS_SSL_TLS_C
@@ -3249,7 +3249,7 @@
  * Note: On systems lacking division instructions,
  *       a power of two should be preferred.
  */
-#define MBEDTLS_SSL_CID_TLS1_3_PADDING_GRANULARITY 1
+//#define MBEDTLS_SSL_CID_TLS1_3_PADDING_GRANULARITY 16
 
 /** \def MBEDTLS_SSL_OUT_CONTENT_LEN
  *

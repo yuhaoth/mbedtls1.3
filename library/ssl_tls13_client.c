@@ -151,6 +151,123 @@ static int ssl_tls13_parse_supported_versions_ext( mbedtls_ssl_context *ssl,
     return( 0 );
 }
 
+#if defined(MBEDTLS_SSL_ALPN)
+/*
+ * ssl_tls13_write_alpn_ext() structure:
+ *
+ * opaque ProtocolName<1..2^8-1>;
+ *
+ * struct {
+ *     ProtocolName protocol_name_list<2..2^16-1>
+ * } ProtocolNameList;
+ *
+ */
+static int ssl_tls13_write_alpn_ext( mbedtls_ssl_context *ssl,
+                                     unsigned char *buf,
+                                     const unsigned char *end,
+                                     size_t *out_len )
+{
+    unsigned char *p = buf;
+    size_t alpnlen = 0;
+    const char **cur;
+
+    *out_len = 0;
+
+    if( ssl->conf->alpn_list == NULL )
+    {
+        return( 0 );
+    }
+
+    for ( cur = ssl->conf->alpn_list; *cur != NULL; cur++ )
+        alpnlen += MBEDTLS_BYTE_0( strlen( *cur ) ) + 1;
+
+    if( end < p || (size_t)( end - p ) < 6 + alpnlen )
+    {
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "buffer too small" ) );
+        return( MBEDTLS_ERR_SSL_BUFFER_TOO_SMALL );
+    }
+
+    MBEDTLS_SSL_DEBUG_MSG( 3, ( "client hello, adding alpn extension" ) );
+
+    MBEDTLS_PUT_UINT16_BE( MBEDTLS_TLS_EXT_ALPN, p, 0 );
+    p += 2;
+
+    /*
+     * opaque ProtocolName<1..2^8-1>;
+     *
+     * struct {
+     *     ProtocolName protocol_name_list<2..2^16-1>
+     * } ProtocolNameList;
+     */
+
+    /* Skip writing extension and list length for now */
+    p += 4;
+
+    for ( cur = ssl->conf->alpn_list; *cur != NULL; cur++ )
+    {
+        *p = MBEDTLS_BYTE_0( strlen( *cur ) );
+        memcpy( p + 1, *cur, *p );
+        p += 1 + *p;
+    }
+
+    *out_len = p - buf;
+
+    /* List length = out_len - 2 ( ext_type ) - 2 ( ext_len ) - 2 ( list_len ) */
+    MBEDTLS_PUT_UINT16_BE( *out_len - 6, buf, 4 );
+
+    /* Extension length = out_len - 2 ( ext_type ) - 2 ( ext_len ) */
+    MBEDTLS_PUT_UINT16_BE( *out_len - 4, buf, 2 );
+
+    return( 0 );
+}
+
+static int ssl_tls13_parse_alpn_ext( mbedtls_ssl_context *ssl,
+                                     const unsigned char *buf, size_t len )
+{
+    size_t list_len, name_len;
+    const char **p;
+
+    /* If we didn't send it, the server shouldn't send it */
+    if( ssl->conf->alpn_list == NULL )
+        return( MBEDTLS_ERR_SSL_ILLEGAL_PARAMETER );
+
+    /*
+     * opaque ProtocolName<1..2^8-1>;
+     *
+     * struct {
+     *     ProtocolName protocol_name_list<2..2^16-1>
+     * } ProtocolNameList;
+     *
+     * the "ProtocolNameList" MUST contain exactly one "ProtocolName"
+     */
+
+    /* Min length is 2 ( list_len ) + 1 ( name_len ) + 1 ( name ) */
+    if( len < 4 )
+        return( MBEDTLS_ERR_SSL_DECODE_ERROR );
+
+    list_len = MBEDTLS_GET_UINT16_BE( buf, 0 );
+    if( list_len != len - 2 )
+        return( MBEDTLS_ERR_SSL_DECODE_ERROR );
+
+    name_len = buf[2];
+    if( name_len != list_len - 1 )
+        return( MBEDTLS_ERR_SSL_DECODE_ERROR );
+
+    /* Check that the server chosen protocol was in our list and save it */
+    for ( p = ssl->conf->alpn_list; *p != NULL; p++ )
+    {
+        if( name_len == strlen( *p ) &&
+            memcmp( buf + 3, *p, name_len ) == 0 )
+        {
+            ssl->alpn_chosen = *p;
+            return( 0 );
+        }
+    }
+
+    return( MBEDTLS_ERR_SSL_HANDSHAKE_FAILURE );
+}
+#endif /* MBEDTLS_SSL_ALPN */
+
 #if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
 
 static int ssl_tls13_reset_key_share( mbedtls_ssl_context *ssl )
@@ -723,78 +840,6 @@ static int ssl_tls13_write_max_fragment_length_ext( mbedtls_ssl_context *ssl,
     return( 0 );
 }
 #endif /* MBEDTLS_SSL_MAX_FRAGMENT_LENGTH */
-
-
-#if defined(MBEDTLS_SSL_ALPN)
-/*
- * ssl_tls13_write_alpn_ext() structure:
- *
- * opaque ProtocolName<1..2^8-1>;
- *
- * struct {
- *     ProtocolName protocol_name_list<2..2^16-1>
- * } ProtocolNameList;
- *
- */
-static int ssl_tls13_write_alpn_ext( mbedtls_ssl_context *ssl,
-                                     unsigned char *buf,
-                                     const unsigned char *end,
-                                     size_t *out_len )
-{
-    unsigned char *p = buf;
-    size_t alpnlen = 0;
-    const char **cur;
-
-    *out_len = 0;
-
-    if( ssl->conf->alpn_list == NULL )
-    {
-        return( 0 );
-    }
-
-    for ( cur = ssl->conf->alpn_list; *cur != NULL; cur++ )
-        alpnlen += MBEDTLS_BYTE_0( strlen( *cur ) ) + 1;
-
-    if( end < p || (size_t)( end - p ) < 6 + alpnlen )
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "buffer too small" ) );
-        return( MBEDTLS_ERR_SSL_BUFFER_TOO_SMALL );
-    }
-
-    MBEDTLS_SSL_DEBUG_MSG( 3, ( "client hello, adding alpn extension" ) );
-
-    MBEDTLS_PUT_UINT16_BE( MBEDTLS_TLS_EXT_ALPN, p, 0 );
-    p += 2;
-
-    /*
-     * opaque ProtocolName<1..2^8-1>;
-     *
-     * struct {
-     *     ProtocolName protocol_name_list<2..2^16-1>
-     * } ProtocolNameList;
-     */
-
-    /* Skip writing extension and list length for now */
-    p += 4;
-
-    for ( cur = ssl->conf->alpn_list; *cur != NULL; cur++ )
-    {
-        *p = MBEDTLS_BYTE_0( strlen( *cur ) );
-        memcpy( p + 1, *cur, *p );
-        p += 1 + *p;
-    }
-
-    *out_len = p - buf;
-
-    /* List length = out_len - 2 ( ext_type ) - 2 ( ext_len ) - 2 ( list_len ) */
-    MBEDTLS_PUT_UINT16_BE( *out_len - 6, buf, 4 );
-
-    /* Extension length = out_len - 2 ( ext_type ) - 2 ( ext_len ) */
-    MBEDTLS_PUT_UINT16_BE( *out_len - 4, buf, 2 );
-
-    return( 0 );
-}
-#endif /* MBEDTLS_SSL_ALPN */
 
 #if defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
 /*
@@ -1680,54 +1725,6 @@ int mbedtls_ssl_set_early_data( mbedtls_ssl_context *ssl,
     return( 0 );
 }
 #endif /* MBEDTLS_ZERO_RTT */
-
-#if defined(MBEDTLS_SSL_ALPN)
-static int ssl_tls13_parse_alpn_ext( mbedtls_ssl_context *ssl,
-                                     const unsigned char *buf, size_t len )
-{
-    size_t list_len, name_len;
-    const char **p;
-
-    /* If we didn't send it, the server shouldn't send it */
-    if( ssl->conf->alpn_list == NULL )
-        return( MBEDTLS_ERR_SSL_ILLEGAL_PARAMETER );
-
-    /*
-     * opaque ProtocolName<1..2^8-1>;
-     *
-     * struct {
-     *     ProtocolName protocol_name_list<2..2^16-1>
-     * } ProtocolNameList;
-     *
-     * the "ProtocolNameList" MUST contain exactly one "ProtocolName"
-     */
-
-    /* Min length is 2 ( list_len ) + 1 ( name_len ) + 1 ( name ) */
-    if( len < 4 )
-        return( MBEDTLS_ERR_SSL_DECODE_ERROR );
-
-    list_len = MBEDTLS_GET_UINT16_BE( buf, 0 );
-    if( list_len != len - 2 )
-        return( MBEDTLS_ERR_SSL_DECODE_ERROR );
-
-    name_len = buf[2];
-    if( name_len != list_len - 1 )
-        return( MBEDTLS_ERR_SSL_DECODE_ERROR );
-
-    /* Check that the server chosen protocol was in our list and save it */
-    for ( p = ssl->conf->alpn_list; *p != NULL; p++ )
-    {
-        if( name_len == strlen( *p ) &&
-            memcmp( buf + 3, *p, name_len ) == 0 )
-        {
-            ssl->alpn_chosen = *p;
-            return( 0 );
-        }
-    }
-
-    return( MBEDTLS_ERR_SSL_HANDSHAKE_FAILURE );
-}
-#endif /* MBEDTLS_SSL_ALPN */
 
 /*
  *
