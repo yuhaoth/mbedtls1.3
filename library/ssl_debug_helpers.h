@@ -41,7 +41,7 @@ const char *mbedtls_ssl_ticket_flags_str( mbedtls_ssl_ticket_flags in );
 
 const char *mbedtls_ssl_key_export_type_str( mbedtls_ssl_key_export_type in );
 
-
+const char *mbedtls_ssl_sig_alg_to_str( uint16_t in );
 
 #endif /* MBEDTLS_DEBUG_C */
 
