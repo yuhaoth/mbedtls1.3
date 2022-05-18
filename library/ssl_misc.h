@@ -567,8 +567,6 @@ struct mbedtls_ssl_handshake_params
 {
     /* Frequently-used boolean or byte fields (placed early to take
      * advantage of smaller code size for indirect access on Arm Thumb) */
-    uint8_t max_major_ver;              /*!< max. major version client*/
-    uint8_t max_minor_ver;              /*!< max. minor version client*/
     uint8_t resume;                     /*!<  session resume indicator*/
     uint8_t cli_exts;                   /*!< client extension presence*/
 
@@ -665,9 +663,9 @@ struct mbedtls_ssl_handshake_params
 #endif
 
 /* Adding guard for MBEDTLS_ECDSA_C to ensure no compile errors due
- * to guards also being in ssl_srv.c and ssl_cli.c. There is a gap
- * in functionality that access to ecdh_ctx structure is needed for
- * MBEDTLS_ECDSA_C which does not seem correct.
+ * to guards in client and server code. There is a gap in functionality that
+ * access to ecdh_ctx structure is needed for MBEDTLS_ECDSA_C which does not
+ * seem correct.
  */
 #if defined(MBEDTLS_ECDH_C) || defined(MBEDTLS_ECDSA_C)
     mbedtls_ecdh_context ecdh_ctx;              /*!<  ECDH key exchange       */
@@ -1287,6 +1285,25 @@ int mbedtls_ssl_write_hostname_ext( mbedtls_ssl_context *ssl,
 int mbedtls_ssl_handshake_client_step( mbedtls_ssl_context *ssl );
 int mbedtls_ssl_handshake_server_step( mbedtls_ssl_context *ssl );
 void mbedtls_ssl_handshake_wrapup( mbedtls_ssl_context *ssl );
+static inline void mbedtls_ssl_handshake_set_state( mbedtls_ssl_context *ssl,
+                                                    int state )
+{
+    ssl->state = state;
+
+    /* Note:
+     * This only works as long as all state-local struct members
+     * of mbedtls_ssl_hanshake_params::state_local can be initialized
+     * through zeroization.
+     * Exceptions must be manually checked for here.
+     */
+    if (state != MBEDTLS_SSL_HANDSHAKE_WRAPUP &&
+        state != MBEDTLS_SSL_HANDSHAKE_OVER &&
+        state != MBEDTLS_SSL_FLUSH_BUFFERS)
+    {
+        mbedtls_platform_zeroize( &ssl->handshake->state_local,
+                                  sizeof( ssl->handshake->state_local ) );
+    }
+}
 
 int mbedtls_ssl_send_fatal_handshake_failure( mbedtls_ssl_context *ssl );
 
@@ -1383,6 +1400,12 @@ int mbedtls_ssl_read_record( mbedtls_ssl_context *ssl,
 
 int mbedtls_ssl_fetch_input(mbedtls_ssl_context* ssl, size_t nb_want);
 
+/*
+ * Write handshake message header
+ */
+int mbedtls_ssl_start_handshake_msg( mbedtls_ssl_context *ssl, unsigned hs_type,
+                                     unsigned char **buf, size_t *buf_len );
+
 int mbedtls_ssl_write_handshake_msg_ext( mbedtls_ssl_context *ssl,
                                          int update_checksum,
                                          int force_flush );
@@ -1390,6 +1413,11 @@ static inline int mbedtls_ssl_write_handshake_msg( mbedtls_ssl_context *ssl )
 {
     return( mbedtls_ssl_write_handshake_msg_ext( ssl, 1 /* update checksum */, 1 /* force flush */ ) );
 }
+/*
+ * Write handshake message tail
+ */
+int mbedtls_ssl_finish_handshake_msg( mbedtls_ssl_context *ssl,
+                                      size_t buf_len, size_t msg_len );
 
 #if !defined(MBEDTLS_SSL_USE_MPS)
 int mbedtls_ssl_write_record( mbedtls_ssl_context *ssl, int force_flush );
@@ -1494,8 +1522,20 @@ int mbedtls_ssl_tls13_parse_client_psk_identity_ext(
 void mbedtls_ssl_optimize_checksum( mbedtls_ssl_context *ssl,
                             const mbedtls_ssl_ciphersuite_t *ciphersuite_info );
 
+/*
+ * Update checksum of handshake messages.
+ */
+void mbedtls_ssl_add_hs_hdr_to_checksum( mbedtls_ssl_context *ssl,
+                                         unsigned hs_type,
+                                         size_t total_hs_len );
+void mbedtls_ssl_add_hs_msg_to_checksum( mbedtls_ssl_context *ssl,
+                                         unsigned hs_type,
+                                         unsigned char const *msg,
+                                         size_t msg_len );
+
 #if defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
-int mbedtls_ssl_psk_derive_premaster( mbedtls_ssl_context *ssl, mbedtls_key_exchange_type_t key_ex );
+int mbedtls_ssl_psk_derive_premaster( mbedtls_ssl_context *ssl,
+                                      mbedtls_key_exchange_type_t key_ex );
 
 /**
  * Get the first properly defined PSK by order of precedence:
@@ -1618,7 +1658,10 @@ mbedtls_pk_type_t mbedtls_ssl_pk_alg_from_sig( unsigned char sig );
 
 mbedtls_md_type_t mbedtls_ssl_md_alg_from_hash( unsigned char hash );
 unsigned char mbedtls_ssl_hash_from_md_alg( int md );
+
+#if defined(MBEDTLS_SSL_PROTO_TLS1_2)
 int mbedtls_ssl_set_calc_verify_md( mbedtls_ssl_context *ssl, int md );
+#endif
 
 int mbedtls_ssl_check_curve_tls_id( const mbedtls_ssl_context *ssl, uint16_t tls_id );
 #if defined(MBEDTLS_ECP_C)
@@ -2230,39 +2273,10 @@ static inline int mbedtls_ssl_tls13_some_psk_enabled( mbedtls_ssl_context *ssl )
                    MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_ALL ) );
 }
 
-
-static inline void mbedtls_ssl_handshake_set_state( mbedtls_ssl_context *ssl,
-                                                    int state )
-{
-    ssl->state = state;
-
-    /* Note:
-     * This only works as long as all state-local struct members
-     * of mbedtls_ssl_hanshake_params::state_local can be initialized
-     * through zeroization.
-     * Exceptions must be manually checked for here.
-     */
-    if (state != MBEDTLS_SSL_HANDSHAKE_WRAPUP &&
-        state != MBEDTLS_SSL_HANDSHAKE_OVER &&
-        state != MBEDTLS_SSL_FLUSH_BUFFERS)
-    {
-        mbedtls_platform_zeroize( &ssl->handshake->state_local,
-                                  sizeof( ssl->handshake->state_local ) );
-    }
-}
-
 /*
  * Fetch TLS 1.3 handshake message header
  */
 int mbedtls_ssl_tls13_fetch_handshake_msg( mbedtls_ssl_context *ssl,
-                                           unsigned hs_type,
-                                           unsigned char **buf,
-                                           size_t *buf_len );
-
-/*
- * Write TLS 1.3 handshake message header
- */
-int mbedtls_ssl_tls13_start_handshake_msg( mbedtls_ssl_context *ssl,
                                            unsigned hs_type,
                                            unsigned char **buf,
                                            size_t *buf_len );
@@ -2294,28 +2308,6 @@ int mbedtls_ssl_tls13_process_certificate_verify( mbedtls_ssl_context *ssl );
  * Write of dummy-CCS's for middlebox compatibility
  */
 int mbedtls_ssl_tls13_write_change_cipher_spec( mbedtls_ssl_context *ssl );
-
-/*
- * Write TLS 1.3 handshake message tail
- */
-int mbedtls_ssl_tls13_finish_handshake_msg( mbedtls_ssl_context *ssl,
-                                            size_t buf_len,
-                                            size_t msg_len );
-
-/*
- * Update checksum with handshake header
- */
-void mbedtls_ssl_tls13_add_hs_hdr_to_checksum( mbedtls_ssl_context *ssl,
-                                               unsigned hs_type,
-                                               size_t total_hs_len );
-
-/*
- * Update checksum of handshake messages.
- */
-void mbedtls_ssl_tls13_add_hs_msg_to_checksum( mbedtls_ssl_context *ssl,
-                                               unsigned hs_type,
-                                               unsigned char const *msg,
-                                               size_t msg_len );
 
 int mbedtls_ssl_reset_transcript_for_hrr( mbedtls_ssl_context *ssl );
 

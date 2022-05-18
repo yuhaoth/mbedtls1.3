@@ -153,7 +153,10 @@ static int ssl_tls13_parse_supported_versions_ext( mbedtls_ssl_context *ssl,
 
 #if defined(MBEDTLS_SSL_ALPN)
 /*
- * ssl_tls13_write_alpn_ext( ) structure:
+ * ssl_tls13_write_alpn_ext()
+ *
+ * Structure of the application_layer_protocol_negotiation extension in
+ * ClientHello:
  *
  * opaque ProtocolName<1..2^8-1>;
  *
@@ -163,28 +166,27 @@ static int ssl_tls13_parse_supported_versions_ext( mbedtls_ssl_context *ssl,
  *
  */
 static int ssl_tls13_write_alpn_ext( mbedtls_ssl_context *ssl,
-                               unsigned char *buf,
-                               const unsigned char *end,
-                               size_t *olen )
+                                     unsigned char *buf,
+                                     const unsigned char *end,
+                                     size_t *out_len )
 {
     unsigned char *p = buf;
-    size_t alpnlen = 0;
-    const char **cur;
 
-    *olen = 0;
+    *out_len = 0;
 
     if( ssl->conf->alpn_list == NULL )
         return( 0 );
 
     MBEDTLS_SSL_DEBUG_MSG( 3, ( "client hello, adding alpn extension" ) );
 
-    for( cur = ssl->conf->alpn_list; *cur != NULL; cur++ )
-        alpnlen += strlen( *cur ) + 1;
 
-    MBEDTLS_SSL_CHK_BUF_PTR( p, end, 6 + alpnlen );
-
+    /* Check we have enough space for the extension type (2 bytes), the
+     * extension length (2 bytes) and the protocol_name_list length (2 bytes).
+     */
+    MBEDTLS_SSL_CHK_BUF_PTR( p, end, 6 );
     MBEDTLS_PUT_UINT16_BE( MBEDTLS_TLS_EXT_ALPN, p, 0 );
-    p += 2;
+    /* Skip writing extension and list length for now */
+    p += 6;
 
     /*
      * opaque ProtocolName<1..2^8-1>;
@@ -193,28 +195,27 @@ static int ssl_tls13_write_alpn_ext( mbedtls_ssl_context *ssl,
      *     ProtocolName protocol_name_list<2..2^16-1>
      * } ProtocolNameList;
      */
-
-    /* Skip writing extension and list length for now */
-    p += 4;
-
-    for( cur = ssl->conf->alpn_list; *cur != NULL; cur++ )
+    for( const char **cur = ssl->conf->alpn_list; *cur != NULL; cur++ )
     {
         /*
          * mbedtls_ssl_conf_set_alpn_protocols() checked that the length of
          * protocol names is less than 255.
          */
-        *p = (unsigned char)strlen( *cur );
-        memcpy( p + 1, *cur, *p );
-        p += 1 + *p;
+        size_t protocol_name_len = strlen( *cur );
+
+        MBEDTLS_SSL_CHK_BUF_PTR( p, end, 1 + protocol_name_len );
+        *p++ = (unsigned char)protocol_name_len;
+        memcpy( p, *cur, protocol_name_len );
+        p += protocol_name_len;
     }
 
-    *olen = p - buf;
+    *out_len = p - buf;
 
-    /* List length = olen - 2 (ext_type) - 2 (ext_len) - 2 (list_len) */
-    MBEDTLS_PUT_UINT16_BE( *olen - 6, buf, 4 );
+    /* List length = *out_len - 2 (ext_type) - 2 (ext_len) - 2 (list_len) */
+    MBEDTLS_PUT_UINT16_BE( *out_len - 6, buf, 4 );
 
-    /* Extension length = olen - 2 (ext_type) - 2 (ext_len) */
-    MBEDTLS_PUT_UINT16_BE( *olen - 4, buf, 2 );
+    /* Extension length = *out_len - 2 (ext_type) - 2 (ext_len) */
+    MBEDTLS_PUT_UINT16_BE( *out_len - 4, buf, 2 );
 
     return( 0 );
 }
@@ -270,13 +271,26 @@ static int ssl_tls13_parse_alpn_ext( mbedtls_ssl_context *ssl,
 static int ssl_tls13_reset_key_share( mbedtls_ssl_context *ssl )
 {
     uint16_t group_id = ssl->handshake->offered_group_id;
+
     if( group_id == 0 )
         return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
 
 #if defined(MBEDTLS_ECDH_C)
     if( mbedtls_ssl_tls13_named_group_is_ecdhe( group_id ) )
     {
-        mbedtls_ecdh_free( &ssl->handshake->ecdh_ctx );
+        int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
+        psa_status_t status = PSA_ERROR_CORRUPTION_DETECTED;
+
+        /* Destroy generated private key. */
+        status = psa_destroy_key( ssl->handshake->ecdh_psa_privkey );
+        if( status != PSA_SUCCESS )
+        {
+            ret = psa_ssl_status_to_mbedtls( status );
+            MBEDTLS_SSL_DEBUG_RET( 1, "psa_destroy_key", ret );
+            return( ret );
+        }
+
+        ssl->handshake->ecdh_psa_privkey = MBEDTLS_SVC_KEY_ID_INIT;
         return( 0 );
     }
     else
@@ -1199,12 +1213,50 @@ int mbedtls_ssl_tls13_write_pre_shared_key_ext(
     return( 0 );
 }
 
-
 #endif	/* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED  */
 
-/*
- * Functions for writing ClientHello message.
- */
+static int ssl_tls13_write_client_hello_exts( mbedtls_ssl_context *ssl,
+                                              unsigned char *buf,
+                                              unsigned char *end,
+                                              size_t *out_len )
+{
+    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
+    unsigned char *p = buf;
+    size_t ext_len;
+
+    *out_len = 0;
+
+    /* Write supported_versions extension
+     *
+     * Supported Versions Extension is mandatory with TLS 1.3.
+     */
+    ret = ssl_tls13_write_supported_versions_ext( ssl, p, end, &ext_len );
+    if( ret != 0 )
+        return( ret );
+    p += ext_len;
+
+    /* Echo the cookie if the server provided one in its preceding
+     * HelloRetryRequest message.
+     */
+    ret = ssl_tls13_write_cookie_ext( ssl, p, end, &ext_len );
+    if( ret != 0 )
+        return( ret );
+    p += ext_len;
+
+#if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
+    if( mbedtls_ssl_conf_tls13_some_ephemeral_enabled( ssl ) )
+    {
+        ret = ssl_tls13_write_key_share_ext( ssl, p, end, &ext_len );
+        if( ret != 0 )
+            return( ret );
+        p += ext_len;
+    }
+#endif /* MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED */
+
+    *out_len = p - buf;
+
+    return( 0 );
+}
 
 /*
  * Structure of ClientHello message:
@@ -1301,22 +1353,22 @@ static int ssl_tls13_write_client_hello_body( mbedtls_ssl_context *ssl,
 
     /* Write extensions */
 
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3)
     /* Keeping track of the included extensions */
     ssl->handshake->extensions_present = MBEDTLS_SSL_EXT_NONE;
+#endif
 
     /* First write extensions, then the total length */
     MBEDTLS_SSL_CHK_BUF_PTR( p, end, 2 );
     p_extensions_len = p;
     p += 2;
 
-    /* Write supported_versions extension
-     *
-     * Supported Versions Extension is mandatory with TLS 1.3.
-     */
-    ret = ssl_tls13_write_supported_versions_ext( ssl, p, end, &output_len );
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3)
+    ret = ssl_tls13_write_client_hello_exts( ssl, p, end, &output_len );
     if( ret != 0 )
         return( ret );
     p += output_len;
+#endif
 
 #if defined(MBEDTLS_SSL_ALPN)
     ret = ssl_tls13_write_alpn_ext( ssl, p, end, &output_len );
@@ -1324,14 +1376,6 @@ static int ssl_tls13_write_client_hello_body( mbedtls_ssl_context *ssl,
         return( ret );
     p += output_len;
 #endif /* MBEDTLS_SSL_ALPN */
-
-    /* Echo the cookie if the server provided one in its preceding
-     * HelloRetryRequest message.
-     */
-    ret = ssl_tls13_write_cookie_ext( ssl, p, end, &output_len );
-    if( ret != 0 )
-        return( ret );
-    p += output_len;
 
 #if defined(MBEDTLS_SSL_MAX_FRAGMENT_LENGTH)
     ret = ssl_tls13_write_max_fragment_length_ext( ssl, p, end, &output_len );
@@ -1374,30 +1418,25 @@ static int ssl_tls13_write_client_hello_body( mbedtls_ssl_context *ssl,
     p += output_len;
 #endif /* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED */
 
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3)
 #if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
-
-    /*
-     * Add the extensions related to (EC)DHE ephemeral key establishment only if
-     * enabled as per the configuration.
-     */
     if( mbedtls_ssl_conf_tls13_some_ephemeral_enabled( ssl ) )
     {
         ret = mbedtls_ssl_write_supported_groups_ext( ssl, p, end, &output_len );
         if( ret != 0 )
             return( ret );
         p += output_len;
+    }
 
-        ret = ssl_tls13_write_key_share_ext( ssl, p, end, &output_len );
-        if( ret != 0 )
-            return( ret );
-        p += output_len;
-
+    if( mbedtls_ssl_conf_tls13_ephemeral_enabled( ssl ) )
+    {
         ret = mbedtls_ssl_write_sig_alg_ext( ssl, p, end, &output_len );
         if( ret != 0 )
             return( ret );
         p += output_len;
     }
 #endif /* MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED */
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
 
     *len_without_binders = 0;
 #if defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
@@ -1486,7 +1525,7 @@ static int ssl_tls13_write_client_hello( mbedtls_ssl_context *ssl )
         ssl->handshake->state_local.cli_hello_out.preparation_done = 1;
     }
 
-    MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_tls13_start_handshake_msg(
+    MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_start_handshake_msg(
                                 ssl, MBEDTLS_SSL_HS_CLIENT_HELLO,
                                 &buf, &buf_len ) );
 
@@ -1495,9 +1534,8 @@ static int ssl_tls13_write_client_hello( mbedtls_ssl_context *ssl )
                                                              &len_without_binders,
                                                              &msg_len ) );
 
-    mbedtls_ssl_tls13_add_hs_hdr_to_checksum( ssl,
-                                              MBEDTLS_SSL_HS_CLIENT_HELLO,
-                                              msg_len );
+    mbedtls_ssl_add_hs_hdr_to_checksum( ssl, MBEDTLS_SSL_HS_CLIENT_HELLO,
+                                        msg_len );
     ssl->handshake->update_checksum( ssl, buf, len_without_binders );
 
 #if defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
@@ -1516,9 +1554,9 @@ static int ssl_tls13_write_client_hello( mbedtls_ssl_context *ssl )
     }
 #endif /* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED */
 
-    MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_tls13_finish_handshake_msg( ssl,
-                                                                  buf_len,
-                                                                  msg_len ) );
+    MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_finish_handshake_msg( ssl,
+                                                            buf_len,
+                                                            msg_len ) );
 
 #if defined(MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE)
     mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_CLIENT_CCS_AFTER_CLIENT_HELLO );
@@ -2431,9 +2469,8 @@ static int ssl_tls13_process_server_hello( mbedtls_ssl_context *ssl )
     if( is_hrr )
         MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_reset_transcript_for_hrr( ssl ) );
 
-    mbedtls_ssl_tls13_add_hs_msg_to_checksum( ssl,
-                                              MBEDTLS_SSL_HS_SERVER_HELLO,
-                                              buf, buf_len );
+    mbedtls_ssl_add_hs_msg_to_checksum( ssl, MBEDTLS_SSL_HS_SERVER_HELLO,
+                                        buf, buf_len );
 #if defined(MBEDTLS_SSL_USE_MPS)
         MBEDTLS_SSL_PROC_CHK( mbedtls_mps_reader_commit( msg.handle ) );
         MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read_consume( &ssl->mps->l4  ) );
@@ -2491,8 +2528,8 @@ static int ssl_tls13_process_encrypted_extensions( mbedtls_ssl_context *ssl )
     MBEDTLS_SSL_PROC_CHK(
         ssl_tls13_parse_encrypted_extensions( ssl, buf, buf + buf_len ) );
 
-    mbedtls_ssl_tls13_add_hs_msg_to_checksum(
-        ssl, MBEDTLS_SSL_HS_ENCRYPTED_EXTENSIONS, buf, buf_len );
+    mbedtls_ssl_add_hs_msg_to_checksum( ssl, MBEDTLS_SSL_HS_ENCRYPTED_EXTENSIONS,
+                                        buf, buf_len );
 
 #if defined(MBEDTLS_SSL_USE_MPS)
     MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_mps_hs_consume_full_hs_msg( ssl ) );
@@ -2935,14 +2972,14 @@ int ssl_tls13_write_end_of_early_data_process( mbedtls_ssl_context *ssl )
         unsigned char *buf;
         size_t buf_len;
 
-        MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_tls13_start_handshake_msg( ssl,
+        MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_start_handshake_msg( ssl,
                           MBEDTLS_SSL_HS_END_OF_EARLY_DATA, &buf, &buf_len ) );
 
-        mbedtls_ssl_tls13_add_hs_hdr_to_checksum(
+        mbedtls_ssl_add_hs_hdr_to_checksum(
             ssl, MBEDTLS_SSL_HS_END_OF_EARLY_DATA, 0 );
 
         MBEDTLS_SSL_PROC_CHK( ssl_tls13_write_end_of_early_data_postprocess( ssl ) );
-        MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_tls13_finish_handshake_msg( ssl, buf_len, 0 ) );
+        MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_finish_handshake_msg( ssl, buf_len, 0 ) );
     }
     else
     {
@@ -3206,8 +3243,8 @@ static int ssl_tls13_process_certificate_request( mbedtls_ssl_context *ssl )
         MBEDTLS_SSL_PROC_CHK( ssl_tls13_parse_certificate_request( ssl,
                                               buf, buf + buf_len ) );
 
-        mbedtls_ssl_tls13_add_hs_msg_to_checksum(
-                       ssl, MBEDTLS_SSL_HS_CERTIFICATE_REQUEST, buf, buf_len );
+        mbedtls_ssl_add_hs_msg_to_checksum( ssl, MBEDTLS_SSL_HS_CERTIFICATE_REQUEST,
+                                            buf, buf_len );
 
 #if defined(MBEDTLS_SSL_USE_MPS)
         MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_mps_hs_consume_full_hs_msg( ssl ) );

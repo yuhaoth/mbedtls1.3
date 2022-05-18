@@ -124,7 +124,7 @@ int mbedtls_ssl_get_peer_cid( mbedtls_ssl_context *ssl,
     *enabled = MBEDTLS_SSL_CID_DISABLED;
 
     if( ssl->conf->transport != MBEDTLS_SSL_TRANSPORT_DATAGRAM ||
-        ssl->state != MBEDTLS_SSL_HANDSHAKE_OVER )
+        mbedtls_ssl_is_handshake_over( ssl ) == 0 )
     {
         return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
     }
@@ -485,6 +485,30 @@ void mbedtls_ssl_optimize_checksum( mbedtls_ssl_context *ssl,
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "should never happen" ) );
         return;
     }
+}
+
+void mbedtls_ssl_add_hs_hdr_to_checksum( mbedtls_ssl_context *ssl,
+                                         unsigned hs_type,
+                                         size_t total_hs_len )
+{
+    unsigned char hs_hdr[4];
+
+    /* Build HS header for checksum update. */
+    hs_hdr[0] = MBEDTLS_BYTE_0( hs_type );
+    hs_hdr[1] = MBEDTLS_BYTE_2( total_hs_len );
+    hs_hdr[2] = MBEDTLS_BYTE_1( total_hs_len );
+    hs_hdr[3] = MBEDTLS_BYTE_0( total_hs_len );
+
+    ssl->handshake->update_checksum( ssl, hs_hdr, sizeof( hs_hdr ) );
+}
+
+void mbedtls_ssl_add_hs_msg_to_checksum( mbedtls_ssl_context *ssl,
+                                         unsigned hs_type,
+                                         unsigned char const *msg,
+                                         size_t msg_len )
+{
+    mbedtls_ssl_add_hs_hdr_to_checksum( ssl, hs_type, msg_len );
+    ssl->handshake->update_checksum( ssl, msg, msg_len );
 }
 
 void mbedtls_ssl_reset_checksum( mbedtls_ssl_context *ssl )
@@ -877,12 +901,14 @@ void mbedtls_ssl_init( mbedtls_ssl_context *ssl )
 
 static int ssl_conf_version_check( const mbedtls_ssl_context *ssl )
 {
+    const mbedtls_ssl_config *conf = ssl->conf;
+
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3)
-    if( mbedtls_ssl_conf_is_tls13_only( ssl->conf ) )
+    if( mbedtls_ssl_conf_is_tls13_only( conf ) )
     {
-        if( ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_DATAGRAM )
+        if( conf->transport == MBEDTLS_SSL_TRANSPORT_DATAGRAM )
         {
-             MBEDTLS_SSL_DEBUG_MSG( 1, ( "DTLS 1.3 is not yet supported" ) );
+             MBEDTLS_SSL_DEBUG_MSG( 1, ( "DTLS 1.3 is not yet supported." ) );
              return( MBEDTLS_ERR_SSL_FEATURE_UNAVAILABLE );
         }
         MBEDTLS_SSL_DEBUG_MSG( 4, ( "The SSL configuration is tls13 only." ) );
@@ -891,7 +917,7 @@ static int ssl_conf_version_check( const mbedtls_ssl_context *ssl )
 #endif
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_2)
-    if( mbedtls_ssl_conf_is_tls12_only( ssl->conf ) )
+    if( mbedtls_ssl_conf_is_tls12_only( conf ) )
     {
         MBEDTLS_SSL_DEBUG_MSG( 4, ( "The SSL configuration is tls12 only." ) );
         return( 0 );
@@ -899,7 +925,7 @@ static int ssl_conf_version_check( const mbedtls_ssl_context *ssl )
 #endif
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_2) && defined(MBEDTLS_SSL_PROTO_TLS1_3)
-    if( mbedtls_ssl_conf_is_hybrid_tls12_tls13( ssl->conf ) )
+    if( mbedtls_ssl_conf_is_hybrid_tls12_tls13( conf ) )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "Hybrid TLS 1.2 + TLS 1.3 configurations are not yet supported" ) );
         return( MBEDTLS_ERR_SSL_FEATURE_UNAVAILABLE );
@@ -3381,7 +3407,7 @@ int mbedtls_ssl_handshake_step( mbedtls_ssl_context *ssl )
     if( ssl            == NULL                       ||
         ssl->conf      == NULL                       ||
         ssl->handshake == NULL                       ||
-        ssl->state     == MBEDTLS_SSL_HANDSHAKE_OVER )
+        mbedtls_ssl_is_handshake_over( ssl ) == 1 )
     {
         return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
     }
@@ -3473,7 +3499,7 @@ int mbedtls_ssl_handshake( mbedtls_ssl_context *ssl )
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> handshake" ) );
 
     /* Main handshake loop */
-    while( ssl->state != MBEDTLS_SSL_HANDSHAKE_OVER )
+    while( mbedtls_ssl_is_handshake_over( ssl ) == 0 )
     {
         ret = mbedtls_ssl_handshake_step( ssl );
         if( ret != 0 )
@@ -3591,7 +3617,7 @@ int mbedtls_ssl_renegotiate( mbedtls_ssl_context *ssl )
     /* On server, just send the request */
     if( ssl->conf->endpoint == MBEDTLS_SSL_IS_SERVER )
     {
-        if( ssl->state != MBEDTLS_SSL_HANDSHAKE_OVER )
+        if( mbedtls_ssl_is_handshake_over( ssl ) == 0 )
             return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
 
         ssl->renego_status = MBEDTLS_SSL_RENEGOTIATION_PENDING;
@@ -3611,7 +3637,7 @@ int mbedtls_ssl_renegotiate( mbedtls_ssl_context *ssl )
      */
     if( ssl->renego_status != MBEDTLS_SSL_RENEGOTIATION_IN_PROGRESS )
     {
-        if( ssl->state != MBEDTLS_SSL_HANDSHAKE_OVER )
+        if( mbedtls_ssl_is_handshake_over( ssl ) == 0 )
             return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
 
         if( ( ret = mbedtls_ssl_start_renegotiation( ssl ) ) != 0 )
@@ -3749,7 +3775,7 @@ void mbedtls_ssl_handshake_free( mbedtls_ssl_context *ssl )
     mbedtls_ssl_buffering_free( ssl );
 #endif /* MBEDTLS_SSL_PROTO_DTLS */
 
-#if defined(MBEDTLS_ECDH_C) &&                  \
+#if defined(MBEDTLS_ECDH_C) && \
     ( defined(MBEDTLS_USE_PSA_CRYPTO) || defined(MBEDTLS_SSL_PROTO_TLS1_3) )
     psa_destroy_key( handshake->ecdh_psa_privkey );
 #endif /* MBEDTLS_ECDH_C && MBEDTLS_USE_PSA_CRYPTO */
@@ -3895,7 +3921,7 @@ int mbedtls_ssl_context_save( mbedtls_ssl_context *ssl,
      * (only DTLS) but are currently used to simplify the implementation.
      */
     /* The initial handshake must be over */
-    if( ssl->state != MBEDTLS_SSL_HANDSHAKE_OVER )
+    if( mbedtls_ssl_is_handshake_over( ssl ) == 0 )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "Initial handshake isn't over" ) );
         return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
@@ -4623,6 +4649,14 @@ static uint16_t ssl_preset_default_sig_algs[] = {
     MBEDTLS_TLS1_3_SIG_RSA_PSS_RSAE_SHA256,
 #endif /* MBEDTLS_X509_RSASSA_PSS_SUPPORT && MBEDTLS_SHA256_C */
 
+#if defined(MBEDTLS_RSA_C) &&  defined(MBEDTLS_SHA512_C)
+    MBEDTLS_TLS1_3_SIG_RSA_PKCS1_SHA512,
+#endif /* MBEDTLS_RSA_C && MBEDTLS_SHA512_C */
+
+#if defined(MBEDTLS_RSA_C) &&  defined(MBEDTLS_SHA384_C)
+    MBEDTLS_TLS1_3_SIG_RSA_PKCS1_SHA384,
+#endif /* MBEDTLS_RSA_C && MBEDTLS_SHA384_C */
+
 #if defined(MBEDTLS_RSA_C) &&  defined(MBEDTLS_SHA256_C)
     MBEDTLS_TLS1_3_SIG_RSA_PKCS1_SHA256,
 #endif /* MBEDTLS_RSA_C && MBEDTLS_SHA256_C */
@@ -5192,37 +5226,6 @@ int mbedtls_ssl_check_cert_usage( const mbedtls_x509_crt* cert,
     return( ret );
 }
 #endif /* MBEDTLS_X509_CRT_PARSE_C */
-
-int mbedtls_ssl_set_calc_verify_md( mbedtls_ssl_context* ssl, int md )
-{
-#if defined(MBEDTLS_SSL_PROTO_TLS1_2)
-    if( ssl->minor_ver != MBEDTLS_SSL_MINOR_VERSION_3 )
-        return( -1 );
-
-    switch( md )
-    {
-#if defined(MBEDTLS_SHA384_C)
-        case MBEDTLS_SSL_HASH_SHA384:
-            ssl->handshake->calc_verify = ssl_calc_verify_tls_sha384;
-            break;
-#endif
-#if defined(MBEDTLS_SHA256_C)
-        case MBEDTLS_SSL_HASH_SHA256:
-            ssl->handshake->calc_verify = ssl_calc_verify_tls_sha256;
-            break;
-#endif
-        default:
-            return( -1 );
-    }
-
-    return 0;
-#else /* !MBEDTLS_SSL_PROTO_TLS1_2 */
-    (void) ssl;
-    (void) md;
-
-    return( -1 );
-#endif /* MBEDTLS_SSL_PROTO_TLS1_2 */
-}
 
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
 int mbedtls_ssl_get_handshake_transcript( mbedtls_ssl_context *ssl,
@@ -5902,20 +5905,16 @@ static int tls_prf_sha384( const unsigned char *secret, size_t slen,
  * Set appropriate PRF function and other SSL / TLS1.2 functions
  *
  * Inputs:
- * - SSL/TLS minor version
  * - hash associated with the ciphersuite (only used by TLS 1.2)
  *
  * Outputs:
  * - the tls_prf, calc_verify and calc_finished members of handshake structure
  */
 static int ssl_set_handshake_prfs( mbedtls_ssl_handshake_params *handshake,
-                                   int minor_ver,
                                    mbedtls_md_type_t hash )
 {
-
 #if defined(MBEDTLS_SHA384_C)
-    if( minor_ver == MBEDTLS_SSL_MINOR_VERSION_3 &&
-        hash == MBEDTLS_MD_SHA384 )
+    if( hash == MBEDTLS_MD_SHA384 )
     {
         handshake->tls_prf = tls_prf_sha384;
         handshake->calc_verify = ssl_calc_verify_tls_sha384;
@@ -5924,20 +5923,19 @@ static int ssl_set_handshake_prfs( mbedtls_ssl_handshake_params *handshake,
     else
 #endif
 #if defined(MBEDTLS_SHA256_C)
-    if( minor_ver == MBEDTLS_SSL_MINOR_VERSION_3 )
     {
+        (void) hash;
         handshake->tls_prf = tls_prf_sha256;
         handshake->calc_verify = ssl_calc_verify_tls_sha256;
         handshake->calc_finished = ssl_calc_finished_tls_sha256;
     }
-    else
-#endif
+#else
     {
-        (void) hash;
-        (void) minor_ver;
         (void) handshake;
+        (void) hash;
         return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
     }
+#endif
 
     return( 0 );
 }
@@ -5976,7 +5974,7 @@ static int ssl_use_opaque_psk( mbedtls_ssl_context const *ssl )
  * [in] ssl: optionally used for debugging, EMS and PSA-PSK
  *      debug: conf->f_dbg, conf->p_dbg
  *      EMS: passed to calc_verify (debug + session_negotiate)
- *      PSA-PSA: minor_ver, conf
+ *      PSA-PSA: conf
  */
 static int ssl_compute_master( mbedtls_ssl_handshake_params *handshake,
                                unsigned char *master,
@@ -6037,7 +6035,6 @@ static int ssl_compute_master( mbedtls_ssl_handshake_params *handshake,
 #if defined(MBEDTLS_USE_PSA_CRYPTO) &&          \
     defined(MBEDTLS_KEY_EXCHANGE_PSK_ENABLED)
     if( handshake->ciphersuite_info->key_exchange == MBEDTLS_KEY_EXCHANGE_PSK &&
-        ssl->minor_ver == MBEDTLS_SSL_MINOR_VERSION_3 &&
         ssl_use_opaque_psk( ssl ) == 1 )
     {
         /* Perform PSK-to-MS expansion in a single step. */
@@ -6115,7 +6112,6 @@ int mbedtls_ssl_derive_keys( mbedtls_ssl_context *ssl )
 
     /* Set PRF, calc_verify and calc_finished function pointers */
     ret = ssl_set_handshake_prfs( ssl->handshake,
-                                  ssl->minor_ver,
                                   ciphersuite_info->mac );
     if( ret != 0 )
     {
@@ -6169,6 +6165,27 @@ int mbedtls_ssl_derive_keys( mbedtls_ssl_context *ssl )
                       sizeof( ssl->handshake->randbytes ) );
 
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= derive keys" ) );
+
+    return( 0 );
+}
+
+int mbedtls_ssl_set_calc_verify_md( mbedtls_ssl_context *ssl, int md )
+{
+    switch( md )
+    {
+#if defined(MBEDTLS_SHA384_C)
+        case MBEDTLS_SSL_HASH_SHA384:
+            ssl->handshake->calc_verify = ssl_calc_verify_tls_sha384;
+            break;
+#endif
+#if defined(MBEDTLS_SHA256_C)
+        case MBEDTLS_SSL_HASH_SHA256:
+            ssl->handshake->calc_verify = ssl_calc_verify_tls_sha256;
+            break;
+#endif
+        default:
+            return( -1 );
+    }
 
     return( 0 );
 }

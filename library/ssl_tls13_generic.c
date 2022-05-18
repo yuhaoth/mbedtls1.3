@@ -102,42 +102,6 @@ cleanup:
     return( ret );
 }
 
-int mbedtls_ssl_tls13_start_handshake_msg( mbedtls_ssl_context *ssl,
-                                           unsigned hs_type,
-                                           unsigned char **buf,
-                                           size_t *buf_len )
-{
-    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
-    mbedtls_mps_handshake_out * const msg = &ssl->handshake->hs_msg_out;
-
-    msg->type   = hs_type;
-    msg->length = MBEDTLS_MPS_SIZE_UNKNOWN;
-    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_write_handshake( &ssl->mps->l4,
-                                                       msg, NULL, NULL ) );
-
-    MBEDTLS_SSL_PROC_CHK( mbedtls_writer_get( msg->handle,
-                                              MBEDTLS_MPS_SIZE_MAX,
-                                              buf, buf_len ) );
-
-cleanup:
-    return( ret );
-}
-
-int mbedtls_ssl_tls13_finish_handshake_msg( mbedtls_ssl_context *ssl,
-                                            size_t buf_len,
-                                            size_t msg_len )
-{
-    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
-    mbedtls_mps_handshake_out * const msg = &ssl->handshake->hs_msg_out;
-
-    MBEDTLS_SSL_PROC_CHK( mbedtls_writer_commit_partial( msg->handle,
-                                                         buf_len - msg_len ) );
-    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_dispatch( &ssl->mps->l4 ) );
-
-cleanup:
-    return( ret );
-}
-
 #else /* MBEDTLS_SSL_USE_MPS */
 int mbedtls_ssl_tls13_fetch_handshake_msg( mbedtls_ssl_context *ssl,
                                            unsigned hs_type,
@@ -176,70 +140,7 @@ cleanup:
 
     return( ret );
 }
-
-int mbedtls_ssl_tls13_start_handshake_msg( mbedtls_ssl_context *ssl,
-                                           unsigned hs_type,
-                                           unsigned char **buf,
-                                           size_t *buf_len )
-{
-    /*
-     * Reserve 4 bytes for hanshake header. ( Section 4,RFC 8446 )
-     *    ...
-     *    HandshakeType msg_type;
-     *    uint24 length;
-     *    ...
-     */
-    *buf = ssl->out_msg + 4;
-    *buf_len = MBEDTLS_SSL_OUT_CONTENT_LEN - 4;
-
-    ssl->out_msgtype = MBEDTLS_SSL_MSG_HANDSHAKE;
-    ssl->out_msg[0]  = hs_type;
-
-    return( 0 );
-}
-
-int mbedtls_ssl_tls13_finish_handshake_msg( mbedtls_ssl_context *ssl,
-                                            size_t buf_len,
-                                            size_t msg_len )
-{
-    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
-    size_t msg_with_header_len;
-    ((void) buf_len);
-
-    /* Add reserved 4 bytes for handshake header */
-    msg_with_header_len = msg_len + 4;
-    ssl->out_msglen = msg_with_header_len;
-    MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_write_handshake_msg_ext( ssl, 0, 0 ) );
-
-cleanup:
-    return( ret );
-}
-
-#endif /* MBEDTLS_SSL_USE_MPS */
-
-void mbedtls_ssl_tls13_add_hs_msg_to_checksum( mbedtls_ssl_context *ssl,
-                                               unsigned hs_type,
-                                               unsigned char const *msg,
-                                               size_t msg_len )
-{
-    mbedtls_ssl_tls13_add_hs_hdr_to_checksum( ssl, hs_type, msg_len );
-    ssl->handshake->update_checksum( ssl, msg, msg_len );
-}
-
-void mbedtls_ssl_tls13_add_hs_hdr_to_checksum( mbedtls_ssl_context *ssl,
-                                               unsigned hs_type,
-                                               size_t total_hs_len )
-{
-    unsigned char hs_hdr[4];
-
-    /* Build HS header for checksum update. */
-    hs_hdr[0] = MBEDTLS_BYTE_0( hs_type );
-    hs_hdr[1] = MBEDTLS_BYTE_2( total_hs_len );
-    hs_hdr[2] = MBEDTLS_BYTE_1( total_hs_len );
-    hs_hdr[3] = MBEDTLS_BYTE_0( total_hs_len );
-
-    ssl->handshake->update_checksum( ssl, hs_hdr, sizeof( hs_hdr ) );
-}
+#endif /* !MBEDTLS_SSL_USE_MPS */
 
 #if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
 /* mbedtls_ssl_tls13_parse_sig_alg_ext()
@@ -629,8 +530,8 @@ int mbedtls_ssl_tls13_process_certificate_verify( mbedtls_ssl_context *ssl )
     MBEDTLS_SSL_PROC_CHK( ssl_tls13_parse_certificate_verify( ssl, buf,
                             buf + buf_len, verify_buffer, verify_buffer_len ) );
 
-    mbedtls_ssl_tls13_add_hs_msg_to_checksum( ssl,
-                        MBEDTLS_SSL_HS_CERTIFICATE_VERIFY, buf, buf_len );
+    mbedtls_ssl_add_hs_msg_to_checksum( ssl, MBEDTLS_SSL_HS_CERTIFICATE_VERIFY,
+                                        buf, buf_len );
 #if defined(MBEDTLS_SSL_USE_MPS)
     MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_mps_hs_consume_full_hs_msg( ssl ) );
 #endif
@@ -1108,8 +1009,8 @@ int mbedtls_ssl_tls13_process_certificate( mbedtls_ssl_context *ssl )
         /* Validate the certificate chain and set the verification results. */
         MBEDTLS_SSL_PROC_CHK( ssl_tls13_validate_certificate( ssl ) );
 
-        mbedtls_ssl_tls13_add_hs_msg_to_checksum( ssl, MBEDTLS_SSL_HS_CERTIFICATE,
-                                                  buf, buf_len );
+        mbedtls_ssl_add_hs_msg_to_checksum( ssl, MBEDTLS_SSL_HS_CERTIFICATE,
+                                            buf, buf_len );
 #if defined(MBEDTLS_SSL_USE_MPS)
         MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_mps_hs_consume_full_hs_msg( ssl ) );
 #endif /* MBEDTLS_SSL_USE_MPS */
@@ -1315,8 +1216,8 @@ int mbedtls_ssl_tls13_process_finished_message( mbedtls_ssl_context *ssl )
     MBEDTLS_SSL_PROC_CHK( ssl_tls13_preprocess_finished_message( ssl ) );
 
     MBEDTLS_SSL_PROC_CHK( ssl_tls13_parse_finished_message( ssl, buf, buf + buf_len ) );
-    mbedtls_ssl_tls13_add_hs_msg_to_checksum(
-        ssl, MBEDTLS_SSL_HS_FINISHED, buf, buf_len );
+    mbedtls_ssl_add_hs_msg_to_checksum( ssl, MBEDTLS_SSL_HS_FINISHED,
+                                        buf, buf_len );
 
 #if defined(MBEDTLS_SSL_USE_MPS)
     MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_mps_hs_consume_full_hs_msg( ssl ) );
@@ -1472,17 +1373,17 @@ int mbedtls_ssl_tls13_write_finished_message( mbedtls_ssl_context *ssl )
         ssl->handshake->state_local.finished_out.preparation_done = 1;
     }
 
-    MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_tls13_start_handshake_msg( ssl,
+    MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_start_handshake_msg( ssl,
                               MBEDTLS_SSL_HS_FINISHED, &buf, &buf_len ) );
 
     MBEDTLS_SSL_PROC_CHK( ssl_tls13_write_finished_message_body(
                               ssl, buf, buf + buf_len, &msg_len ) );
 
-    mbedtls_ssl_tls13_add_hs_msg_to_checksum( ssl, MBEDTLS_SSL_HS_FINISHED,
-                                              buf, msg_len );
+    mbedtls_ssl_add_hs_msg_to_checksum( ssl, MBEDTLS_SSL_HS_FINISHED,
+                                        buf, msg_len );
 
     MBEDTLS_SSL_PROC_CHK( ssl_tls13_finalize_finished_message( ssl ) );
-    MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_tls13_finish_handshake_msg( ssl,
+    MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_finish_handshake_msg( ssl,
                                               buf_len, msg_len ) );
 
 cleanup:
@@ -1812,7 +1713,7 @@ int mbedtls_ssl_tls13_write_certificate( mbedtls_ssl_context *ssl )
         unsigned char *buf;
         size_t buf_len, msg_len;
 
-        MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_tls13_start_handshake_msg( ssl,
+        MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_start_handshake_msg( ssl,
                               MBEDTLS_SSL_HS_CERTIFICATE, &buf, &buf_len ) );
 
         MBEDTLS_SSL_PROC_CHK( ssl_tls13_write_certificate_body( ssl,
@@ -1820,12 +1721,10 @@ int mbedtls_ssl_tls13_write_certificate( mbedtls_ssl_context *ssl )
                                                                 buf + buf_len,
                                                                 &msg_len ) );
 
-        mbedtls_ssl_tls13_add_hs_msg_to_checksum( ssl,
-                                                  MBEDTLS_SSL_HS_CERTIFICATE,
-                                                  buf,
-                                                  msg_len );
+        mbedtls_ssl_add_hs_msg_to_checksum( ssl, MBEDTLS_SSL_HS_CERTIFICATE,
+                                            buf, msg_len );
 
-        MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_tls13_finish_handshake_msg(
+        MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_finish_handshake_msg(
                                   ssl, buf_len, msg_len ) );
     }
 
@@ -2127,16 +2026,16 @@ int mbedtls_ssl_tls13_write_certificate_verify( mbedtls_ssl_context *ssl )
         unsigned char *buf;
         size_t buf_len, msg_len;
 
-        MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_tls13_start_handshake_msg( ssl,
+        MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_start_handshake_msg( ssl,
                    MBEDTLS_SSL_HS_CERTIFICATE_VERIFY, &buf, &buf_len ) );
 
         MBEDTLS_SSL_PROC_CHK( ssl_tls13_write_certificate_verify_body(
                                     ssl, buf, buf + buf_len, &msg_len ) );
 
-        mbedtls_ssl_tls13_add_hs_msg_to_checksum(
+        mbedtls_ssl_add_hs_msg_to_checksum(
             ssl, MBEDTLS_SSL_HS_CERTIFICATE_VERIFY, buf, msg_len );
 
-        MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_tls13_finish_handshake_msg(
+        MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_finish_handshake_msg(
                                   ssl, buf_len, msg_len ) );
     }
 
@@ -2636,7 +2535,6 @@ int mbedtls_ssl_reset_transcript_for_hrr( mbedtls_ssl_context *ssl )
     size_t hash_len;
     const mbedtls_ssl_ciphersuite_t *ciphersuite_info;
     uint16_t cipher_suite = ssl->session_negotiate->ciphersuite;
-    psa_status_t status = PSA_ERROR_GENERIC_ERROR;
     ciphersuite_info = mbedtls_ssl_ciphersuite_from_id( cipher_suite );
 
     MBEDTLS_SSL_DEBUG_MSG( 3, ( "Reset SSL session for HRR" ) );
@@ -2690,18 +2588,6 @@ int mbedtls_ssl_reset_transcript_for_hrr( mbedtls_ssl_context *ssl )
 #if defined(MBEDTLS_SHA256_C) || defined(MBEDTLS_SHA384_C)
     ssl->handshake->update_checksum( ssl, hash_transcript, hash_len );
 #endif /* MBEDTLS_SHA256_C || MBEDTLS_SHA384_C */
-
-    /* Destroy generated private key. */
-    status = psa_destroy_key( ssl->handshake->ecdh_psa_privkey );
-
-    if( status != PSA_SUCCESS )
-    {
-        ret = psa_ssl_status_to_mbedtls( status );
-        MBEDTLS_SSL_DEBUG_RET( 1, "psa_destroy_key", ret );
-        return( ret );
-    }
-
-    ssl->handshake->ecdh_psa_privkey = MBEDTLS_SVC_KEY_ID_INIT;
 
     return( ret );
 }
