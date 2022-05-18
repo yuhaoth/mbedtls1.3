@@ -1042,13 +1042,11 @@ static int ssl_tls13_parse_cookie_ext( mbedtls_ssl_context *ssl,
                       buf, cookie_len, ssl->cli_id, ssl->cli_id_len ) != 0 )
         {
             MBEDTLS_SSL_DEBUG_MSG( 2, ( "cookie verification failed" ) );
-            ssl->handshake->verify_cookie_len = 1;
             ret = MBEDTLS_ERR_SSL_HRR_REQUIRED;
         }
         else
         {
             MBEDTLS_SSL_DEBUG_MSG( 2, ( "cookie verification passed" ) );
-            ssl->handshake->verify_cookie_len = 0;
         }
     }
     else {

@@ -699,7 +699,7 @@ static int ssl_tls13_parse_cookie_ext( mbedtls_ssl_context *ssl,
                                        const unsigned char *buf,
                                        const unsigned char *end )
 {
-    size_t cookie_len;
+    uint16_t cookie_len;
     const unsigned char *p = buf;
     mbedtls_ssl_handshake_params *handshake = ssl->handshake;
 
@@ -711,19 +711,55 @@ static int ssl_tls13_parse_cookie_ext( mbedtls_ssl_context *ssl,
     MBEDTLS_SSL_CHK_BUF_READ_PTR( p, end, cookie_len );
     MBEDTLS_SSL_DEBUG_BUF( 3, "cookie extension", p, cookie_len );
 
-    mbedtls_free( handshake->verify_cookie );
-    handshake->verify_cookie_len = 0;
-    handshake->verify_cookie = mbedtls_calloc( 1, cookie_len );
-    if( handshake->verify_cookie == NULL )
+    mbedtls_free( handshake->cookie );
+    handshake->hrr_cookie_len = 0;
+    handshake->cookie = mbedtls_calloc( 1, cookie_len );
+    if( handshake->cookie == NULL )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1,
-                ( "alloc failed ( %" MBEDTLS_PRINTF_SIZET " bytes )",
+                ( "alloc failed ( %ud bytes )",
                   cookie_len ) );
         return( MBEDTLS_ERR_SSL_ALLOC_FAILED );
     }
 
-    memcpy( handshake->verify_cookie, p, cookie_len );
-    handshake->verify_cookie_len = (unsigned char) cookie_len;
+    memcpy( handshake->cookie, p, cookie_len );
+    handshake->hrr_cookie_len = cookie_len;
+
+    return( 0 );
+}
+
+static int ssl_tls13_write_cookie_ext( mbedtls_ssl_context *ssl,
+                                       unsigned char *buf,
+                                       unsigned char *end,
+                                       size_t *out_len )
+{
+    unsigned char *p = buf;
+    *out_len = 0;
+    mbedtls_ssl_handshake_params *handshake = ssl->handshake;
+
+    if( handshake->cookie == NULL )
+    {
+        MBEDTLS_SSL_DEBUG_MSG( 3, ( "no cookie to send; skip extension" ) );
+        return( 0 );
+    }
+
+    MBEDTLS_SSL_DEBUG_BUF( 3, "client hello, cookie",
+                           handshake->cookie,
+                           handshake->hrr_cookie_len );
+
+    MBEDTLS_SSL_CHK_BUF_PTR( p, end, handshake->hrr_cookie_len + 6 );
+
+    MBEDTLS_SSL_DEBUG_MSG( 3, ( "client hello, adding cookie extension" ) );
+
+    MBEDTLS_PUT_UINT16_BE( MBEDTLS_TLS_EXT_COOKIE, p, 0 );
+    MBEDTLS_PUT_UINT16_BE( handshake->hrr_cookie_len + 2, p, 2 );
+    MBEDTLS_PUT_UINT16_BE( handshake->hrr_cookie_len, p, 4 );
+    p += 6;
+
+    /* Cookie */
+    memcpy( p, handshake->cookie, handshake->hrr_cookie_len );
+
+    *out_len = handshake->hrr_cookie_len + 6;
 
     return( 0 );
 }
@@ -1166,53 +1202,6 @@ int mbedtls_ssl_tls13_write_pre_shared_key_ext(
 
 #endif	/* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED  */
 
-
-static int ssl_tls13_write_cookie_ext( mbedtls_ssl_context *ssl,
-                                       unsigned char *buf,
-                                       unsigned char *end,
-                                       size_t *out_len )
-{
-    unsigned char *p = buf;
-
-    *out_len = 0;
-
-    if( ssl->handshake->verify_cookie == NULL )
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 3, ( "no cookie to send; skip extension" ) );
-        return( 0 );
-    }
-
-    MBEDTLS_SSL_DEBUG_BUF( 3, "client hello, cookie",
-                          ssl->handshake->verify_cookie,
-                          ssl->handshake->verify_cookie_len );
-
-    if( end < p ||
-        (size_t)( end - p ) < ( (size_t)ssl->handshake->verify_cookie_len + 4 ) )
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "buffer too small" ) );
-        return( MBEDTLS_ERR_SSL_BUFFER_TOO_SMALL );
-    }
-
-    MBEDTLS_SSL_DEBUG_MSG( 3, ( "client hello, adding cookie extension" ) );
-
-    /* Extension Type */
-    MBEDTLS_PUT_UINT16_BE( MBEDTLS_TLS_EXT_COOKIE, p, 0 );
-
-    /* Extension Length */
-    MBEDTLS_PUT_UINT16_BE( ssl->handshake->verify_cookie_len + 2, p, 2 );
-
-    /* Cookie Length */
-    MBEDTLS_PUT_UINT16_BE( ssl->handshake->verify_cookie_len, p, 4 );
-    p += 6;
-
-    /* Cookie */
-    memcpy( p, ssl->handshake->verify_cookie, ssl->handshake->verify_cookie_len );
-
-    *out_len = ssl->handshake->verify_cookie_len + 6;
-
-    return( 0 );
-}
-
 /*
  * Functions for writing ClientHello message.
  */
@@ -1329,19 +1318,20 @@ static int ssl_tls13_write_client_hello_body( mbedtls_ssl_context *ssl,
         return( ret );
     p += output_len;
 
-    /* For TLS / DTLS 1.3 we need to support the use of cookies
-     * ( if the server provided them ) */
-    ret = ssl_tls13_write_cookie_ext( ssl, p, end, &output_len );
-    if( ret != 0 )
-        return( ret );
-    p += output_len;
-
 #if defined(MBEDTLS_SSL_ALPN)
     ret = ssl_tls13_write_alpn_ext( ssl, p, end, &output_len );
     if( ret != 0 )
         return( ret );
     p += output_len;
 #endif /* MBEDTLS_SSL_ALPN */
+
+    /* Echo the cookie if the server provided one in its preceding
+     * HelloRetryRequest message.
+     */
+    ret = ssl_tls13_write_cookie_ext( ssl, p, end, &output_len );
+    if( ret != 0 )
+        return( ret );
+    p += output_len;
 
 #if defined(MBEDTLS_SSL_MAX_FRAGMENT_LENGTH)
     ret = ssl_tls13_write_max_fragment_length_ext( ssl, p, end, &output_len );
