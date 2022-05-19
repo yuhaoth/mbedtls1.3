@@ -886,7 +886,7 @@ psk_parsing_successful:
             psk_type = MBEDTLS_SSL_TLS1_3_PSK_EXTERNAL;
 
         ret = mbedtls_ssl_tls13_create_psk_binder( ssl,
-                 ssl->handshake->ciphersuite_info->mac,
+                 mbedtls_psa_translate_md( ssl->handshake->ciphersuite_info->mac ),
                  psk, psk_len, psk_type,
                  transcript, server_computed_binder );
 
@@ -1567,7 +1567,8 @@ static int ssl_tls13_write_new_session_ticket_write( mbedtls_ssl_context *ssl,
      *  HKDF-Expand-Label( resumption_master_secret,
      *                    "resumption", ticket_nonce, Hash.length )
      */
-    ret = mbedtls_ssl_tls13_hkdf_expand_label( suite_info->mac,
+    ret = mbedtls_ssl_tls13_hkdf_expand_label(
+               mbedtls_psa_translate_md( suite_info->mac ),
                ssl->session->app_secrets.resumption_master_secret,
                hash_length,
                MBEDTLS_SSL_TLS1_3_LBL_WITH_LEN( resumption ),
