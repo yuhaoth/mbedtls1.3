@@ -28,9 +28,8 @@
 #include "mbedtls/debug.h"
 #include "mbedtls/error.h"
 
-#include "ssl_client.h"
 #include "ssl_misc.h"
-#include "ecdh_misc.h"
+#include "ssl_client.h"
 #include "ssl_tls13_keys.h"
 #include "ssl_debug_helpers.h"
 
@@ -61,8 +60,8 @@ static int ssl_tls13_write_supported_versions_ext( mbedtls_ssl_context *ssl,
                                                    size_t *out_len )
 {
     unsigned char *p = buf;
-    unsigned char versions_len = ( ssl->handshake->min_minor_ver <=
-                                   MBEDTLS_SSL_MINOR_VERSION_3 ) ? 4 : 2;
+    unsigned char versions_len = ( ssl->handshake->min_tls_version <=
+                                   MBEDTLS_SSL_VERSION_TLS1_2 ) ? 4 : 2;
 
     *out_len = 0;
 
@@ -87,17 +86,15 @@ static int ssl_tls13_write_supported_versions_ext( mbedtls_ssl_context *ssl,
      * They are defined by the configuration.
      * Currently, we advertise only TLS 1.3 or both TLS 1.3 and TLS 1.2.
      */
-    mbedtls_ssl_write_version( MBEDTLS_SSL_MAJOR_VERSION_3,
-                               MBEDTLS_SSL_MINOR_VERSION_4,
-                               MBEDTLS_SSL_TRANSPORT_STREAM, p );
+    mbedtls_ssl_write_version( p, MBEDTLS_SSL_TRANSPORT_STREAM,
+                               MBEDTLS_SSL_VERSION_TLS1_3 );
     MBEDTLS_SSL_DEBUG_MSG( 3, ( "supported version: [3:4]" ) );
 
 
-    if( ssl->handshake->min_minor_ver <= MBEDTLS_SSL_MINOR_VERSION_3 )
+    if( ssl->handshake->min_tls_version <= MBEDTLS_SSL_VERSION_TLS1_2 )
     {
-        mbedtls_ssl_write_version( MBEDTLS_SSL_MAJOR_VERSION_3,
-                                   MBEDTLS_SSL_MINOR_VERSION_3,
-                                   MBEDTLS_SSL_TRANSPORT_STREAM, p + 2 );
+        mbedtls_ssl_write_version( p + 2, MBEDTLS_SSL_TRANSPORT_STREAM,
+                                   MBEDTLS_SSL_VERSION_TLS1_2 );
         MBEDTLS_SSL_DEBUG_MSG( 3, ( "supported version: [3:3]" ) );
     }
 
@@ -112,9 +109,9 @@ static int ssl_tls13_parse_supported_versions_ext( mbedtls_ssl_context *ssl,
 {
     ((void) ssl);
 
-    MBEDTLS_SSL_CHK_BUF_READ_PTR( buf, end, 2);
-    if( buf[0] != MBEDTLS_SSL_MAJOR_VERSION_3 ||
-        buf[1] != MBEDTLS_SSL_MINOR_VERSION_4 )
+    MBEDTLS_SSL_CHK_BUF_READ_PTR( buf, end, 2 );
+    if( mbedtls_ssl_read_version( buf, ssl->conf->transport ) !=
+          MBEDTLS_SSL_VERSION_TLS1_3 )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "unexpected version" ) );
 
@@ -136,7 +133,7 @@ static int ssl_tls13_parse_supported_versions_ext( mbedtls_ssl_context *ssl,
      * and the endpoint information into the session structure
      * since only session information is available in that API.
      */
-    ssl->session_negotiate->minor_ver = ssl->minor_ver;
+    ssl->session_negotiate->tls_version = ssl->tls_version;
     ssl->session_negotiate->endpoint = ssl->conf->endpoint;
 #endif /* MBEDTLS_SSL_NEW_SESSION_TICKET */
 
@@ -250,9 +247,7 @@ static int ssl_tls13_generate_and_write_ecdh_key_exchange(
         mbedtls_psa_parse_tls_ecc_group( named_group, &ecdh_bits ) ) == 0 )
             return( MBEDTLS_ERR_SSL_HANDSHAKE_FAILURE );
 
-    if( ecdh_bits > 0xffff )
-        return( MBEDTLS_ERR_SSL_ILLEGAL_PARAMETER );
-    ssl->handshake->ecdh_bits = (uint16_t) ecdh_bits;
+    ssl->handshake->ecdh_bits = ecdh_bits;
 
     key_attributes = psa_key_attributes_init();
     psa_set_key_usage_flags( &key_attributes, PSA_KEY_USAGE_DERIVE );
@@ -1138,6 +1133,7 @@ int mbedtls_ssl_tls13_write_client_hello_exts( mbedtls_ssl_context *ssl,
 /*
  * Functions for parsing and processing Server Hello
  */
+
 /**
  * \brief Detect if the ServerHello contains a supported_versions extension
  *        or not.
@@ -1220,6 +1216,36 @@ static int ssl_tls13_is_supported_versions_ext_present(
 }
 
 /* Returns a negative value on failure, and otherwise
+ * - 1 if the last eight bytes of the ServerHello random bytes indicate that
+ *     the server is TLS 1.3 capable but negotiating TLS 1.2 or below.
+ * - 0 otherwise
+ */
+static int ssl_tls13_is_downgrade_negotiation( mbedtls_ssl_context *ssl,
+                                               const unsigned char *buf,
+                                               const unsigned char *end )
+{
+    /* First seven bytes of the magic downgrade strings, see RFC 8446 4.1.3 */
+    static const unsigned char magic_downgrade_string[] =
+        { 0x44, 0x4F, 0x57, 0x4E, 0x47, 0x52, 0x44 };
+    const unsigned char *last_eight_bytes_of_random;
+    unsigned char last_byte_of_random;
+
+    MBEDTLS_SSL_CHK_BUF_READ_PTR( buf, end, MBEDTLS_SERVER_HELLO_RANDOM_LEN + 2 );
+    last_eight_bytes_of_random = buf + 2 + MBEDTLS_SERVER_HELLO_RANDOM_LEN - 8;
+
+    if( memcmp( last_eight_bytes_of_random,
+                magic_downgrade_string,
+                sizeof( magic_downgrade_string ) ) == 0 )
+    {
+        last_byte_of_random = last_eight_bytes_of_random[7];
+        return( last_byte_of_random == 0 ||
+                last_byte_of_random == 1    );
+    }
+
+    return( 0 );
+}
+
+/* Returns a negative value on failure, and otherwise
  * - SSL_SERVER_HELLO_COORDINATE_HELLO or
  * - SSL_SERVER_HELLO_COORDINATE_HRR
  * to indicate which message is expected and to be parsed next.
@@ -1275,6 +1301,7 @@ static int ssl_tls13_server_hello_coordinate( mbedtls_ssl_context *ssl,
                                               size_t *buf_len )
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
+    const unsigned char *end;
 
     MBEDTLS_SSL_PROC_CHK_NEG( mbedtls_mps_read( &ssl->mps->l4 ) );
 
@@ -1306,16 +1333,22 @@ static int ssl_tls13_server_hello_coordinate( mbedtls_ssl_context *ssl,
     }
 
     *buf_len = msg->length;
+    end = *buf + *buf_len;
 
     MBEDTLS_SSL_PROC_CHK_NEG( ssl_tls13_is_supported_versions_ext_present(
-                                  ssl, *buf, *buf + *buf_len ) );
+                                  ssl, *buf, end ) );
     if( ret == 0 )
     {
-        /* If the supported versions extension is not present but we were
-         * expecting it, abort the handshake. Otherwise, switch to TLS 1.2
-         * handshake.
+        MBEDTLS_SSL_PROC_CHK_NEG(
+            ssl_tls13_is_downgrade_negotiation( ssl, *buf, end ) );
+
+        /* If the server is negotiating TLS 1.2 or below and:
+         * . we did not propose TLS 1.2 or
+         * . the server responded it is TLS 1.3 capable but negotiating a lower
+         *   version of the protocol and thus we are under downgrade attack
+         * abort the handshake with an "illegal parameter" alert.
          */
-        if( ssl->handshake->min_minor_ver > MBEDTLS_SSL_MINOR_VERSION_3 )
+        if( ssl->handshake->min_tls_version > MBEDTLS_SSL_VERSION_TLS1_2 || ret )
         {
             MBEDTLS_SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_ILLEGAL_PARAMETER,
                                           MBEDTLS_ERR_SSL_ILLEGAL_PARAMETER );
@@ -1323,7 +1356,7 @@ static int ssl_tls13_server_hello_coordinate( mbedtls_ssl_context *ssl,
         }
 
         ssl->keep_current_message = 1;
-        ssl->minor_ver = MBEDTLS_SSL_MINOR_VERSION_3;
+        ssl->tls_version = MBEDTLS_SSL_VERSION_TLS1_2;
         mbedtls_ssl_add_hs_msg_to_checksum( ssl, MBEDTLS_SSL_HS_SERVER_HELLO,
                                             *buf, *buf_len );
 
@@ -1337,7 +1370,7 @@ static int ssl_tls13_server_hello_coordinate( mbedtls_ssl_context *ssl,
         return( SSL_SERVER_HELLO_COORDINATE_TLS1_2 );
     }
 
-    ret = ssl_server_hello_is_hrr( ssl, *buf, *buf + *buf_len );
+    ret = ssl_server_hello_is_hrr( ssl, *buf, end );
     switch( ret )
     {
         case SSL_SERVER_HELLO_COORDINATE_HELLO:
@@ -1388,20 +1421,27 @@ static int ssl_tls13_server_hello_coordinate( mbedtls_ssl_context *ssl,
                                               size_t *buf_len )
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
+    const unsigned char *end;
 
     MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_tls13_fetch_handshake_msg( ssl,
                                              MBEDTLS_SSL_HS_SERVER_HELLO,
                                              buf, buf_len ) );
+    end = *buf + *buf_len;
 
     MBEDTLS_SSL_PROC_CHK_NEG( ssl_tls13_is_supported_versions_ext_present(
-                                  ssl, *buf, *buf + *buf_len ) );
+                                  ssl, *buf, end ) );
     if( ret == 0 )
     {
-        /* If the supported versions extension is not present but we were
-         * expecting it, abort the handshake. Otherwise, switch to TLS 1.2
-         * handshake.
+        MBEDTLS_SSL_PROC_CHK_NEG(
+            ssl_tls13_is_downgrade_negotiation( ssl, *buf, end ) );
+
+        /* If the server is negotiating TLS 1.2 or below and:
+         * . we did not propose TLS 1.2 or
+         * . the server responded it is TLS 1.3 capable but negotiating a lower
+         *   version of the protocol and thus we are under downgrade attack
+         * abort the handshake with an "illegal parameter" alert.
          */
-        if( ssl->handshake->min_minor_ver > MBEDTLS_SSL_MINOR_VERSION_3 )
+        if( ssl->handshake->min_tls_version > MBEDTLS_SSL_VERSION_TLS1_2 || ret )
         {
             MBEDTLS_SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_ILLEGAL_PARAMETER,
                                           MBEDTLS_ERR_SSL_ILLEGAL_PARAMETER );
@@ -1409,7 +1449,7 @@ static int ssl_tls13_server_hello_coordinate( mbedtls_ssl_context *ssl,
         }
 
         ssl->keep_current_message = 1;
-        ssl->minor_ver = MBEDTLS_SSL_MINOR_VERSION_3;
+        ssl->tls_version = MBEDTLS_SSL_VERSION_TLS1_2;
         mbedtls_ssl_add_hs_msg_to_checksum( ssl, MBEDTLS_SSL_HS_SERVER_HELLO,
                                             *buf, *buf_len );
 
@@ -1423,7 +1463,7 @@ static int ssl_tls13_server_hello_coordinate( mbedtls_ssl_context *ssl,
         return( SSL_SERVER_HELLO_COORDINATE_TLS1_2 );
     }
 
-    ret = ssl_server_hello_is_hrr( ssl, *buf, *buf + *buf_len );
+    ret = ssl_server_hello_is_hrr( ssl, *buf, end );
     switch( ret )
     {
         case SSL_SERVER_HELLO_COORDINATE_HELLO:
@@ -1741,8 +1781,8 @@ static int ssl_tls13_parse_server_hello( mbedtls_ssl_context *ssl,
      * with ProtocolVersion defined as:
      * uint16 ProtocolVersion;
      */
-    if( !( p[0] == MBEDTLS_SSL_MAJOR_VERSION_3 &&
-           p[1] == MBEDTLS_SSL_MINOR_VERSION_3 ) )
+    if( mbedtls_ssl_read_version( p, ssl->conf->transport ) !=
+          MBEDTLS_SSL_VERSION_TLS1_2 )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "Unsupported version of TLS." ) );
         MBEDTLS_SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_PROTOCOL_VERSION,
@@ -1792,8 +1832,9 @@ static int ssl_tls13_parse_server_hello( mbedtls_ssl_context *ssl,
     /*
      * Check whether this ciphersuite is valid and offered.
      */
-    if( ( mbedtls_ssl_validate_ciphersuite(
-            ssl, ciphersuite_info, ssl->minor_ver, ssl->minor_ver ) != 0 ) ||
+    if( ( mbedtls_ssl_validate_ciphersuite( ssl, ciphersuite_info,
+                                            ssl->tls_version,
+                                            ssl->tls_version ) != 0 ) ||
         !ssl_tls13_cipher_suite_is_offered( ssl, cipher_suite ) )
     {
         fatal_alert = MBEDTLS_SSL_ALERT_MSG_ILLEGAL_PARAMETER;
@@ -2154,8 +2195,6 @@ static int ssl_tls13_process_server_hello( mbedtls_ssl_context *ssl )
      * - Make sure it's either a ServerHello or a HRR.
      * - Switch processing routine in case of HRR
      */
-
-    ssl->major_ver = MBEDTLS_SSL_MAJOR_VERSION_3;
     ssl->handshake->extensions_present = MBEDTLS_SSL_EXT_NONE;
 
 #if defined(MBEDTLS_SSL_USE_MPS)

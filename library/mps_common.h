@@ -585,7 +585,7 @@ typedef size_t mbedtls_mps_size_t;
  * \{
  */
 
-/* #define MBEDTLS_MPS_CONF_VERSION 3   /\*!< TLS v1.2 *\/ */
+/* #define MBEDTLS_MPS_CONF_TLS_VERSION 0x0303 /\*!< TLS v1.2 *\/ */
 /* #define MBEDTLS_MPS_CONF_ANTI_REPLAY 1 */
 /* #define MBEDTLS_MPS_CONF_MAX_PLAIN_IN  1000 */
 /* #define MBEDTLS_MPS_CONF_MAX_PLAIN_OUT 1000 */

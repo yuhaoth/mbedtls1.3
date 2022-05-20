@@ -256,6 +256,7 @@
  * Various constants
  */
 
+#if !defined(MBEDTLS_DEPRECATED_REMOVED)
 /* These are the high an low bytes of ProtocolVersion as defined by:
  * - RFC 5246: ProtocolVersion version = { 3, 3 };     // TLS v1.2
  * - RFC 8446: see section 4.2.1
@@ -263,6 +264,7 @@
 #define MBEDTLS_SSL_MAJOR_VERSION_3             3
 #define MBEDTLS_SSL_MINOR_VERSION_3             3   /*!< TLS v1.2 */
 #define MBEDTLS_SSL_MINOR_VERSION_4             4   /*!< TLS v1.3 */
+#endif /* MBEDTLS_DEPRECATED_REMOVED */
 
 #define MBEDTLS_SSL_TRANSPORT_STREAM            0   /*!< TLS      */
 #define MBEDTLS_SSL_TRANSPORT_DATAGRAM          1   /*!< DTLS     */
@@ -1193,6 +1195,14 @@ mbedtls_dtls_srtp_info;
 
 #endif /* MBEDTLS_SSL_DTLS_SRTP */
 
+/** Human-friendly representation of the (D)TLS protocol version. */
+typedef enum
+{
+    MBEDTLS_SSL_VERSION_UNKNOWN, /*!< Context not in use or version not yet negotiated. */
+    MBEDTLS_SSL_VERSION_TLS1_2 = 0x0303, /*!< (D)TLS 1.2 */
+    MBEDTLS_SSL_VERSION_TLS1_3 = 0x0304, /*!< (D)TLS 1.3 */
+} mbedtls_ssl_protocol_version;
+
 /*
  * This structure is used for storing current session data.
  *
@@ -1212,11 +1222,10 @@ struct mbedtls_ssl_session
 
     unsigned char MBEDTLS_PRIVATE(exported);
 
-    /*!< Minor version negotiated in the session. Used if and when
-     *   renegotiating or resuming a session instead of the configured minor
-     *   version.
+    /** TLS version negotiated in the session. Used if and when renegotiating
+     *  or resuming a session instead of the configured minor TLS version.
      */
-    unsigned char MBEDTLS_PRIVATE(minor_ver);
+    mbedtls_ssl_protocol_version MBEDTLS_PRIVATE(tls_version);
 
 #if defined(MBEDTLS_HAVE_TIME)
     mbedtls_time_t MBEDTLS_PRIVATE(start);       /*!< starting time      */
@@ -1283,14 +1292,6 @@ struct mbedtls_ssl_session
 #endif
 };
 
-/** Human-friendly representation of the (D)TLS protocol version. */
-typedef enum
-{
-    MBEDTLS_SSL_VERSION_UNKNOWN, /*!< Context not in use or version not yet negotiated. */
-    MBEDTLS_SSL_VERSION_1_2,     /*!< (D)TLS 1.2 */
-    MBEDTLS_SSL_VERSION_1_3,     /*!< (D)TLS 1.3 */
-} mbedtls_ssl_protocol_version;
-
 /*
  * Identifiers for PRFs used in various versions of TLS.
  */
@@ -1340,6 +1341,25 @@ typedef void mbedtls_ssl_export_keys_t( void *p_expkey,
                                         const unsigned char server_random[32],
                                         mbedtls_tls_prf_types tls_prf_type );
 
+#if defined(MBEDTLS_SSL_SRV_C)
+/**
+ * \brief           Callback type: generic handshake callback
+ *
+ * \note            Callbacks may use user_data funcs to set/get app user data.
+ *                  See \c mbedtls_ssl_get_user_data_p()
+ *                      \c mbedtls_ssl_get_user_data_n()
+ *                      \c mbedtls_ssl_conf_get_user_data_p()
+ *                      \c mbedtls_ssl_conf_get_user_data_n()
+ *
+ * \param ssl       \c mbedtls_ssl_context on which the callback is run
+ *
+ * \return          The return value of the callback is 0 if successful,
+ *                  or a specific MBEDTLS_ERR_XXX code, which will cause
+ *                  the handshake to be aborted.
+ */
+typedef int (*mbedtls_ssl_hs_cb_t)( mbedtls_ssl_context *ssl );
+#endif
+
 #if defined(MBEDTLS_SSL_USE_MPS)
 struct mbedtls_ssl_mps;
 typedef struct mbedtls_ssl_mps mbedtls_ssl_mps;
@@ -1368,10 +1388,8 @@ struct mbedtls_ssl_config
      * so that elements tend to be in the 128-element direct access window
      * on Arm Thumb, which reduces the code size. */
 
-    unsigned char MBEDTLS_PRIVATE(max_major_ver);    /*!< max. major version used            */
-    unsigned char MBEDTLS_PRIVATE(max_minor_ver);    /*!< max. minor version used            */
-    unsigned char MBEDTLS_PRIVATE(min_major_ver);    /*!< min. major version used            */
-    unsigned char MBEDTLS_PRIVATE(min_minor_ver);    /*!< min. minor version used            */
+    mbedtls_ssl_protocol_version MBEDTLS_PRIVATE(max_tls_version);  /*!< max. TLS version used */
+    mbedtls_ssl_protocol_version MBEDTLS_PRIVATE(min_tls_version);  /*!< min. TLS version used */
 
     /*
      * Flags (could be bit-fields to save RAM, but separate bytes make
@@ -1628,7 +1646,7 @@ struct mbedtls_ssl_config
     mbedtls_ssl_user_data_t MBEDTLS_PRIVATE(user_data);
 
 #if defined(MBEDTLS_SSL_SRV_C)
-    int (*MBEDTLS_PRIVATE(f_cert_cb))(mbedtls_ssl_context *); /*!< certificate selection callback */
+    mbedtls_ssl_hs_cb_t MBEDTLS_PRIVATE(f_cert_cb);  /*!< certificate selection callback */
 #endif /* MBEDTLS_SSL_SRV_C */
 };
 
@@ -1647,24 +1665,21 @@ struct mbedtls_ssl_context
                                   renego_max_records is < 0           */
 #endif /* MBEDTLS_SSL_RENEGOTIATION */
 
-    /*!< Equal to MBEDTLS_SSL_MAJOR_VERSION_3 */
-    int MBEDTLS_PRIVATE(major_ver);
-
-    /*!< Server: Negotiated minor version.
-     *   Client: Maximum minor version to be negotiated, then negotiated minor
-     *           version.
+    /** Server: Negotiated TLS protocol version.
+     *  Client: Maximum TLS version to be negotiated, then negotiated TLS
+     *          version.
      *
-     *   It is initialized as the maximum minor version to be negotiated in the
-     *   ClientHello writing preparation stage and used throughout the
-     *   ClientHello writing. For a fresh handshake not linked to any previous
-     *   handshake, it is initialized to the configured maximum minor version
-     *   to be negotiated. When renegotiating or resuming a session, it is
-     *   initialized to the previously negotiated minor version.
+     *  It is initialized as the maximum TLS version to be negotiated in the
+     *  ClientHello writing preparation stage and used throughout the
+     *  ClientHello writing. For a fresh handshake not linked to any previous
+     *  handshake, it is initialized to the configured maximum TLS version
+     *  to be negotiated. When renegotiating or resuming a session, it is
+     *  initialized to the previously negotiated TLS version.
      *
-     *   Updated to the negotiated minor version as soon as the ServerHello is
-     *   received.
+     *  Updated to the negotiated TLS version as soon as the ServerHello is
+     *  received.
      */
-    int MBEDTLS_PRIVATE(minor_ver);
+    mbedtls_ssl_protocol_version MBEDTLS_PRIVATE(tls_version);
 
     unsigned MBEDTLS_PRIVATE(badmac_seen);       /*!< records with a bad MAC received    */
 
@@ -2516,19 +2531,15 @@ void mbedtls_ssl_set_timer_cb( mbedtls_ssl_context *ssl,
  *                  If set, the callback is always called for each handshake,
  *                  after `ClientHello` processing has finished.
  *
- *                  The callback has the following parameters:
- *                  - \c mbedtls_ssl_context*: The SSL context to which
- *                                             the operation applies.
- *                  The return value of the callback is 0 if successful,
- *                  or a specific MBEDTLS_ERR_XXX code, which will cause
- *                  the handshake to be aborted.
- *
  * \param conf      The SSL configuration to register the callback with.
  * \param f_cert_cb The callback for selecting server certificate after
  *                  `ClientHello` processing has finished.
  */
-void mbedtls_ssl_conf_cert_cb( mbedtls_ssl_config *conf,
-                               int (*f_cert_cb)(mbedtls_ssl_context *) );
+static inline void mbedtls_ssl_conf_cert_cb( mbedtls_ssl_config *conf,
+                                             mbedtls_ssl_hs_cb_t f_cert_cb )
+{
+    conf->MBEDTLS_PRIVATE(f_cert_cb) = f_cert_cb;
+}
 #endif /* MBEDTLS_SSL_SRV_C */
 
 /**
@@ -4195,6 +4206,7 @@ void mbedtls_ssl_get_dtls_srtp_negotiation_result( const mbedtls_ssl_context *ss
                                                    mbedtls_dtls_srtp_info *dtls_srtp_info );
 #endif /* MBEDTLS_SSL_DTLS_SRTP */
 
+#if !defined(MBEDTLS_DEPRECATED_REMOVED)
 /**
  * \brief          Set the maximum supported version sent from the client side
  *                 and/or accepted at the server side.
@@ -4203,14 +4215,37 @@ void mbedtls_ssl_get_dtls_srtp_negotiation_result( const mbedtls_ssl_context *ss
  *
  * \note           This ignores ciphersuites from higher versions.
  *
+ * \note           This function is deprecated and has been replaced by
+ *                 \c mbedtls_ssl_conf_max_tls_version().
+ *
  * \param conf     SSL configuration
  * \param major    Major version number (#MBEDTLS_SSL_MAJOR_VERSION_3)
  * \param minor    Minor version number
  *                 (#MBEDTLS_SSL_MINOR_VERSION_3 for (D)TLS 1.2,
  *                 #MBEDTLS_SSL_MINOR_VERSION_4 for TLS 1.3)
  */
-void mbedtls_ssl_conf_max_version( mbedtls_ssl_config *conf, int major, int minor );
+void MBEDTLS_DEPRECATED mbedtls_ssl_conf_max_version( mbedtls_ssl_config *conf, int major, int minor );
+#endif /* MBEDTLS_DEPRECATED_REMOVED */
 
+/**
+ * \brief          Set the maximum supported version sent from the client side
+ *                 and/or accepted at the server side.
+ *
+ * \note           After the handshake, you can call
+ *                 mbedtls_ssl_get_version_number() to see what version was
+ *                 negotiated.
+ *
+ * \param conf         SSL configuration
+ * \param tls_version  TLS protocol version number (\p mbedtls_ssl_protocol_version)
+ *                     (#MBEDTLS_SSL_VERSION_UNKNOWN is not valid)
+ */
+static inline void mbedtls_ssl_conf_max_tls_version( mbedtls_ssl_config *conf,
+                                     mbedtls_ssl_protocol_version tls_version )
+{
+    conf->MBEDTLS_PRIVATE(max_tls_version) = tls_version;
+}
+
+#if !defined(MBEDTLS_DEPRECATED_REMOVED)
 /**
  * \brief          Set the minimum accepted SSL/TLS protocol version
  *
@@ -4236,13 +4271,35 @@ void mbedtls_ssl_conf_max_version( mbedtls_ssl_config *conf, int major, int mino
  *                 mbedtls_ssl_get_version_number() to see what version was
  *                 negotiated.
  *
+ * \note           This function is deprecated and has been replaced by
+ *                 \c mbedtls_ssl_conf_min_tls_version().
+ *
  * \param conf     SSL configuration
  * \param major    Major version number (#MBEDTLS_SSL_MAJOR_VERSION_3)
  * \param minor    Minor version number
  *                 (#MBEDTLS_SSL_MINOR_VERSION_3 for (D)TLS 1.2,
  *                 #MBEDTLS_SSL_MINOR_VERSION_4 for TLS 1.3)
  */
-void mbedtls_ssl_conf_min_version( mbedtls_ssl_config *conf, int major, int minor );
+void MBEDTLS_DEPRECATED mbedtls_ssl_conf_min_version( mbedtls_ssl_config *conf, int major, int minor );
+#endif /* MBEDTLS_DEPRECATED_REMOVED */
+
+/**
+ * \brief          Set the minimum supported version sent from the client side
+ *                 and/or accepted at the server side.
+ *
+ * \note           After the handshake, you can call
+ *                 mbedtls_ssl_get_version_number() to see what version was
+ *                 negotiated.
+ *
+ * \param conf         SSL configuration
+ * \param tls_version  TLS protocol version number (\p mbedtls_ssl_protocol_version)
+ *                     (#MBEDTLS_SSL_VERSION_UNKNOWN is not valid)
+ */
+static inline void mbedtls_ssl_conf_min_tls_version( mbedtls_ssl_config *conf,
+                                     mbedtls_ssl_protocol_version tls_version )
+{
+    conf->MBEDTLS_PRIVATE(min_tls_version) = tls_version;
+}
 
 #if defined(MBEDTLS_SSL_ENCRYPT_THEN_MAC)
 /**
@@ -4585,8 +4642,11 @@ mbedtls_key_exchange_type_t mbedtls_ssl_get_key_exchange(const mbedtls_ssl_conte
  * \param ssl      The SSL context to query.
  * \return         The negotiated protocol version.
  */
-mbedtls_ssl_protocol_version mbedtls_ssl_get_version_number(
-    const mbedtls_ssl_context *ssl );
+static inline mbedtls_ssl_protocol_version mbedtls_ssl_get_version_number(
+    const mbedtls_ssl_context *ssl )
+{
+    return ssl->MBEDTLS_PRIVATE(tls_version);
+}
 
 /**
  * \brief          Return the current TLS version
@@ -5187,7 +5247,7 @@ int mbedtls_ssl_context_load( mbedtls_ssl_context *ssl,
 void mbedtls_ssl_config_init( mbedtls_ssl_config *conf );
 
 /**
- * \brief          Load reasonnable default SSL configuration values.
+ * \brief          Load reasonable default SSL configuration values.
  *                 (You need to call mbedtls_ssl_config_init() first.)
  *
  * \param conf     SSL configuration context

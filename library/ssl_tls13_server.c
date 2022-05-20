@@ -1261,7 +1261,6 @@ static int ssl_tls13_parse_supported_versions_ext( mbedtls_ssl_context *ssl,
 {
     size_t list_len;
     int tls13_supported = 0;
-    int major_ver, minor_ver;
 
     if( len < 1 )
         return( MBEDTLS_ERR_SSL_DECODE_ERROR );
@@ -1279,11 +1278,11 @@ static int ssl_tls13_parse_supported_versions_ext( mbedtls_ssl_context *ssl,
 
     while( len > 0 )
     {
-        mbedtls_ssl_read_version( &major_ver, &minor_ver, ssl->conf->transport, buf );
+        
 
         /* In this implementation we only support TLS 1.3 and DTLS 1.3. */
-        if( major_ver == MBEDTLS_SSL_MAJOR_VERSION_3 &&
-            minor_ver == MBEDTLS_SSL_MINOR_VERSION_4 )
+        if( mbedtls_ssl_read_version( buf, ssl->conf->transport ) ==
+            MBEDTLS_SSL_VERSION_TLS1_3 )
         {
             tls13_supported = 1;
             break;
@@ -1293,7 +1292,7 @@ static int ssl_tls13_parse_supported_versions_ext( mbedtls_ssl_context *ssl,
         len -= 2;
     }
 
-    if( tls13_supported == 0 )
+    if( ! tls13_supported )
     {
         /* When we support runtime negotiation of TLS 1.2 and TLS 1.3, we need
          * a graceful fallback to TLS 1.2 in this case. */
@@ -1305,15 +1304,14 @@ static int ssl_tls13_parse_supported_versions_ext( mbedtls_ssl_context *ssl,
         return( MBEDTLS_ERR_SSL_BAD_PROTOCOL_VERSION );
     }
 
-    MBEDTLS_SSL_DEBUG_MSG( 1, ( "Negotiated version. Supported is [%d:%d]",
-                              major_ver, minor_ver ) );
+    ssl->tls_version = MBEDTLS_SSL_VERSION_TLS1_3;
 
-    ssl->major_ver = major_ver;
-    ssl->minor_ver = minor_ver;
+    MBEDTLS_SSL_DEBUG_MSG( 1, ( "Negotiated version. Supported is [%04x]",      
+                              ssl->tls_version ) );
 
 #if defined(MBEDTLS_SSL_NEW_SESSION_TICKET)
     /* Store minor version for later use with ticket serialization. */
-    ssl->session_negotiate->minor_ver = ssl->minor_ver;
+    ssl->session_negotiate->tls_version = MBEDTLS_SSL_VERSION_TLS1_3;
 #endif /* MBEDTLS_SSL_NEW_SESSION_TICKET */
 
     return( 0 );
@@ -2072,8 +2070,7 @@ static int ssl_tls13_client_hello_process( mbedtls_ssl_context *ssl )
     size_t buflen = 0;
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> parse client hello" ) );
 
-    ssl->major_ver = MBEDTLS_SSL_MAJOR_VERSION_3;
-    ssl->minor_ver = MBEDTLS_SSL_MINOR_VERSION_4;
+    ssl->tls_version = MBEDTLS_SSL_VERSION_TLS1_3;
     MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_tls13_fetch_handshake_msg(
                               ssl, MBEDTLS_SSL_HS_CLIENT_HELLO,
                               &buf, &buflen ) );
@@ -3890,7 +3887,7 @@ int mbedtls_ssl_tls13_handshake_server_step( mbedtls_ssl_context *ssl )
         case MBEDTLS_SSL_CLIENT_HELLO:
 
 #if defined(MBEDTLS_SSL_NEW_SESSION_TICKET)
-            ssl->session_negotiate->minor_ver = ssl->minor_ver;
+            ssl->session_negotiate->tls_version = ssl->tls_version;
             ssl->session_negotiate->endpoint = ssl->conf->endpoint;
 #endif /* MBEDTLS_SSL_NEW_SESSION_TICKET */
 

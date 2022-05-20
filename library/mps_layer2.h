@@ -37,12 +37,8 @@
  * Copied from existing headers -- remove when integrating MPS
  */
 
-#define MBEDTLS_SSL_MAJOR_VERSION_3             3
-#define MBEDTLS_SSL_MINOR_VERSION_0             0   /*!< SSL v3.0 */
-#define MBEDTLS_SSL_MINOR_VERSION_1             1   /*!< TLS v1.0 */
-#define MBEDTLS_SSL_MINOR_VERSION_2             2   /*!< TLS v1.1 */
-#define MBEDTLS_SSL_MINOR_VERSION_3             3   /*!< TLS v1.2 */
-#define MBEDTLS_SSL_MINOR_VERSION_4             4   /*!< TLS v1.3 */
+#define MBEDTLS_MPS_VERSION_TLS1_2 0x0303
+#define MBEDTLS_MPS_VERSION_TLS1_3 0x0304
 
 /* End of external copies to be removed later */
 
@@ -342,15 +338,15 @@ struct mbedtls_mps_l2_config
                               *   the TLS (0) or DTLS (1) record protocol.    */
 #endif /* MBEDTLS_MPS_CONF_MODE */
 
-#if !defined(MBEDTLS_MPS_CONF_VERSION)
-    uint8_t version;         /*!< This field indicates the TLS/DTLS version
+#if !defined(MBEDTLS_MPS_CONF_TLS_VERSION)
+    uint16_t tls_version;    /*!< This field indicates the TLS/DTLS version
                               *   the Layer 2 instance uses.
                               *
                               *   This field may initially be unspecified, in
                               *   which case multiple [D]TLS versions can be
                               *   received until the exact [D]TLS version has
                               *   been agreed upon.                           */
-#endif /* !MBEDTLS_MPS_CONF_VERSION */
+#endif /* !MBEDTLS_MPS_CONF_TLS_VERSION */
 
 #if !defined(MBEDTLS_MPS_CONF_ANTI_REPLAY)
     uint8_t anti_replay;     /*!< This field indicates whether anti replay
@@ -501,20 +497,20 @@ mbedtls_mps_l2_conf_get_mode( mbedtls_mps_l2_config *conf )
 }
 #endif /* MBEDTLS_MPS_CONF_MODE */
 
-#if !defined(MBEDTLS_MPS_CONF_VERSION)
+#if !defined(MBEDTLS_MPS_CONF_TLS_VERSION)
 static inline
-uint8_t mbedtls_mps_l2_conf_get_version( mbedtls_mps_l2_config *conf )
+uint16_t mbedtls_mps_l2_conf_get_tls_version( mbedtls_mps_l2_config *conf )
 {
-    return( conf->version );
+    return( conf->tls_version );
 }
-#else /* !MBEDTLS_MPS_CONF_VERSION */
+#else /* !MBEDTLS_MPS_CONF_TLS_VERSION */
 static inline
-uint8_t mbedtls_mps_l2_conf_get_version( mbedtls_mps_l2_config *conf )
+uint16_t mbedtls_mps_l2_conf_get_tls_version( mbedtls_mps_l2_config *conf )
 {
     ((void) conf);
-    return( MBEDTLS_MPS_CONF_VERSION );
+    return( MBEDTLS_MPS_CONF_TLS_VERSION );
 }
-#endif /* MBEDTLS_MPS_CONF_VERSION */
+#endif /* MBEDTLS_MPS_CONF_TLS_VERSION */
 
 #if !defined(MBEDTLS_MPS_CONF_ANTI_REPLAY)
 static inline uint8_t mbedtls_mps_l2_conf_get_anti_replay(
@@ -1117,7 +1113,7 @@ static inline int mps_l2_config_add_type( mbedtls_mps_l2 *ctx,
  *
  */
 
-int mps_l2_config_version( mbedtls_mps_l2 *ctx, uint8_t version );
+int mps_l2_config_tls_version( mbedtls_mps_l2 *ctx, uint16_t version );
 
 /**
  * \brief          Query a Layer 2 context for incoming data.

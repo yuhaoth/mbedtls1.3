@@ -56,8 +56,9 @@ typedef struct
     uint32_t ctr[2];    /*!< The record sequence number.            */
     uint16_t epoch;     /*!< The epoch to which the record belongs. */
     uint8_t type;       /*!< The record content type.               */
-    uint8_t major_ver;  /*!< The major TLS version of the record.   */
-    uint8_t minor_ver;  /*!< The minor TLS version of the record.   */
+
+    /** The TLS version of the record. */
+    uint16_t tls_version;
 
     mps_l2_bufpair buf; /*!< The record's plaintext or ciphertext,
                          *   surrounded by a parent buffer. */
