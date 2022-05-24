@@ -1184,46 +1184,7 @@ int mbedtls_ssl_setup( mbedtls_ssl_context *ssl,
         goto error;
     }
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_2)
-    if( mbedtls_ssl_conf_is_tls12_only( conf ) )
-        mbedtls_ssl_reset_in_out_pointers( ssl );
-#endif
-
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3)
-    if( mbedtls_ssl_conf_is_tls13_only(conf) )
-    {
-#if defined(MBEDTLS_SSL_PROTO_DTLS)
-        if( conf->transport == MBEDTLS_SSL_TRANSPORT_DATAGRAM )
-        {
-            ssl->out_hdr = ssl->out_buf;
-            ssl->out_ctr = ssl->out_buf + 3;
-            ssl->out_len = ssl->out_buf + 11;
-            ssl->out_iv = ssl->out_buf + 13;
-            ssl->out_msg = ssl->out_buf + 13;
-
-            ssl->in_hdr = ssl->in_buf;
-            ssl->in_ctr = ssl->in_buf + 3;
-            ssl->in_len = ssl->in_buf + 11;
-            ssl->in_iv = ssl->in_buf + 13;
-            ssl->in_msg = ssl->in_buf + 13;
-        }
-        else
-#endif /* MBEDTLS_SSL_PROTO_DTLS */
-        {
-            ssl->out_ctr = ssl->out_buf;
-            ssl->out_hdr = ssl->out_buf + 8;
-            ssl->out_len = ssl->out_buf + 11;
-            ssl->out_iv = ssl->out_buf + 13;
-            ssl->out_msg = ssl->out_buf + 13;
-
-            ssl->in_ctr = ssl->in_buf;
-            ssl->in_hdr = ssl->in_buf + 8;
-            ssl->in_len = ssl->in_buf + 11;
-            ssl->in_iv = ssl->in_buf + 13;
-            ssl->in_msg = ssl->in_buf + 13;
-        }
-    }
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
+    mbedtls_ssl_reset_in_out_pointers( ssl );
 #endif /* !MBEDTLS_SSL_USE_MPS */
 
 #if defined(MBEDTLS_SSL_DTLS_SRTP)
