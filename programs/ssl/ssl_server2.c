@@ -3083,7 +3083,13 @@ int main( int argc, char *argv[] )
         {
             ; /* Nothing to do */
         }
+    }
+#endif /* MBEDTLS_SSL_PROTO_DTLS */
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
 
+#if defined(MBEDTLS_SSL_PROTO_DTLS)
+    if( opt.transport == MBEDTLS_SSL_TRANSPORT_DATAGRAM )
+    {
 #if defined(MBEDTLS_SSL_DTLS_ANTI_REPLAY)
         if( opt.anti_replay != DFL_ANTI_REPLAY )
             mbedtls_ssl_conf_dtls_anti_replay( &conf, opt.anti_replay );
@@ -3093,7 +3099,6 @@ int main( int argc, char *argv[] )
             mbedtls_ssl_conf_dtls_badmac_limit( &conf, opt.badmac_limit );
     }
 #endif /* MBEDTLS_SSL_PROTO_DTLS */
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
 
     if( opt.force_ciphersuite[0] != DFL_FORCE_CIPHER )
         mbedtls_ssl_conf_ciphersuites( &conf, opt.force_ciphersuite );
