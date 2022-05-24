@@ -282,38 +282,6 @@ static int ssl_write_cid_ext( mbedtls_ssl_context *ssl,
 }
 #endif /* MBEDTLS_SSL_DTLS_CONNECTION_ID */
 
-#if defined(MBEDTLS_SSL_MAX_FRAGMENT_LENGTH)
-static int ssl_write_max_fragment_length_ext( mbedtls_ssl_context *ssl,
-                                              unsigned char *buf,
-                                              const unsigned char *end,
-                                              size_t *olen )
-{
-    unsigned char *p = buf;
-
-    *olen = 0;
-
-    if( ssl->conf->mfl_code == MBEDTLS_SSL_MAX_FRAG_LEN_NONE )
-        return( 0 );
-
-    MBEDTLS_SSL_DEBUG_MSG( 3,
-        ( "client hello, adding max_fragment_length extension" ) );
-
-    MBEDTLS_SSL_CHK_BUF_PTR( p, end, 5 );
-
-    MBEDTLS_PUT_UINT16_BE( MBEDTLS_TLS_EXT_MAX_FRAGMENT_LENGTH, p, 0 );
-    p += 2;
-
-    *p++ = 0x00;
-    *p++ = 1;
-
-    *p++ = ssl->conf->mfl_code;
-
-    *olen = 5;
-
-    return( 0 );
-}
-#endif /* MBEDTLS_SSL_MAX_FRAGMENT_LENGTH */
-
 #if defined(MBEDTLS_SSL_ENCRYPT_THEN_MAC)
 static int ssl_write_encrypt_then_mac_ext( mbedtls_ssl_context *ssl,
                                            unsigned char *buf,
@@ -594,16 +562,6 @@ int mbedtls_ssl_tls12_write_client_hello_exts( mbedtls_ssl_context *ssl,
     }
     p += ext_len;
 #endif /* MBEDTLS_SSL_DTLS_CONNECTION_ID */
-
-#if defined(MBEDTLS_SSL_MAX_FRAGMENT_LENGTH)
-    if( ( ret = ssl_write_max_fragment_length_ext( ssl, p, end,
-                                                   &ext_len ) ) != 0 )
-    {
-        MBEDTLS_SSL_DEBUG_RET( 1, "ssl_write_max_fragment_length_ext", ret );
-        return( ret );
-    }
-    p += ext_len;
-#endif
 
 #if defined(MBEDTLS_SSL_ENCRYPT_THEN_MAC)
     if( ( ret = ssl_write_encrypt_then_mac_ext( ssl, p, end, &ext_len ) ) != 0 )
