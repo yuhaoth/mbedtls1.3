@@ -2006,8 +2006,8 @@ int main( int argc, char *argv[] )
             }
             else if( strcmp( q, "dtls13" ) == 0 )
             {
-                opt.min_version = MBEDTLS_SSL_MINOR_VERSION_4;
-                opt.max_version = MBEDTLS_SSL_MINOR_VERSION_4;
+                opt.min_version = MBEDTLS_SSL_VERSION_TLS1_3;
+                opt.max_version = MBEDTLS_SSL_VERSION_TLS1_3;
                 opt.transport = MBEDTLS_SSL_TRANSPORT_DATAGRAM;
             }
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
