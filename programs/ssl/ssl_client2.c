@@ -212,13 +212,8 @@ int main( void )
 #define USAGE_TICKETS ""
 #endif /* MBEDTLS_SSL_SESSION_TICKETS */
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3)
-/* Support for EAP-TLS 1.3 has not been implemented yet. */
-#define USAGE_EAP_TLS ""
-#else
 #define USAGE_EAP_TLS                                       \
     "    eap_tls=%%d          default: 0 (disabled)\n"
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
 
 #define USAGE_NSS_KEYLOG                                    \
     "    nss_keylog=%%d          default: 0 (disabled)\n"               \
@@ -1355,14 +1350,9 @@ int main( int argc, char *argv[] )
         }
         else if( strcmp( p, "eap_tls" ) == 0 )
         {
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3)
-            mbedtls_printf( "Error: eap_tls is not supported in TLS 1.3.\n" );
-            goto usage;
-#else
             opt.eap_tls = atoi( q );
             if( opt.eap_tls < 0 || opt.eap_tls > 1 )
                 goto usage;
-#endif
         }
         else if( strcmp( p, "reproducible" ) == 0 )
         {
@@ -2341,6 +2331,14 @@ int main( int argc, char *argv[] )
     if( opt.eap_tls != 0 )
     {
         size_t j = 0;
+
+        if( mbedtls_ssl_get_version_number( &ssl ) !=
+            MBEDTLS_SSL_VERSION_TLS1_2 )
+        {
+            mbedtls_printf( "Error: eap_tls is only supported for TLS 1.2.\n" );
+            ret = MBEDTLS_ERR_SSL_FEATURE_UNAVAILABLE;
+            goto exit;
+        }
 
         if( ( ret = mbedtls_ssl_tls_prf( eap_tls_keying.tls_prf_type,
                                          eap_tls_keying.master_secret,
