@@ -183,11 +183,6 @@ filter()
 
   EXCLMODE="$EXCLUDE"
 
-  if [ `minor_ver "$MODE"` -ge 4 ]
-  then
-      EXCLMODE="$EXCLUDE"'\|RC4\|ARCFOUR'
-  fi
-
   for i in $LIST;
   do
     NEW_LIST="$NEW_LIST $( echo "$i" | grep "$FILTER" | grep -v "$EXCLMODE" )"
@@ -555,17 +550,18 @@ setup_arguments()
         "tls12")
             O_MODE="tls1_2"
             G_PRIO_MODE="+VERS-TLS1.2"
-            O_MODE="tls1_2"
             ;;
         "tls13")
             G_PRIO_MODE="+VERS-TLS1.3"
             O_MODE="tls1_3"
+            OPENSSL_CMD=${OPENSSL_NEXT}
+            GNUTLS_CLI=${GNUTLS_NEXT_CLI}
+            GNUTLS_SERV=${GNUTLS_NEXT_SERV}
             ;;
         "dtls12")
             O_MODE="dtls1_2"
             G_PRIO_MODE="+VERS-DTLS1.2"
             G_MODE="-u"
-            O_MODE="dtls1_2"
             ;;
         *)
             echo "error: invalid mode: $MODE" >&2
@@ -1101,7 +1097,6 @@ for VERIFY in $VERIFIES; do
                     fi
                     filter_ciphersuites
 
-
                     if [ "X" != "X$M_CIPHERS" ]; then
                         start_server "GnuTLS"
                         for i in $M_CIPHERS; do
@@ -1117,6 +1112,7 @@ for VERIFY in $VERIFIES; do
                         done
                         stop_server
                     fi
+
                     ;;
 
                 mbed*)
