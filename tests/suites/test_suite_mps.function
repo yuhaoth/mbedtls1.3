@@ -62,7 +62,7 @@
 #define L0_STREAM_BUFFER_DEFAULT_SIZE 1000
 
 /* Default TLS version to use in tests */
-#define DEFAULT_TLS_VERSION MBEDTLS_SSL_MINOR_VERSION_3
+#define DEFAULT_TLS_VERSION MBEDTLS_MPS_VERSION_TLS1_2
 
 #define DEFAULT_TLS_MAX_PLAINTEXT_SIZE 1000
 
@@ -93,7 +93,7 @@
 /* End of compile-time configuration. */
 
 #if !defined(TEST_SUITE_MPS_NO_SSL)
-#include "../include/mbedtls/ssl_internal.h"
+//#include "../library/ssl_misc.h"
 #endif
 
 /* Currently, the real record transformation functions
@@ -533,50 +533,21 @@ static void build_mock_transforms( mbedtls_mps_transform_wrap_t *ptr0,
 }
 
 #if !defined(TEST_SUITE_MPS_NO_SSL)
-static void write_version( int major, int minor, int transport,
-                           unsigned char ver[2] )
+static void write_version( int version, int transport, unsigned char ver[2] )
 {
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
     if( transport == MBEDTLS_MPS_MODE_DATAGRAM )
     {
-        if( minor == MBEDTLS_SSL_MINOR_VERSION_2 )
-            --minor; /* DTLS 1.0 stored as TLS 1.1 internally */
-
-        ver[0] = (unsigned char)( 255 - ( major - 2 ) );
-        ver[1] = (unsigned char)( 255 - ( minor - 1 ) );
+        version =
+          ~( version - ( version == 0x0302 ? 0x0202 : 0x0201 ) );
     }
     else
 #else
     ((void) transport);
 #endif
-    {
-        ver[0] = (unsigned char) major;
-        ver[1] = (unsigned char) minor;
-    }
+    MBEDTLS_PUT_UINT16_BE( version, ver, 0 );
 }
-
-static void read_version( int *major, int *minor, int transport,
-                          const unsigned char ver[2] )
-{
-#if defined(MBEDTLS_SSL_PROTO_DTLS)
-    if( transport == MBEDTLS_MPS_MODE_DATAGRAM )
-    {
-        *major = 255 - ver[0] + 2;
-        *minor = 255 - ver[1] + 1;
-
-        if( *minor == MBEDTLS_SSL_MINOR_VERSION_1 )
-            ++*minor; /* DTLS 1.0 stored as TLS 1.1 internally */
-    }
-    else
-#else
-    ((void) transport);
-#endif
-    {
-        *major = ver[0];
-        *minor = ver[1];
-    }
-}
-#endif /* #if !defined(TEST_SUITE_MPS_NO_SSL) */
+#endif /* ! TEST_SUITE_MPS_NO_SSL */
 
 #define CHK( x )                                \
     do                                          \
@@ -596,7 +567,7 @@ static void read_version( int *major, int *minor, int transport,
 static int build_real_transforms_worker( mbedtls_mps_transform_wrap_t *t_in_,
                                   mbedtls_mps_transform_wrap_t *t_out_,
                                   int cipher_type, int hash_id,
-                                  int etm, int tag_mode, int ver,
+                                  int etm, int tag_mode, int tls_version,
                                   int (*f_rng)(void *, unsigned char *, size_t),
                                   void *p_rng )
 {
@@ -657,8 +628,8 @@ static int build_real_transforms_worker( mbedtls_mps_transform_wrap_t *t_in_,
 #else
     ((void) etm);
 #endif /* MBEDTLS_SSL_ENCRYPT_THEN_MAC */
-    t_out->minor_ver = ver;
-    t_in->minor_ver = ver;
+    t_out->tls_version = tls_version;
+    t_in->tls_version = tls_version;
     t_out->ivlen = ivlen; /* redundant, must be iv size */
     t_in->ivlen = ivlen;  /* redundant, must be iv size */
 
@@ -720,26 +691,10 @@ static int build_real_transforms_worker( mbedtls_mps_transform_wrap_t *t_in_,
         CHK( mbedtls_md_setup( &t_in->md_ctx_enc,  md_info, 1 ) == 0 );
         CHK( mbedtls_md_setup( &t_in->md_ctx_dec,  md_info, 1 ) == 0 );
 
-        if( ver > MBEDTLS_SSL_MINOR_VERSION_0 )
-        {
-            CHK( mbedtls_md_hmac_starts( &t_in->md_ctx_enc,
-                                         md0, maclen ) == 0 );
-            CHK( mbedtls_md_hmac_starts( &t_in->md_ctx_dec,
-                                         md1, maclen ) == 0 );
-            CHK( mbedtls_md_hmac_starts( &t_out->md_ctx_enc,
-                                         md1, maclen ) == 0 );
-            CHK( mbedtls_md_hmac_starts( &t_out->md_ctx_dec,
-                                         md0, maclen ) == 0 );
-        }
-#if defined(MBEDTLS_SSL_PROTO_SSL3)
-        else
-        {
-            memcpy( &t_in->mac_enc, md0, maclen );
-            memcpy( &t_in->mac_dec, md1, maclen );
-            memcpy( &t_out->mac_enc, md1, maclen );
-            memcpy( &t_out->mac_dec, md0, maclen );
-        }
-#endif
+        CHK( mbedtls_md_hmac_starts( &t_in->md_ctx_enc, md0, maclen ) == 0 );
+        CHK( mbedtls_md_hmac_starts( &t_in->md_ctx_dec, md1, maclen ) == 0 );
+        CHK( mbedtls_md_hmac_starts( &t_out->md_ctx_enc, md1, maclen ) == 0 );
+        CHK( mbedtls_md_hmac_starts( &t_out->md_ctx_dec, md0, maclen ) == 0 );
     }
     free( md0 );
     free( md1 );
@@ -790,7 +745,7 @@ static int build_real_transforms( mbedtls_mps_transform_wrap_t *t_in_,
     return( build_real_transforms_worker( t_in_, t_out_,
                            MBEDTLS_CIPHER_AES_256_GCM,
                            MBEDTLS_MD_SHA256,
-                           0, 0, MBEDTLS_SSL_MINOR_VERSION_3,
+                           0, 0, MBEDTLS_SSL_VERSION_TLS1_2,
                            mbedtls_test_rnd_std_rand, NULL ) );
 }
 #endif /* TEST_SUITE_MPS_NO_SSL */
@@ -856,8 +811,8 @@ int mps_transform_encrypt( void *transform__,
         rec_alt.ctr[5] = ( rec->ctr[0] >> 16 ) & 0xFF;
         rec_alt.ctr[6] = ( rec->ctr[0] >>  8 ) & 0xFF;
         rec_alt.ctr[7] = ( rec->ctr[0] >>  0 ) & 0xFF;
-        write_version( rec->major_ver, rec->minor_ver,
-                       MBEDTLS_MPS_MODE_STREAM, &rec_alt.ver[0] );
+        write_version( rec->tls_version, MBEDTLS_MPS_MODE_STREAM,
+                       &rec_alt.ver[0] );
 
         ret = mbedtls_ssl_encrypt_buf( NULL, real, &rec_alt, f_rng, p_rng );
         if( ret != 0 )
@@ -973,8 +928,8 @@ int mps_transform_decrypt( void *transform__, mps_rec *rec )
         rec_alt.ctr[5] = ( rec->ctr[0] >> 16 ) & 0xFF;
         rec_alt.ctr[6] = ( rec->ctr[0] >>  8 ) & 0xFF;
         rec_alt.ctr[7] = ( rec->ctr[0] >>  0 ) & 0xFF;
-        write_version( rec->major_ver, rec->minor_ver,
-                       MBEDTLS_MPS_MODE_STREAM, &rec_alt.ver[0] );
+        write_version( rec->tls_version, MBEDTLS_MPS_MODE_STREAM,
+                       &rec_alt.ver[0] );
 
         ret = mbedtls_ssl_decrypt_buf( NULL, real, &rec_alt );
         if( ret != 0 )
@@ -1247,7 +1202,7 @@ mbedtls_mps cli_l4, srv_l4;
 typedef struct
 {
     int mode;
-    int version;
+    uint16_t tls_version;
     size_t max_plain_out;
     size_t io_buffer_size;
     size_t l0_stream_buffer_sz;
@@ -1259,7 +1214,7 @@ typedef struct
 mps_layer_test_config_t const mps_test_config_default =
 {
     .mode                = MBEDTLS_MPS_MODE_STREAM,
-    .version             = DEFAULT_TLS_VERSION,
+    .tls_version         = DEFAULT_TLS_VERSION,
     .max_plain_out       = DEFAULT_TLS_MAX_PLAINTEXT_SIZE,
     .io_buffer_size      = IO_BUFFER_DEFAULT_SIZE,
     .l0_stream_buffer_sz = L0_STREAM_BUFFER_DEFAULT_SIZE,
@@ -1338,10 +1293,10 @@ static int init_mps_layers()
     cli_l2.conf.max_plain_out = mps_test_config.max_plain_out;
     srv_l2.conf.max_plain_out = mps_test_config.max_plain_out;
 
-    CHK( mps_l2_config_version( &cli_l2,
-                                mps_test_config.version ) == 0 );
-    CHK( mps_l2_config_version( &srv_l2,
-                                mps_test_config.version ) == 0 );
+    CHK( mps_l2_config_tls_version( &cli_l2,
+                                    mps_test_config.tls_version ) == 0 );
+    CHK( mps_l2_config_tls_version( &srv_l2,
+                                    mps_test_config.tls_version ) == 0 );
 
     /* Initialize Layer 3 */
     CHK( mps_l3_init( &cli_l3, &cli_l2, mps_test_config.mode ) == 0 );
@@ -1395,6 +1350,11 @@ static void set_transform_pointers()
 #endif /* TEST_SUITE_MPS */
 
 /* END_HEADER */
+
+/* BEGIN_DEPENDENCIES
+ * depends_on:MBEDTLS_SSL_PROTO_TLS1_3
+ * END_DEPENDENCIES
+ */
 
 /* BEGIN_CASE depends_on:TEST_SUITE_MPS_READER */
 void mbedtls_mps_reader_feed_empty( int option )
@@ -4528,14 +4488,8 @@ void mbedtls_mps_l2_bad_record( int mode,
         l1_out_buf[ tls_rec_type_offset ] = type;
 
         /* Write record version */
-        if( failure_type != 1 )
-            min_ver = MBEDTLS_SSL_MINOR_VERSION_3;
-        else
-            min_ver = MBEDTLS_SSL_MINOR_VERSION_1;
-        if( failure_type != 2 )
-            maj_ver = MBEDTLS_SSL_MAJOR_VERSION_3;
-        else
-            maj_ver = 42;
+        min_ver = ( failure_type != 1 ) ? 3 : 0;
+        maj_ver = ( failure_type != 2 ) ? 3 : 42;
 
         l1_out_buf[ tls_rec_ver_offset + 0 ] = maj_ver;
         l1_out_buf[ tls_rec_ver_offset + 1 ] = min_ver;
@@ -4576,14 +4530,8 @@ void mbedtls_mps_l2_bad_record( int mode,
         l1_out_buf[ dtls_rec_type_offset ] = type;
 
         /* Write record version */
-        if( failure_type != 1 )
-            min_ver = MBEDTLS_SSL_MINOR_VERSION_3;
-        else
-            min_ver = MBEDTLS_SSL_MINOR_VERSION_1;
-        if( failure_type != 2 )
-            maj_ver = MBEDTLS_SSL_MAJOR_VERSION_3;
-        else
-            maj_ver = 42;
+        min_ver = ( failure_type != 1 ) ? 3 : 1;
+        maj_ver = ( failure_type != 2 ) ? 3 : 42;
 
         l1_out_buf[ dtls_rec_ver_offset + 0 ] = maj_ver;
         l1_out_buf[ dtls_rec_ver_offset + 1 ] = min_ver;
@@ -10077,8 +10025,8 @@ void mbedtls_mps_l4_flight_exchange( int mode,
                                       ( 3 * hs_len ) / 2,
                                       ( 3 * hs_len ) / 2,
                                       mbedtls_test_rnd_std_rand, NULL ) == 0 );
-            TEST_ASSERT( mps_l2_config_version( &srv_l2,
-                                                MBEDTLS_SSL_MINOR_VERSION_3 ) == 0 );
+            TEST_ASSERT( mps_l2_config_tls_version( &srv_l2,
+                                                    MBEDTLS_MPS_VERSION_TLS1_2 ) == 0 );
             TEST_ASSERT( mps_l2_config_add_type( &srv_l2, MBEDTLS_MPS_MSG_HS,
                                                  1, 1, 0, 0 ) == 0 );
             TEST_ASSERT( mps_l2_config_add_type( &srv_l2, MBEDTLS_MPS_MSG_ALERT,

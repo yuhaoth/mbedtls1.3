@@ -45,45 +45,40 @@ static int mbedtls_mps_trace_id = MBEDTLS_MPS_TRACE_BIT_LAYER_2;
 #include <string.h>
 
 MBEDTLS_MPS_STATIC
-void l2_out_write_version( int major, int minor,
+void l2_out_write_version( int version,
                            mbedtls_mps_transport_type transport,
                            unsigned char ver[2] )
 {
-    MBEDTLS_MPS_IF_TLS( transport )
+    MBEDTLS_MPS_IF_DTLS( transport )
     {
-        ver[0] = (unsigned char) major;
-        ver[1] = (unsigned char) minor;
+        version =
+          ~( version - ( version == 0x0302 ? 0x0202 : 0x0201 ) );
     }
-    MBEDTLS_MPS_ELSE_IF_DTLS( transport )
-    {
-        if( minor == MBEDTLS_SSL_MINOR_VERSION_2 )
-            --minor; /* DTLS 1.0 stored as TLS 1.1 internally */
 
-        ver[0] = (unsigned char)( 255 - ( major - 2 ) );
-        ver[1] = (unsigned char)( 255 - ( minor - 1 ) );
-    }
+    MBEDTLS_PUT_UINT16_BE( version, ver, 0 );
 }
 
 #if defined(MBEDTLS_MPS_PROTO_TLS)
 MBEDTLS_MPS_STATIC
-void l2_read_version_tls( uint8_t *major, uint8_t *minor,
+void l2_read_version_tls( uint16_t *tls_version,
                           const unsigned char ver[2] )
 {
-    *major = ver[0];
-    *minor = ver[1];
+    *tls_version = MBEDTLS_GET_UINT16_BE( ver, 0 );
 }
 #endif /* MBEDTLS_MPS_PROTO_TLS */
 
 #if defined(MBEDTLS_MPS_PROTO_DTLS)
 MBEDTLS_MPS_STATIC
-void l2_read_version_dtls( uint8_t *major, uint8_t *minor,
+void l2_read_version_dtls( uint16_t *tls_version,
                            const unsigned char ver[2] )
 {
-    *major = 255 - ver[0] + 2;
-    *minor = 255 - ver[1] + 1;
+    int major = 255 - ver[0] + 2;
+    int minor = 255 - ver[1] + 1;
 
-    if( *minor == MBEDTLS_SSL_MINOR_VERSION_1 )
-        ++*minor; /* DTLS 1.0 stored as TLS 1.1 internally */
+    if( minor == 1 )
+        ++minor; /* DTLS 1.0 stored as TLS 1.1 internally */
+
+    *tls_version = ( major << 8 ) | minor;
 }
 #endif /* MBEDTLS_MPS_PROTO_DTLS */
 
@@ -346,11 +341,11 @@ int mps_l2_init( mbedtls_mps_l2 *ctx, mps_l1 *l1,
             "Mismatch between compile- and runtime configuration" );
 #endif /* MBEDTLS_MPS_CONF_MODE */
 
-#if !defined(MBEDTLS_MPS_CONF_VERSION)
+#if !defined(MBEDTLS_MPS_CONF_TLS_VERSION)
     /* TODO: Allow setting an arbitrary version,
      *       as well as an initially unspecified one. */
-    ctx->conf.version = MBEDTLS_SSL_MINOR_VERSION_3;
-#endif /* !MBEDTLS_MPS_CONF_VERSION */
+    ctx->conf.tls_version = MBEDTLS_MPS_VERSION_TLS1_2;
+#endif /* !MBEDTLS_MPS_CONF_TLS_VERSION */
 
 #if !defined(MBEDTLS_MPS_CONF_TYPE_FLAG)
     ctx->conf.type_flag = 0;
@@ -463,14 +458,14 @@ int mps_l2_free( mbedtls_mps_l2 *ctx )
     MBEDTLS_MPS_TRACE_RETURN( 0 );
 }
 
-int mps_l2_config_version( mbedtls_mps_l2 *ctx, uint8_t ver )
+int mps_l2_config_tls_version( mbedtls_mps_l2 *ctx, uint16_t tls_version )
 {
-    MBEDTLS_MPS_TRACE_INIT( "mps_l2_config_version: %u", (unsigned) ver );
+    MBEDTLS_MPS_TRACE_INIT( "mps_l2_config_tls_version: %u", tls_version );
 
-#if !defined(MBEDTLS_MPS_CONF_VERSION)
+#if !defined(MBEDTLS_MPS_CONF_TLS_VERSION)
     /* TODO: Add check */
-    ctx->conf.version = ver;
-#endif /* !MBEDTLS_MPS_CONF_VERSION */
+    ctx->conf.tls_version = tls_version;
+#endif /* !MBEDTLS_MPS_CONF_TLS_VERSION */
 
     MBEDTLS_MPS_TRACE_RETURN( 0 );
 }
@@ -664,11 +659,10 @@ int l2_out_dispatch_record( mbedtls_mps_l2 *ctx )
         /* Step 1: Prepare the record header structure. */
 
         /* TODO: Handle the case where the version hasn't been set yet! */
-        rec.major_ver = MBEDTLS_SSL_MAJOR_VERSION_3;
-        rec.minor_ver = mbedtls_mps_l2_conf_get_version( &ctx->conf );
-        rec.buf       = ctx->io.out.payload;
-        rec.epoch     = (uint16_t) ctx->io.out.writer.epoch;
-        rec.type      = ctx->io.out.writer.type;
+        rec.tls_version = mbedtls_mps_l2_conf_get_tls_version( &ctx->conf );
+        rec.buf         = ctx->io.out.payload;
+        rec.epoch       = (uint16_t) ctx->io.out.writer.epoch;
+        rec.type        = ctx->io.out.writer.type;
 
         MBEDTLS_MPS_TRACE_COMMENT( "Record header fields:" );
         MBEDTLS_MPS_TRACE_COMMENT( "* Epoch:           %u", (unsigned) rec.epoch );
@@ -771,12 +765,11 @@ int l2_out_write_protected_record( mbedtls_mps_l2 *ctx, mps_rec *rec )
 #if defined(MBEDTLS_MPS_PROTO_DTLS)
     MBEDTLS_MPS_ELSE_IF_DTLS( mode )
     {
-        /* Only handle DTLS 1.0 and 1.2 for the moment,
+        /* Only handle DTLS 1.2 for the moment,
          * which have a uniform and simple record header. */
-        switch( mbedtls_mps_l2_conf_get_version( &ctx->conf ) )
+        switch( mbedtls_mps_l2_conf_get_tls_version( &ctx->conf ) )
         {
-            case MBEDTLS_SSL_MINOR_VERSION_2: /* DTLS 1.0 */
-            case MBEDTLS_SSL_MINOR_VERSION_3: /* DTLS 1.2 */
+            case MBEDTLS_MPS_VERSION_TLS1_2: /* DTLS 1.2 */
                 ret = l2_out_write_protected_record_dtls12( ctx, rec );
 
             /* TLS-1.3-NOTE: Add DTLS-1.3 here */
@@ -833,13 +826,13 @@ int l2_out_write_protected_record_tls( mbedtls_mps_l2 *ctx, mps_rec *rec )
     /* Write record content type. */
     MPS_WRITE_UINT8_BE( &rec->type, hdr + tls_rec_type_offset );
     /* Write record version. */
-    l2_out_write_version( rec->major_ver, rec->minor_ver,
+    l2_out_write_version( rec->tls_version,
                           MBEDTLS_MPS_MODE_STREAM,
                           hdr + tls_rec_ver_offset );
     /* Write ciphertext length. */
     MPS_WRITE_UINT16_BE( &rec->buf.data_len, hdr + tls_rec_len_offset );
     MBEDTLS_MPS_TRACE_COMMENT( "* Type:    %u", (unsigned) rec->type );
-    MBEDTLS_MPS_TRACE_COMMENT( "* Version: %u", (unsigned) rec->minor_ver );
+    MBEDTLS_MPS_TRACE_COMMENT( "* Version: %u", rec->tls_version );
     MBEDTLS_MPS_TRACE_RETURN( mps_l1_dispatch( l1, hdr_len + rec->buf.data_len, NULL ) );
 }
 #endif /* MBEDTLS_MPS_PROTO_TLS */
@@ -889,8 +882,7 @@ int l2_out_write_protected_record_dtls12( mbedtls_mps_l2 *ctx,
     MPS_WRITE_UINT8_BE( &rec->type, hdr + dtls_rec_type_offset );
 
     /* Write record version. */
-    l2_out_write_version( rec->major_ver,
-                          rec->minor_ver,
+    l2_out_write_version( rec->tls_version,
                           MBEDTLS_MPS_MODE_DATAGRAM,
                           hdr + dtls_rec_ver_offset );
 
@@ -1811,13 +1803,11 @@ int l2_in_fetch_protected_record( mbedtls_mps_l2 *ctx, mps_rec *rec )
     MBEDTLS_MPS_ELSE_IF_DTLS( mode )
     {
         MBEDTLS_MPS_ASSERT_RAW(
-            mbedtls_mps_l2_conf_get_version( &ctx->conf )
-              == MBEDTLS_SSL_MINOR_VERSION_2 ||
-            mbedtls_mps_l2_conf_get_version( &ctx->conf )
-              == MBEDTLS_SSL_MINOR_VERSION_3,
+            mbedtls_mps_l2_conf_get_tls_version( &ctx->conf )
+              == MBEDTLS_MPS_VERSION_TLS1_2,
             "unexpected version" );
 
-        /* Only handle DTLS 1.0 and 1.2 for the moment,
+        /* Only handle DTLS 1.2 for the moment,
          * which have a uniform and simple record header. */
         MBEDTLS_MPS_TRACE_RETURN( l2_in_fetch_protected_record_dtls12( ctx, rec ) );
     }
@@ -1841,15 +1831,12 @@ mbedtls_mps_size_t l2_get_header_len( mbedtls_mps_l2 *ctx,
     MBEDTLS_MPS_ELSE_IF_DTLS( mode )
     {
         /* OPTIMIZATION:
-         * As long as we're only supporting DTLS 1.0 and 1.2
-         * which share the same record header, remove this
-         * switch to save a few bytes? */
+         * As long as we're only supporting DTLS 1.2,
+         * remove this switch to save a few bytes? */
 
         MBEDTLS_MPS_ASSERT_RAW(
-            mbedtls_mps_l2_conf_get_version( &ctx->conf )
-              == MBEDTLS_SSL_MINOR_VERSION_2 ||
-            mbedtls_mps_l2_conf_get_version( &ctx->conf )
-              == MBEDTLS_SSL_MINOR_VERSION_3,
+            mbedtls_mps_l2_conf_get_tls_version( &ctx->conf )
+              == MBEDTLS_MPS_VERSION_TLS1_2,
             "Unexpected version" );
 
         /* Only handle DTLS 1.0 and 1.2 for the moment,
@@ -1862,17 +1849,17 @@ mbedtls_mps_size_t l2_get_header_len( mbedtls_mps_l2 *ctx,
 /* This function converts an internal TLS version identifier to
  * the version byte used within the record header on the wire.  */
 MBEDTLS_MPS_ALWAYS_INLINE
-int l2_version_wire_matches_logical( uint8_t wire_version,
-                                     int logical_version )
+int l2_version_wire_matches_logical( uint16_t wire_version,
+                                     uint16_t logical_version )
 {
 
     /* TODO: Since MBEDTLS_MPS_L2_VERSION_UNSPECIFIED is not
      * yet implemented we include this special handling.
      */
-    if( wire_version == MBEDTLS_SSL_MINOR_VERSION_1 )
+    if( wire_version == 0x0301 )
     {
         /* Backwards compatibility case */
-        MBEDTLS_MPS_TRACE_COMMENT( "Record with TLS 1.1 version number received" );
+        MBEDTLS_MPS_TRACE_COMMENT( "Record with TLS 1.0 version number received" );
         return( 1 );
     }
 
@@ -1880,17 +1867,11 @@ int l2_version_wire_matches_logical( uint8_t wire_version,
     {
         case MBEDTLS_MPS_L2_VERSION_UNSPECIFIED:
             return( 1 );
-        case MBEDTLS_SSL_MINOR_VERSION_0:
-            return( wire_version == 0 );
-        case MBEDTLS_SSL_MINOR_VERSION_1:
-            return( wire_version == 1 );
-        case MBEDTLS_SSL_MINOR_VERSION_2:
-            return( wire_version == 2 );
-        case MBEDTLS_SSL_MINOR_VERSION_3:
-            return( wire_version == 3 );
+        case MBEDTLS_MPS_VERSION_TLS1_2:
+            return( wire_version == 0x0303 );
         /* TLS 1.3 and TLS 1.2 use the same wire-version. */
-        case MBEDTLS_SSL_MINOR_VERSION_4:
-            return( wire_version == 3 );
+        case MBEDTLS_MPS_VERSION_TLS1_3:
+            return( wire_version == 0x0303 );
 
         default:
             return( 0 );
@@ -1926,7 +1907,7 @@ int l2_in_fetch_protected_record_tls( mbedtls_mps_l2 *ctx, mps_rec *rec )
     const mbedtls_mps_size_t tls_rec_len_offset  = 3;
 
     /* Record fields */
-    uint8_t minor_ver, major_ver;
+    uint16_t tls_version;
     mbedtls_mps_msg_type_t type;
     uint16_t len;
     MBEDTLS_MPS_TRACE_INIT( "l2_in_fetch_protected_record_tls" );
@@ -1951,13 +1932,7 @@ int l2_in_fetch_protected_record_tls( mbedtls_mps_l2 *ctx, mps_rec *rec )
      *       is ApplicationData in the case of TLS 1.3.
      */
     MPS_READ_UINT8_BE( buf + tls_rec_type_offset, &type );
-    l2_read_version_tls( &major_ver, &minor_ver, buf + tls_rec_ver_offset );
-    if( major_ver != MBEDTLS_SSL_MAJOR_VERSION_3 )
-    {
-        MBEDTLS_MPS_TRACE_ERROR( "Invalid major record version %u received, expected %u",
-               (unsigned) major_ver, (unsigned) MBEDTLS_SSL_MAJOR_VERSION_3 );
-        MBEDTLS_MPS_TRACE_RETURN( MBEDTLS_ERR_MPS_INVALID_RECORD );
-    }
+    l2_read_version_tls( &tls_version, buf + tls_rec_ver_offset );
 
     /* Initially, the server doesn't know which TLS version the client will use
      * for its ClientHello message, so Layer 2 must be configurable to allow
@@ -1970,11 +1945,11 @@ int l2_in_fetch_protected_record_tls( mbedtls_mps_l2 *ctx, mps_rec *rec )
      *
      * We capture both special cases in a helper function checking whether the
      * wire-version matches the configured logical version. */
-    if( l2_version_wire_matches_logical( minor_ver,
-                  mbedtls_mps_l2_conf_get_version( &ctx->conf ) ) != 1 )
+    if( l2_version_wire_matches_logical( tls_version,
+                  mbedtls_mps_l2_conf_get_tls_version( &ctx->conf ) ) != 1 )
     {
-        MBEDTLS_MPS_TRACE_ERROR( "Invalid minor record version %u received, expected %u",
-               (unsigned) minor_ver, mbedtls_mps_l2_conf_get_version( &ctx->conf ) );
+        MBEDTLS_MPS_TRACE_ERROR( "Invalid record version %u received, expected %u",
+               tls_version, mbedtls_mps_l2_conf_get_tls_version( &ctx->conf ) );
         MBEDTLS_MPS_TRACE_RETURN( MBEDTLS_ERR_MPS_INVALID_RECORD );
     }
 
@@ -2021,9 +1996,8 @@ int l2_in_fetch_protected_record_tls( mbedtls_mps_l2 *ctx, mps_rec *rec )
     MBEDTLS_MPS_TRACE_COMMENT( "* Record number: ( %u << 32 ) + %u ",
            (unsigned) rec->ctr[0], (unsigned) rec->ctr[1] );
 
-    rec->type      = type;
-    rec->major_ver = major_ver;
-    rec->minor_ver = minor_ver;
+    rec->type        = type;
+    rec->tls_version = tls_version;
 
     rec->buf.buf         = buf + tls_rec_hdr_len;
     rec->buf.buf_len     = len;
@@ -2184,8 +2158,8 @@ int l2_in_fetch_protected_record_dtls12( mbedtls_mps_l2 *ctx,
     mbedtls_mps_size_t const dtls_rec_len_offset   = 11;
 
     /* Temporaries for record fields. */
-    uint8_t  type, minor_ver, major_ver;
-    uint16_t epoch, len;
+    uint8_t  type;
+    uint16_t tls_version, epoch, len;
     uint32_t seq_nr[2];
 
     MBEDTLS_MPS_TRACE_INIT( "l2_in_fetch_protected_record_dtls12" );
@@ -2223,26 +2197,18 @@ int l2_in_fetch_protected_record_dtls12( mbedtls_mps_l2 *ctx,
     rec->type = type;
 
     /* Version */
-    l2_read_version_dtls( &major_ver, &minor_ver,
+    l2_read_version_dtls( &tls_version,
                           buf + dtls_rec_ver_offset );
-    if( major_ver != MBEDTLS_SSL_MAJOR_VERSION_3 )
-    {
-        MBEDTLS_MPS_TRACE_ERROR( "Invalid major record version %u received, expected %u",
-               (unsigned) major_ver, (unsigned) MBEDTLS_SSL_MAJOR_VERSION_3 );
-        MBEDTLS_MPS_TRACE_RETURN( MBEDTLS_ERR_MPS_INVALID_RECORD );
-    }
-    if( mbedtls_mps_l2_conf_get_version( &ctx->conf ) !=
+    if( mbedtls_mps_l2_conf_get_tls_version( &ctx->conf ) !=
           MBEDTLS_MPS_L2_VERSION_UNSPECIFIED &&
-        mbedtls_mps_l2_conf_get_version( &ctx->conf ) !=
-          minor_ver )
+        mbedtls_mps_l2_conf_get_tls_version( &ctx->conf ) !=
+          tls_version )
     {
         MBEDTLS_MPS_TRACE_ERROR( "Invalid minor record version %u received, expected %u",
-               (unsigned) minor_ver,
-               (unsigned) mbedtls_mps_l2_conf_get_version( &ctx->conf ) );
+               tls_version, mbedtls_mps_l2_conf_get_tls_version( &ctx->conf ) );
         MBEDTLS_MPS_TRACE_RETURN( MBEDTLS_ERR_MPS_INVALID_RECORD );
     }
-    rec->major_ver = major_ver;
-    rec->minor_ver = minor_ver;
+    rec->tls_version = tls_version;
 
     /* Epoch */
     MPS_READ_UINT16_BE( buf + dtls_rec_epoch_offset, &epoch );

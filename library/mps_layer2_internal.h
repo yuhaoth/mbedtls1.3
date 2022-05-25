@@ -27,15 +27,15 @@
  */
 
 #if defined(MBEDTLS_MPS_PROTO_TLS)
-MBEDTLS_MPS_STATIC void l2_read_version_tls( uint8_t *major, uint8_t *minor,
+MBEDTLS_MPS_STATIC void l2_read_version_tls( uint16_t *tls_version,
                                              const unsigned char ver[2] );
 #endif /* MBEDTLS_MPS_PROTO_TLS */
 
 #if defined(MBEDTLS_MPS_PROTO_DTLS)
-MBEDTLS_MPS_STATIC void l2_read_version_dtls( uint8_t *major, uint8_t *minor,
+MBEDTLS_MPS_STATIC void l2_read_version_dtls( uint16_t *tls_version,
                                               const unsigned char ver[2] );
 #endif /* MBEDTLS_MPS_PROTO_DTLS */
-MBEDTLS_MPS_STATIC void l2_out_write_version( int major, int minor,
+MBEDTLS_MPS_STATIC void l2_out_write_version( int tls_version,
                                   mbedtls_mps_transport_type transport,
                                   unsigned char ver[2] );
 
@@ -217,8 +217,8 @@ MBEDTLS_MPS_STATIC int l2_out_release_record( mbedtls_mps_l2 *ctx,
 
 #if defined(MBEDTLS_MPS_PROTO_TLS)
 MBEDTLS_MPS_ALWAYS_INLINE
-int l2_version_wire_matches_logical( uint8_t wire_version,
-                                     int logical_version );
+int l2_version_wire_matches_logical( uint16_t wire_version,
+                                     uint16_t logical_version );
 #endif /* MBEDTLS_MPS_PROTO_TLS */
 
 /* Configuration related */
