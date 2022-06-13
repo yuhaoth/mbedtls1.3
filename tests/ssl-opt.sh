@@ -11493,6 +11493,15 @@ run_test    "TLS 1.3 m->G server with middlebox compat support, not client" \
             1 \
             -c "ChangeCipherSpec invalid in TLS 1.3 without compatibility mode"
 
+requires_openssl_tls1_3
+run_test    "TLS 1.3: NewSessionTicket" \
+            "$P_SRV debug_level=4 crt_file=data_files/server5.crt key_file=data_files/server5.key force_version=tls13 tickets=1" \
+            "$O_NEXT_CLI -msg -debug -tls1_3 -no_middlebox" \
+            0 \
+            -s "=> write NewSessionTicket msg" \
+            -s "server state: MBEDTLS_SSL_SERVER_NEW_SESSION_TICKET" \
+            -s "server state: MBEDTLS_SSL_SERVER_NEW_SESSION_TICKET_FLUSH"
+
 # Test heap memory usage after handshake
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
 requires_config_enabled MBEDTLS_MEMORY_DEBUG
