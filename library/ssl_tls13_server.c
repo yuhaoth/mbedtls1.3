@@ -1651,10 +1651,245 @@ static int ssl_tls13_handshake_wrapup( mbedtls_ssl_context *ssl )
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "handshake: done" ) );
 
     mbedtls_ssl_tls13_handshake_wrapup( ssl );
+
+#if defined(MBEDTLS_SSL_SESSION_TICKETS)
+    mbedtls_ssl_handshake_set_state( ssl,
+                                     MBEDTLS_SSL_SERVER_NEW_SESSION_TICKET );
+#else /* MBEDTLS_SSL_SESSION_TICKETS */
     mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_HANDSHAKE_OVER );
+#endif /* !MBEDTLS_SSL_SESSION_TICKETS */
     return( 0 );
 }
 
+#define SSL_NEW_SESSION_TICKET_SKIP  0
+#define SSL_NEW_SESSION_TICKET_WRITE 1
+static int ssl_tls13_write_new_session_ticket_coordinate( mbedtls_ssl_context *ssl )
+{
+    /* Check whether the use of session tickets is enabled */
+    if( ssl->conf->session_tickets == 0 )
+    {
+        return( SSL_NEW_SESSION_TICKET_SKIP );
+    }
+
+    return( SSL_NEW_SESSION_TICKET_WRITE );
+}
+
+#if defined(MBEDTLS_SSL_SESSION_TICKETS)
+/* This function creates a NewSessionTicket message in the following format:
+ *
+ * struct {
+ *    uint32 ticket_lifetime;
+ *    uint32 ticket_age_add;
+ *    opaque ticket_nonce<0..255>;
+ *    opaque ticket<1..2^16-1>;
+ *    Extension extensions<0..2^16-2>;
+ * } NewSessionTicket;
+ *
+ * The ticket inside the NewSessionTicket message is an encrypted container
+ * carrying the necessary information so that the server is later able to
+ * re-start the communication.
+ *
+ * The following fields are placed inside the ticket by the
+ * f_ticket_write() function:
+ *
+ *  - creation time (start)
+ *  - flags (flags)
+ *  - lifetime (ticket_lifetime)
+ *  - age add (ticket_age_add)
+ *  - key (key)
+ *  - key length (key_len)
+ *  - ciphersuite (ciphersuite)
+ *  - certificate of the peer (peer_cert)
+ *
+ */
+static int ssl_tls13_write_new_session_ticket_body( mbedtls_ssl_context *ssl,
+                                                    unsigned char *buf,
+                                                    size_t buflen,
+                                                    size_t *olen )
+{
+    int ret;
+    size_t tlen;
+    size_t ext_len = 0;
+    unsigned char *p;
+    unsigned char *end = buf + buflen;
+    mbedtls_ssl_ciphersuite_t *suite_info;
+    int hash_length;
+    unsigned char *ticket_lifetime_ptr;
+
+    size_t const total_length = 12 + MBEDTLS_SSL_TICKET_NONCE_LENGTH;
+    p = buf;
+
+    MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> write NewSessionTicket msg" ) );
+
+    /* Do we have space for the fixed length part of the ticket */
+    if( buflen < total_length )
+    {
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "Buffer for ticket too small" ) );
+        return( MBEDTLS_ERR_SSL_BUFFER_TOO_SMALL );
+    }
+
+    suite_info = (mbedtls_ssl_ciphersuite_t *) ssl->handshake->ciphersuite_info;
+
+    hash_length = mbedtls_hash_size_for_ciphersuite( suite_info );
+
+    if( hash_length == -1 )
+        return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
+
+    /* In this code the psk key length equals the length of the hash */
+    ssl->session->key_len = hash_length;
+    ssl->session->ciphersuite = ssl->handshake->ciphersuite_info->id;
+
+    /* Ticket Lifetime
+     * (write it later)
+     */
+    ticket_lifetime_ptr = p;
+    p+=4;
+
+    /* Ticket Age Add */
+    if( ( ret = ssl->conf->f_rng( ssl->conf->p_rng,
+                                  (unsigned char*) &ssl->session->ticket_age_add,
+                                  sizeof( ssl->session->ticket_age_add ) ) != 0 ) )
+    {
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "Failed to generate ticket" ) );
+        return( ret );
+    }
+
+    MBEDTLS_PUT_UINT32_BE( ssl->session->ticket_age_add, p, 0 );
+    p += 4;
+
+    MBEDTLS_SSL_DEBUG_MSG( 3, ( "ticket->ticket_age_add: %u", ssl->session->ticket_age_add ) );
+
+    /* Ticket Nonce */
+    *(p++) = MBEDTLS_SSL_TICKET_NONCE_LENGTH;
+
+    ret = ssl->conf->f_rng( ssl->conf->p_rng, p,
+                            MBEDTLS_SSL_TICKET_NONCE_LENGTH );
+    if( ret != 0 )
+        return( ret );
+
+    MBEDTLS_SSL_DEBUG_BUF( 3, "ticket_nonce:",
+                           p, MBEDTLS_SSL_TICKET_NONCE_LENGTH );
+
+    MBEDTLS_SSL_DEBUG_BUF( 3, "resumption_master_secret",
+                           ssl->session->app_secrets.resumption_master_secret,
+                           hash_length );
+
+    /* Computer resumption key
+     *
+     *  HKDF-Expand-Label( resumption_master_secret,
+     *                    "resumption", ticket_nonce, Hash.length )
+     */
+    ret = mbedtls_ssl_tls13_hkdf_expand_label(
+               mbedtls_psa_translate_md( suite_info->mac ),
+               ssl->session->app_secrets.resumption_master_secret,
+               hash_length,
+               MBEDTLS_SSL_TLS1_3_LBL_WITH_LEN( resumption ),
+               (const unsigned char *) p,
+               MBEDTLS_SSL_TICKET_NONCE_LENGTH,
+               ssl->session->key,
+               hash_length );
+
+    if( ret != 0 )
+    {
+        MBEDTLS_SSL_DEBUG_RET( 2, "Creating the ticket-resumed PSK failed", ret );
+        return ( ret );
+    }
+
+    p += MBEDTLS_SSL_TICKET_NONCE_LENGTH;
+
+    ssl->session->key_len = hash_length;
+
+    MBEDTLS_SSL_DEBUG_BUF( 3, "Ticket-resumed PSK",
+                           ssl->session->key, hash_length );
+
+    /* Ticket */
+    ret = ssl->conf->f_ticket_write( ssl->conf->p_ticket,
+                                     ssl->session,
+                                     p + 2, end,
+                                     &tlen,
+                                     &ssl->session->ticket_lifetime);
+    if( ret != 0 )
+    {
+        MBEDTLS_SSL_DEBUG_RET( 1, "f_ticket_write", ret );
+        return( ret );
+    }
+
+    /* Ticket lifetime */
+    MBEDTLS_PUT_UINT16_BE( ssl->session->ticket_lifetime,
+                           ticket_lifetime_ptr, 0 );
+    ticket_lifetime_ptr += 4;
+
+    MBEDTLS_SSL_DEBUG_MSG( 3, ( "ticket->ticket_lifetime: %d",
+                               ssl->session->ticket_lifetime ) );
+
+    /* Ticket Length */
+    MBEDTLS_PUT_UINT16_BE( tlen, p, 0 );
+    p += 2 + tlen;
+
+    /* Ticket Extensions
+     *
+     * Note: We currently don't have any extensions.
+     * Set length to zero.
+     */
+    MBEDTLS_PUT_UINT16_BE( ext_len, p, 0 );
+    p += 2;
+
+    MBEDTLS_SSL_DEBUG_MSG( 3, ( "NewSessionTicket (extension_length): %" MBEDTLS_PRINTF_SIZET , ext_len ) );
+
+    MBEDTLS_SSL_DEBUG_MSG( 3, ( "NewSessionTicket (ticket length): %" MBEDTLS_PRINTF_SIZET , tlen ) );
+
+    *olen = p - buf;
+
+    MBEDTLS_SSL_DEBUG_BUF( 4, "ticket", buf, *olen );
+
+    MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= write new session ticket" ) );
+
+    return( ret );
+}
+
+static int ssl_tls13_write_new_session_ticket_postprocess( mbedtls_ssl_context *ssl )
+{
+    mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_SERVER_NEW_SESSION_TICKET_FLUSH );
+    return( 0 );
+}
+
+/*
+ * Handler for MBEDTLS_SSL_SERVER_NEW_SESSION_TICKET
+ */
+static int ssl_tls13_write_new_session_ticket( mbedtls_ssl_context *ssl )
+{
+    int ret = 0;
+
+    MBEDTLS_SSL_PROC_CHK_NEG( ssl_tls13_write_new_session_ticket_coordinate( ssl ) );
+
+    if( ret == SSL_NEW_SESSION_TICKET_WRITE )
+    {
+        unsigned char *buf;
+        size_t buf_len, msg_len;
+
+        MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_start_handshake_msg( ssl,
+                MBEDTLS_SSL_HS_NEW_SESSION_TICKET, &buf, &buf_len ) );
+
+        MBEDTLS_SSL_PROC_CHK( ssl_tls13_write_new_session_ticket_body(
+                                  ssl, buf, buf_len, &msg_len ) );
+
+        MBEDTLS_SSL_PROC_CHK(
+            ssl_tls13_write_new_session_ticket_postprocess( ssl ) );
+
+        MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_finish_handshake_msg(
+                                  ssl, buf_len, msg_len ) );
+    }
+    else
+    {
+        MBEDTLS_SSL_PROC_CHK(
+            ssl_tls13_write_new_session_ticket_postprocess( ssl ) );
+    }
+
+cleanup:
+
+    return( ret );
+}
+#endif /* MBEDTLS_SSL_SESSION_TICKETS */
 /*
  * TLS 1.3 State Machine -- server side
  */
@@ -1754,6 +1989,25 @@ int mbedtls_ssl_tls13_handshake_server_step( mbedtls_ssl_context *ssl )
                     ssl, MBEDTLS_SSL_CLIENT_FINISHED );
             }
             break;
+
+#if defined(MBEDTLS_SSL_SESSION_TICKETS)
+        case MBEDTLS_SSL_SERVER_NEW_SESSION_TICKET:
+            ret = ssl_tls13_write_new_session_ticket( ssl );
+            if( ret != 0 )
+            {
+                MBEDTLS_SSL_DEBUG_RET( 1,
+                                       "ssl_tls13_write_new_session_ticket ",
+                                       ret );
+            }
+            break;
+        case MBEDTLS_SSL_SERVER_NEW_SESSION_TICKET_FLUSH:
+            ret = mbedtls_ssl_flush_output( ssl );
+            if( ret != 0 )
+                return( ret );
+            mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_HANDSHAKE_OVER );
+            break;
+
+#endif /* MBEDTLS_SSL_SESSION_TICKET */
 
         default:
             MBEDTLS_SSL_DEBUG_MSG( 1, ( "invalid state %d", ssl->state ) );

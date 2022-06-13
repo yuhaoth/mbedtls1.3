@@ -647,6 +647,7 @@ typedef enum
     MBEDTLS_SSL_CLIENT_CERTIFICATE_VERIFY,
     MBEDTLS_SSL_CLIENT_CCS_AFTER_SERVER_FINISHED,
     MBEDTLS_SSL_CLIENT_CCS_BEFORE_2ND_CLIENT_HELLO,
+    MBEDTLS_SSL_SERVER_NEW_SESSION_TICKET_FLUSH,
 }
 mbedtls_ssl_states;
 
@@ -775,6 +776,15 @@ typedef struct mbedtls_ssl_key_cert mbedtls_ssl_key_cert;
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
 typedef struct mbedtls_ssl_flight_item mbedtls_ssl_flight_item;
 #endif
+
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3) && defined(MBEDTLS_SSL_SESSION_TICKETS)
+typedef enum
+{
+    allow_early_data = 1,
+    allow_dhe_resumption = 2,
+    allow_psk_resumption = 4,
+} mbedtls_ssl_ticket_flags;
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3 && MBEDTLS_SSL_SESSION_TICKETS */
 
 /**
  * \brief          Callback type: server-side session cache getter
@@ -1159,6 +1169,23 @@ struct mbedtls_ssl_session
     size_t MBEDTLS_PRIVATE(ticket_len);          /*!< session ticket length   */
     uint32_t MBEDTLS_PRIVATE(ticket_lifetime);   /*!< ticket lifetime hint    */
 #endif /* MBEDTLS_SSL_SESSION_TICKETS && MBEDTLS_SSL_CLI_C */
+
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3) && defined(MBEDTLS_SSL_SESSION_TICKETS)
+    mbedtls_ssl_ticket_flags MBEDTLS_PRIVATE(ticket_flags); /*!< Ticket flags */
+    uint32_t MBEDTLS_PRIVATE(ticket_age_add);               /*!< Randomly generated value used to obscure the age of the ticket */
+    uint8_t MBEDTLS_PRIVATE(key_len);                       /*!< PSK key length */
+
+#if defined(MBEDTLS_SHA256_C) && !defined(MBEDTLS_SHA512_C)
+    unsigned char MBEDTLS_PRIVATE(key)[32];                 /*!< key (32 byte) */
+#else /* MBEDTLS_SHA512_C */
+    unsigned char MBEDTLS_PRIVATE(key)[48];                 /*!< key (48 byte) */
+#endif /* MBEDTLS_SHA256_C && !MBEDTLS_SHA512_C */
+
+// #if defined(MBEDTLS_HAVE_TIME) && defined(MBEDTLS_SSL_CLI_C)
+//     time_t MBEDTLS_PRIVATE(ticket_received);         /*!< time ticket was received */
+// #endif /* MBEDTLS_HAVE_TIME && MBEDTLS_SSL_CLI_C */
+//     uint32_t MBEDTLS_PRIVATE(max_early_data_size);   /*!< max data allowed */
+#endif /*  MBEDTLS_SSL_PROTO_TLS1_3 && MBEDTLS_SSL_SESSION_TICKETS */
 
 #if defined(MBEDTLS_SSL_ENCRYPT_THEN_MAC)
     int MBEDTLS_PRIVATE(encrypt_then_mac);       /*!< flag for EtM activation                */
