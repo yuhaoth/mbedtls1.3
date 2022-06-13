@@ -420,6 +420,12 @@ static int ssl_session_load_tls12( mbedtls_ssl_session *session,
                                    size_t len );
 #endif /* MBEDTLS_SSL_PROTO_TLS1_2 */
 
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3)
+static size_t ssl_session_save_tls13( const mbedtls_ssl_session *session,
+                                      unsigned char *buf,
+                                      size_t buf_len );
+#endif /* MBEDTLS_SSL_PROTO_TLS1_2 */
+
 static void ssl_update_checksum_start( mbedtls_ssl_context *, const unsigned char *, size_t );
 
 #if defined(MBEDTLS_SHA256_C)
@@ -1839,6 +1845,101 @@ mbedtls_ssl_mode_t mbedtls_ssl_get_mode_from_ciphersuite(
 }
 
 #if defined(MBEDTLS_USE_PSA_CRYPTO) || defined(MBEDTLS_SSL_PROTO_TLS1_3)
+
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3)
+/* Serialization of TLS 1.3 sessions:
+ *
+ * struct {
+ *   uint64 start_time;
+ *   uint8 ciphersuite[2];
+ *   uint32 ticket_lifetime;
+ *   uint32 ticket_age_add;
+ *   uint8 ticket_flags;
+ *   opaque resumption_key<0..255>;
+ *   opaque ticket<0..2^16>;
+ *   uint64 ticket_received;
+ * } serialized_session_tls13;
+ *
+ */
+#if defined(MBEDTLS_SSL_SESSION_TICKETS)
+
+static size_t ssl_session_save_tls13( const mbedtls_ssl_session *session,
+                                      unsigned char *buf,
+                                      size_t buf_len )
+{
+    unsigned char *p = buf;
+    size_t used = 0;
+    uint64_t start;
+
+    if( session == NULL )
+        return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
+
+#if defined(MBEDTLS_HAVE_TIME)
+    used += 8;
+
+    if( used <= buf_len )
+    {
+        start = (uint64_t) session->start;
+        *p++ = (unsigned char)( ( start >> 56 ) & 0xFF );
+        *p++ = (unsigned char)( ( start >> 48 ) & 0xFF );
+        *p++ = (unsigned char)( ( start >> 40 ) & 0xFF );
+        *p++ = (unsigned char)( ( start >> 32 ) & 0xFF );
+        *p++ = (unsigned char)( ( start >> 24 ) & 0xFF );
+        *p++ = (unsigned char)( ( start >> 16 ) & 0xFF );
+        *p++ = (unsigned char)( ( start >>  8 ) & 0xFF );
+        *p++ = (unsigned char)( ( start       ) & 0xFF );
+    }
+#endif /* MBEDTLS_HAVE_TIME */
+
+    used += 2   /* ciphersuite     */
+          + 4   /* ticket_lifetime */
+          + 4   /* ticket_age_add  */
+          + 1   /* flags           */
+          + 1;  /* key_len         */
+
+    if( used <= buf_len )
+    {
+        *p++ = (unsigned char)( ( session->ciphersuite >> 8 ) & 0xFF );
+        *p++ = (unsigned char)( ( session->ciphersuite      ) & 0xFF );
+
+        *p++ = (unsigned char)( ( session->ticket_lifetime >> 24 ) & 0xFF );
+        *p++ = (unsigned char)( ( session->ticket_lifetime >> 16 ) & 0xFF );
+        *p++ = (unsigned char)( ( session->ticket_lifetime >>  8 ) & 0xFF );
+        *p++ = (unsigned char)( ( session->ticket_lifetime       ) & 0xFF );
+
+        *p++ = (unsigned char)( ( session->ticket_age_add >> 24 ) & 0xFF );
+        *p++ = (unsigned char)( ( session->ticket_age_add >> 16 ) & 0xFF );
+        *p++ = (unsigned char)( ( session->ticket_age_add >>  8 ) & 0xFF );
+        *p++ = (unsigned char)( ( session->ticket_age_add       ) & 0xFF );
+
+        *p++ = (unsigned char)( ( session->ticket_flags      ) & 0xFF );
+
+        *p++ = (unsigned char)( ( session->key_len      ) & 0xFF );
+    }
+
+    used += session->key_len;
+    if( used <= buf_len )
+    {
+        memcpy( p, session->key, session->key_len );
+        p += session->key_len;
+    }
+
+    return( used );
+}
+#else /* MBEDTLS_SSL_SESSION_TICKETS */
+static size_t ssl_session_save_tls13( const mbedtls_ssl_session *session,
+                                      unsigned char *buf,
+                                      size_t buf_len )
+{
+    (void) session;
+    (void) buf;
+    (void) buf_len;
+    return( MBEDTLS_ERR_SSL_FEATURE_UNAVAILABLE );
+}
+
+#endif /* !MBEDTLS_SSL_SESSION_TICKETS */
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
+
 psa_status_t mbedtls_ssl_cipher_to_psa( mbedtls_cipher_type_t mbedtls_cipher_type,
                                     size_t taglen,
                                     psa_algorithm_t *alg,
@@ -2789,7 +2890,7 @@ static int ssl_session_save( const mbedtls_ssl_session *session,
     {
         *p++ = MBEDTLS_BYTE_0( session->tls_version );
     }
-
+    mbedtls_printf("%s:%d %x\n",__FILE__,__LINE__,session->tls_version);
     /* Forward to version-specific serialization routine. */
     switch( session->tls_version )
     {
@@ -2801,6 +2902,16 @@ static int ssl_session_save( const mbedtls_ssl_session *session,
         break;
     }
 #endif /* MBEDTLS_SSL_PROTO_TLS1_2 */
+
+
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3)
+    case MBEDTLS_SSL_VERSION_TLS1_3:
+    {
+        size_t remaining_len = used <= buf_len ? buf_len - used : 0;
+        used += ssl_session_save_tls13( session, p, remaining_len );
+        break;
+    }
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
 
     default:
         return( MBEDTLS_ERR_SSL_FEATURE_UNAVAILABLE );

@@ -91,6 +91,10 @@ static int ssl_tls13_parse_supported_versions_ext( mbedtls_ssl_context *ssl,
 
     MBEDTLS_SSL_DEBUG_MSG( 1, ( "Negotiated version. Supported is [%04x]",
                               (unsigned int)tls_version ) );
+#if defined(MBEDTLS_SSL_SESSION_TICKETS)
+    /* Store minor version for later use with ticket serialization. */
+    ssl->session_negotiate->tls_version = MBEDTLS_SSL_VERSION_TLS1_3;
+#endif /* MBEDTLS_SSL_NEW_SESSION_TICKET */
 
     return( 0 );
 }
@@ -1666,7 +1670,7 @@ static int ssl_tls13_handshake_wrapup( mbedtls_ssl_context *ssl )
 static int ssl_tls13_write_new_session_ticket_coordinate( mbedtls_ssl_context *ssl )
 {
     /* Check whether the use of session tickets is enabled */
-    if( ssl->conf->session_tickets == 0 )
+    if( ssl->conf->f_ticket_write == NULL )
     {
         return( SSL_NEW_SESSION_TICKET_SKIP );
     }
