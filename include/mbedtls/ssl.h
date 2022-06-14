@@ -777,15 +777,6 @@ typedef struct mbedtls_ssl_key_cert mbedtls_ssl_key_cert;
 typedef struct mbedtls_ssl_flight_item mbedtls_ssl_flight_item;
 #endif
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3) && defined(MBEDTLS_SSL_SESSION_TICKETS)
-typedef enum
-{
-    allow_early_data = 1,
-    allow_dhe_resumption = 2,
-    allow_psk_resumption = 4,
-} mbedtls_ssl_ticket_flags;
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3 && MBEDTLS_SSL_SESSION_TICKETS */
-
 /**
  * \brief          Callback type: server-side session cache getter
  *
@@ -1171,7 +1162,7 @@ struct mbedtls_ssl_session
 #endif /* MBEDTLS_SSL_SESSION_TICKETS && MBEDTLS_SSL_CLI_C */
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3) && defined(MBEDTLS_SSL_SESSION_TICKETS)
-    mbedtls_ssl_ticket_flags MBEDTLS_PRIVATE(ticket_flags); /*!< Ticket flags */
+    uint8_t MBEDTLS_PRIVATE(ticket_flags); /*!< Ticket flags */
     uint32_t MBEDTLS_PRIVATE(ticket_age_add);               /*!< Randomly generated value used to obscure the age of the ticket */
     uint8_t MBEDTLS_PRIVATE(key_len);                       /*!< PSK key length */
 

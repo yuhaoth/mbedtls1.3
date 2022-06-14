@@ -1529,7 +1529,7 @@
  */
 //#define MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 
-/*
+/**
  * \def MBEDTLS_SSL_TICKET_NONCE_LENGTH
  *
  * Allows adjusting the length of the nonce field in the ticket.
