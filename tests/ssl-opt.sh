@@ -11520,6 +11520,34 @@ run_test    "TLS 1.3: NewSessionTicket check - guntls client" \
             -s "server state: MBEDTLS_SSL_SERVER_NEW_SESSION_TICKET_FLUSH" \
             -c "NEW SESSION TICKET (4) was received"
 
+requires_openssl_tls1_3
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
+requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_CLI_C
+requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
+run_test    "TLS 1.3: NewSessionTicket check - openssl server" \
+            "$O_NEXT_SRV -msg -tls1_3 -no_resume_ephemeral -no_cache " \
+            "$P_CLI debug_level=4" \
+            0 \
+            -c "Protocol is TLSv1.3" \
+            -c "MBEDTLS_SSL_CLIENT_NEW_SESSION_TICKET" \
+            -c "got new session ticket." \
+            -c "HTTP/1.0 200 ok"
+
+requires_gnutls_tls1_3
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
+requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
+requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_CLI_C
+run_test    "TLS 1.3: NewSessionTicket check - guntls server" \
+            "$G_NEXT_SRV --priority=NORMAL:-VERS-ALL:+VERS-TLS1.3:+CIPHER-ALL --disable-client-cert" \
+            "$P_CLI debug_level=4" \
+            0 \
+            -c "Protocol is TLSv1.3" \
+            -c "MBEDTLS_SSL_CLIENT_NEW_SESSION_TICKET" \
+            -c "got new session ticket." \
+            -c "HTTP/1.0 200 OK"
+
 # Test heap memory usage after handshake
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
 requires_config_enabled MBEDTLS_MEMORY_DEBUG

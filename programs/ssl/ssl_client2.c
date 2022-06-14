@@ -2670,7 +2670,7 @@ send_request:
                     case MBEDTLS_ERR_SSL_RECEIVED_NEW_SESSION_TICKET:
                         /* We were waiting for application data but got
                          * a NewSessionTicket instead. */
-                        mbedtls_printf( " got ticket.\n" );
+                        mbedtls_printf( " got new session ticket.\n" );
                         continue;
 #endif /* MBEDTLS_SSL_SESSION_TICKETS */
 
