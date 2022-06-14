@@ -1158,7 +1158,8 @@ struct mbedtls_ssl_session
 #endif /* MBEDTLS_X509_CRT_PARSE_C */
     uint32_t MBEDTLS_PRIVATE(verify_result);          /*!<  verification result     */
 
-#if defined(MBEDTLS_SSL_SESSION_TICKETS) && defined(MBEDTLS_SSL_CLI_C)
+#if defined(MBEDTLS_SSL_SESSION_TICKETS) && \
+    ( defined(MBEDTLS_SSL_CLI_C) || defined(MBEDTLS_SSL_PROTO_TLS1_3) )
     unsigned char *MBEDTLS_PRIVATE(ticket);      /*!< RFC 5077 session ticket */
     size_t MBEDTLS_PRIVATE(ticket_len);          /*!< session ticket length   */
     uint32_t MBEDTLS_PRIVATE(ticket_lifetime);   /*!< ticket lifetime hint    */

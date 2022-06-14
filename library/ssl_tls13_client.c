@@ -1953,15 +1953,17 @@ static int ssl_tls13_parse_new_session_ticket( mbedtls_ssl_context *ssl,
     ssl->session->ticket_lifetime = MBEDTLS_GET_UINT32_BE( buf, i );
     i += 4;
 
-    MBEDTLS_SSL_DEBUG_MSG( 3, ( "ticket->lifetime: %u",
-                                ssl->session->ticket_lifetime ) );
+    MBEDTLS_SSL_DEBUG_MSG( 3,
+                           ( "ticket->lifetime: %u",
+                             ( unsigned int )ssl->session->ticket_lifetime ) );
 
     /* Ticket Age Add */
     ssl->session->ticket_age_add = MBEDTLS_GET_UINT32_BE( buf, i );
     i += 4;
 
-    MBEDTLS_SSL_DEBUG_MSG( 3, ( "ticket->ticket_age_add: %u",
-                                ssl->session->ticket_age_add ) );
+    MBEDTLS_SSL_DEBUG_MSG( 3,
+                           ( "ticket->ticket_age_add: %u",
+                             ( unsigned int )ssl->session->ticket_age_add ) );
 
     ticket_nonce_len = buf[i];
     i++;

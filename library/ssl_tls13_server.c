@@ -1719,6 +1719,7 @@ static int ssl_tls13_write_new_session_ticket_body( mbedtls_ssl_context *ssl,
     int hash_length;
     mbedtls_ssl_session *session = ssl->session;
 
+    *out_len = 0;
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> write NewSessionTicket msg" ) );
 
     suite_info = (mbedtls_ssl_ciphersuite_t *) ssl->handshake->ciphersuite_info;
@@ -1772,7 +1773,7 @@ static int ssl_tls13_write_new_session_ticket_body( mbedtls_ssl_context *ssl,
     p += 4;
 
     MBEDTLS_SSL_DEBUG_MSG( 3, ( "ticket->ticket_lifetime: %u",
-                                session->ticket_lifetime ) );
+                                ( unsigned int )session->ticket_lifetime ) );
 
     if( ( ret = ssl->conf->f_rng( ssl->conf->p_rng,
                                   (unsigned char*) &session->ticket_age_add,
@@ -1784,7 +1785,7 @@ static int ssl_tls13_write_new_session_ticket_body( mbedtls_ssl_context *ssl,
     MBEDTLS_PUT_UINT32_BE( session->ticket_age_add, p, 0 );
     p += 4;
     MBEDTLS_SSL_DEBUG_MSG( 3, ( "ticket->ticket_age_add: %u",
-                                session->ticket_age_add ) );
+                                ( unsigned int )session->ticket_age_add ) );
 
     *p++ = MBEDTLS_SSL_TICKET_NONCE_LENGTH;
     ret = ssl->conf->f_rng( ssl->conf->p_rng, p,
