@@ -1869,7 +1869,6 @@ static size_t ssl_session_save_tls13( const mbedtls_ssl_session *session,
 {
     unsigned char *p = buf;
     size_t used = 0;
-    uint64_t start;
 
     if( session == NULL )
         return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
@@ -1879,41 +1878,28 @@ static size_t ssl_session_save_tls13( const mbedtls_ssl_session *session,
 
     if( used <= buf_len )
     {
-        start = (uint64_t) session->start;
-        *p++ = (unsigned char)( ( start >> 56 ) & 0xFF );
-        *p++ = (unsigned char)( ( start >> 48 ) & 0xFF );
-        *p++ = (unsigned char)( ( start >> 40 ) & 0xFF );
-        *p++ = (unsigned char)( ( start >> 32 ) & 0xFF );
-        *p++ = (unsigned char)( ( start >> 24 ) & 0xFF );
-        *p++ = (unsigned char)( ( start >> 16 ) & 0xFF );
-        *p++ = (unsigned char)( ( start >>  8 ) & 0xFF );
-        *p++ = (unsigned char)( ( start       ) & 0xFF );
+        MBEDTLS_PUT_UINT64_BE( (uint64_t) session->start, p, 0 );
+        p += 8;
     }
 #endif /* MBEDTLS_HAVE_TIME */
 
     used += 2   /* ciphersuite     */
-          + 4   /* ticket_lifetime */
-          + 4   /* ticket_age_add  */
-          + 1   /* flags           */
-          + 1;  /* key_len         */
+         +  4   /* ticket_lifetime */
+         +  4   /* ticket_age_add  */
+         +  1   /* flags           */
+         +  1;  /* key_len         */
 
     if( used <= buf_len )
     {
-        *p++ = (unsigned char)( ( session->ciphersuite >> 8 ) & 0xFF );
-        *p++ = (unsigned char)( ( session->ciphersuite      ) & 0xFF );
+        MBEDTLS_PUT_UINT16_BE( session->ciphersuite, p, 0 );
 
-        *p++ = (unsigned char)( ( session->ticket_lifetime >> 24 ) & 0xFF );
-        *p++ = (unsigned char)( ( session->ticket_lifetime >> 16 ) & 0xFF );
-        *p++ = (unsigned char)( ( session->ticket_lifetime >>  8 ) & 0xFF );
-        *p++ = (unsigned char)( ( session->ticket_lifetime       ) & 0xFF );
+        MBEDTLS_PUT_UINT32_BE( session->ticket_lifetime, p, 16 );
 
-        *p++ = (unsigned char)( ( session->ticket_age_add >> 24 ) & 0xFF );
-        *p++ = (unsigned char)( ( session->ticket_age_add >> 16 ) & 0xFF );
-        *p++ = (unsigned char)( ( session->ticket_age_add >>  8 ) & 0xFF );
-        *p++ = (unsigned char)( ( session->ticket_age_add       ) & 0xFF );
+        MBEDTLS_PUT_UINT32_BE( session->ticket_age_add, p, 48 );
+
+        p += 10;
 
         *p++ = (unsigned char)( ( session->ticket_flags      ) & 0xFF );
-
         *p++ = (unsigned char)( ( session->key_len      ) & 0xFF );
     }
 
@@ -2890,7 +2876,7 @@ static int ssl_session_save( const mbedtls_ssl_session *session,
     {
         *p++ = MBEDTLS_BYTE_0( session->tls_version );
     }
-    mbedtls_printf("%s:%d %x\n",__FILE__,__LINE__,session->tls_version);
+
     /* Forward to version-specific serialization routine. */
     switch( session->tls_version )
     {
