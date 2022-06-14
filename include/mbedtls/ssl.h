@@ -98,6 +98,8 @@
 /* Error space gap */
 /** Processing of the Certificate handshake message failed. */
 #define MBEDTLS_ERR_SSL_BAD_CERTIFICATE                   -0x7A00
+/** Received NewSessionTicket Post Handshake Message */
+#define MBEDTLS_ERR_SSL_RECEIVED_NEW_SESSION_TICKET       -0x7B00
 /* Error space gap */
 /* Error space gap */
 /* Error space gap */
@@ -648,6 +650,7 @@ typedef enum
     MBEDTLS_SSL_CLIENT_CCS_AFTER_SERVER_FINISHED,
     MBEDTLS_SSL_CLIENT_CCS_BEFORE_2ND_CLIENT_HELLO,
     MBEDTLS_SSL_SERVER_NEW_SESSION_TICKET_FLUSH,
+    MBEDTLS_SSL_CLIENT_NEW_SESSION_TICKET,
 }
 mbedtls_ssl_states;
 
@@ -1172,10 +1175,10 @@ struct mbedtls_ssl_session
     unsigned char MBEDTLS_PRIVATE(key)[48];                 /*!< key (48 byte) */
 #endif /* MBEDTLS_SHA256_C && !MBEDTLS_SHA512_C */
 
-// #if defined(MBEDTLS_HAVE_TIME) && defined(MBEDTLS_SSL_CLI_C)
-//     time_t MBEDTLS_PRIVATE(ticket_received);         /*!< time ticket was received */
-// #endif /* MBEDTLS_HAVE_TIME && MBEDTLS_SSL_CLI_C */
-//     uint32_t MBEDTLS_PRIVATE(max_early_data_size);   /*!< max data allowed */
+#if defined(MBEDTLS_HAVE_TIME) && defined(MBEDTLS_SSL_CLI_C)
+    time_t MBEDTLS_PRIVATE(ticket_received);         /*!< time ticket was received */
+#endif /* MBEDTLS_HAVE_TIME && MBEDTLS_SSL_CLI_C */
+
 #endif /*  MBEDTLS_SSL_PROTO_TLS1_3 && MBEDTLS_SSL_SESSION_TICKETS */
 
 #if defined(MBEDTLS_SSL_ENCRYPT_THEN_MAC)

@@ -2664,6 +2664,17 @@ send_request:
                         mbedtls_printf( " connection was reset by peer\n" );
                         ret = 0;
                         goto reconnect;
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3)
+
+#if defined(MBEDTLS_SSL_SESSION_TICKETS)
+                    case MBEDTLS_ERR_SSL_RECEIVED_NEW_SESSION_TICKET:
+                        /* We were waiting for application data but got
+                         * a NewSessionTicket instead. */
+                        mbedtls_printf( " got ticket.\n" );
+                        continue;
+#endif /* MBEDTLS_SSL_SESSION_TICKETS */
+
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
 
                     default:
                         mbedtls_printf( " mbedtls_ssl_read returned -0x%x\n",
