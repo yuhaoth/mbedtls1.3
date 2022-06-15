@@ -2063,23 +2063,6 @@ static inline int mbedtls_ssl_tls13_get_pk_type_and_md_alg_from_sig_alg(
         return( 0 );
 }
 
-static inline unsigned int mbedtls_hash_size_for_ciphersuite(
-                            const mbedtls_ssl_ciphersuite_t *ciphersuite )
-{
-    /* We assume that the input parameter, ciphersuite, is not NULL. */
-    switch( ciphersuite->mac )
-    {
-    case MBEDTLS_MD_SHA256:
-        return( 32 );
-    case MBEDTLS_MD_SHA384:
-        return( 48 );
-    case MBEDTLS_MD_SHA512:
-        return( 64 );
-    default:
-        return( -1 );
-    }
-}
-
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
 
 static inline int mbedtls_ssl_sig_alg_is_supported(
@@ -2164,6 +2147,25 @@ static inline int mbedtls_ssl_sig_alg_is_supported(
     return( 0 );
 }
 #endif /* MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED */
+
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3)
+static inline unsigned int mbedtls_hash_size_for_ciphersuite(
+                            const mbedtls_ssl_ciphersuite_t *ciphersuite )
+{
+    /* We assume that the input parameter, ciphersuite, is not NULL. */
+    switch( ciphersuite->mac )
+    {
+    case MBEDTLS_MD_SHA256:
+        return( 32 );
+    case MBEDTLS_MD_SHA384:
+        return( 48 );
+    case MBEDTLS_MD_SHA512:
+        return( 64 );
+    default:
+        return( -1 );
+    }
+}
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
 
 #if defined(MBEDTLS_USE_PSA_CRYPTO) || defined(MBEDTLS_SSL_PROTO_TLS1_3)
 /* Corresponding PSA algorithm for MBEDTLS_CIPHER_NULL.
