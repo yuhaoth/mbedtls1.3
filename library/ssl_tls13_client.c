@@ -1871,44 +1871,38 @@ static int ssl_tls13_handshake_wrapup( mbedtls_ssl_context *ssl )
 #if defined(MBEDTLS_SSL_SESSION_TICKETS)
 
 static int ssl_tls13_parse_new_session_ticket_extensions(
-    mbedtls_ssl_context *ssl,
-    const unsigned char *buf, size_t buf_remain )
+                                                mbedtls_ssl_context *ssl,
+                                                const unsigned char *buf,
+                                                const unsigned char *end )
 {
-    unsigned int ext_id;
-    size_t ext_size;
+    unsigned char *p = ( unsigned char * )buf;
 
     ((void) ssl);
 
-    while( buf_remain != 0 )
+    while( p < end )
     {
-        if( buf_remain < 4 )
-        {
-            /* TODO: Replace with DECODE_ERROR once we have merged 3.0 */
-            return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
-        }
+        unsigned int extension_type;
+        size_t extension_data_len;
+        const unsigned char *extension_data_end;
 
-        ext_id   = MBEDTLS_GET_UINT16_BE( buf, 0 );
-        ext_size = MBEDTLS_GET_UINT16_BE( buf, 2 );
+        ((void) extension_data_end);
+        MBEDTLS_SSL_CHK_BUF_READ_PTR( p, end, 4 );
+        extension_type = MBEDTLS_GET_UINT16_BE( p, 0 );
+        extension_data_len = MBEDTLS_GET_UINT16_BE( p, 2 );
+        p += 4;
 
-        switch( ext_id )
+        MBEDTLS_SSL_CHK_BUF_READ_PTR( p, end, extension_data_len );
+        extension_data_end = p + extension_data_len;
+
+        switch( extension_type )
         {
+            case MBEDTLS_TLS_EXT_EARLY_DATA:
+                MBEDTLS_SSL_DEBUG_MSG( 4, ( "early_data extension received" ) );
+                break;
             default:
                 break;
         }
-
-        buf        += 4;
-        buf_remain -= 4;
-
-        if( ext_size > buf_remain )
-        {
-            /* TODO: Replace with DECODE_ERROR once we have merged 3.0 */
-            return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
-        }
-
-        /* Ignore other extensions */
-
-        buf        += ext_size;
-        buf_remain -= ext_size;
+        p +=  extension_data_len;
     }
 
     return( 0 );
@@ -2001,7 +1995,7 @@ static int ssl_tls13_parse_new_session_ticket( mbedtls_ssl_context *ssl,
 
     MBEDTLS_SSL_DEBUG_BUF( 3, "ticket->extension", p, extensions_len );
 
-    ret = ssl_tls13_parse_new_session_ticket_extensions( ssl, p, extensions_len );
+    ret = ssl_tls13_parse_new_session_ticket_extensions( ssl, p, end );
     if( ret != 0 )
     {
         MBEDTLS_SSL_DEBUG_RET( 1,
@@ -2079,7 +2073,7 @@ static int ssl_tls13_postprocess_new_session_ticket( mbedtls_ssl_context *ssl )
 /*
  * Handler for MBEDTLS_SSL_CLIENT_NEW_SESSION_TICKET
  */
-static int ssl_tls13_new_session_ticket_process( mbedtls_ssl_context *ssl )
+static int ssl_tls13_process_new_session_ticket( mbedtls_ssl_context *ssl )
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
     unsigned char *buf;
@@ -2186,7 +2180,7 @@ int mbedtls_ssl_tls13_handshake_client_step( mbedtls_ssl_context *ssl )
 
 #if defined(MBEDTLS_SSL_SESSION_TICKETS)
         case MBEDTLS_SSL_CLIENT_NEW_SESSION_TICKET:
-            ret = ssl_tls13_new_session_ticket_process( ssl );
+            ret = ssl_tls13_process_new_session_ticket( ssl );
             if( ret != 0 )
                 break;
             ret = MBEDTLS_ERR_SSL_RECEIVED_NEW_SESSION_TICKET;
