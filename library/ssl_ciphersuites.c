@@ -1977,24 +1977,4 @@ int mbedtls_ssl_ciphersuite_uses_psk( const mbedtls_ssl_ciphersuite_t *info )
 }
 #endif /* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED */
 
-
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3)
-unsigned int mbedtls_hash_size_for_ciphersuite(
-                const mbedtls_ssl_ciphersuite_t *ciphersuite )
-{
-    /* We assume that the input parameter, ciphersuite, is not NULL. */
-    switch( ciphersuite->mac )
-    {
-    case MBEDTLS_MD_SHA256:
-        return( 32 );
-    case MBEDTLS_MD_SHA384:
-        return( 48 );
-    case MBEDTLS_MD_SHA512:
-        return( 64 );
-    default:
-        return( 0 );
-    }
-}
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
-
 #endif /* MBEDTLS_SSL_TLS_C */
