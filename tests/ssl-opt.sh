@@ -11493,6 +11493,258 @@ run_test    "TLS 1.3 m->G server with middlebox compat support, not client" \
             1 \
             -c "ChangeCipherSpec invalid in TLS 1.3 without compatibility mode"
 
+requires_openssl_tls1_3
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
+requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
+requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_CLI_C
+run_test    "TLS 1.3: version negotiation with rsa key, tls12, allow_sha1=1, m->O" \
+            "$O_NEXT_SRV_NO_CERT -cert data_files/server2-sha256.crt -key data_files/server2.key -msg -tls1_2" \
+            "$P_CLI debug_level=4 min_version=tls12 max_version=tls13 " \
+            0 \
+            -c "Protocol  : TLSv1.2" \
+            -c "HTTP/1.0 200 [Oo][Kk]"
+
+requires_gnutls_next
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
+requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
+requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_CLI_C
+run_test    "TLS 1.3: version negotiation with rsa key, tls12, allow_sha1=1, m->G" \
+            "$G_NEXT_SRV_NO_CERT --x509certfile data_files/server2-sha256.crt --x509keyfile data_files/server2.key
+                    --disable-client-cert -d 4
+                    --priority=NORMAL:-VERS-ALL:+VERS-TLS1.2 " \
+            "$P_CLI debug_level=4 min_version=tls12 max_version=tls13 " \
+            0 \
+            -c "Protocol is TLSv1.2" \
+            -c "HTTP/1.0 200 [Oo][Kk]"
+
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
+requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_CLI_C
+run_test    "TLS 1.3: version negotiation with rsa key, tls12, allow_sha1=1, m->m" \
+            "$P_SRV debug_level=4 crt_file=data_files/server2.crt key_file=data_files/server2.key force_version=tls12 " \
+            "$P_CLI debug_level=4 min_version=tls12 max_version=tls13 " \
+            0 \
+            -c "Protocol is TLSv1.2" \
+            -c "HTTP/1.0 200 [Oo][Kk]"
+
+requires_openssl_tls1_3
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
+requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
+requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_SRV_C
+requires_config_enabled MBEDTLS_SSL_CLI_C
+run_test    "TLS 1.3: version negotiation with rsa key, tls12, allow_sha1=0, m->O" \
+            "$O_NEXT_SRV_NO_CERT -cert data_files/server2-sha256.crt -key data_files/server2.key -msg -tls1_2" \
+            "$P_CLI allow_sha1=0 debug_level=4 min_version=tls12 max_version=tls13 " \
+            0 \
+            -c "Protocol  : TLSv1.2" \
+            -c "HTTP/1.0 200 [Oo][Kk]"
+
+requires_gnutls_next
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
+requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
+requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_CLI_C
+run_test    "TLS 1.3: version negotiation with rsa key, tls12, allow_sha1=0, m->G" \
+            "$G_NEXT_SRV_NO_CERT --x509certfile data_files/server2-sha256.crt --x509keyfile data_files/server2.key
+                    --disable-client-cert -d 4
+                    --priority=NORMAL:-VERS-ALL:+VERS-TLS1.2 " \
+            "$P_CLI allow_sha1=0 debug_level=4 min_version=tls12 max_version=tls13 " \
+            0 \
+            -c "Protocol is TLSv1.2" \
+            -c "HTTP/1.0 200 [Oo][Kk]"
+
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
+requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
+requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_SRV_C
+requires_config_enabled MBEDTLS_SSL_CLI_C
+run_test    "TLS 1.3: version negotiation with rsa key, tls12, allow_sha1=0, m->m" \
+            "$P_SRV allow_sha1=0 debug_level=4 crt_file=data_files/server2-sha256.crt key_file=data_files/server2.key force_version=tls12 " \
+            "$P_CLI allow_sha1=0 debug_level=4 min_version=tls12 max_version=tls13 " \
+            0 \
+            -c "Protocol is TLSv1.2" \
+            -c "HTTP/1.0 200 [Oo][Kk]"
+
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
+requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
+requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_SRV_C
+requires_config_enabled MBEDTLS_SSL_CLI_C
+run_test    "TLS 1.3: version negotiation with rsa key, tls12, allow_sha1=0, O->m" \
+            "$P_SRV allow_sha1=0 debug_level=4 crt_file=data_files/server2-sha256.crt key_file=data_files/server2.key force_version=tls12 " \
+            "$O_NEXT_CLI_NO_CERT -CAfile data_files/test-ca_cat12.crt -msg  "  \
+            0 \
+            -s "Protocol is TLSv1.2"
+
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
+requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
+requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_SRV_C
+requires_config_enabled MBEDTLS_SSL_CLI_C
+run_test    "TLS 1.3: version negotiation with rsa key, tls12, allow_sha1=1, O->m" \
+            "$P_SRV allow_sha1=1 debug_level=4 crt_file=data_files/server2-sha256.crt key_file=data_files/server2.key force_version=tls12 " \
+            "$O_NEXT_CLI_NO_CERT -CAfile data_files/test-ca_cat12.crt -msg "  \
+            0 \
+            -s "Protocol is TLSv1.2"
+
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
+requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
+requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_SRV_C
+requires_config_enabled MBEDTLS_SSL_CLI_C
+run_test    "TLS 1.3: version negotiation with rsa key, tls12, allow_sha1=0, G->m" \
+            "$P_SRV allow_sha1=0 debug_level=4 crt_file=data_files/server2-sha256.crt key_file=data_files/server2.key force_version=tls12 " \
+            "$G_NEXT_CLI_NO_CERT localhost -d 4 --x509cafile data_files/test-ca_cat12.crt --priority=NORMAL "  \
+            0 \
+            -s "Protocol is TLSv1.2"
+
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
+requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
+requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_SRV_C
+requires_config_enabled MBEDTLS_SSL_CLI_C
+run_test    "TLS 1.3: version negotiation with rsa key, tls12, allow_sha1=1, G->m" \
+            "$P_SRV allow_sha1=1 debug_level=4 crt_file=data_files/server2-sha256.crt key_file=data_files/server2.key force_version=tls12 " \
+            "$G_NEXT_CLI_NO_CERT localhost -d 4 --x509cafile data_files/test-ca_cat12.crt --priority=NORMAL "  \
+            0 \
+            -s "Protocol is TLSv1.2"
+
+requires_openssl_tls1_3
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
+requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
+requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_CLI_C
+run_test    "TLS 1.3: version negotiation with rsa key, tls13, allow_sha1=1, m->O" \
+            "$O_NEXT_SRV_NO_CERT -cert data_files/server2-sha256.crt -key data_files/server2.key -msg -tls1_3 -num_tickets 0 -no_resume_ephemeral -no_cache " \
+            "$P_CLI debug_level=4 min_version=tls12 max_version=tls13 " \
+            0 \
+            -c "Protocol  : TLSv1.3" \
+            -c "HTTP/1.0 200 [Oo][Kk]"
+
+requires_gnutls_next
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
+requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
+requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_CLI_C
+run_test    "TLS 1.3: version negotiation with rsa key, tls13, allow_sha1=1, m->G" \
+            "$G_NEXT_SRV_NO_CERT --x509certfile data_files/server2-sha256.crt --x509keyfile data_files/server2.key
+                    --disable-client-cert -d 4
+                    --priority=NORMAL:-VERS-ALL:+VERS-TLS1.3:+CIPHER-ALL:%NO_TICKETS " \
+            "$P_CLI allow_sha1=1 debug_level=4 min_version=tls12 max_version=tls13 " \
+            0 \
+            -c "Protocol is TLSv1.3" \
+            -c "HTTP/1.0 200 [Oo][Kk]"
+
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
+requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
+requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_SRV_C
+requires_config_enabled MBEDTLS_SSL_CLI_C
+run_test    "TLS 1.3: version negotiation with rsa key, tls13, allow_sha1=1, m->m" \
+            "$P_SRV debug_level=4 crt_file=data_files/server2-sha256.crt key_file=data_files/server2.key force_version=tls13 " \
+            "$P_CLI debug_level=4 min_version=tls12 max_version=tls13 " \
+            0 \
+            -c "Protocol is TLSv1.3" \
+            -c "HTTP/1.0 200 [Oo][Kk]"
+
+requires_gnutls_next
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
+requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
+requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_CLI_C
+run_test    "TLS 1.3: version negotiation with rsa key, tls13, allow_sha1=0, m->G" \
+            "$G_NEXT_SRV_NO_CERT --x509certfile data_files/server2-sha256.crt --x509keyfile data_files/server2.key
+                    --disable-client-cert -d 4
+                    --priority=NORMAL:-VERS-ALL:+VERS-TLS1.3:+CIPHER-ALL:%NO_TICKETS " \
+            "$P_CLI allow_sha1=0 debug_level=4 min_version=tls12 max_version=tls13 " \
+            0 \
+            -c "Protocol is TLSv1.3" \
+            -c "HTTP/1.0 200 [Oo][Kk]"
+
+requires_openssl_tls1_3
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
+requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
+requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_CLI_C
+run_test    "TLS 1.3: version negotiation with rsa key, tls13, allow_sha1=0, m->O" \
+            "$O_NEXT_SRV_NO_CERT -cert data_files/server2-sha256.crt -key data_files/server2.key
+                 -msg -tls1_3 -num_tickets 0 -no_resume_ephemeral -no_cache " \
+            "$P_CLI allow_sha1=0 debug_level=4 min_version=tls12 max_version=tls13 " \
+            0 \
+            -c "Protocol  : TLSv1.3" \
+            -c "HTTP/1.0 200 [Oo][Kk]"
+
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
+requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
+requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_SRV_C
+requires_config_enabled MBEDTLS_SSL_CLI_C
+run_test    "TLS 1.3: version negotiation with rsa key, tls13, allow_sha1=0, m->m" \
+            "$P_SRV allow_sha1=0 debug_level=4 crt_file=data_files/server2-sha256.crt key_file=data_files/server2.key force_version=tls13 " \
+            "$P_CLI allow_sha1=0 debug_level=4 min_version=tls12 max_version=tls13 " \
+            0 \
+            -c "Protocol is TLSv1.3" \
+            -c "HTTP/1.0 200 [Oo][Kk]"
+
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
+requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
+requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_SRV_C
+requires_config_enabled MBEDTLS_SSL_CLI_C
+run_test    "TLS 1.3: version negotiation with rsa key, tls13, allow_sha1=0, O->m" \
+            "$P_SRV allow_sha1=0 debug_level=4 crt_file=data_files/server2-sha256.crt key_file=data_files/server2.key force_version=tls13 " \
+            "$O_NEXT_CLI_NO_CERT -CAfile data_files/test-ca_cat12.crt -msg  "  \
+            0 \
+            -s "Protocol is TLSv1.3"
+
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
+requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
+requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_SRV_C
+requires_config_enabled MBEDTLS_SSL_CLI_C
+run_test    "TLS 1.3: version negotiation with rsa key, tls13, allow_sha1=1, O->m" \
+            "$P_SRV allow_sha1=1 debug_level=4 crt_file=data_files/server2-sha256.crt key_file=data_files/server2.key force_version=tls13 " \
+            "$O_NEXT_CLI_NO_CERT -CAfile data_files/test-ca_cat12.crt -msg "  \
+            0 \
+            -s "Protocol is TLSv1.3"
+
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
+requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
+requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_SRV_C
+requires_config_enabled MBEDTLS_SSL_CLI_C
+run_test    "TLS 1.3: version negotiation with rsa key, tls13, allow_sha1=0, G->m" \
+            "$P_SRV allow_sha1=0 debug_level=4 crt_file=data_files/server2-sha256.crt key_file=data_files/server2.key force_version=tls13 " \
+            "$G_NEXT_CLI_NO_CERT localhost -d 4 --x509cafile data_files/test-ca_cat12.crt --priority=NORMAL "  \
+            0 \
+           -s "Protocol is TLSv1.3"
+
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
+requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
+requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_SRV_C
+requires_config_enabled MBEDTLS_SSL_CLI_C
+run_test    "TLS 1.3: version negotiation with rsa key, tls13, allow_sha1=1, G->m" \
+            "$P_SRV allow_sha1=1 debug_level=4 crt_file=data_files/server2-sha256.crt key_file=data_files/server2.key force_version=tls13 " \
+            "$G_NEXT_CLI_NO_CERT localhost -d 4 --x509cafile data_files/test-ca_cat12.crt --priority=NORMAL "  \
+            0 \
+            -s "Protocol is TLSv1.3"
+
 # Test heap memory usage after handshake
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
 requires_config_enabled MBEDTLS_MEMORY_DEBUG
