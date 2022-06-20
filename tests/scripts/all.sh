@@ -933,6 +933,7 @@ component_test_full_cmake_gcc_asan () {
 
     msg "test: ssl-opt.sh (full config, ASan build)"
     tests/ssl-opt.sh
+    head tests/*.log
 
     msg "test: compat.sh (full config, ASan build)"
     tests/compat.sh
