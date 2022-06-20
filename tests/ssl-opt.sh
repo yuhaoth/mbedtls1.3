@@ -11493,6 +11493,44 @@ run_test    "TLS 1.3 m->G server with middlebox compat support, not client" \
             1 \
             -c "ChangeCipherSpec invalid in TLS 1.3 without compatibility mode"
 
+requires_openssl_tls1_3
+requires_gnutls_tls1_3
+run_test    "TLS 1.3: G->O" \
+            "$O_NEXT_SRV_NO_CERT -cert data_files/server2-sha256.crt -key data_files/server2.key
+                 -msg -debug -tls1_2 " \
+            "$G_NEXT_CLI_NO_CERT localhost -d 4 --x509cafile data_files/test-ca_cat12.crt \
+                --priority=NORMAL:-SIGN-ALL:+SIGN-RSA-PSS-RSAE-SHA512:+SIGN-RSA-PSS-SHA512 "  \
+            0
+
+requires_openssl_tls1_3
+requires_gnutls_tls1_3
+run_test    "TLS 1.3: O->G" \
+            "$G_NEXT_SRV_NO_CERT --http --disable-client-cert --debug=4 --x509certfile data_files/server2-sha256.crt --x509keyfile data_files/server2.key
+                --priority=NORMAL:-VERS-ALL:+VERS-TLS1.2" \
+            "$O_NEXT_CLI_NO_CERT -CAfile data_files/test-ca_cat12.crt -msg  -sigalgs rsa_pss_rsae_sha512,rsa_pkcs1_sha512"  \
+            0
+
+# This test will fail, that is different result with OpenSSL/GnuTLS
+requires_openssl_tls1_3
+requires_gnutls_tls1_3
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
+run_test    "TLS 1.3: m->G rsa_pss_rsae_sha512,rsa_pkcs1_sha512" \
+            "$G_NEXT_SRV_NO_CERT --http --disable-client-cert --debug=4 --x509certfile data_files/server2-sha256.crt --x509keyfile data_files/server2.key
+                --priority=NORMAL:-VERS-ALL:+VERS-TLS1.2" \
+            "$P_CLI allow_sha1=0 debug_level=4 sig_algs=rsa_pss_rsae_sha512,rsa_pkcs1_sha512" \
+            0
+
+requires_openssl_tls1_3
+requires_gnutls_tls1_3
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
+run_test    "TLS 1.3: m->G rsa_pkcs1_sha512,rsa_pss_rsae_sha512" \
+            "$G_NEXT_SRV_NO_CERT --http --disable-client-cert --debug=4 --x509certfile data_files/server2-sha256.crt --x509keyfile data_files/server2.key
+                --priority=NORMAL:-VERS-ALL:+VERS-TLS1.2" \
+            "$P_CLI allow_sha1=0 debug_level=4 sig_algs=rsa_pkcs1_sha512,rsa_pss_rsae_sha512 " \
+            0
+
 # Test heap memory usage after handshake
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
 requires_config_enabled MBEDTLS_MEMORY_DEBUG
