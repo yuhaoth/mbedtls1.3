@@ -2402,14 +2402,31 @@ start_processing:
         unsigned char *params = ssl->in_msg + mbedtls_ssl_hs_hdr_len( ssl );
         size_t params_len = p - params;
         void *rs_ctx = NULL;
+        uint16_t sig_alg;
 
         mbedtls_pk_context * peer_pk;
+
+#if !defined(MBEDTLS_SSL_KEEP_PEER_CERTIFICATE)
+        peer_pk = &ssl->handshake->peer_pubkey;
+#else /* !MBEDTLS_SSL_KEEP_PEER_CERTIFICATE */
+        if( ssl->session_negotiate->peer_cert == NULL )
+        {
+            /* Should never happen */
+            MBEDTLS_SSL_DEBUG_MSG( 1, ( "should never happen" ) );
+            return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
+        }
+        peer_pk = &ssl->session_negotiate->peer_cert->pk;
+#endif /* MBEDTLS_SSL_KEEP_PEER_CERTIFICATE */
 
         /*
          * Handle the digitally-signed structure
          */
-        if( ssl_parse_signature_algorithm( ssl, &p, end,
-                                           &md_alg, &pk_alg ) != 0 )
+        MBEDTLS_SSL_CHK_BUF_READ_PTR( p, end, 2 );
+        sig_alg = MBEDTLS_GET_UINT16_BE( p, 0 );
+        if( mbedtls_ssl_tls13_get_pk_type_and_md_alg_from_sig_alg(
+                                            sig_alg, &pk_alg, &md_alg ) != 0 &&
+            ! mbedtls_ssl_sig_alg_is_offered( ssl, sig_alg ) &&
+            ! mbedtls_ssl_sig_alg_is_supported( ssl, sig_alg ) )
         {
             MBEDTLS_SSL_DEBUG_MSG( 1,
                 ( "bad server key exchange message" ) );
@@ -2419,9 +2436,9 @@ start_processing:
                 MBEDTLS_SSL_ALERT_MSG_ILLEGAL_PARAMETER );
             return( MBEDTLS_ERR_SSL_ILLEGAL_PARAMETER );
         }
+        p += 2;
 
-        if( pk_alg !=
-            mbedtls_ssl_get_ciphersuite_sig_pk_alg( ciphersuite_info ) )
+        if( !mbedtls_pk_can_do( peer_pk, pk_alg ) )
         {
             MBEDTLS_SSL_DEBUG_MSG( 1,
                 ( "bad server key exchange message" ) );
@@ -2479,18 +2496,6 @@ start_processing:
 
         MBEDTLS_SSL_DEBUG_BUF( 3, "parameters hash", hash, hashlen );
 
-#if !defined(MBEDTLS_SSL_KEEP_PEER_CERTIFICATE)
-        peer_pk = &ssl->handshake->peer_pubkey;
-#else /* !MBEDTLS_SSL_KEEP_PEER_CERTIFICATE */
-        if( ssl->session_negotiate->peer_cert == NULL )
-        {
-            /* Should never happen */
-            MBEDTLS_SSL_DEBUG_MSG( 1, ( "should never happen" ) );
-            return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
-        }
-        peer_pk = &ssl->session_negotiate->peer_cert->pk;
-#endif /* MBEDTLS_SSL_KEEP_PEER_CERTIFICATE */
-
         /*
          * Verify signature
          */
@@ -2509,8 +2514,28 @@ start_processing:
             rs_ctx = &ssl->handshake->ecrs_ctx.pk;
 #endif
 
-        if( ( ret = mbedtls_pk_verify_restartable( peer_pk,
-                        md_alg, hash, hashlen, p, sig_len, rs_ctx ) ) != 0 )
+#if defined(MBEDTLS_X509_RSASSA_PSS_SUPPORT)
+        if( pk_alg == MBEDTLS_PK_RSASSA_PSS )
+        {
+            const mbedtls_md_info_t* md_info;
+            mbedtls_pk_rsassa_pss_options rsassa_pss_options;
+            rsassa_pss_options.mgf1_hash_id = md_alg;
+            if( ( md_info = mbedtls_md_info_from_type( md_alg ) ) == NULL )
+            {
+                return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
+            }
+            rsassa_pss_options.expected_salt_len = mbedtls_md_get_size( md_info );
+            ret = mbedtls_pk_verify_ext( pk_alg, &rsassa_pss_options,
+                                         peer_pk,
+                                         md_alg, hash, hashlen,
+                                         p, sig_len );
+        }
+        else
+#endif /* MBEDTLS_X509_RSASSA_PSS_SUPPORT */
+            ret = mbedtls_pk_verify_restartable( peer_pk,
+                        md_alg, hash, hashlen, p, sig_len, rs_ctx );
+
+        if( ret != 0 )
         {
 #if defined(MBEDTLS_SSL_ECP_RESTARTABLE_ENABLED)
             if( ret != MBEDTLS_ERR_ECP_IN_PROGRESS )
