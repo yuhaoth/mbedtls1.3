@@ -1012,6 +1012,30 @@ component_test_ref_configs () {
     tests/scripts/test-ref-configs.pl
 }
 
+component_test_ref_config_ccm_psk_dtls1_2_psa () {
+    msg "Testing configuration: config-ccm-psk-dtls1_2.h+PSA"
+
+    CC=gcc cmake -D GEN_FILES=Off -D CMAKE_BUILD_TYPE:String=Asan .
+    scripts/config.py set MBEDTLS_PSA_CRYPTO_C
+    scripts/config.py set MBEDTLS_USE_PSA_CRYPTO
+    CFLAGS='-Os -Werror -Wall -Wextra -DMBEDTLS_USER_CONFIG_FILE=\"../tests/configs/config-ccm-psk-dtls1_2.h\"' \
+        make
+    make test
+
+    msg "running compat.sh -m dtls12 -f '^TLS-PSK-WITH-AES-...-CCM-8' (config-ccm-psk-dtls1_2.h+PSA)"
+    tests/compat.sh -m dtls12 -f '^TLS-PSK-WITH-AES-...-CCM-8'
+
+    msg "rebuilding with debug traces for ssl-opt (config-ccm-psk-dtls1_2.h+PSA)"
+    make clean
+    scripts/config.py set MBEDTLS_DEBUG_C
+    scripts/config.py set MBEDTLS_ERROR_C
+    CFLAGS='-Os -Werror -Wall -Wextra -DMBEDTLS_USER_CONFIG_FILE=\"../tests/configs/config-ccm-psk-dtls1_2.h\"' \
+        make
+
+    msg "running ssl-opt.sh   (config-ccm-psk-dtls1_2.h+PSA+DEBUG)"
+    tests/ssl-opt.sh
+}
+
 component_test_no_renegotiation () {
     msg "build: Default + !MBEDTLS_SSL_RENEGOTIATION (ASan build)" # ~ 6 min
     scripts/config.py unset MBEDTLS_SSL_RENEGOTIATION
