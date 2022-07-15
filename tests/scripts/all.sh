@@ -1013,19 +1013,40 @@ component_test_psa_crypto_rsa_no_genprime() {
     make test
 }
 
-component_test_ref_configs () {
-    msg "test/build: ref-configs (ASan build)" # ~ 6 min 20s
-    # test-ref-configs works by overwriting mbedtls_config.h; this makes cmake
-    # want to re-generate generated files that depend on it, quite correctly.
-    # However this doesn't work as the generation script expects a specific
-    # format for mbedtls_config.h, which the other files don't follow. Also,
-    # cmake can't know this, but re-generation is actually not necessary as
-    # the generated files only depend on the list of available options, not
-    # whether they're on or off. So, disable cmake's (over-sensitive here)
-    # dependency resolution for generated files and just rely on them being
-    # present (thanks to pre_generate_files) by turning GEN_FILES off.
+component_test_ref_config_ccm_psk_tls1_2 () {
+    msg "test/build: ref-config config-ccm-psk-tls1_2.h (ASan build)"
     CC=gcc cmake -D GEN_FILES=Off -D CMAKE_BUILD_TYPE:String=Asan .
-    tests/scripts/test-ref-configs.pl
+    tests/scripts/test-ref-configs.pl config-ccm-psk-tls1_2.h
+}
+
+component_test_ref_config_ccm_psk_dtls1_2 () {
+    msg "test/build: ref-config config-ccm-psk-dtls1_2.h (ASan build)"
+    CC=gcc cmake -D GEN_FILES=Off -D CMAKE_BUILD_TYPE:String=Asan .
+    tests/scripts/test-ref-configs.pl config-ccm-psk-dtls1_2.h
+}
+
+component_test_ref_config_no_entropy () {
+    msg "test/build: ref-config config-no-entropy.h (ASan build)"
+    CC=gcc cmake -D GEN_FILES=Off -D CMAKE_BUILD_TYPE:String=Asan .
+    tests/scripts/test-ref-configs.pl config-no-entropy.h
+}
+
+component_test_ref_config_suite_b () {
+    msg "test/build: ref-config config-suite-b.h (ASan build)"
+    CC=gcc cmake -D GEN_FILES=Off -D CMAKE_BUILD_TYPE:String=Asan .
+    tests/scripts/test-ref-configs.pl config-suite-b.h
+}
+
+component_test_ref_config_symmetric_only () {
+    msg "test/build: ref-config config-symmetric-only.h (ASan build)"
+    CC=gcc cmake -D GEN_FILES=Off -D CMAKE_BUILD_TYPE:String=Asan .
+    tests/scripts/test-ref-configs.pl config-symmetric-only.h
+}
+
+component_test_ref_config_thread () {
+    msg "test/build: ref-config config-thread.h (ASan build)"
+    CC=gcc cmake -D GEN_FILES=Off -D CMAKE_BUILD_TYPE:String=Asan .
+    tests/scripts/test-ref-configs.pl config-thread.h
 }
 
 component_test_no_renegotiation () {
