@@ -703,10 +703,6 @@ static int ssl_tls13_write_psk_key_exchange_modes_ext( mbedtls_ssl_context *ssl,
                                                        unsigned char *end,
                                                        size_t *out_len )
 {
-    const unsigned char *psk;
-    size_t psk_len;
-    const unsigned char *psk_identity;
-    size_t psk_identity_len;
     unsigned char *p;
     int num_modes = 0;
 
@@ -715,13 +711,6 @@ static int ssl_tls13_write_psk_key_exchange_modes_ext( mbedtls_ssl_context *ssl,
     if( !mbedtls_ssl_conf_tls13_some_psk_enabled( ssl ) )
     {
         *out_len = 0;
-        return( 0 );
-    }
-
-    if( mbedtls_ssl_get_psk_to_offer( ssl, &psk, &psk_len,
-                                      &psk_identity, &psk_identity_len ) != 0 )
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 3, ( "skip psk_key_exchange_modes extension" ) );
         return( 0 );
     }
 
