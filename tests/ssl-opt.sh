@@ -12714,7 +12714,7 @@ requires_config_enabled MBEDTLS_SSL_SESSION_TICKETS
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
 run_test    "TLS 1.3: NewSessionTicket: Basic check, O->m" \
-            "$P_SRV debug_level=4 crt_file=data_files/server5.crt key_file=data_files/server5.key force_version=tls13 tickets=1" \
+            "$P_SRV debug_level=4 crt_file=data_files/server5.crt key_file=data_files/server5.key force_version=tls13 tickets=4" \
             "$O_NEXT_CLI -msg -debug -tls1_3 -no_middlebox" \
             0 \
             -s "=> write NewSessionTicket msg" \
@@ -12727,7 +12727,7 @@ requires_config_enabled MBEDTLS_SSL_SESSION_TICKETS
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_DEBUG_C
 run_test    "TLS 1.3: NewSessionTicket: Basic check, G->m" \
-            "$P_SRV debug_level=4 crt_file=data_files/server5.crt key_file=data_files/server5.key force_version=tls13 tickets=1" \
+            "$P_SRV debug_level=4 crt_file=data_files/server5.crt key_file=data_files/server5.key force_version=tls13 tickets=4" \
             "$G_NEXT_CLI localhost -d 4 --priority=NORMAL:-VERS-ALL:+VERS-TLS1.3:%DISABLE_TLS13_COMPAT_MODE -V" \
             0 \
             -s "=> write NewSessionTicket msg" \
@@ -12741,12 +12741,12 @@ requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_DEBUG_C
 run_test    "TLS 1.3: NewSessionTicket: Basic check, m->m" \
-            "$P_SRV debug_level=4 crt_file=data_files/server5.crt key_file=data_files/server5.key force_version=tls13 tickets=1" \
+            "$P_SRV debug_level=4 crt_file=data_files/server5.crt key_file=data_files/server5.key force_version=tls13 tickets=4" \
             "$P_CLI debug_level=4 reco_mode=1 reconnect=1" \
             0 \
             -c "Protocol is TLSv1.3" \
             -c "MBEDTLS_SSL_NEW_SESSION_TICKET" \
-            -c "got new session ticket." \
+            -c "got new session ticket ( 3 )" \
             -c "Saving session for reuse... ok" \
             -c "HTTP/1.0 200 OK"    \
             -s "=> write NewSessionTicket msg" \
