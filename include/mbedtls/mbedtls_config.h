@@ -1554,6 +1554,15 @@
 #define MBEDTLS_SSL_TLS1_3_TICKET_NONCE_LENGTH 32
 
 /**
+ * \def MBEDTLS_SSL_TLS1_3_MAX_NEW_SESSION_TICKETS
+ *
+ * Max number of NewSessionTicket. This is not used in TLS 1.2.
+ *
+ * This must be less than 256.
+ */
+#define MBEDTLS_SSL_TLS1_3_MAX_NEW_SESSION_TICKETS 4
+
+/**
  * \def MBEDTLS_SSL_PROTO_DTLS
  *
  * Enable support for DTLS (all available versions).
