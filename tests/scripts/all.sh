@@ -3229,14 +3229,34 @@ test_build_opt () {
     done
 }
 
-component_test_clang_opt () {
+component_test_clang_opt_o0 () {
     scripts/config.py full
-    test_build_opt 'full config' clang -O0 -Os -O2
+    test_build_opt 'full config' clang -O0
 }
 
-component_test_gcc_opt () {
+component_test_clang_opt_os () {
     scripts/config.py full
-    test_build_opt 'full config' gcc -O0 -Os -O2
+    test_build_opt 'full config' clang -Os
+}
+
+component_test_clang_opt_o2 () {
+    scripts/config.py full
+    test_build_opt 'full config' clang -O2
+}
+
+component_test_gcc_opt_o0 () {
+    scripts/config.py full
+    test_build_opt 'full config' gcc -O0
+}
+
+component_test_gcc_opt_os () {
+    scripts/config.py full
+    test_build_opt 'full config' gcc -Os
+}
+
+component_test_gcc_opt_o2 () {
+    scripts/config.py full
+    test_build_opt 'full config' gcc -O2
 }
 
 component_build_mbedtls_config_file () {
