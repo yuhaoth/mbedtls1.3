@@ -750,9 +750,84 @@ int mbedtls_ssl_tls13_psk_list_add_session( mbedtls_ssl_context *ssl,
 }
 #endif /* MBEDTLS_SSL_SESSION_TICKETS */
 
+MBEDTLS_CHECK_RETURN_CRITICAL
+static int ssl_tls13_psk_list_add_psk_opaque( mbedtls_ssl_config *conf,
+                                              const unsigned char *identity,
+                                              size_t identity_len,
+                                              mbedtls_svc_key_id_t psk_opaque,
+                                              unsigned char type )
+{
+    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
+    mbedtls_ssl_psk_list_t *psk_list;
+    unsigned char *entry;
+    size_t len = 1 + sizeof( mbedtls_svc_key_id_t ) + 2 + identity_len ;
+
+    ret = ssl_tls13_get_psk_list( (mbedtls_ssl_config*)conf, &psk_list );
+    if( ret < 0 )
+        return( ret );
+
+    if( psk_list->size >= MBEDTLS_SSL_TLS1_3_MAX_PSK_SLOTS )
+        return( MBEDTLS_ERR_SSL_BAD_CONFIG );
+
+    entry = mbedtls_calloc( 1, len );
+    if( entry == NULL )
+        return( MBEDTLS_ERR_SSL_ALLOC_FAILED );
+
+    entry[0] = type;
+
+    memcpy( entry + 1, &psk_opaque, sizeof( psk_opaque ) );
+    MBEDTLS_PUT_UINT16_BE( identity_len, entry,
+                           sizeof( mbedtls_svc_key_id_t ) + 1 );
+    memcpy( entry + sizeof( mbedtls_svc_key_id_t ) + 1 + 2,
+            identity, identity_len);
+
+    psk_list->entries[ psk_list->size ] = entry;
+    psk_list->size += 1;
+
+    return( 0 );
+}
+
+int mbedtls_ssl_tls13_psk_list_add_psk_opaque( mbedtls_ssl_config *conf,
+                                               const unsigned char *identity,
+                                               size_t identity_len,
+                                               mbedtls_svc_key_id_t psk_opaque )
+{
+    return( ssl_tls13_psk_list_add_psk_opaque(
+                conf, identity, identity_len,
+                psk_opaque, SSL_TLS1_3_PSK_LIST_PSK ) );
+}
+int mbedtls_ssl_tls13_psk_list_add_psk( mbedtls_ssl_config *conf,
+                                        const unsigned char *identity,
+                                        size_t identity_len,
+                                        const unsigned char *psk,
+                                        size_t psk_len)
+{
+    psa_key_attributes_t key_attributes = psa_key_attributes_init();
+    psa_status_t status = PSA_ERROR_CORRUPTION_DETECTED;
+    psa_algorithm_t alg = PSA_ALG_NONE;
+    mbedtls_svc_key_id_t psk_opaque = MBEDTLS_SVC_KEY_ID_INIT;
+
+    alg = PSA_ALG_HKDF_EXTRACT( PSA_ALG_ANY_HASH );
+        psa_set_key_usage_flags( &key_attributes,
+                                 PSA_KEY_USAGE_DERIVE | PSA_KEY_USAGE_EXPORT );
+
+    psa_set_key_algorithm( &key_attributes, alg );
+    psa_set_key_type( &key_attributes, PSA_KEY_TYPE_DERIVE );
+
+    status = psa_import_key( &key_attributes, psk, psk_len, &psk_opaque );
+    if( status != PSA_SUCCESS )
+        return( MBEDTLS_ERR_SSL_HW_ACCEL_FAILED );
+
+    return( ssl_tls13_psk_list_add_psk_opaque(
+                conf, identity, identity_len,
+                psk_opaque, SSL_TLS1_3_PSK_LIST_ALLOCED_PSK ) );
+
+}
+
 void mbedtls_ssl_tls13_psk_list_free( mbedtls_ssl_config *conf )
 {
     mbedtls_ssl_psk_list_t *psk_list;
+    mbedtls_svc_key_id_t psk_opaque;
     if( conf->psk_list == NULL )
         return;
 
@@ -761,13 +836,20 @@ void mbedtls_ssl_tls13_psk_list_free( mbedtls_ssl_config *conf )
     for( int i = 0; i < psk_list->size; i++ )
     {
         unsigned char *entry = psk_list->entries[i];
+        if( entry == NULL )
+            continue;
         switch( entry[0] )
         {
-            case SSL_TLS1_3_PSK_LIST_SESSION:
+            case SSL_TLS1_3_PSK_LIST_ALLOCED_PSK:
+                memcpy( &psk_opaque, entry + 1, sizeof( psk_opaque ) );
+                psa_destroy_key( psk_opaque );
                 mbedtls_free( entry );
                 break;
             case SSL_TLS1_3_PSK_LIST_PSK:
-            case SSL_TLS1_3_PSK_LIST_ALLOCED_PSK:
+            case SSL_TLS1_3_PSK_LIST_SESSION:
+                mbedtls_free( entry );
+                break;
+
             default:
                 break;
         }
