@@ -387,6 +387,11 @@ armc6_build_test()
     FLAGS="$1"
 
     msg "build: ARM Compiler 6 ($FLAGS)"
+
+    scripts/config.py baremetal
+    # armc[56] don't support SHA-512 intrinsics
+    scripts/config.py unset MBEDTLS_SHA512_USE_A64_CRYPTO_IF_PRESENT
+
     ARM_TOOL_VARIANT="ult" CC="$ARMC6_CC" AR="$ARMC6_AR" CFLAGS="$FLAGS" \
                     WARNING_CFLAGS='-xc -std=c99' make lib
 
@@ -3487,7 +3492,7 @@ component_build_arm_none_eabi_gcc_no_64bit_multiplication () {
     not grep __aeabi_lmul library/*.o
 }
 
-component_build_armcc () {
+component_build_armcc_5 () {
     msg "build: ARM Compiler 5"
     scripts/config.py baremetal
     # armc[56] don't support SHA-512 intrinsics
@@ -3498,26 +3503,35 @@ component_build_armcc () {
 
     msg "size: ARM Compiler 5"
     "$ARMC5_FROMELF" -z library/*.o
+}
 
-    make clean
+# Compile with -O1 since some Arm inline assembly is disabled for -O0.
 
-    # Compile with -O1 since some Arm inline assembly is disabled for -O0.
-
+component_build_armcc_6_armv7_a () {
     # ARM Compiler 6 - Target ARMv7-A
     armc6_build_test "-O1 --target=arm-arm-none-eabi -march=armv7-a"
+}
 
-    # ARM Compiler 6 - Target ARMv7-M
-    armc6_build_test "-O1 --target=arm-arm-none-eabi -march=armv7-m"
-
+component_build_armcc_6_armv7_m_dsp () {
     # ARM Compiler 6 - Target ARMv7-M+DSP
     armc6_build_test "-O1 --target=arm-arm-none-eabi -march=armv7-m+dsp"
+}
+component_build_armcc_6_armv7_m () {
+    # ARM Compiler 6 - Target ARMv7-M
+    armc6_build_test "-O1 --target=arm-arm-none-eabi -march=armv7-m"
+}
 
+component_build_armcc_6_armv8_a_aarch32 () {
     # ARM Compiler 6 - Target ARMv8-A - AArch32
     armc6_build_test "-O1 --target=arm-arm-none-eabi -march=armv8.2-a"
+}
 
+component_build_armcc_6_armv8_m () {
     # ARM Compiler 6 - Target ARMv8-M
     armc6_build_test "-O1 --target=arm-arm-none-eabi -march=armv8-m.main"
+}
 
+component_build_armcc_6_armv8_a () {
     # ARM Compiler 6 - Target ARMv8.2-A - AArch64
     armc6_build_test "-O1 --target=aarch64-arm-none-eabi -march=armv8.2-a+crypto"
 }
