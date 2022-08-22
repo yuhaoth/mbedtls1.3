@@ -665,6 +665,117 @@ static int ssl_tls13_write_psk_key_exchange_modes_ext( mbedtls_ssl_context *ssl,
     return ( 0 );
 }
 
+/* Fuctions and structure for PSK list maintain
+ *
+ * struct {
+ *     mbedtls_svc_key_id_t psk;
+ *     opaque identity<0..2^16-1>;
+ * } PSK;
+ *
+ * struct {
+ *     uint8_t  type;
+ *     select ( Entry.type ){
+ *         case PSK: PSK;
+ *         case PSK_WITH_ALLOC: PSK;
+ *         case SESSION: session_data<1..2^16-1>;
+ *     };
+ * } Entry;
+ *
+ * struct {
+ *      uint8_t size;
+ *      Entry   *entries[MBEDTLS_SSL_TLS1_3_MAX_PSK_SLOTS];
+ * };
+ */
+typedef struct {
+    uint8_t size;
+    unsigned char *entries[MBEDTLS_SSL_TLS1_3_MAX_PSK_SLOTS];
+} mbedtls_ssl_psk_list_t;
+
+#define SSL_TLS1_3_PSK_LIST_SESSION     0
+#define SSL_TLS1_3_PSK_LIST_PSK         1
+#define SSL_TLS1_3_PSK_LIST_ALLOCED_PSK 2
+
+MBEDTLS_CHECK_RETURN_CRITICAL
+static int ssl_tls13_get_psk_list( mbedtls_ssl_config *conf,
+                                   mbedtls_ssl_psk_list_t **psk_list )
+{
+    *psk_list = NULL;
+    if( conf->psk_list == NULL )
+    {
+        conf->psk_list = mbedtls_calloc( 1, sizeof( mbedtls_ssl_psk_list_t ) );
+        if( conf->psk_list == NULL )
+            return( MBEDTLS_ERR_SSL_ALLOC_FAILED );
+        memset( conf->psk_list, 0, sizeof( mbedtls_ssl_psk_list_t ) );
+    }
+    *psk_list = (mbedtls_ssl_psk_list_t*)conf->psk_list;
+    return( 0 );
+}
+#if defined(MBEDTLS_SSL_SESSION_TICKETS)
+int mbedtls_ssl_tls13_psk_list_add_session( mbedtls_ssl_context *ssl,
+                                            const mbedtls_ssl_session *session )
+{
+    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
+    mbedtls_ssl_psk_list_t *psk_list;
+    unsigned char *entry;
+    size_t session_len;
+
+    ret = ssl_tls13_get_psk_list( (mbedtls_ssl_config*)ssl->conf, &psk_list );
+    if( ret < 0 )
+        return( ret );
+
+    if( psk_list->size >= MBEDTLS_SSL_TLS1_3_MAX_PSK_SLOTS )
+        return( MBEDTLS_ERR_SSL_BAD_CONFIG );
+
+    ret = mbedtls_ssl_session_save( session, NULL, 0, &session_len );
+    if( ret != MBEDTLS_ERR_SSL_BUFFER_TOO_SMALL )
+    {
+        return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
+    }
+
+    entry = mbedtls_calloc( 1, session_len + 1 );
+    if( entry == NULL )
+        return( MBEDTLS_ERR_SSL_ALLOC_FAILED );
+
+    *entry = SSL_TLS1_3_PSK_LIST_SESSION;
+
+    ret = mbedtls_ssl_session_save( session, entry + 1,
+                                    session_len, &session_len );
+    if( ret != 0 )
+        return( ret );
+
+    psk_list->entries[ psk_list->size ] = entry;
+    psk_list->size += 1;
+
+    return( 0 );
+}
+#endif /* MBEDTLS_SSL_SESSION_TICKETS */
+
+void mbedtls_ssl_tls13_psk_list_free( mbedtls_ssl_config *conf )
+{
+    mbedtls_ssl_psk_list_t *psk_list;
+    if( conf->psk_list == NULL )
+        return;
+
+    psk_list = (mbedtls_ssl_psk_list_t *)conf->psk_list;
+
+    for( int i = 0; i < psk_list->size; i++ )
+    {
+        unsigned char *entry = psk_list->entries[i];
+        switch( entry[0] )
+        {
+            case SSL_TLS1_3_PSK_LIST_SESSION:
+                mbedtls_free( entry );
+                break;
+            case SSL_TLS1_3_PSK_LIST_PSK:
+            case SSL_TLS1_3_PSK_LIST_ALLOCED_PSK:
+            default:
+                break;
+        }
+    }
+    mbedtls_free( psk_list );
+}
+/* End of PSK list functions */
+
 /* Check if we have any PSK to offer, returns 0 if PSK is available.
  * Assign the psk and ticket if pointers are present.
  */
