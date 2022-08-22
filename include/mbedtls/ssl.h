@@ -1489,6 +1489,10 @@ struct mbedtls_ssl_config
                                      *   Its value is non-zero if and only if
                                      *   \c psk is not \c NULL or \c psk_opaque
                                      *   is not \c 0. */
+#if defined(MBEDTLS_SSL_CLI_C) && defined(MBEDTLS_SSL_PROTO_TLS1_3)
+    void          *MBEDTLS_PRIVATE(psk_list); /*!< The PSK list for TLS 1.3 PSK negotiation.
+                                     * Contains multiple PSKs and session tickets. */
+#endif /* MBEDTLS_SSL_CLI_C && MBEDTLS_SSL_PROTO_TLS1_3 */
 #endif /* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED */
 
 #if defined(MBEDTLS_SSL_ALPN)
@@ -2920,9 +2924,11 @@ void mbedtls_ssl_conf_session_cache( mbedtls_ssl_config *conf,
  *                 corresponding tickets being advertised as resumption PSKs
  *                 by the client.
  *
- * \note           Calling this function multiple times will only be useful
- *                 once TLS 1.3 is supported. For TLS 1.2 connections, this
- *                 function should be called at most once.
+ * \note           For TLS 1.2 connections, this function should be called at
+ *                 most once.
+ *
+ * \note           For TLS 1.3 connections, this function should be called up
+ *                 to \c MBEDTLS_SSL_TLS1_3_MAX_PSK_SLOTS times.
  *
  * \param ssl      The SSL context representing the connection which should
  *                 be attempted to be setup using session resumption. This
@@ -3293,14 +3299,22 @@ int mbedtls_ssl_conf_own_cert( mbedtls_ssl_config *conf,
 
 #if defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
 /**
- * \brief          Configure pre-shared keys (PSKs) and their
- *                 identities to be used in PSK-based ciphersuites.
+ * \brief          Configure pre-shared keys (PSKs) and their identities to be
+ *                 used in PSK-based ciphersuites.
  *
- *                 Only one PSK can be registered, through either
- *                 mbedtls_ssl_conf_psk() or mbedtls_ssl_conf_psk_opaque().
- *                 If you attempt to register more than one PSK, this function
- *                 fails, though this may change in future versions, which
- *                 may add support for multiple PSKs.
+ *                 Without TLS 1.3 client, only one PSK can be registered,
+ *                 through either mbedtls_ssl_conf_psk() or
+ *                 mbedtls_ssl_conf_psk_opaque(). If you attempt to register
+ *                 more than one PSK, this function fails, though this may change
+ *                 in future versions, which may add support for multiple PSKs.
+ *
+ * \note           With TLS 1.3 client, the max register times is defined as
+ *                 \c MBEDTLS_SSL_TLS1_3_MAX_PSK_SLOTS . For TLS 1.2 connections,
+ *                 only first PSK will be sent to server side.
+ *
+ * \note           \c MBEDTLS_SSL_TLS1_3_MAX_PSK_SLOTS is the max times of calling
+ *                 \c mbedtls_ssl_conf_psk() , \c mbedtls_ssl_conf_psk_opaque()
+ *                 and \c mbedtls_ssl_set_session()
  *
  * \note           This is mainly useful for clients. Servers will usually
  *                 want to use \c mbedtls_ssl_conf_psk_cb() instead.
