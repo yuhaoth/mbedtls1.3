@@ -1545,6 +1545,13 @@
 //#define MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 
 /**
+ * \brief MBEDTLS_SSL_TLS1_3_MAX_PSK_SLOTS
+ *
+ * Max slots for saving PSK and session tickets.
+ */
+#define MBEDTLS_SSL_TLS1_3_MAX_PSK_SLOTS 16
+
+/**
  * \def MBEDTLS_SSL_TLS1_3_TICKET_NONCE_LENGTH
  *
  * Size in bytes of a ticket nonce. This is not used in TLS 1.2.
