@@ -1360,9 +1360,19 @@ int mbedtls_ssl_set_session( mbedtls_ssl_context *ssl, const mbedtls_ssl_session
     {
         return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
     }
-
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3) && \
+    defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED) && \
+    defined(MBEDTLS_SSL_SESSION_TICKETS)
+    ret = mbedtls_ssl_tls13_psk_list_add_session( ssl, session );
+    if( ret < 0 )
+        return( ret );
+    /* Skip session_negotiate update if it has been configured */
+    if( ssl->handshake->resume == 1 )
+        return( 0 );
+#else /* MBEDTLS_SSL_PROTO_TLS1_3 && MBEDTLS_SSL_SESSION_TICKETS */
     if( ssl->handshake->resume == 1 )
         return( MBEDTLS_ERR_SSL_FEATURE_UNAVAILABLE );
+#endif /* !( MBEDTLS_SSL_PROTO_TLS1_3 && MBEDTLS_SSL_SESSION_TICKETS )*/
 
     if( ( ret = mbedtls_ssl_session_copy( ssl->session_negotiate,
                                           session ) ) != 0 )
@@ -1637,10 +1647,6 @@ int mbedtls_ssl_conf_psk( mbedtls_ssl_config *conf,
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
 
-    /* We currently only support one PSK, raw or opaque. */
-    if( ssl_conf_psk_is_configured( conf ) )
-        return( MBEDTLS_ERR_SSL_FEATURE_UNAVAILABLE );
-
     /* Check and set raw PSK */
     if( psk == NULL )
         return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
@@ -1648,6 +1654,22 @@ int mbedtls_ssl_conf_psk( mbedtls_ssl_config *conf,
         return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
     if( psk_len > MBEDTLS_PSK_MAX_LEN )
         return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
+
+#if defined(MBEDTLS_SSL_CLI_C) && defined(MBEDTLS_SSL_PROTO_TLS1_3)
+    ret = mbedtls_ssl_tls13_psk_list_add_psk( conf,
+                                              psk_identity, psk_identity_len,
+                                              psk, psk_len );
+    if( ret < 0 )
+        return( ret );
+    /* Skip default setting if configured */
+    if( ssl_conf_psk_is_configured( conf ) )
+        return( 0 );
+#else
+    /* We currently only support one PSK, raw or opaque. */
+    if( ssl_conf_psk_is_configured( conf ) )
+        return( MBEDTLS_ERR_SSL_FEATURE_UNAVAILABLE );
+#endif
+
 
     if( ( conf->psk = mbedtls_calloc( 1, psk_len ) ) == NULL )
         return( MBEDTLS_ERR_SSL_ALLOC_FAILED );
@@ -1755,13 +1777,27 @@ int mbedtls_ssl_conf_psk_opaque( mbedtls_ssl_config *conf,
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
 
-    /* We currently only support one PSK, raw or opaque. */
-    if( ssl_conf_psk_is_configured( conf ) )
-        return( MBEDTLS_ERR_SSL_FEATURE_UNAVAILABLE );
-
     /* Check and set opaque PSK */
     if( mbedtls_svc_key_id_is_null( psk ) )
         return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
+
+
+#if defined(MBEDTLS_SSL_CLI_C) && defined(MBEDTLS_SSL_PROTO_TLS1_3)
+    ret = mbedtls_ssl_tls13_psk_list_add_psk_opaque( conf,
+                                                     psk_identity,
+                                                     psk_identity_len,
+                                                     psk );
+    if( ret < 0 )
+        return( ret );
+    /* Skip default setting if configured */
+    if( ssl_conf_psk_is_configured( conf ) )
+        return( 0 );
+#else
+    /* We currently only support one PSK, raw or opaque. */
+    if( ssl_conf_psk_is_configured( conf ) )
+        return( MBEDTLS_ERR_SSL_FEATURE_UNAVAILABLE );
+#endif
+
     conf->psk_opaque = psk;
 
     /* Check and set PSK Identity */
@@ -4778,6 +4814,9 @@ void mbedtls_ssl_config_free( mbedtls_ssl_config *conf )
         conf->psk_opaque = MBEDTLS_SVC_KEY_ID_INIT;
     }
 #endif /* MBEDTLS_USE_PSA_CRYPTO */
+#if defined(MBEDTLS_SSL_CLI_C) && defined(MBEDTLS_SSL_PROTO_TLS1_3)
+    mbedtls_ssl_tls13_psk_list_free( conf );
+#endif
     if( conf->psk != NULL )
     {
         mbedtls_platform_zeroize( conf->psk, conf->psk_len );

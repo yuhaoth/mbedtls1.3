@@ -2458,7 +2458,9 @@ int mbedtls_ssl_check_dtls_clihlo_cookie(
                            unsigned char *obuf, size_t buf_len, size_t *olen );
 #endif
 
-#if defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
+#if defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED) && \
+    defined(MBEDTLS_SSL_PROTO_TLS1_3) && \
+    defined(MBEDTLS_SSL_CLI_C)
 /**
  * \brief Given an SSL context and its associated configuration, write the TLS
  *        1.3 specific Pre-Shared key extension.
@@ -2491,6 +2493,62 @@ MBEDTLS_CHECK_RETURN_CRITICAL
 int mbedtls_ssl_tls13_write_binders_of_pre_shared_key_ext(
     mbedtls_ssl_context *ssl,
     unsigned char *buf, unsigned char *end );
-#endif /* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED */
+
+/**
+ * \brief Store PSK into PSK list for PSK negotiation with raw key
+ *
+ * \param[in] conf          Config context.
+ * \param[in] identity      Identity of PSK.
+ * \param[in] identity_len  Length of identity.
+ * \param[in] psk           PSK key.
+ * \param[in] psk_len       Length of PSK key.
+ * \return 0 on success. negative on failure.
+ */
+MBEDTLS_CHECK_RETURN_CRITICAL
+int mbedtls_ssl_tls13_psk_list_add_psk( mbedtls_ssl_config *conf,
+                                        const unsigned char *identity,
+                                        size_t identity_len,
+                                        const unsigned char *psk,
+                                        size_t psk_len);
+
+/**
+ * \brief Store PSK into PSK list for PSK negotiation with opaque key
+ *
+ * \param[in] conf          Config context.
+ * \param[in] identity      Identity of PSK.
+ * \param[in] identity_len  Length of identity.
+ * \param[in] psk_opaque    PSK key.
+ * \return 0 on success. negative on failure.
+ */
+MBEDTLS_CHECK_RETURN_CRITICAL
+int mbedtls_ssl_tls13_psk_list_add_psk_opaque( mbedtls_ssl_config *conf,
+                                               const unsigned char *identity,
+                                               size_t identity_len,
+                                               mbedtls_svc_key_id_t psk_opaque );
+
+#if defined(MBEDTLS_SSL_SESSION_TICKETS)
+/**
+ * \brief Store session in PSK list
+ *
+ * \param[in] ssl       SSL context.
+ * \param[in] session   Session should be stored
+ * \return 0 on success. negative on failure.
+ */
+MBEDTLS_CHECK_RETURN_CRITICAL
+int mbedtls_ssl_tls13_psk_list_add_session( mbedtls_ssl_context *ssl,
+                                            const mbedtls_ssl_session *session );
+
+#endif /* MBEDTLS_SSL_SESSION_TICKETS */
+
+/**
+ * \brief Free resources of PSK list
+ *
+ * \param[in] conf Config context.
+ */
+void mbedtls_ssl_tls13_psk_list_free( mbedtls_ssl_config *conf );
+
+#endif /* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED &&
+          MBEDTLS_SSL_PROTO_TLS1_3 &&
+          MBEDTLS_SSL_CLI_C */
 
 #endif /* ssl_misc.h */
