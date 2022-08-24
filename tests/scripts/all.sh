@@ -807,6 +807,27 @@ amd64_only() {
         *) false;;
     esac
 }
+has_command () {
+    if [ -z "$1" ]
+    then
+        return 1
+    fi
+    type $1 2>&1 >/dev/null
+}
+
+has_arm_none_eabi_gcc () {
+    has_command ${ARM_NONE_EABI_GCC_PREFIX}gcc
+}
+
+has_armcc_5 () {
+    has_command "${ARMC5_CC}"
+}
+
+has_armcc_6 () {
+    has_command "${ARMC6_CC}"
+}
+
+
 
 ################################################################
 #### Basic checks
@@ -3455,7 +3476,9 @@ component_build_arm_none_eabi_gcc () {
     msg "size: ${ARM_NONE_EABI_GCC_PREFIX}gcc -O1, baremetal+debug"
     ${ARM_NONE_EABI_GCC_PREFIX}size library/*.o
 }
-
+support_build_arm_none_eabi_gcc () {
+    has_arm_none_eabi_gcc
+}
 component_build_arm_linux_gnueabi_gcc_arm5vte () {
     msg "build: ${ARM_LINUX_GNUEABI_GCC_PREFIX}gcc -march=arm5vte, baremetal+debug" # ~ 10s
     scripts/config.py baremetal
@@ -3485,6 +3508,10 @@ component_build_arm_none_eabi_gcc_arm5vte () {
     ${ARM_NONE_EABI_GCC_PREFIX}size library/*.o
 }
 
+support_build_arm_none_eabi_gcc_arm5vte () {
+    has_arm_none_eabi_gcc
+}
+
 component_build_arm_none_eabi_gcc_m0plus () {
     msg "build: ${ARM_NONE_EABI_GCC_PREFIX}gcc -mthumb -mcpu=cortex-m0plus, baremetal_size" # ~ 10s
     scripts/config.py baremetal_size
@@ -3492,6 +3519,10 @@ component_build_arm_none_eabi_gcc_m0plus () {
 
     msg "size: ${ARM_NONE_EABI_GCC_PREFIX}gcc -mthumb -mcpu=cortex-m0plus -Os, baremetal_size"
     ${ARM_NONE_EABI_GCC_PREFIX}size library/*.o
+}
+
+support_build_arm_none_eabi_gcc_m0plus () {
+    has_arm_none_eabi_gcc
 }
 
 component_build_arm_none_eabi_gcc_no_udbl_division () {
@@ -3503,6 +3534,10 @@ component_build_arm_none_eabi_gcc_no_udbl_division () {
     not grep __aeabi_uldiv library/*.o
 }
 
+support_build_arm_none_eabi_gcc_no_udbl_division () {
+    has_arm_none_eabi_gcc
+}
+
 component_build_arm_none_eabi_gcc_no_64bit_multiplication () {
     msg "build: ${ARM_NONE_EABI_GCC_PREFIX}gcc MBEDTLS_NO_64BIT_MULTIPLICATION, make" # ~ 10s
     scripts/config.py baremetal
@@ -3510,6 +3545,10 @@ component_build_arm_none_eabi_gcc_no_64bit_multiplication () {
     make CC="${ARM_NONE_EABI_GCC_PREFIX}gcc" AR="${ARM_NONE_EABI_GCC_PREFIX}ar" LD="${ARM_NONE_EABI_GCC_PREFIX}ld" CFLAGS='-std=c99 -Werror -O1 -march=armv6-m -mthumb' lib
     echo "Checking that software 64-bit multiplication is not required"
     not grep __aeabi_lmul library/*.o
+}
+
+support_build_arm_none_eabi_gcc_no_64bit_multiplication () {
+    has_arm_none_eabi_gcc
 }
 
 component_build_armcc_5 () {
@@ -3525,20 +3564,35 @@ component_build_armcc_5 () {
     "$ARMC5_FROMELF" -z library/*.o
 }
 
-# Compile with -O1 since some Arm inline assembly is disabled for -O0.
+support_build_armcc_5 () {
+    has_armcc_5
+}
 
 component_build_armcc_6_armv7_a () {
     # ARM Compiler 6 - Target ARMv7-A
     armc6_build_test "-O1 --target=arm-arm-none-eabi -march=armv7-a"
 }
 
+support_build_armcc_6_armv7_a () {
+    has_armcc_6
+}
+
 component_build_armcc_6_armv7_m_dsp () {
     # ARM Compiler 6 - Target ARMv7-M+DSP
     armc6_build_test "-O1 --target=arm-arm-none-eabi -march=armv7-m+dsp"
 }
+
+support_build_armcc_6_armv7_m_dsp () {
+    has_armcc_6
+}
+
 component_build_armcc_6_armv7_m () {
     # ARM Compiler 6 - Target ARMv7-M
     armc6_build_test "-O1 --target=arm-arm-none-eabi -march=armv7-m"
+}
+
+support_build_armcc_6_armv7_m () {
+    has_armcc_6
 }
 
 component_build_armcc_6_armv8_a_aarch32 () {
@@ -3546,14 +3600,26 @@ component_build_armcc_6_armv8_a_aarch32 () {
     armc6_build_test "-O1 --target=arm-arm-none-eabi -march=armv8.2-a"
 }
 
+support_build_armcc_6_armv8_a_aarch32 () {
+    has_armcc_6
+}
+
 component_build_armcc_6_armv8_m () {
     # ARM Compiler 6 - Target ARMv8-M
     armc6_build_test "-O1 --target=arm-arm-none-eabi -march=armv8-m.main"
 }
 
+support_build_armcc_6_armv8_m () {
+    has_armcc_6
+}
+
 component_build_armcc_6_armv8_a () {
     # ARM Compiler 6 - Target ARMv8.2-A - AArch64
     armc6_build_test "-O1 --target=aarch64-arm-none-eabi -march=armv8.2-a+crypto"
+}
+
+support_build_armcc_6_armv8_a () {
+    has_armcc_6
 }
 
 component_test_tls13_only () {
