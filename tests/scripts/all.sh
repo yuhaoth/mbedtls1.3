@@ -1750,6 +1750,10 @@ component_test_full_cmake_clang () {
     env OPENSSL="$OPENSSL_NEXT" tests/compat.sh -e '^$' -f 'ARIA\|CHACHA'
 }
 
+support_test_full_cmake_clang () {
+    known_aarch64_fail
+}
+
 skip_suites_without_constant_flow () {
     # Skip the test suites that don't have any constant-flow annotations.
     # This will need to be adjusted if we ever start declaring things as
@@ -1760,6 +1764,7 @@ skip_suites_without_constant_flow () {
             tr '\n' ,)
     export SKIP_TEST_SUITES
 }
+
 
 component_test_memsan_constant_flow () {
     # This tests both (1) accesses to undefined memory, and (2) branches or
@@ -1780,6 +1785,10 @@ component_test_memsan_constant_flow () {
     make test
 }
 
+support_test_memsan_constant_flow () {
+    depend_on_clang
+}
+
 component_test_memsan_constant_flow_psa () {
     # This tests both (1) accesses to undefined memory, and (2) branches or
     # memory access depending on secret values. To distinguish between those:
@@ -1796,6 +1805,10 @@ component_test_memsan_constant_flow_psa () {
 
     msg "test: main suites (Msan + constant flow)"
     make test
+}
+
+support_test_memsan_constant_flow_psa () {
+    depend_on_clang
 }
 
 component_test_valgrind_constant_flow () {
@@ -3313,6 +3326,10 @@ test_build_opt () {
 component_test_clang_opt_o0 () {
     scripts/config.py full
     test_build_opt 'full config' clang -O0
+}
+
+support_test_clang_opt_o0 () {
+    depend_on_clang
 }
 
 component_test_clang_opt_os () {
