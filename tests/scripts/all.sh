@@ -812,7 +812,7 @@ has_command () {
     then
         return 1
     fi
-    type $1 2>&1 >/dev/null
+    type $1 >/dev/null 2>&1
 }
 
 has_arm_none_eabi_gcc () {
@@ -820,11 +820,11 @@ has_arm_none_eabi_gcc () {
 }
 
 has_armcc_5 () {
-    has_command "${ARMC5_CC}"
+    has_command "${ARMC5_CC:-}"
 }
 
 has_armcc_6 () {
-    has_command "${ARMC6_CC}"
+    has_command "${ARMC6_CC:-}"
 }
 
 
