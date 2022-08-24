@@ -800,7 +800,13 @@ pre_generate_files() {
     fi
 }
 
-
+# utils for check platform information used by `support_*`
+amd64_only() {
+    case $(uname -m) in
+        amd64|x86_64) true;;
+        *) false;;
+    esac
+}
 
 ################################################################
 #### Basic checks
@@ -3310,10 +3316,7 @@ component_test_m32_o0 () {
     make test
 }
 support_test_m32_o0 () {
-    case $(uname -m) in
-        *64*) true;;
-        *) false;;
-    esac
+    amd64_only
 }
 
 component_test_m32_o2 () {
@@ -3330,7 +3333,7 @@ component_test_m32_o2 () {
     tests/ssl-opt.sh
 }
 support_test_m32_o2 () {
-    support_test_m32_o0 "$@"
+    amd64_only "$@"
 }
 
 component_test_m32_everest () {
@@ -3349,7 +3352,7 @@ component_test_m32_everest () {
     tests/compat.sh -f ECDH -V NO -e 'ARIA\|CAMELLIA\|CHACHA'
 }
 support_test_m32_everest () {
-    support_test_m32_o0 "$@"
+    amd64_only "$@"
 }
 
 component_test_mx32 () {
@@ -3361,10 +3364,7 @@ component_test_mx32 () {
     make test
 }
 support_test_mx32 () {
-    case $(uname -m) in
-        amd64|x86_64) true;;
-        *) false;;
-    esac
+    amd64_only
 }
 
 component_test_min_mpi_window_size () {
