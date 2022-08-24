@@ -817,18 +817,28 @@ has_command () {
 
 has_arm_none_eabi_gcc () {
     has_command ${ARM_NONE_EABI_GCC_PREFIX}gcc
+    return $?
+    type ${ARM_NONE_EABI_GCC_PREFIX}gcc
 }
 
 has_armcc_5 () {
-    has_command "${ARMC5_CC:-}"
+    has_command "$ARMC5_BIN_DIR/armcc"
 }
 
 has_armcc_6 () {
-    has_command "${ARMC6_CC:-}"
+    has_command "$ARMC6_BIN_DIR/armclang"
 }
 
+depend_on_clang () {
+    # Quick fix for clang. In aarch64 images, clang version too low. It does not
+    # support change arch with pragma. To fix that, we should check clang version
+    # also. For now, just disable clang build for aarch64
+    amd64_only
+}
 
-
+known_aarch64_fail () {
+    amd64_only
+}
 ################################################################
 #### Basic checks
 ################################################################
@@ -1051,6 +1061,10 @@ component_test_ref_config_ccm_psk_tls1_2 () {
     tests/scripts/test-ref-configs.pl config-ccm-psk-tls1_2.h
 }
 
+support_test_ref_config_ccm_psk_tls1_2 () {
+    known_aarch64_fail
+}
+
 component_test_ref_config_ccm_psk_dtls1_2 () {
     msg "test/build: ref-config config-ccm-psk-dtls1_2.h (ASan build)"
     CC=gcc cmake -D GEN_FILES=Off -D CMAKE_BUILD_TYPE:String=Asan .
@@ -1079,6 +1093,10 @@ component_test_ref_config_thread () {
     msg "test/build: ref-config config-thread.h (ASan build)"
     CC=gcc cmake -D GEN_FILES=Off -D CMAKE_BUILD_TYPE:String=Asan .
     tests/scripts/test-ref-configs.pl config-thread.h
+}
+
+support_test_ref_config_thread () {
+    known_aarch64_fail
 }
 
 component_test_no_renegotiation () {
@@ -1253,6 +1271,10 @@ component_test_psa_external_rng_no_drbg_classic () {
     tests/ssl-opt.sh -f 'Default'
 }
 
+support_test_psa_external_rng_no_drbg_classic () {
+    known_aarch64_fail
+}
+
 component_test_psa_external_rng_no_drbg_use_psa () {
     msg "build: PSA_CRYPTO_EXTERNAL_RNG minus *_DRBG, PSA crypto in TLS"
     scripts/config.py full
@@ -1270,6 +1292,10 @@ component_test_psa_external_rng_no_drbg_use_psa () {
 
     msg "test: PSA_CRYPTO_EXTERNAL_RNG minus *_DRBG, PSA crypto - ssl-opt.sh (subset)"
     tests/ssl-opt.sh -f 'Default\|opaque'
+}
+
+support_test_psa_external_rng_no_drbg_use_psa () {
+    known_aarch64_fail
 }
 
 component_test_crypto_full_no_md () {
@@ -1596,6 +1622,10 @@ component_test_psa_external_rng_use_psa_crypto () {
     tests/ssl-opt.sh -f 'Default\|opaque'
 }
 
+support_test_psa_external_rng_use_psa_crypto () {
+    known_aarch64_fail
+}
+
 component_test_everest () {
     msg "build: Everest ECDH context (ASan build)" # ~ 6 min
     scripts/config.py set MBEDTLS_ECDH_VARIANT_EVEREST_ENABLED
@@ -1611,6 +1641,10 @@ component_test_everest () {
     msg "test: Everest ECDH context - compat.sh with some ECDH ciphersuites (ASan build)" # ~ 3 min
     # Exclude some symmetric ciphers that are redundant here to gain time.
     tests/compat.sh -f ECDH -V NO -e 'ARIA\|CAMELLIA\|CHACHA'
+}
+
+support_test_everest () {
+    known_aarch64_fail
 }
 
 component_test_everest_curve25519_only () {
@@ -1643,6 +1677,10 @@ component_test_small_ssl_out_content_len () {
     tests/ssl-opt.sh -f "Max fragment\|Large packet"
 }
 
+support_test_small_ssl_out_content_len () {
+    known_aarch64_fail
+}
+
 component_test_small_ssl_in_content_len () {
     msg "build: small SSL_IN_CONTENT_LEN (ASan build)"
     scripts/config.py set MBEDTLS_SSL_IN_CONTENT_LEN 4096
@@ -1652,6 +1690,10 @@ component_test_small_ssl_in_content_len () {
 
     msg "test: small SSL_IN_CONTENT_LEN - ssl-opt.sh MFL tests"
     tests/ssl-opt.sh -f "Max fragment"
+}
+
+support_test_small_ssl_in_content_len () {
+    known_aarch64_fail
 }
 
 component_test_small_ssl_dtls_max_buffering () {
@@ -2995,6 +3037,10 @@ component_test_no_max_fragment_length () {
     tests/ssl-opt.sh -f "Max fragment length"
 }
 
+support_test_no_max_fragment_length () {
+    known_aarch64_fail
+}
+
 component_test_asan_remove_peer_certificate () {
     msg "build: default config with MBEDTLS_SSL_KEEP_PEER_CERTIFICATE disabled (ASan build)"
     scripts/config.py unset MBEDTLS_SSL_KEEP_PEER_CERTIFICATE
@@ -3027,6 +3073,10 @@ component_test_no_max_fragment_length_small_ssl_out_content_len () {
 
     msg "test: context-info.sh (disabled MFL extension case)"
     tests/context-info.sh
+}
+
+support_test_no_max_fragment_length_small_ssl_out_content_len () {
+    known_aarch64_fail
 }
 
 component_test_variable_ssl_in_out_buffer_len () {
@@ -3211,6 +3261,10 @@ component_test_se_default () {
     make test
 }
 
+support_test_se_default () {
+    known_aarch64_fail
+}
+
 component_test_psa_crypto_drivers () {
     msg "build: MBEDTLS_PSA_CRYPTO_DRIVERS w/ driver hooks"
     scripts/config.py full
@@ -3266,9 +3320,17 @@ component_test_clang_opt_os () {
     test_build_opt 'full config' clang -Os
 }
 
+support_test_clang_opt_os () {
+    depend_on_clang
+}
+
 component_test_clang_opt_o2 () {
     scripts/config.py full
     test_build_opt 'full config' clang -O2
+}
+
+support_test_clang_opt_o2 () {
+    depend_on_clang
 }
 
 component_test_gcc_opt_o0 () {
