@@ -2965,64 +2965,17 @@ cleanup:
 }
 
 /*
- *
- * EncryptedExtensions message
- *
- * The EncryptedExtensions message contains any extensions which
- * should be protected, i.e., any which are not needed to establish
- * the cryptographic context.
+ * Handler for MBEDTLS_SSL_ENCRYPTED_EXTENSIONS
  */
 
 /*
- * Overview
+ * struct {
+ *    Extension extensions<0..2 ^ 16 - 1>;
+ * } EncryptedExtensions;
+ *
  */
 
-/* Main entry point; orchestrates the other functions */
-static int ssl_tls13_encrypted_extensions_process( mbedtls_ssl_context *ssl );
-
-static int ssl_tls13_encrypted_extensions_prepare( mbedtls_ssl_context *ssl );
-static int ssl_tls13_encrypted_extensions_write( mbedtls_ssl_context *ssl,
-                                                 unsigned char *buf,
-                                                 size_t buflen,
-                                                 size_t *olen );
-static int ssl_tls13_encrypted_extensions_postprocess( mbedtls_ssl_context *ssl );
-
-static int ssl_tls13_encrypted_extensions_process( mbedtls_ssl_context *ssl )
-{
-    int ret;
-    unsigned char *buf;
-    size_t buf_len, msg_len;
-
-    MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> write encrypted extension" ) );
-
-    if( ssl->handshake->state_local.encrypted_extensions_out.preparation_done == 0 )
-    {
-        MBEDTLS_SSL_PROC_CHK( ssl_tls13_encrypted_extensions_prepare( ssl ) );
-        ssl->handshake->state_local.encrypted_extensions_out.preparation_done = 1;
-    }
-
-    MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_start_handshake_msg( ssl,
-                       MBEDTLS_SSL_HS_ENCRYPTED_EXTENSIONS, &buf, &buf_len ) );
-
-    MBEDTLS_SSL_PROC_CHK( ssl_tls13_encrypted_extensions_write(
-                              ssl, buf, buf_len, &msg_len ) );
-
-    mbedtls_ssl_add_hs_msg_to_checksum( ssl, MBEDTLS_SSL_HS_ENCRYPTED_EXTENSIONS,
-                                        buf, msg_len );
-
-    /* Update state */
-    MBEDTLS_SSL_PROC_CHK( ssl_tls13_encrypted_extensions_postprocess( ssl ) );
-
-    MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_finish_handshake_msg(
-                              ssl, buf_len, msg_len ) );
-
-cleanup:
-
-    MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= write encrypted extension" ) );
-    return( ret );
-}
-
-static int ssl_tls13_encrypted_extensions_prepare( mbedtls_ssl_context *ssl )
+static int ssl_tls13_prepare_encrypted_extensions( mbedtls_ssl_context *ssl )
 {
     int ret;
     mbedtls_ssl_key_set traffic_keys;
@@ -3093,10 +3046,10 @@ static int ssl_tls13_encrypted_extensions_prepare( mbedtls_ssl_context *ssl )
     return( 0 );
 }
 
-static int ssl_tls13_encrypted_extensions_write( mbedtls_ssl_context *ssl,
-                                                 unsigned char *buf,
-                                                 size_t buflen,
-                                                 size_t *olen )
+static int ssl_tls13_write_encrypted_extensions_body( mbedtls_ssl_context *ssl,
+                                                      unsigned char *buf,
+                                                      size_t buflen,
+                                                      size_t *olen )
 {
     int ret;
     size_t n, enc_ext_len;
@@ -3155,10 +3108,34 @@ static int ssl_tls13_encrypted_extensions_write( mbedtls_ssl_context *ssl,
     return( 0 );
 }
 
-static int ssl_tls13_encrypted_extensions_postprocess( mbedtls_ssl_context *ssl )
+static int ssl_tls13_write_encrypted_extensions( mbedtls_ssl_context *ssl )
 {
+    int ret;
+    unsigned char *buf;
+    size_t buf_len, msg_len;
+
+    MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> write encrypted extension" ) );
+
+    MBEDTLS_SSL_PROC_CHK( ssl_tls13_prepare_encrypted_extensions( ssl ) );
+
+    MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_start_handshake_msg( ssl,
+                       MBEDTLS_SSL_HS_ENCRYPTED_EXTENSIONS, &buf, &buf_len ) );
+
+    MBEDTLS_SSL_PROC_CHK( ssl_tls13_write_encrypted_extensions_body(
+                              ssl, buf, buf_len, &msg_len ) );
+
+    mbedtls_ssl_add_hs_msg_to_checksum( ssl, MBEDTLS_SSL_HS_ENCRYPTED_EXTENSIONS,
+                                        buf, msg_len );
+
+    MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_finish_handshake_msg(
+                              ssl, buf_len, msg_len ) );
+
     mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_CERTIFICATE_REQUEST );
-    return( 0 );
+
+cleanup:
+
+    MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= write encrypted extension" ) );
+    return( ret );
 }
 
 /*
@@ -3787,7 +3764,7 @@ int mbedtls_ssl_tls13_handshake_server_step( mbedtls_ssl_context *ssl )
             /* ----- WRITE ENCRYPTED EXTENSIONS ----*/
 
         case MBEDTLS_SSL_ENCRYPTED_EXTENSIONS:
-            ret = ssl_tls13_encrypted_extensions_process( ssl );
+            ret = ssl_tls13_write_encrypted_extensions( ssl );
             break;
 
             /* ----- WRITE CERTIFICATE REQUEST ----*/
