@@ -11275,11 +11275,7 @@ requires_openssl_tls1_3
 run_test    "TLS 1.3: Server side check - openssl" \
             "$P_SRV debug_level=4 crt_file=data_files/server5.crt key_file=data_files/server5.key force_version=tls13 tickets=0" \
             "$O_NEXT_CLI -msg -tls1_3" \
-            0 \
-            -s " tls13 server state: MBEDTLS_SSL_CLIENT_HELLO" \
-            -s " tls13 server state: MBEDTLS_SSL_SERVER_HELLO" \
-            -s "=> parse client hello" \
-            -s "<= parse client hello"
+            0
 
 requires_gnutls_tls1_3
 requires_gnutls_next_no_ticket
@@ -11289,11 +11285,16 @@ requires_config_enabled MBEDTLS_SSL_SRV_C
 run_test    "TLS 1.3: Server side check - gnutls" \
             "$P_SRV debug_level=4 crt_file=data_files/server5.crt key_file=data_files/server5.key force_version=tls13 tickets=0" \
             "$G_NEXT_CLI localhost -d 4 --priority=NORMAL:-VERS-ALL:+VERS-TLS1.3:%NO_TICKETS:%DISABLE_TLS13_COMPAT_MODE -V" \
-            0 \
-            -s " tls13 server state: MBEDTLS_SSL_CLIENT_HELLO" \
-            -s " tls13 server state: MBEDTLS_SSL_SERVER_HELLO" \
-            -s "=> parse client hello" \
-            -s "<= parse client hello"
+            0
+
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
+requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_SSL_SRV_C
+requires_config_enabled MBEDTLS_SSL_CLI_C
+run_test    "TLS 1.3: Server side check - mbedtls" \
+            "$P_SRV debug_level=4 crt_file=data_files/server5.crt key_file=data_files/server5.key force_version=tls13 tickets=0" \
+            "$P_CLI debug_level=4 force_version=tls13" \
+            0
 
 for i in opt-testcases/*.sh
 do
