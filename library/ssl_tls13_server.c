@@ -3121,6 +3121,154 @@ cleanup:
 
 /*
  *
+ * Handler for MBEDTLS_SSL_CERTIFICATE_REQUEST
+ *
+ */
+
+/* Coordination:
+ * Check whether a CertificateRequest message should be written.
+ * Returns a negative error code on failure, or one of
+ * - SSL_CERTIFICATE_REQUEST_EXPECT_WRITE or
+ * - SSL_CERTIFICATE_REQUEST_SKIP
+ * indicating if the writing of the CertificateRequest
+ * should be skipped or not.
+ */
+#define SSL_CERTIFICATE_REQUEST_SEND 0
+#define SSL_CERTIFICATE_REQUEST_SKIP 1
+static int ssl_tls13_certificate_request_coordinate( mbedtls_ssl_context *ssl )
+{
+    int authmode;
+
+    if( mbedtls_ssl_tls13_kex_with_psk( ssl ) )
+        return( SSL_CERTIFICATE_REQUEST_SKIP );
+
+#if !defined(MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED)
+    ( ( void )authmode );
+    MBEDTLS_SSL_DEBUG_MSG( 1, ( "should never happen" ) );
+    return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
+#else
+
+#if defined(MBEDTLS_SSL_SERVER_NAME_INDICATION)
+    if( ssl->handshake->sni_authmode != MBEDTLS_SSL_VERIFY_UNSET )
+        authmode = ssl->handshake->sni_authmode;
+    else
+#endif
+        authmode = ssl->conf->authmode;
+
+    if( authmode == MBEDTLS_SSL_VERIFY_NONE )
+        return( SSL_CERTIFICATE_REQUEST_SKIP );
+
+    return( SSL_CERTIFICATE_REQUEST_SEND );
+
+#endif /* MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED */
+}
+
+static int ssl_tls13_write_certificate_request_body( mbedtls_ssl_context *ssl,
+                                                     unsigned char *buf,
+                                                     size_t buflen,
+                                                     size_t *olen )
+{
+    int ret;
+    size_t ext_size;
+    unsigned char *p;
+    unsigned char *end = buf + buflen;
+
+    p = buf;
+
+    if( p + 1 + 2 > end )
+    {
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "buffer too small" ) );
+        return ( MBEDTLS_ERR_SSL_ALLOC_FAILED );
+    }
+
+    /*
+     *
+     * struct {
+     *   opaque certificate_request_context<0..2^8-1>;
+     *   Extension extensions<2..2^16-1>;
+     * } CertificateRequest;
+     *
+     */
+
+    /*
+     * Write certificate_request_context
+     */
+
+    /*
+     * We use a zero length context for the normal handshake
+     * messages. For post-authentication handshake messages
+     * this request context would be set to a non-zero value.
+     */
+    *p++ = 0x0;
+
+    /*
+     * Write extensions
+     */
+
+    /* The extensions must contain the signature_algorithms. */
+    /* Currently we don't use any other extension */
+    ret = mbedtls_ssl_write_sig_alg_ext( ssl, p + 2, end, &ext_size );
+    if( ret != 0 )
+        return( ret );
+
+    /* length field for all extensions */
+    MBEDTLS_PUT_UINT16_BE( ext_size, p, 0 );
+    p += 2 + ext_size;
+
+    *olen = p - buf;
+
+    return( ret );
+}
+
+static int ssl_tls13_write_certificate_request( mbedtls_ssl_context *ssl )
+{
+    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
+    MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> write certificate request" ) );
+
+    /* Coordination step: Check if we need to send a CertificateRequest */
+    MBEDTLS_SSL_PROC_CHK_NEG( ssl_tls13_certificate_request_coordinate( ssl ) );
+
+#if defined(MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED)
+    if( ret == SSL_CERTIFICATE_REQUEST_SEND )
+    {
+        unsigned char *buf;
+        size_t buf_len, msg_len;
+
+        MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_start_handshake_msg( ssl,
+                MBEDTLS_SSL_HS_CERTIFICATE_REQUEST, &buf, &buf_len ) );
+
+        MBEDTLS_SSL_PROC_CHK( ssl_tls13_write_certificate_request_body(
+                                  ssl, buf, buf_len, &msg_len ) );
+
+        mbedtls_ssl_add_hs_msg_to_checksum(
+            ssl, MBEDTLS_SSL_HS_CERTIFICATE_REQUEST, buf, msg_len );
+
+        MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_finish_handshake_msg(
+                                  ssl, buf_len, msg_len ) );
+    }
+    else
+#endif /* MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED */
+    if( ret == SSL_CERTIFICATE_REQUEST_SKIP )
+    {
+        MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= skip write certificate request" ) );
+        ret = 0;
+    }
+    else
+    {
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "should never happen" ) );
+        return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
+    }
+
+    mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_SERVER_CERTIFICATE );
+
+cleanup:
+
+    MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= write certificate request" ) );
+    return( ret );
+}
+
+/*
+ *
  * HelloRetryRequest message
  *
  * Servers send this message in response to a ClientHello message when
@@ -3405,183 +3553,6 @@ static int ssl_tls13_write_hello_retry_request_write( mbedtls_ssl_context *ssl,
 }
 
 /*
- *
- * STATE HANDLING: CertificateRequest
- *
- */
-
-/* Main entry point; orchestrates the other functions */
-static int ssl_tls13_certificate_request_process( mbedtls_ssl_context *ssl );
-
-/* Coordination:
- * Check whether a CertificateRequest message should be written.
- * Returns a negative error code on failure, or one of
- * - SSL_CERTIFICATE_REQUEST_EXPECT_WRITE or
- * - SSL_CERTIFICATE_REQUEST_SKIP
- * indicating if the writing of the CertificateRequest
- * should be skipped or not.
- */
-#define SSL_CERTIFICATE_REQUEST_SEND 0
-#define SSL_CERTIFICATE_REQUEST_SKIP 1
-static int ssl_tls13_certificate_request_coordinate( mbedtls_ssl_context* ssl );
-#if defined(MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED)
-static int ssl_tls13_certificate_request_write( mbedtls_ssl_context *ssl,
-                                                unsigned char *buf,
-                                                size_t buflen,
-                                                size_t *olen );
-#endif /* MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED */
-static int ssl_tls13_certificate_request_postprocess( mbedtls_ssl_context *ssl );
-
-
-/*
- * Implementation
- */
-
-static int ssl_tls13_certificate_request_process( mbedtls_ssl_context *ssl )
-{
-    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
-    MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> write certificate request" ) );
-
-    /* Coordination step: Check if we need to send a CertificateRequest */
-    MBEDTLS_SSL_PROC_CHK_NEG( ssl_tls13_certificate_request_coordinate( ssl ) );
-
-#if defined(MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED)
-    if( ret == SSL_CERTIFICATE_REQUEST_SEND )
-    {
-        unsigned char *buf;
-        size_t buf_len, msg_len;
-
-        MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_start_handshake_msg( ssl,
-                MBEDTLS_SSL_HS_CERTIFICATE_REQUEST, &buf, &buf_len ) );
-
-        MBEDTLS_SSL_PROC_CHK( ssl_tls13_certificate_request_write(
-                                  ssl, buf, buf_len, &msg_len ) );
-
-        mbedtls_ssl_add_hs_msg_to_checksum(
-            ssl, MBEDTLS_SSL_HS_CERTIFICATE_REQUEST, buf, msg_len );
-
-        /* TODO: Logically this should come at the end, but the non-MPS msg
-         *       layer impl'n of mbedtls_ssl_finish_handshake_msg() can fail. */
-        MBEDTLS_SSL_PROC_CHK( ssl_tls13_certificate_request_postprocess( ssl ) );
-        MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_finish_handshake_msg(
-                                  ssl, buf_len, msg_len ) );
-
-    }
-    else
-#endif /* MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED */
-    if( ret == SSL_CERTIFICATE_REQUEST_SKIP )
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= skip write certificate request" ) );
-
-        /* Update state */
-        MBEDTLS_SSL_PROC_CHK( ssl_tls13_certificate_request_postprocess( ssl ) );
-    }
-    else
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "should never happen" ) );
-        return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
-    }
-
-cleanup:
-
-    MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= write certificate request" ) );
-    return( ret );
-}
-
-static int ssl_tls13_certificate_request_coordinate( mbedtls_ssl_context *ssl )
-{
-    int authmode;
-
-    if( mbedtls_ssl_tls13_kex_with_psk( ssl ) )
-        return( SSL_CERTIFICATE_REQUEST_SKIP );
-
-#if !defined(MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED)
-    ( ( void )authmode );
-    MBEDTLS_SSL_DEBUG_MSG( 1, ( "should never happen" ) );
-    return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
-#else
-
-#if defined(MBEDTLS_SSL_SERVER_NAME_INDICATION)
-    if( ssl->handshake->sni_authmode != MBEDTLS_SSL_VERIFY_UNSET )
-        authmode = ssl->handshake->sni_authmode;
-    else
-#endif
-        authmode = ssl->conf->authmode;
-
-    if( authmode == MBEDTLS_SSL_VERIFY_NONE )
-        return( SSL_CERTIFICATE_REQUEST_SKIP );
-
-    return( SSL_CERTIFICATE_REQUEST_SEND );
-
-#endif /* MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED */
-}
-
-static int ssl_tls13_certificate_request_write( mbedtls_ssl_context *ssl,
-                                                unsigned char *buf,
-                                                size_t buflen,
-                                                size_t *olen )
-{
-    int ret;
-    size_t ext_size;
-    unsigned char *p;
-    unsigned char *end = buf + buflen;
-
-    p = buf;
-
-    if( p + 1 + 2 > end )
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "buffer too small" ) );
-        return ( MBEDTLS_ERR_SSL_ALLOC_FAILED );
-    }
-
-    /*
-     *
-     * struct {
-     *   opaque certificate_request_context<0..2^8-1>;
-     *   Extension extensions<2..2^16-1>;
-     * } CertificateRequest;
-     *
-     */
-
-    /*
-     * Write certificate_request_context
-     */
-
-    /*
-     * We use a zero length context for the normal handshake
-     * messages. For post-authentication handshake messages
-     * this request context would be set to a non-zero value.
-     */
-    *p++ = 0x0;
-
-    /*
-     * Write extensions
-     */
-
-    /* The extensions must contain the signature_algorithms. */
-    /* Currently we don't use any other extension */
-    ret = mbedtls_ssl_write_sig_alg_ext( ssl, p + 2, end, &ext_size );
-    if( ret != 0 )
-        return( ret );
-
-    /* length field for all extensions */
-    MBEDTLS_PUT_UINT16_BE( ext_size, p, 0 );
-    p += 2 + ext_size;
-
-    *olen = p - buf;
-
-    return( ret );
-}
-
-
-static int ssl_tls13_certificate_request_postprocess( mbedtls_ssl_context *ssl )
-{
-    /* next state */
-    mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_SERVER_CERTIFICATE );
-    return( 0 );
-}
-
-/*
  * TLS and DTLS 1.3 State Maschine -- server side
  */
 int mbedtls_ssl_tls13_handshake_server_step( mbedtls_ssl_context *ssl )
@@ -3719,7 +3690,7 @@ int mbedtls_ssl_tls13_handshake_server_step( mbedtls_ssl_context *ssl )
             /* ----- WRITE CERTIFICATE REQUEST ----*/
 
         case MBEDTLS_SSL_CERTIFICATE_REQUEST:
-            ret = ssl_tls13_certificate_request_process( ssl );
+            ret = ssl_tls13_write_certificate_request( ssl );
             break;
 
             /* ----- WRITE SERVER CERTIFICATE ----*/
