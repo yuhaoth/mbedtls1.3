@@ -687,9 +687,7 @@ int mbedtls_ssl_encrypt_buf( mbedtls_ssl_context *ssl,
                              int (*f_rng)(void *, unsigned char *, size_t),
                              void *p_rng )
 {
-#if !defined(MBEDTLS_USE_PSA_CRYPTO)
-    mbedtls_cipher_mode_t mode;
-#endif /* MBEDTLS_USE_PSA_CRYPTO */
+    mbedtls_ssl_mode_t ssl_mode;
     int auth_done = 0;
     unsigned char * data;
     unsigned char add_data[13 + 1 + MBEDTLS_SSL_CID_OUT_LEN_MAX ];
@@ -730,14 +728,21 @@ int mbedtls_ssl_encrypt_buf( mbedtls_ssl_context *ssl,
         return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
     }
 
+    ssl_mode = mbedtls_ssl_get_mode_from_transform( transform );
+
     data = rec->buf + rec->data_offset;
     post_avail = rec->buf_len - ( rec->data_len + rec->data_offset );
     MBEDTLS_SSL_DEBUG_BUF( 4, "before encrypt: output payload",
                            data, rec->data_len );
 
-#if !defined(MBEDTLS_USE_PSA_CRYPTO)
-    mode = mbedtls_cipher_get_cipher_mode( &transform->cipher_ctx_enc );
-#endif /* MBEDTLS_USE_PSA_CRYPTO */
+    if( rec->data_len > MBEDTLS_SSL_OUT_CONTENT_LEN )
+    {
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "Record content %" MBEDTLS_PRINTF_SIZET
+                                    " too large, maximum %" MBEDTLS_PRINTF_SIZET,
+                                    rec->data_len,
+                                    (size_t) MBEDTLS_SSL_OUT_CONTENT_LEN ) );
+        return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
+    }
 
     /* The following two code paths implement the (D)TLSInnerPlaintext
      * structure present in TLS 1.3 and DTLS 1.2 + CID.
@@ -809,17 +814,8 @@ int mbedtls_ssl_encrypt_buf( mbedtls_ssl_context *ssl,
      * Add MAC before if needed
      */
 #if defined(MBEDTLS_SSL_SOME_SUITES_USE_MAC)
-#if defined(MBEDTLS_USE_PSA_CRYPTO)
-    if ( transform->psa_alg == MBEDTLS_SSL_NULL_CIPHER  ||
-            ( transform->psa_alg == PSA_ALG_CBC_NO_PADDING
-#else
-    if( mode == MBEDTLS_MODE_STREAM ||
-        ( mode == MBEDTLS_MODE_CBC
-#endif
-#if defined(MBEDTLS_SSL_ENCRYPT_THEN_MAC)
-          && transform->encrypt_then_mac == MBEDTLS_SSL_ETM_DISABLED
-#endif
-        ) )
+    if( ssl_mode == MBEDTLS_SSL_MODE_STREAM ||
+        ssl_mode == MBEDTLS_SSL_MODE_CBC )
     {
         if( post_avail < transform->maclen )
         {
@@ -903,11 +899,7 @@ int mbedtls_ssl_encrypt_buf( mbedtls_ssl_context *ssl,
      * Encrypt
      */
 #if defined(MBEDTLS_SSL_SOME_SUITES_USE_STREAM)
-#if defined(MBEDTLS_USE_PSA_CRYPTO)
-    if ( transform->psa_alg == MBEDTLS_SSL_NULL_CIPHER )
-#else
-    if( mode == MBEDTLS_MODE_STREAM )
-#endif
+    if( ssl_mode == MBEDTLS_SSL_MODE_STREAM )
     {
         MBEDTLS_SSL_DEBUG_MSG( 3, ( "before encrypt: msglen = %" MBEDTLS_PRINTF_SIZET ", "
                                     "including %d bytes of padding",
@@ -922,13 +914,7 @@ int mbedtls_ssl_encrypt_buf( mbedtls_ssl_context *ssl,
 #if defined(MBEDTLS_GCM_C) || \
     defined(MBEDTLS_CCM_C) || \
     defined(MBEDTLS_CHACHAPOLY_C)
-#if defined(MBEDTLS_USE_PSA_CRYPTO)
-    if ( PSA_ALG_IS_AEAD( transform->psa_alg ) )
-#else
-    if( mode == MBEDTLS_MODE_GCM ||
-        mode == MBEDTLS_MODE_CCM ||
-        mode == MBEDTLS_MODE_CHACHAPOLY )
-#endif /* MBEDTLS_USE_PSA_CRYPTO */
+    if( ssl_mode == MBEDTLS_SSL_MODE_AEAD )
     {
         unsigned char iv[12];
         unsigned char *dynamic_iv;
@@ -1046,11 +1032,8 @@ int mbedtls_ssl_encrypt_buf( mbedtls_ssl_context *ssl,
     else
 #endif /* MBEDTLS_GCM_C || MBEDTLS_CCM_C || MBEDTLS_CHACHAPOLY_C */
 #if defined(MBEDTLS_SSL_SOME_SUITES_USE_CBC)
-#if defined(MBEDTLS_USE_PSA_CRYPTO)
-    if ( transform->psa_alg == PSA_ALG_CBC_NO_PADDING )
-#else
-    if( mode == MBEDTLS_MODE_CBC )
-#endif /* MBEDTLS_USE_PSA_CRYPTO */
+    if( ssl_mode == MBEDTLS_SSL_MODE_CBC ||
+        ssl_mode == MBEDTLS_SSL_MODE_CBC_ETM )
     {
         int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
         size_t padlen, i;
@@ -1294,13 +1277,8 @@ int mbedtls_ssl_decrypt_buf( mbedtls_ssl_context const *ssl,
                              mbedtls_record *rec )
 {
     size_t olen;
-#if defined(MBEDTLS_USE_PSA_CRYPTO)
+    mbedtls_ssl_mode_t ssl_mode;
     int ret;
-
-#else
-    mbedtls_cipher_mode_t mode;
-    int ret;
-#endif /* MBEDTLS_USE_PSA_CRYPTO */
 
     int auth_done = 0;
 #if defined(MBEDTLS_SSL_SOME_SUITES_USE_MAC)
@@ -1326,9 +1304,7 @@ int mbedtls_ssl_decrypt_buf( mbedtls_ssl_context const *ssl,
     }
 
     data = rec->buf + rec->data_offset;
-#if !defined(MBEDTLS_USE_PSA_CRYPTO)
-    mode = mbedtls_cipher_get_cipher_mode( &transform->cipher_ctx_dec );
-#endif /* MBEDTLS_USE_PSA_CRYPTO */
+    ssl_mode = mbedtls_ssl_get_mode_from_transform( transform );
 
 #if defined(MBEDTLS_SSL_DTLS_CONNECTION_ID)
     /*
@@ -1342,11 +1318,7 @@ int mbedtls_ssl_decrypt_buf( mbedtls_ssl_context const *ssl,
 #endif /* MBEDTLS_SSL_DTLS_CONNECTION_ID */
 
 #if defined(MBEDTLS_SSL_SOME_SUITES_USE_STREAM)
-#if defined(MBEDTLS_USE_PSA_CRYPTO)
-    if ( transform->psa_alg == MBEDTLS_SSL_NULL_CIPHER )
-#else
-    if( mode == MBEDTLS_MODE_STREAM )
-#endif /* MBEDTLS_USE_PSA_CRYPTO */
+    if( ssl_mode == MBEDTLS_SSL_MODE_STREAM )
     {
         /* The only supported stream cipher is "NULL",
          * so there's nothing to do here.*/
@@ -1356,13 +1328,7 @@ int mbedtls_ssl_decrypt_buf( mbedtls_ssl_context const *ssl,
 #if defined(MBEDTLS_GCM_C) || \
     defined(MBEDTLS_CCM_C) || \
     defined(MBEDTLS_CHACHAPOLY_C)
-#if defined(MBEDTLS_USE_PSA_CRYPTO)
-    if ( PSA_ALG_IS_AEAD( transform->psa_alg ) )
-#else
-    if( mode == MBEDTLS_MODE_GCM ||
-        mode == MBEDTLS_MODE_CCM ||
-        mode == MBEDTLS_MODE_CHACHAPOLY )
-#endif /* MBEDTLS_USE_PSA_CRYPTO */
+    if( ssl_mode == MBEDTLS_SSL_MODE_AEAD )
     {
         unsigned char iv[12];
         unsigned char *dynamic_iv;
@@ -1488,11 +1454,8 @@ int mbedtls_ssl_decrypt_buf( mbedtls_ssl_context const *ssl,
     else
 #endif /* MBEDTLS_GCM_C || MBEDTLS_CCM_C */
 #if defined(MBEDTLS_SSL_SOME_SUITES_USE_CBC)
-#if defined(MBEDTLS_USE_PSA_CRYPTO)
-    if ( transform->psa_alg == PSA_ALG_CBC_NO_PADDING )
-#else
-    if( mode == MBEDTLS_MODE_CBC )
-#endif /* MBEDTLS_USE_PSA_CRYPTO */
+    if( ssl_mode == MBEDTLS_SSL_MODE_CBC ||
+        ssl_mode == MBEDTLS_SSL_MODE_CBC_ETM )
     {
         size_t minlen = 0;
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
@@ -1546,7 +1509,7 @@ int mbedtls_ssl_decrypt_buf( mbedtls_ssl_context const *ssl,
          * Authenticate before decrypt if enabled
          */
 #if defined(MBEDTLS_SSL_ENCRYPT_THEN_MAC)
-        if( transform->encrypt_then_mac == MBEDTLS_SSL_ETM_ENABLED )
+        if( ssl_mode == MBEDTLS_SSL_MODE_CBC_ETM )
         {
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
             psa_mac_operation_t operation = PSA_MAC_OPERATION_INIT;
