@@ -459,144 +459,6 @@ static int ssl_tls13_write_sni_server_ext(
 }
 #endif /* MBEDTLS_SSL_SERVER_NAME_INDICATION */
 
-/* Key Shares Extension
- *
- * enum {
- *     ... (0xFFFF)
- * } NamedGroup;
- *
- * struct {
- *     NamedGroup group;
- *     opaque key_exchange<1..2^16-1>;
- * } KeyShareEntry;
- *
- * struct {
- *     select(role) {
- *     ...
- *     case server:
- *         KeyShareEntry server_share;
- *     }
- * } KeyShare;
-*/
-
-#if defined(MBEDTLS_ECDH_C)
-static int ssl_tls13_generate_and_write_ecdh_key_exchange(
-                mbedtls_ssl_context *ssl,
-                uint16_t named_group,
-                unsigned char *buf,
-                unsigned char *end,
-                size_t *out_len )
-{
-    psa_status_t status = PSA_ERROR_GENERIC_ERROR;
-    int ret = MBEDTLS_ERR_SSL_FEATURE_UNAVAILABLE;
-    psa_key_attributes_t key_attributes;
-    size_t own_pubkey_len;
-    mbedtls_ssl_handshake_params *handshake = ssl->handshake;
-    size_t ecdh_bits = 0;
-
-    MBEDTLS_SSL_DEBUG_MSG( 1, ( "Perform PSA-based ECDH computation." ) );
-
-    /* Convert EC group to PSA key type. */
-    if( ( handshake->ecdh_psa_type =
-        mbedtls_psa_parse_tls_ecc_group( named_group, &ecdh_bits ) ) == 0 )
-            return( MBEDTLS_ERR_SSL_HANDSHAKE_FAILURE );
-
-    if( ecdh_bits > 0xffff )
-        return( MBEDTLS_ERR_SSL_ILLEGAL_PARAMETER );
-    ssl->handshake->ecdh_bits = (uint16_t) ecdh_bits;
-
-    key_attributes = psa_key_attributes_init();
-    psa_set_key_usage_flags( &key_attributes, PSA_KEY_USAGE_DERIVE );
-    psa_set_key_algorithm( &key_attributes, PSA_ALG_ECDH );
-    psa_set_key_type( &key_attributes, handshake->ecdh_psa_type );
-    psa_set_key_bits( &key_attributes, handshake->ecdh_bits );
-
-    /* Generate ECDH private key. */
-    status = psa_generate_key( &key_attributes,
-                                &handshake->ecdh_psa_privkey );
-    if( status != PSA_SUCCESS )
-    {
-        ret = psa_ssl_status_to_mbedtls( status );
-        MBEDTLS_SSL_DEBUG_RET( 1, "psa_generate_key", ret );
-        return( ret );
-
-    }
-
-    /* Export the public part of the ECDH private key from PSA. */
-    status = psa_export_public_key( handshake->ecdh_psa_privkey,
-                                    buf, (size_t)( end - buf ),
-                                    &own_pubkey_len );
-    if( status != PSA_SUCCESS )
-    {
-        ret = psa_ssl_status_to_mbedtls( status );
-        MBEDTLS_SSL_DEBUG_RET( 1, "psa_export_public_key", ret );
-        return( ret );
-
-    }
-
-    if( own_pubkey_len > (size_t)( end - buf ) )
-    {
-            MBEDTLS_SSL_DEBUG_MSG( 1, ( "No space in the buffer for ECDH public key." ) );
-        return( MBEDTLS_ERR_SSL_BUFFER_TOO_SMALL );
-    }
-
-    *out_len = own_pubkey_len;
-
-    return( 0 );
-}
-#endif /* MBEDTLS_ECDH_C */
-
-static int ssl_tls13_write_key_shares_ext(
-    mbedtls_ssl_context *ssl,
-    unsigned char *buf,
-    unsigned char *end,
-    size_t *olen )
-{
-    size_t ext_len = 0;
-
-    *olen = 0;
-
-    MBEDTLS_SSL_DEBUG_MSG( 3, ( "server hello, adding key share extension" ) );
-
-    if( end - buf < 8 )
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "buffer too small" ) );
-        return( MBEDTLS_ERR_SSL_BUFFER_TOO_SMALL );
-    }
-
-#if defined(MBEDTLS_ECDH_C)
-    /* When we introduce PQC-ECDHE hybrids, we'll want to call this
-     * function multiple times. */
-    int ret;
-    unsigned char *key_share_entry = buf + 4;
-    unsigned char *key_share       = buf + 8;
-    size_t share_len;
-
-    ret = ssl_tls13_generate_and_write_ecdh_key_exchange(
-              ssl, ssl->handshake->offered_group_id,
-              key_share, end, &share_len );
-    if( ret != 0 )
-        return( ret );
-
-    /* Write group ID */
-    MBEDTLS_PUT_UINT16_BE( ssl->handshake->offered_group_id, key_share_entry, 0 );
-    /* Write key share length */
-    MBEDTLS_PUT_UINT16_BE( share_len, key_share_entry, 2 );
-    key_share_entry += 4;
-
-    ext_len = share_len + 4;
-#endif /* MBEDTLS_ECDH_C */
-
-    /* Write extension header */
-    MBEDTLS_PUT_UINT16_BE( MBEDTLS_TLS_EXT_KEY_SHARE, buf, 0 );
-
-    /* Write total extension length */
-    MBEDTLS_PUT_UINT16_BE( ext_len, buf, 2 );
-
-    *olen = ext_len + 4; /* 4 bytes for fixed header + length of key share */
-    return( 0 );
-}
-
 #if defined(MBEDTLS_ZERO_RTT)
 static int ssl_tls13_parse_early_data_ext( mbedtls_ssl_context *ssl,
                                            const unsigned char *buf,
@@ -1306,49 +1168,6 @@ static int ssl_tls13_parse_key_exchange_modes_ext( mbedtls_ssl_context *ssl,
     return( 0 );
 }
 #endif /* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED */
-
-/* From RFC 8446:
- *   struct {
- *       select (Handshake.msg_type) {
- *           case client_hello:
- *                ProtocolVersion versions<2..254>;
- *           case server_hello: // and HelloRetryRequest
- *                ProtocolVersion selected_version;
- *       };
- *   } SupportedVersions;
- */
-static int ssl_tls13_write_supported_version_ext( mbedtls_ssl_context *ssl,
-                                                  unsigned char *buf,
-                                                  unsigned char *end,
-                                                  size_t *olen )
-{
-    unsigned char *p = buf;
-    *olen = 0;
-
-    /* With only a single supported version we do not need the ssl structure. */
-    ((void) ssl);
-
-    MBEDTLS_SSL_DEBUG_MSG( 3, ( "adding supported version extension" ) );
-
-    if( end < p || (size_t)( end - p ) < 6 )
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "buffer too small" ) );
-        return( MBEDTLS_ERR_SSL_BUFFER_TOO_SMALL );
-    }
-
-    MBEDTLS_PUT_UINT16_BE( MBEDTLS_TLS_EXT_SUPPORTED_VERSIONS, p, 0 );
-
-    /* length */
-    MBEDTLS_PUT_UINT16_BE( 2, p, 2 );
-
-    /* For TLS 1.3 and for DTLS 1.3 we use 0x0304 */
-    MBEDTLS_PUT_UINT16_BE( 0x0304, p, 4 );
-    MBEDTLS_SSL_DEBUG_MSG( 3, ( "version [3:4]" ) );
-
-    *olen = 6;
-
-    return( 0 );
-}
 
 #if defined(MBEDTLS_SSL_ALPN)
 static int ssl_tls13_parse_alpn_ext( mbedtls_ssl_context *ssl,
@@ -2762,8 +2581,6 @@ static int ssl_tls13_write_max_fragment_length_ext( mbedtls_ssl_context *ssl,
 }
 #endif /* MBEDTLS_SSL_MAX_FRAGMENT_LENGTH */
 
-
-
 #if defined(MBEDTLS_SSL_ALPN)
 static int ssl_tls13_write_alpn_ext(
     mbedtls_ssl_context *ssl,
@@ -2804,7 +2621,399 @@ static int ssl_tls13_write_alpn_ext(
 }
 #endif /* MBEDTLS_SSL_ALPN */
 
+/*
+ * Handler for MBEDTLS_SSL_SERVER_HELLO
+ */
+static int ssl_tls13_server_hello_prepare( mbedtls_ssl_context *ssl )
+{
+    int ret;
 
+    if( ( ret = ssl->conf->f_rng( ssl->conf->p_rng, ssl->handshake->randbytes + 32, 32 ) ) != 0 )
+        return( ret );
+
+    MBEDTLS_SSL_DEBUG_BUF( 3, "server hello, random bytes", ssl->handshake->randbytes + 32, 32 );
+
+#if defined(MBEDTLS_HAVE_TIME)
+    ssl->session_negotiate->start = time( NULL );
+#endif /* MBEDTLS_HAVE_TIME */
+
+
+    /* Check for session resumption
+     * <TBD>
+     */
+
+    return( 0 );
+}
+
+/*
+ * ssl_tls13_write_server_hello_supported_versions_ext ():
+ *
+ * struct {
+ *      ProtocolVersion selected_version;
+ * } SupportedVersions;
+ */
+static int ssl_tls13_write_server_hello_supported_versions_ext(
+                                                mbedtls_ssl_context *ssl,
+                                                unsigned char *buf,
+                                                unsigned char *end,
+                                                size_t *olen )
+{
+    unsigned char *p = buf;
+    *olen = 0;
+
+    /* With only a single supported version we do not need the ssl structure. */
+    ((void) ssl);
+
+    MBEDTLS_SSL_DEBUG_MSG( 3, ( "adding supported version extension" ) );
+
+    if( end < p || (size_t)( end - p ) < 6 )
+    {
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "buffer too small" ) );
+        return( MBEDTLS_ERR_SSL_BUFFER_TOO_SMALL );
+    }
+
+    MBEDTLS_PUT_UINT16_BE( MBEDTLS_TLS_EXT_SUPPORTED_VERSIONS, p, 0 );
+
+    /* length */
+    MBEDTLS_PUT_UINT16_BE( 2, p, 2 );
+
+    /* For TLS 1.3 and for DTLS 1.3 we use 0x0304 */
+    MBEDTLS_PUT_UINT16_BE( 0x0304, p, 4 );
+    MBEDTLS_SSL_DEBUG_MSG( 3, ( "version [3:4]" ) );
+
+    *olen = 6;
+
+    return( 0 );
+}
+
+/* Key Shares Extension
+ *
+ * enum {
+ *     ... (0xFFFF)
+ * } NamedGroup;
+ *
+ * struct {
+ *     NamedGroup group;
+ *     opaque key_exchange<1..2^16-1>;
+ * } KeyShareEntry;
+ *
+ * struct {
+ *     select(role) {
+ *     ...
+ *     case server:
+ *         KeyShareEntry server_share;
+ *     }
+ * } KeyShare;
+*/
+
+#if defined(MBEDTLS_ECDH_C)
+static int ssl_tls13_generate_and_write_ecdh_key_exchange(
+                mbedtls_ssl_context *ssl,
+                uint16_t named_group,
+                unsigned char *buf,
+                unsigned char *end,
+                size_t *out_len )
+{
+    psa_status_t status = PSA_ERROR_GENERIC_ERROR;
+    int ret = MBEDTLS_ERR_SSL_FEATURE_UNAVAILABLE;
+    psa_key_attributes_t key_attributes;
+    size_t own_pubkey_len;
+    mbedtls_ssl_handshake_params *handshake = ssl->handshake;
+    size_t ecdh_bits = 0;
+
+    MBEDTLS_SSL_DEBUG_MSG( 1, ( "Perform PSA-based ECDH computation." ) );
+
+    /* Convert EC group to PSA key type. */
+    if( ( handshake->ecdh_psa_type =
+        mbedtls_psa_parse_tls_ecc_group( named_group, &ecdh_bits ) ) == 0 )
+            return( MBEDTLS_ERR_SSL_HANDSHAKE_FAILURE );
+
+    if( ecdh_bits > 0xffff )
+        return( MBEDTLS_ERR_SSL_ILLEGAL_PARAMETER );
+    ssl->handshake->ecdh_bits = (uint16_t) ecdh_bits;
+
+    key_attributes = psa_key_attributes_init();
+    psa_set_key_usage_flags( &key_attributes, PSA_KEY_USAGE_DERIVE );
+    psa_set_key_algorithm( &key_attributes, PSA_ALG_ECDH );
+    psa_set_key_type( &key_attributes, handshake->ecdh_psa_type );
+    psa_set_key_bits( &key_attributes, handshake->ecdh_bits );
+
+    /* Generate ECDH private key. */
+    status = psa_generate_key( &key_attributes,
+                                &handshake->ecdh_psa_privkey );
+    if( status != PSA_SUCCESS )
+    {
+        ret = psa_ssl_status_to_mbedtls( status );
+        MBEDTLS_SSL_DEBUG_RET( 1, "psa_generate_key", ret );
+        return( ret );
+
+    }
+
+    /* Export the public part of the ECDH private key from PSA. */
+    status = psa_export_public_key( handshake->ecdh_psa_privkey,
+                                    buf, (size_t)( end - buf ),
+                                    &own_pubkey_len );
+    if( status != PSA_SUCCESS )
+    {
+        ret = psa_ssl_status_to_mbedtls( status );
+        MBEDTLS_SSL_DEBUG_RET( 1, "psa_export_public_key", ret );
+        return( ret );
+
+    }
+
+    if( own_pubkey_len > (size_t)( end - buf ) )
+    {
+            MBEDTLS_SSL_DEBUG_MSG( 1, ( "No space in the buffer for ECDH public key." ) );
+        return( MBEDTLS_ERR_SSL_BUFFER_TOO_SMALL );
+    }
+
+    *out_len = own_pubkey_len;
+
+    return( 0 );
+}
+#endif /* MBEDTLS_ECDH_C */
+
+/*
+ * ssl_tls13_write_key_share_ext
+ *
+ * Structure of key_share extension in ServerHello:
+ *
+ * struct {
+ *     NamedGroup group;
+ *     opaque key_exchange<1..2^16-1>;
+ * } KeyShareEntry;
+ * struct {
+ *     KeyShareEntry server_share;
+ * } KeyShareServerHello;
+ */
+static int ssl_tls13_write_key_share_ext( mbedtls_ssl_context *ssl,
+                                          unsigned char *buf,
+                                          unsigned char *end,
+                                          size_t *olen )
+{
+    size_t ext_len = 0;
+
+    *olen = 0;
+
+    MBEDTLS_SSL_DEBUG_MSG( 3, ( "server hello, adding key share extension" ) );
+
+    if( end - buf < 8 )
+    {
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "buffer too small" ) );
+        return( MBEDTLS_ERR_SSL_BUFFER_TOO_SMALL );
+    }
+
+#if defined(MBEDTLS_ECDH_C)
+    /* When we introduce PQC-ECDHE hybrids, we'll want to call this
+     * function multiple times. */
+    int ret;
+    unsigned char *key_share_entry = buf + 4;
+    unsigned char *key_share       = buf + 8;
+    size_t share_len;
+
+    ret = ssl_tls13_generate_and_write_ecdh_key_exchange(
+              ssl, ssl->handshake->offered_group_id,
+              key_share, end, &share_len );
+    if( ret != 0 )
+        return( ret );
+
+    /* Write group ID */
+    MBEDTLS_PUT_UINT16_BE( ssl->handshake->offered_group_id, key_share_entry, 0 );
+    /* Write key share length */
+    MBEDTLS_PUT_UINT16_BE( share_len, key_share_entry, 2 );
+    key_share_entry += 4;
+
+    ext_len = share_len + 4;
+#endif /* MBEDTLS_ECDH_C */
+
+    /* Write extension header */
+    MBEDTLS_PUT_UINT16_BE( MBEDTLS_TLS_EXT_KEY_SHARE, buf, 0 );
+
+    /* Write total extension length */
+    MBEDTLS_PUT_UINT16_BE( ext_len, buf, 2 );
+
+    *olen = ext_len + 4; /* 4 bytes for fixed header + length of key share */
+    return( 0 );
+}
+
+/*
+ * Structure of ServerHello message:
+ *
+ *     struct {
+ *        ProtocolVersion legacy_version = 0x0303;    // TLS v1.2
+ *        Random random;
+ *        opaque legacy_session_id_echo<0..32>;
+ *        CipherSuite cipher_suite;
+ *        uint8 legacy_compression_method = 0;
+ *        Extension extensions<6..2^16-1>;
+ *    } ServerHello;
+ */
+static int ssl_tls13_write_server_hello_body( mbedtls_ssl_context *ssl,
+                                              unsigned char *buf,
+                                              size_t buflen,
+                                              size_t *olen )
+{
+    int ret=0;
+    /* Extensions */
+
+    /* extension_start
+     *    Used during extension writing where the
+     *    buffer pointer to the beginning of the
+     *    extension list must be kept to write
+     *    the total extension list size in the end.
+     */
+    unsigned char *extension_start;
+    size_t cur_ext_len;          /* Size of the current extension */
+    size_t total_ext_len;        /* Size of list of extensions    */
+    size_t rand_bytes_len;
+
+    /* Buffer management */
+    unsigned char *start = buf;
+    unsigned char *end = buf + buflen;
+
+    rand_bytes_len = 32;
+
+    /* Ensure we have enough room for ServerHello
+     * up to but excluding the extensions. */
+    if( buflen < ( 4+32+2+2+1+ssl->session_negotiate->id_len+1+1 ) ) /* TBD: FIXME */
+    {
+        return( MBEDTLS_ERR_SSL_BUFFER_TOO_SMALL );
+    }
+
+    /* Version */
+    *buf++ = (unsigned char)0x3;
+    *buf++ = (unsigned char)0x3;
+    MBEDTLS_SSL_DEBUG_MSG( 3, ( "server hello, chosen version: [0x3:0x3]" ) );
+    buflen -= 2;
+
+    /* Write random bytes */
+    memcpy( buf, ssl->handshake->randbytes + 32, rand_bytes_len );
+    MBEDTLS_SSL_DEBUG_BUF( 3, "server hello, random bytes", buf, rand_bytes_len );
+
+    buf += rand_bytes_len;
+    buflen -= rand_bytes_len;
+
+#if defined(MBEDTLS_HAVE_TIME)
+    ssl->session_negotiate->start = time( NULL );
+#endif /* MBEDTLS_HAVE_TIME */
+
+    /* Write legacy session id */
+    *buf++ = (unsigned char)ssl->session_negotiate->id_len;
+    buflen--;
+    memcpy( buf, &ssl->session_negotiate->id[0], ssl->session_negotiate->id_len );
+    buf += ssl->session_negotiate->id_len;
+    MBEDTLS_SSL_DEBUG_MSG( 3, ( "session id length ( %" MBEDTLS_PRINTF_SIZET " )", ssl->session_negotiate->id_len ) );
+    MBEDTLS_SSL_DEBUG_BUF( 3, "session id", ssl->session_negotiate->id, ssl->session_negotiate->id_len );
+    buflen -= ssl->session_negotiate->id_len;
+
+    /* write selected ciphersuite ( 2 bytes ) */
+    MBEDTLS_PUT_UINT16_BE( ssl->session_negotiate->ciphersuite, buf, 0 );
+    buf += 2;
+    buflen -= 2;
+    MBEDTLS_SSL_DEBUG_MSG( 3, ( "server hello, chosen ciphersuite: %s ( id=%d )",
+        mbedtls_ssl_get_ciphersuite_name( ssl->session_negotiate->ciphersuite ),
+        ssl->session_negotiate->ciphersuite ) );
+
+    /* write legacy_compression_method ( 0 ) */
+    *buf++ = 0x0;
+    buflen--;
+
+    /* First write extensions, then the total length */
+    extension_start = buf;
+    total_ext_len = 0;
+    buf += 2;
+
+#if defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
+    if( mbedtls_ssl_tls13_kex_with_psk( ssl ) )
+    {
+        ret = ssl_tls13_write_server_pre_shared_key_ext( ssl, buf, end,
+                                                         &cur_ext_len );
+        if( ret != 0 )
+        {
+            MBEDTLS_SSL_DEBUG_RET( 1, "ssl_tls13_write_server_pre_shared_key_ext",
+                                   ret );
+            return( ret );
+        }
+
+        total_ext_len += cur_ext_len;
+        buf += cur_ext_len;
+    }
+#endif /* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED */
+
+#if ( defined(MBEDTLS_ECDH_C) || defined(MBEDTLS_ECDSA_C) )
+    if( mbedtls_ssl_tls13_kex_with_ephemeral( ssl ) )
+    {
+        if( ( ret = ssl_tls13_write_key_share_ext( ssl, buf, end, &cur_ext_len ) ) != 0 )
+        {
+            MBEDTLS_SSL_DEBUG_RET( 1, "ssl_tls13_write_key_share_ext", ret );
+            return( ret );
+        }
+
+        total_ext_len += cur_ext_len;
+        buf += cur_ext_len;
+    }
+#endif /* ( MBEDTLS_ECDH_C || MBEDTLS_ECDSA_C */
+
+    /* Add supported_versions extension */
+    if( ( ret = ssl_tls13_write_server_hello_supported_versions_ext
+                ( ssl, buf, end, &cur_ext_len ) ) != 0 )
+    {
+        MBEDTLS_SSL_DEBUG_RET( 1, "ssl_tls13_write_server_hello_supported_versions_ext", ret );
+        return( ret );
+    }
+
+    total_ext_len += cur_ext_len;
+    buf += cur_ext_len;
+
+    MBEDTLS_SSL_DEBUG_BUF( 4, "server hello extensions", extension_start, total_ext_len );
+
+    /* Write length information */
+    MBEDTLS_PUT_UINT16_BE( total_ext_len, extension_start, 0 );
+    buflen -= 2 + total_ext_len;
+
+    *olen = buf - start;
+
+    MBEDTLS_SSL_DEBUG_BUF( 3, "server hello", start, *olen );
+
+    return( ret );
+}
+
+static int ssl_tls13_write_server_hello( mbedtls_ssl_context *ssl ) {
+
+    int ret = 0;
+    unsigned char *buf;
+    size_t buf_len, msg_len;
+
+    MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> write server hello" ) );
+
+    MBEDTLS_SSL_PROC_CHK( ssl_tls13_server_hello_prepare( ssl ) );
+
+    MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_start_handshake_msg( ssl,
+                                MBEDTLS_SSL_HS_SERVER_HELLO, &buf, &buf_len ) );
+
+    MBEDTLS_SSL_PROC_CHK( ssl_tls13_write_server_hello_body( ssl, buf, buf_len,
+                                                             &msg_len ) );
+
+    mbedtls_ssl_add_hs_msg_to_checksum( ssl, MBEDTLS_SSL_HS_SERVER_HELLO,
+                                        buf, msg_len );
+
+    MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_finish_handshake_msg(
+                              ssl, buf_len, msg_len ) );
+
+#if defined(MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE)
+    if( ssl->handshake->ccs_sent > 1 )
+        mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_SERVER_CCS_AFTER_SERVER_HELLO );
+    else
+#endif /* MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE */
+    {
+        mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_ENCRYPTED_EXTENSIONS );
+    }
+
+cleanup:
+
+    MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= write server hello" ) );
+    return( ret );
+}
 
 /*
  *
@@ -3292,10 +3501,10 @@ static int ssl_tls13_write_hello_retry_request_write( mbedtls_ssl_context *ssl,
 #endif /* MBEDTLS_SSL_COOKIE_C */
 
     /* Add supported_version extension */
-    if( ( ret = ssl_tls13_write_supported_version_ext( ssl, p, end,
-                                                       &ext_length ) ) != 0 )
+    if( ( ret = ssl_tls13_write_server_hello_supported_versions_ext(
+                    ssl, p, end, &ext_length ) ) != 0 )
     {
-        MBEDTLS_SSL_DEBUG_RET( 1, "ssl_tls13_write_supported_version_ext", ret );
+        MBEDTLS_SSL_DEBUG_RET( 1, "ssl_tls13_write_server_hello_supported_versions_ext", ret );
         return( ret );
     }
 
@@ -3317,236 +3526,6 @@ static int ssl_tls13_write_hello_retry_request_write( mbedtls_ssl_context *ssl,
     *olen = p - buf;
 
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= write hello retry request" ) );
-    return( 0 );
-}
-
-/*
- *
- * STATE HANDLING: ServerHello
- *
- */
-
-/*
- * Overview
- */
-
-/* Main entry point; orchestrates the other functions */
-static int ssl_tls13_server_hello_process( mbedtls_ssl_context *ssl );
-
-/* ServerHello handling sub-routines */
-static int ssl_tls13_server_hello_prepare( mbedtls_ssl_context *ssl );
-static int ssl_tls13_server_hello_write( mbedtls_ssl_context *ssl,
-                                         unsigned char *buf,
-                                         size_t buflen,
-                                         size_t *olen );
-static int ssl_tls13_server_hello_postprocess( mbedtls_ssl_context *ssl );
-
-static int ssl_tls13_server_hello_process( mbedtls_ssl_context *ssl ) {
-
-    int ret = 0;
-    unsigned char *buf;
-    size_t buf_len, msg_len;
-
-    MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> write server hello" ) );
-
-    /* Preprocessing */
-
-    /* This might lead to ssl_tls13_process_server_hello() being called
-     * multiple times. The implementation of
-     * ssl_tls13_process_server_hello_preprocess() must either be safe to be
-     * called multiple times, or we need to add state to omit this call once
-     * we're calling ssl_tls13_process_server_hello() multiple times.
-     */
-    MBEDTLS_SSL_PROC_CHK( ssl_tls13_server_hello_prepare( ssl ) );
-
-        MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_start_handshake_msg( ssl,
-                MBEDTLS_SSL_HS_SERVER_HELLO, &buf, &buf_len ) );
-
-    MBEDTLS_SSL_PROC_CHK( ssl_tls13_server_hello_write( ssl, buf, buf_len,
-                                                        &msg_len ) );
-
-    mbedtls_ssl_add_hs_msg_to_checksum( ssl, MBEDTLS_SSL_HS_SERVER_HELLO,
-                                        buf, msg_len );
-
-    MBEDTLS_SSL_PROC_CHK( ssl_tls13_server_hello_postprocess( ssl ) );
-
-    MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_finish_handshake_msg(
-                              ssl, buf_len, msg_len ) );
-cleanup:
-
-    MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= write server hello" ) );
-    return( ret );
-}
-
-
-/* IMPORTANT: This function can currently be called multiple times
- *            in case the call to mbedtls_ssl_flush_output( ) that
- *            follows it in ssl_tls13_process_server_hello( ) fails.
- *
- *            Make sure that the preparations in this function
- *            can safely be repeated multiple times, or add logic
- *            to ssl_tls13_process_server_hello( ) to never call it twice.
- */
-static int ssl_tls13_server_hello_prepare( mbedtls_ssl_context *ssl )
-{
-    int ret;
-
-    if( ( ret = ssl->conf->f_rng( ssl->conf->p_rng, ssl->handshake->randbytes + 32, 32 ) ) != 0 )
-        return( ret );
-
-    MBEDTLS_SSL_DEBUG_BUF( 3, "server hello, random bytes", ssl->handshake->randbytes + 32, 32 );
-
-#if defined(MBEDTLS_HAVE_TIME)
-    ssl->session_negotiate->start = time( NULL );
-#endif /* MBEDTLS_HAVE_TIME */
-
-
-    /* Check for session resumption
-     * <TBD>
-     */
-
-    return( 0 );
-}
-
-static int ssl_tls13_server_hello_write( mbedtls_ssl_context *ssl,
-                                         unsigned char *buf,
-                                         size_t buflen,
-                                         size_t *olen )
-{
-    int ret=0;
-    /* Extensions */
-
-    /* extension_start
-     *    Used during extension writing where the
-     *    buffer pointer to the beginning of the
-     *    extension list must be kept to write
-     *    the total extension list size in the end.
-     */
-    unsigned char *extension_start;
-    size_t cur_ext_len;          /* Size of the current extension */
-    size_t total_ext_len;        /* Size of list of extensions    */
-    size_t rand_bytes_len;
-
-    /* Buffer management */
-    unsigned char *start = buf;
-    unsigned char *end = buf + buflen;
-
-    rand_bytes_len = 32;
-
-    /* Ensure we have enough room for ServerHello
-     * up to but excluding the extensions. */
-    if( buflen < ( 4+32+2+2+1+ssl->session_negotiate->id_len+1+1 ) ) /* TBD: FIXME */
-    {
-        return( MBEDTLS_ERR_SSL_BUFFER_TOO_SMALL );
-    }
-
-    /* Version */
-    *buf++ = (unsigned char)0x3;
-    *buf++ = (unsigned char)0x3;
-    MBEDTLS_SSL_DEBUG_MSG( 3, ( "server hello, chosen version: [0x3:0x3]" ) );
-    buflen -= 2;
-
-    /* Write random bytes */
-    memcpy( buf, ssl->handshake->randbytes + 32, rand_bytes_len );
-    MBEDTLS_SSL_DEBUG_BUF( 3, "server hello, random bytes", buf, rand_bytes_len );
-
-    buf += rand_bytes_len;
-    buflen -= rand_bytes_len;
-
-#if defined(MBEDTLS_HAVE_TIME)
-    ssl->session_negotiate->start = time( NULL );
-#endif /* MBEDTLS_HAVE_TIME */
-
-    /* Write legacy session id */
-    *buf++ = (unsigned char)ssl->session_negotiate->id_len;
-    buflen--;
-    memcpy( buf, &ssl->session_negotiate->id[0], ssl->session_negotiate->id_len );
-    buf += ssl->session_negotiate->id_len;
-    MBEDTLS_SSL_DEBUG_MSG( 3, ( "session id length ( %" MBEDTLS_PRINTF_SIZET " )", ssl->session_negotiate->id_len ) );
-    MBEDTLS_SSL_DEBUG_BUF( 3, "session id", ssl->session_negotiate->id, ssl->session_negotiate->id_len );
-    buflen -= ssl->session_negotiate->id_len;
-
-    /* write selected ciphersuite ( 2 bytes ) */
-    MBEDTLS_PUT_UINT16_BE( ssl->session_negotiate->ciphersuite, buf, 0 );
-    buf += 2;
-    buflen -= 2;
-    MBEDTLS_SSL_DEBUG_MSG( 3, ( "server hello, chosen ciphersuite: %s ( id=%d )",
-        mbedtls_ssl_get_ciphersuite_name( ssl->session_negotiate->ciphersuite ),
-        ssl->session_negotiate->ciphersuite ) );
-
-    /* write legacy_compression_method ( 0 ) */
-    *buf++ = 0x0;
-    buflen--;
-
-    /* First write extensions, then the total length */
-    extension_start = buf;
-    total_ext_len = 0;
-    buf += 2;
-
-#if defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
-    if( mbedtls_ssl_tls13_kex_with_psk( ssl ) )
-    {
-        ret = ssl_tls13_write_server_pre_shared_key_ext( ssl, buf, end,
-                                                         &cur_ext_len );
-        if( ret != 0 )
-        {
-            MBEDTLS_SSL_DEBUG_RET( 1, "ssl_tls13_write_server_pre_shared_key_ext",
-                                   ret );
-            return( ret );
-        }
-
-        total_ext_len += cur_ext_len;
-        buf += cur_ext_len;
-    }
-#endif /* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED */
-
-#if ( defined(MBEDTLS_ECDH_C) || defined(MBEDTLS_ECDSA_C) )
-    if( mbedtls_ssl_tls13_kex_with_ephemeral( ssl ) )
-    {
-        if( ( ret = ssl_tls13_write_key_shares_ext( ssl, buf, end, &cur_ext_len ) ) != 0 )
-        {
-            MBEDTLS_SSL_DEBUG_RET( 1, "ssl_tls13_write_key_shares_ext", ret );
-            return( ret );
-        }
-
-        total_ext_len += cur_ext_len;
-        buf += cur_ext_len;
-    }
-#endif /* ( MBEDTLS_ECDH_C || MBEDTLS_ECDSA_C */
-
-    /* Add supported_version extension */
-    if( ( ret = ssl_tls13_write_supported_version_ext( ssl, buf, end, &cur_ext_len ) ) != 0 )
-    {
-        MBEDTLS_SSL_DEBUG_RET( 1, "ssl_tls13_write_supported_version_ext", ret );
-        return( ret );
-    }
-
-    total_ext_len += cur_ext_len;
-    buf += cur_ext_len;
-
-    MBEDTLS_SSL_DEBUG_BUF( 4, "server hello extensions", extension_start, total_ext_len );
-
-    /* Write length information */
-    MBEDTLS_PUT_UINT16_BE( total_ext_len, extension_start, 0 );
-    buflen -= 2 + total_ext_len;
-
-    *olen = buf - start;
-
-    MBEDTLS_SSL_DEBUG_BUF( 3, "server hello", start, *olen );
-
-    return( ret );
-}
-
-static int ssl_tls13_server_hello_postprocess( mbedtls_ssl_context *ssl )
-{
-#if defined(MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE)
-    if( ssl->handshake->ccs_sent > 1 )
-        mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_SERVER_CCS_AFTER_SERVER_HELLO );
-    else
-#endif /* MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE */
-    {
-        mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_ENCRYPTED_EXTENSIONS );
-    }
     return( 0 );
 }
 
@@ -3835,7 +3814,7 @@ int mbedtls_ssl_tls13_handshake_server_step( mbedtls_ssl_context *ssl )
             /* ----- WRITE SERVER HELLO ----*/
 
         case MBEDTLS_SSL_SERVER_HELLO:
-            ret = ssl_tls13_server_hello_process( ssl );
+            ret = ssl_tls13_write_server_hello( ssl );
             if( ret != 0 )
                 break;
 
