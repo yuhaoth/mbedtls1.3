@@ -367,6 +367,44 @@ int mbedtls_ssl_tls13_hkdf_expand_label(
                                          buf, buf_len ) ) );
 }
 
+static int ssl_tls13_get_psk( mbedtls_ssl_context *ssl,
+                              unsigned char **psk,
+                              size_t *psk_len )
+{
+#if defined(MBEDTLS_USE_PSA_CRYPTO)
+    psa_key_attributes_t key_attributes = PSA_KEY_ATTRIBUTES_INIT;
+    psa_status_t status;
+
+    *psk_len = 0;
+    *psk = NULL;
+
+    status = psa_get_key_attributes( ssl->handshake->psk_opaque, &key_attributes );
+    if( status != PSA_SUCCESS)
+    {
+        return( psa_ssl_status_to_mbedtls( status ) );
+    }
+
+    *psk_len = PSA_BITS_TO_BYTES( psa_get_key_bits( &key_attributes ) );
+    *psk = mbedtls_calloc( 1, *psk_len );
+    if( *psk == NULL )
+    {
+        return( MBEDTLS_ERR_SSL_ALLOC_FAILED );
+    }
+
+    status = psa_export_key( ssl->handshake->psk_opaque,
+                             (uint8_t *)*psk, *psk_len, psk_len );
+    if( status != PSA_SUCCESS)
+    {
+        mbedtls_free( (void *)*psk );
+        return( psa_ssl_status_to_mbedtls( status ) );
+    }
+#else
+    *psk = ssl->handshake->psk;
+    *psk_len = ssl->handshake->psk_len;
+#endif /* !MBEDTLS_USE_PSA_CRYPTO */
+    return( 0 );
+}
+
 /*
  * The traffic keying material is generated from the following inputs:
  *
@@ -1239,6 +1277,8 @@ int mbedtls_ssl_tls13_key_schedule_stage_early( mbedtls_ssl_context *ssl )
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
     psa_algorithm_t hash_alg;
     mbedtls_ssl_handshake_params *handshake = ssl->handshake;
+    unsigned char *psk;
+    size_t psk_len;
 
     if( handshake->ciphersuite_info == NULL )
     {
@@ -1248,9 +1288,21 @@ int mbedtls_ssl_tls13_key_schedule_stage_early( mbedtls_ssl_context *ssl )
 
     hash_alg = mbedtls_psa_translate_md( handshake->ciphersuite_info->mac );
 
+    ret = ssl_tls13_get_psk( ssl, &psk, &psk_len );
+    if( ret != 0 )
+    {
+        psk = NULL;
+        psk_len = 0;
+    }
+
     ret = mbedtls_ssl_tls13_evolve_secret( hash_alg, NULL,
-                                           handshake->psk, handshake->psk_len,
+                                           psk, psk_len,
                                            handshake->tls13_master_secrets.early );
+#if defined(MBEDTLS_USE_PSA_CRYPTO)
+    if( psk != NULL )
+        mbedtls_free( psk );
+#endif
+
     if( ret != 0 )
     {
         MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_tls13_evolve_secret", ret );
