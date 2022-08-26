@@ -116,6 +116,7 @@ int main( void )
 #define DFL_USE_SRTP            0
 #define DFL_SRTP_FORCE_PROFILE  0
 #define DFL_SRTP_MKI            ""
+#define DFL_KEY_OPAQUE_ALG      "none"
 
 #define GET_REQUEST "GET %s HTTP/1.0\r\nExtra-header: "
 #define GET_REQUEST_END "\r\n\r\n"
@@ -361,6 +362,13 @@ int main( void )
 #define USAGE_NAMED_GROUP ""
 #endif /* MBEDTLS_ECP_C && MBEDTLS_SSL_PROTO_TLS1_3 */
 
+#define USAGE_KEY_OPAQUE_ALGS \
+    "    key_opaque_algs=%%s  Allowed opaque key algorithms.\n"                      \
+    "                        comma-separated pair of values among the following:\n"   \
+    "                        rsa-sign-pkcs1, rsa-sign-pss, rsa-decrypt,\n"           \
+    "                        ecdsa-sign, ecdh, none (only acceptable for\n"          \
+    "                        the second value).\n"                                   \
+
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3)
 #define USAGE_TLS1_3_KEY_EXCHANGE_MODES \
     "    tls13_kex_modes=%%s   default: all\n"     \
@@ -431,6 +439,7 @@ int main( void )
     USAGE_EARLY_DATA                                        \
     USAGE_NAMED_GROUP                                       \
     USAGE_DHMLEN                                            \
+    USAGE_KEY_OPAQUE_ALGS                                   \
     "\n"
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3)
@@ -547,6 +556,8 @@ struct options
     int use_srtp;               /* Support SRTP                             */
     int force_srtp_profile;     /* SRTP protection profile to use or all    */
     const char *mki;            /* The dtls mki value to use                */
+    const char *key_opaque_alg1; /* Allowed opaque key alg 1                */
+    const char *key_opaque_alg2; /* Allowed Opaque key alg 2                */
 } opt;
 
 #include "ssl_test_common_source.c"
@@ -933,6 +944,8 @@ int main( int argc, char *argv[] )
     opt.use_srtp            = DFL_USE_SRTP;
     opt.force_srtp_profile  = DFL_SRTP_FORCE_PROFILE;
     opt.mki                 = DFL_SRTP_MKI;
+    opt.key_opaque_alg1     = DFL_KEY_OPAQUE_ALG;
+    opt.key_opaque_alg2     = DFL_KEY_OPAQUE_ALG;
 
     for( i = 1; i < argc; i++ )
     {
@@ -1386,6 +1399,12 @@ int main( int argc, char *argv[] )
         {
             opt.mki = q;
         }
+        else if( strcmp( p, "key_opaque_algs" ) == 0 )
+        {
+            if( key_opaque_alg_parse( q, &opt.key_opaque_alg1,
+                                         &opt.key_opaque_alg2 ) != 0 )
+                goto usage;
+        }
         else
             goto usage;
     }
@@ -1817,26 +1836,24 @@ int main( int argc, char *argv[] )
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
     if( opt.key_opaque != 0 )
     {
-        psa_algorithm_t psa_alg, psa_alg2;
+        psa_algorithm_t psa_alg, psa_alg2 = PSA_ALG_NONE;
+        psa_key_usage_t usage = 0;
 
-        if( mbedtls_pk_get_type( &pkey ) == MBEDTLS_PK_ECKEY )
+        if( key_opaque_set_alg_usage( opt.key_opaque_alg1,
+                                      opt.key_opaque_alg2,
+                                      &psa_alg, &psa_alg2,
+                                      &usage,
+                                      mbedtls_pk_get_type( &pkey ) ) == 0 )
         {
-            psa_alg = PSA_ALG_ECDSA( PSA_ALG_ANY_HASH );
-            psa_alg2 = PSA_ALG_NONE;
-        }
-        else
-        {
-            psa_alg = PSA_ALG_RSA_PKCS1V15_SIGN( PSA_ALG_ANY_HASH );
-            psa_alg2 = PSA_ALG_RSA_PSS( PSA_ALG_ANY_HASH );
-        }
-
-        if( ( ret = mbedtls_pk_wrap_as_opaque( &pkey, &key_slot, psa_alg,
-                                               PSA_KEY_USAGE_SIGN_HASH,
-                                               psa_alg2 ) ) != 0 )
-        {
-            mbedtls_printf( " failed\n  !  "
-                            "mbedtls_pk_wrap_as_opaque returned -0x%x\n\n", (unsigned int)  -ret );
-            goto exit;
+            ret = mbedtls_pk_wrap_as_opaque( &pkey, &key_slot, psa_alg,
+                                             usage, psa_alg2 );
+            if( ret != 0 )
+            {
+                mbedtls_printf( " failed\n  !  "
+                                "mbedtls_pk_wrap_as_opaque returned -0x%x\n\n",
+                                (unsigned int)  -ret );
+                goto exit;
+            }
         }
     }
 #endif /* MBEDTLS_USE_PSA_CRYPTO */
