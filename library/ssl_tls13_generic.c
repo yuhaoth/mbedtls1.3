@@ -1568,44 +1568,6 @@ cleanup:
 /*
  * STATE HANDLING: Output Certificate
  */
-/* Check if a certificate should be written, and if yes,
- * if it is available.
- * Returns a negative error code on failure ( such as no certificate
- * being available on the server ), and otherwise
- * SSL_WRITE_CERTIFICATE_SEND or
- * SSL_WRITE_CERTIFICATE_SKIP
- * indicating that a Certificate message should be written based
- * on the configured certificate, or whether it should be silently skipped.
- */
-#define SSL_WRITE_CERTIFICATE_SEND 0
-#define SSL_WRITE_CERTIFICATE_SKIP 1
-
-static int ssl_tls13_write_certificate_coordinate( mbedtls_ssl_context *ssl )
-{
-#if defined(MBEDTLS_SSL_SRV_C)
-    int have_own_cert = 1;
-#endif /* MBEDTLS_SSL_SRV_C */
-
-    /* For PSK and ECDHE-PSK ciphersuites there is no certificate to exchange. */
-    if( mbedtls_ssl_tls13_kex_with_psk( ssl ) )
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= skip write certificate" ) );
-        return( SSL_WRITE_CERTIFICATE_SKIP );
-    }
-
-#if defined(MBEDTLS_SSL_SRV_C)
-    if( ssl->conf->endpoint == MBEDTLS_SSL_IS_SERVER )
-    {
-        if( have_own_cert == 0 )
-        {
-            MBEDTLS_SSL_DEBUG_MSG( 1, ( "got no certificate to send" ) );
-            return( MBEDTLS_ERR_SSL_HANDSHAKE_FAILURE );
-        }
-    }
-#endif /* MBEDTLS_SSL_SRV_C */
-
-    return( SSL_WRITE_CERTIFICATE_SEND );
-}
 
 /*
  *  enum {
@@ -1694,48 +1656,28 @@ static int ssl_tls13_write_certificate_body( mbedtls_ssl_context *ssl,
     return( 0 );
 }
 
-static int ssl_tls13_finalize_write_certificate( mbedtls_ssl_context *ssl )
-{
-    (void) ssl;
-
-#if defined(MBEDTLS_SSL_SRV_C)
-    if( ssl->conf->endpoint == MBEDTLS_SSL_IS_SERVER )
-        mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_CERTIFICATE_VERIFY );
-#endif /* MBEDTLS_SSL_SRV_C */
-
-    return( 0 );
-}
-
 int mbedtls_ssl_tls13_write_certificate( mbedtls_ssl_context *ssl )
 {
     int ret;
+    unsigned char *buf;
+    size_t buf_len, msg_len;
 
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> write certificate" ) );
 
-    /* Coordination: Check if we need to send a certificate. */
-    MBEDTLS_SSL_PROC_CHK_NEG( ssl_tls13_write_certificate_coordinate( ssl ) );
 
-    if( ret == SSL_WRITE_CERTIFICATE_SEND )
-    {
-        unsigned char *buf;
-        size_t buf_len, msg_len;
+    MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_start_handshake_msg( ssl,
+                          MBEDTLS_SSL_HS_CERTIFICATE, &buf, &buf_len ) );
 
-        MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_start_handshake_msg( ssl,
-                              MBEDTLS_SSL_HS_CERTIFICATE, &buf, &buf_len ) );
+    MBEDTLS_SSL_PROC_CHK( ssl_tls13_write_certificate_body( ssl,
+                                                            buf,
+                                                            buf + buf_len,
+                                                            &msg_len ) );
 
-        MBEDTLS_SSL_PROC_CHK( ssl_tls13_write_certificate_body( ssl,
-                                                                buf,
-                                                                buf + buf_len,
-                                                                &msg_len ) );
+    mbedtls_ssl_add_hs_msg_to_checksum( ssl, MBEDTLS_SSL_HS_CERTIFICATE,
+                                        buf, msg_len );
 
-        mbedtls_ssl_add_hs_msg_to_checksum( ssl, MBEDTLS_SSL_HS_CERTIFICATE,
-                                            buf, msg_len );
-
-        MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_finish_handshake_msg(
-                                  ssl, buf_len, msg_len ) );
-    }
-
-    MBEDTLS_SSL_PROC_CHK( ssl_tls13_finalize_write_certificate( ssl ) );
+    MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_finish_handshake_msg(
+                              ssl, buf_len, msg_len ) );
 
 cleanup:
 
@@ -1858,46 +1800,10 @@ static int ssl_tls13_get_sig_alg_from_pk( mbedtls_ssl_context *ssl,
 #endif /* MBEDTLS_RSA_C */
         default:
             MBEDTLS_SSL_DEBUG_MSG( 1,
-                                   ( "unkown signature type : %u", sig ) );
+                                   ( "unknown signature type : %u", sig ) );
             break;
     }
     return( -1 );
-}
-
-/* Coordinate: Check whether a certificate verify message should be sent.
- * Returns a negative value on failure, and otherwise
- * - SSL_WRITE_CERTIFICATE_VERIFY_SKIP
- * - SSL_WRITE_CERTIFICATE_VERIFY_SEND
- * to indicate if the CertificateVerify message should be sent or not.
- */
-#define SSL_WRITE_CERTIFICATE_VERIFY_SKIP 0
-#define SSL_WRITE_CERTIFICATE_VERIFY_SEND 1
-
-static int ssl_tls13_write_certificate_verify_coordinate( mbedtls_ssl_context *ssl )
-{
-#if defined(MBEDTLS_SSL_SRV_C)
-    int have_own_cert = 1;
-#endif
-
-    if( mbedtls_ssl_tls13_kex_with_psk( ssl ) )
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= skip write certificate verify" ) );
-        return( SSL_WRITE_CERTIFICATE_VERIFY_SKIP );
-    }
-
-#if defined(MBEDTLS_SSL_SRV_C)
-    if( mbedtls_ssl_own_cert( ssl ) == NULL )
-        have_own_cert = 0;
-
-    if( have_own_cert == 0 &&
-        ssl->conf->authmode != MBEDTLS_SSL_VERIFY_NONE )
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "got no certificate" ) );
-        return( MBEDTLS_ERR_SSL_PRIVATE_KEY_REQUIRED );
-    }
-#endif
-
-    return( SSL_WRITE_CERTIFICATE_VERIFY_SEND );
 }
 
 static int ssl_tls13_write_certificate_verify_body( mbedtls_ssl_context *ssl,
@@ -2008,45 +1914,26 @@ static int ssl_tls13_write_certificate_verify_body( mbedtls_ssl_context *ssl,
     return( ret );
 }
 
-static int ssl_tls13_finalize_certificate_verify( mbedtls_ssl_context *ssl )
-{
-    (void) ssl;
-
-#if defined(MBEDTLS_SSL_SRV_C)
-    if( ssl->conf->endpoint == MBEDTLS_SSL_IS_SERVER )
-        mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_SERVER_FINISHED );
-#endif /* MBEDTLS_SSL_SRV_C */
-
-    return( 0 );
-}
-
 int mbedtls_ssl_tls13_write_certificate_verify( mbedtls_ssl_context *ssl )
 {
     int ret = 0;
+    unsigned char *buf;
+    size_t buf_len, msg_len;
 
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> write certificate verify" ) );
 
-    MBEDTLS_SSL_PROC_CHK_NEG( ssl_tls13_write_certificate_verify_coordinate( ssl ) );
 
-    if( ret == SSL_WRITE_CERTIFICATE_VERIFY_SEND )
-    {
-        unsigned char *buf;
-        size_t buf_len, msg_len;
+    MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_start_handshake_msg( ssl,
+                MBEDTLS_SSL_HS_CERTIFICATE_VERIFY, &buf, &buf_len ) );
 
-        MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_start_handshake_msg( ssl,
-                   MBEDTLS_SSL_HS_CERTIFICATE_VERIFY, &buf, &buf_len ) );
+    MBEDTLS_SSL_PROC_CHK( ssl_tls13_write_certificate_verify_body(
+                                ssl, buf, buf + buf_len, &msg_len ) );
 
-        MBEDTLS_SSL_PROC_CHK( ssl_tls13_write_certificate_verify_body(
-                                    ssl, buf, buf + buf_len, &msg_len ) );
+    mbedtls_ssl_add_hs_msg_to_checksum(
+        ssl, MBEDTLS_SSL_HS_CERTIFICATE_VERIFY, buf, msg_len );
 
-        mbedtls_ssl_add_hs_msg_to_checksum(
-            ssl, MBEDTLS_SSL_HS_CERTIFICATE_VERIFY, buf, msg_len );
-
-        MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_finish_handshake_msg(
-                                  ssl, buf_len, msg_len ) );
-    }
-
-    MBEDTLS_SSL_PROC_CHK( ssl_tls13_finalize_certificate_verify( ssl ) );
+    MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_finish_handshake_msg(
+                              ssl, buf_len, msg_len ) );
 
 cleanup:
 
