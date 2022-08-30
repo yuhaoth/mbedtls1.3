@@ -81,7 +81,7 @@ fi
 if [ -n "${OPENSSL_NEXT:-}" ]; then
     O_NEXT_SRV="$OPENSSL_NEXT s_server -www -cert data_files/server5.crt -key data_files/server5.key"
     O_NEXT_SRV_NO_CERT="$OPENSSL_NEXT s_server -www "
-    O_NEXT_CLI="echo 'GET / HTTP/1.0' | $OPENSSL_NEXT s_client"
+    O_NEXT_CLI="echo 'GET / HTTP/1.0' | $OPENSSL_NEXT s_client -CAfile data_files/test-ca_cat12.crt"
 else
     O_NEXT_SRV=false
     O_NEXT_SRV_NO_CERT=false
@@ -2581,6 +2581,36 @@ run_test    "TLS-DHE-RSA Opaque key for client authentication" \
             -c "Ciphersuite is TLS-DHE-RSA" \
             -s "Verifying peer X.509 certificate... ok" \
             -s "Ciphersuite is TLS-DHE-RSA" \
+            -S "error" \
+            -C "error"
+
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
+requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
+requires_config_enabled MBEDTLS_RSA_C
+run_test    "RSA opaque key on server configured for decryption" \
+            "$P_SRV debug_level=1 key_opaque=1 key_opaque_algs=rsa-decrypt,none" \
+            "$P_CLI force_ciphersuite=TLS-RSA-WITH-AES-128-CBC-SHA256" \
+            0 \
+            -c "Verifying peer X.509 certificate... ok" \
+            -c "Ciphersuite is TLS-RSA-" \
+            -s "key types: Opaque, Opaque" \
+            -s "Ciphersuite is TLS-RSA-" \
+            -S "error" \
+            -C "error"
+
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
+requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
+requires_config_enabled MBEDTLS_RSA_C
+run_test    "RSA-PSK opaque key on server configured for decryption" \
+            "$P_SRV debug_level=1 key_opaque=1 key_opaque_algs=rsa-decrypt,none \
+             psk=abc123 psk_identity=foo" \
+            "$P_CLI force_ciphersuite=TLS-RSA-PSK-WITH-AES-128-CBC-SHA256 \
+             psk=abc123 psk_identity=foo" \
+            0 \
+            -c "Verifying peer X.509 certificate... ok" \
+            -c "Ciphersuite is TLS-RSA-PSK-" \
+            -s "key types: Opaque, Opaque" \
+            -s "Ciphersuite is TLS-RSA-PSK-" \
             -S "error" \
             -C "error"
 
@@ -11991,15 +12021,19 @@ run_test    "TLS 1.3: HRR check, ciphersuite TLS_AES_256_GCM_SHA384 - gnutls" \
             -c "Protocol is TLSv1.3" \
             -c "HTTP/1.0 200 OK"
 
+requires_openssl_tls1_3
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_DEBUG_C
 requires_config_enabled MBEDTLS_SSL_SRV_C
-requires_openssl_tls1_3
 run_test    "TLS 1.3: Server side check - openssl" \
             "$P_SRV debug_level=4 crt_file=data_files/server5.crt key_file=data_files/server5.key force_version=tls13 tickets=0" \
             "$O_NEXT_CLI -msg -tls1_3" \
             0
 
+# Skip this test before openssl exit code issue fixed
+# On fail, openssl return different exit code on OpenCI and internal CI for
+# this test.
+skip_next_test
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_DEBUG_C
 requires_config_enabled MBEDTLS_SSL_SRV_C

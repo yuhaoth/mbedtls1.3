@@ -2745,7 +2745,7 @@ static int ssl_tls13_parse_certificate_request( mbedtls_ssl_context *ssl,
             case MBEDTLS_TLS_EXT_SIG_ALG:
                 MBEDTLS_SSL_DEBUG_MSG( 3,
                         ( "found signature algorithms extension" ) );
-                ret = mbedtls_ssl_tls13_parse_sig_alg_ext( ssl, p,
+                ret = mbedtls_ssl_parse_sig_alg_ext( ssl, p,
                               p + extension_data_len );
                 if( ret != 0 )
                     return( ret );
@@ -2888,6 +2888,15 @@ static int ssl_tls13_process_server_finished( mbedtls_ssl_context *ssl )
     if( ret != 0 )
         return( ret );
 
+    ret = mbedtls_ssl_tls13_compute_application_transform( ssl );
+    if( ret != 0 )
+    {
+        MBEDTLS_SSL_PEND_FATAL_ALERT(
+                MBEDTLS_SSL_ALERT_MSG_HANDSHAKE_FAILURE,
+                MBEDTLS_ERR_SSL_HANDSHAKE_FAILURE );
+        return( ret );
+    }
+
     mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_END_OF_EARLY_DATA );
 
     return( 0 );
@@ -2964,7 +2973,22 @@ static int ssl_tls13_write_client_certificate_verify( mbedtls_ssl_context *ssl )
  */
 static int ssl_tls13_write_client_finished( mbedtls_ssl_context *ssl )
 {
-    return( mbedtls_ssl_tls13_write_finished_message( ssl ) );
+    int ret;
+
+    ret = mbedtls_ssl_tls13_write_finished_message( ssl );
+    if( ret != 0 )
+        return( ret );
+
+    ret = mbedtls_ssl_tls13_generate_resumption_master_secret( ssl );
+    if( ret != 0 )
+    {
+        MBEDTLS_SSL_DEBUG_RET( 1,
+                "mbedtls_ssl_tls13_generate_resumption_master_secret ", ret );
+        return ( ret );
+    }
+
+    mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_FLUSH_BUFFERS );
+    return( 0 );
 }
 
 /*
@@ -2983,30 +3007,11 @@ static int ssl_tls13_flush_buffers( mbedtls_ssl_context *ssl )
  */
 static int ssl_tls13_handshake_wrapup( mbedtls_ssl_context *ssl )
 {
-    MBEDTLS_SSL_DEBUG_MSG( 1, ( "Switch to application keys for inbound traffic" ) );
-    MBEDTLS_SSL_DEBUG_MSG( 1, ( "Switch to application keys for outbound traffic" ) );
+    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
 
-#if defined(MBEDTLS_SSL_USE_MPS)
-    int ret = 0;
-
-    ret = mbedtls_mps_set_incoming_keys( &ssl->mps->l4,
-                                                 ssl->epoch_application );
+    ret = mbedtls_ssl_tls13_handshake_wrapup( ssl );
     if( ret != 0 )
         return( ret );
-
-    ret = mbedtls_mps_set_outgoing_keys( &ssl->mps->l4,
-                                         ssl->epoch_application );
-    if( ret != 0 )
-        return( ret );
-#else
-    MBEDTLS_SSL_DEBUG_MSG( 1, ( "Switch to application keys for inbound traffic" ) );
-    mbedtls_ssl_set_inbound_transform ( ssl, ssl->transform_application );
-
-    MBEDTLS_SSL_DEBUG_MSG( 1, ( "Switch to application keys for outbound traffic" ) );
-    mbedtls_ssl_set_outbound_transform( ssl, ssl->transform_application );
-#endif /* MBEDTLS_SSL_USE_MPS */
-
-    mbedtls_ssl_tls13_handshake_wrapup( ssl );
 
     mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_HANDSHAKE_OVER );
 

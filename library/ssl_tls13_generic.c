@@ -150,80 +150,6 @@ cleanup:
 #endif /* !MBEDTLS_SSL_USE_MPS */
 
 #if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
-/* mbedtls_ssl_tls13_parse_sig_alg_ext()
- *
- * enum {
- *    ....
- *   ecdsa_secp256r1_sha256( 0x0403 ),
- *   ecdsa_secp384r1_sha384( 0x0503 ),
- *   ecdsa_secp521r1_sha512( 0x0603 ),
- *    ....
- * } SignatureScheme;
- *
- * struct {
- *    SignatureScheme supported_signature_algorithms<2..2^16-2>;
- * } SignatureSchemeList;
- */
-int mbedtls_ssl_tls13_parse_sig_alg_ext( mbedtls_ssl_context *ssl,
-                                         const unsigned char *buf,
-                                         const unsigned char *end )
-{
-    const unsigned char *p = buf;
-    size_t supported_sig_algs_len = 0;
-    const unsigned char *supported_sig_algs_end;
-    uint16_t sig_alg;
-    uint32_t common_idx = 0;
-
-    MBEDTLS_SSL_CHK_BUF_READ_PTR( p, end, 2 );
-    supported_sig_algs_len = MBEDTLS_GET_UINT16_BE( p, 0 );
-    p += 2;
-
-    memset( ssl->handshake->received_sig_algs, 0,
-            sizeof(ssl->handshake->received_sig_algs) );
-
-    MBEDTLS_SSL_CHK_BUF_READ_PTR( p, end, supported_sig_algs_len );
-    supported_sig_algs_end = p + supported_sig_algs_len;
-    while( p < supported_sig_algs_end )
-    {
-        MBEDTLS_SSL_CHK_BUF_READ_PTR( p, supported_sig_algs_end, 2 );
-        sig_alg = MBEDTLS_GET_UINT16_BE( p, 0 );
-        p += 2;
-
-        MBEDTLS_SSL_DEBUG_MSG( 4, ( "received signature algorithm: 0x%x",
-                                    sig_alg ) );
-
-        if( ! mbedtls_ssl_sig_alg_is_supported( ssl, sig_alg ) ||
-            ! mbedtls_ssl_sig_alg_is_offered( ssl, sig_alg ) )
-            continue;
-
-        if( common_idx + 1 < MBEDTLS_RECEIVED_SIG_ALGS_SIZE )
-        {
-            ssl->handshake->received_sig_algs[common_idx] = sig_alg;
-            common_idx += 1;
-        }
-    }
-    /* Check that we consumed all the message. */
-    if( p != end )
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 1,
-            ( "Signature algorithms extension length misaligned" ) );
-        MBEDTLS_SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_DECODE_ERROR,
-                                      MBEDTLS_ERR_SSL_DECODE_ERROR );
-        return( MBEDTLS_ERR_SSL_DECODE_ERROR );
-    }
-
-    if( common_idx == 0 )
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 3, ( "no signature algorithm in common" ) );
-        MBEDTLS_SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_HANDSHAKE_FAILURE,
-                                      MBEDTLS_ERR_SSL_HANDSHAKE_FAILURE );
-        return( MBEDTLS_ERR_SSL_HANDSHAKE_FAILURE );
-    }
-
-    ssl->handshake->received_sig_algs[common_idx] = MBEDTLS_TLS1_3_SIG_NONE;
-    return( 0 );
-}
-
 /*
  * STATE HANDLING: Read CertificateVerify
  */
@@ -1112,113 +1038,16 @@ static int ssl_tls13_parse_finished_message( mbedtls_ssl_context *ssl,
     return( 0 );
 }
 
-#if defined(MBEDTLS_SSL_CLI_C)
-static int ssl_tls13_postprocess_server_finished_message( mbedtls_ssl_context *ssl )
-{
-    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
-    mbedtls_ssl_key_set traffic_keys;
-    mbedtls_ssl_transform *transform_application = NULL;
-
-    ret = mbedtls_ssl_tls13_key_schedule_stage_application( ssl );
-    if( ret != 0 )
-    {
-        MBEDTLS_SSL_DEBUG_RET( 1,
-           "mbedtls_ssl_tls13_key_schedule_stage_application", ret );
-        goto cleanup;
-    }
-
-    ret = mbedtls_ssl_tls13_generate_application_keys( ssl, &traffic_keys );
-    if( ret != 0 )
-    {
-        MBEDTLS_SSL_DEBUG_RET( 1,
-            "mbedtls_ssl_tls13_generate_application_keys", ret );
-        goto cleanup;
-    }
-
-    transform_application =
-        mbedtls_calloc( 1, sizeof( mbedtls_ssl_transform ) );
-    if( transform_application == NULL )
-    {
-        ret = MBEDTLS_ERR_SSL_ALLOC_FAILED;
-        goto cleanup;
-    }
-
-    ret = mbedtls_ssl_tls13_populate_transform(
-                                    transform_application,
-                                    ssl->conf->endpoint,
-                                    ssl->session_negotiate->ciphersuite,
-                                    &traffic_keys,
-                                    ssl );
-    if( ret != 0 )
-    {
-        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_tls13_populate_transform", ret );
-        goto cleanup;
-    }
-
-#if !defined(MBEDTLS_SSL_USE_MPS)
-    ssl->transform_application = transform_application;
-#else /* MBEDTLS_SSL_USE_MPS */
-    ret = mbedtls_mps_add_key_material( &ssl->mps->l4,
-                                        transform_application,
-                                        &ssl->epoch_application );
-    if( ret != 0 )
-        goto cleanup;
-#endif /* MBEDTLS_SSL_USE_MPS */
-
-cleanup:
-
-    mbedtls_platform_zeroize( &traffic_keys, sizeof( traffic_keys ) );
-    if( ret != 0 )
-    {
-        mbedtls_free( transform_application );
-        MBEDTLS_SSL_PEND_FATAL_ALERT(
-                MBEDTLS_SSL_ALERT_MSG_HANDSHAKE_FAILURE,
-                MBEDTLS_ERR_SSL_HANDSHAKE_FAILURE );
-    }
-    return( ret );
-}
-#endif /* MBEDTLS_SSL_CLI_C */
-
-static int ssl_tls13_postprocess_finished_message( mbedtls_ssl_context *ssl )
-{
-#if defined(MBEDTLS_SSL_SRV_C)
-    int ret;
-    if( ssl->conf->endpoint == MBEDTLS_SSL_IS_SERVER )
-    {
-        /* Compute resumption_master_secret */
-        ret = mbedtls_ssl_tls13_generate_resumption_master_secret( ssl );
-        if( ret != 0 )
-        {
-            MBEDTLS_SSL_DEBUG_RET( 1,
-               "mbedtls_ssl_tls13_generate_resumption_master_secret ", ret );
-            return( ret );
-        }
-
-        return( 0 );
-    }
-#endif /* MBEDTLS_SSL_SRV_C */
-
-#if defined(MBEDTLS_SSL_CLI_C)
-    if( ssl->conf->endpoint == MBEDTLS_SSL_IS_CLIENT )
-    {
-        return( ssl_tls13_postprocess_server_finished_message( ssl ) );
-    }
-#endif /* MBEDTLS_SSL_CLI_C */
-
-    return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
-}
-
 int mbedtls_ssl_tls13_process_finished_message( mbedtls_ssl_context *ssl )
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
     unsigned char *buf;
     size_t buf_len;
 
-    MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> parse finished message" ) );
-
     MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_tls13_fetch_handshake_msg( ssl,
                                               MBEDTLS_SSL_HS_FINISHED,
                                               &buf, &buf_len ) );
+
     /* Preprocessing step: Compute handshake digest */
     MBEDTLS_SSL_PROC_CHK( ssl_tls13_preprocess_finished_message( ssl ) );
 
@@ -1229,8 +1058,6 @@ int mbedtls_ssl_tls13_process_finished_message( mbedtls_ssl_context *ssl )
 #if defined(MBEDTLS_SSL_USE_MPS)
     MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_mps_hs_consume_full_hs_msg( ssl ) );
 #endif /* MBEDTLS_SSL_USE_MPS */
-
-    MBEDTLS_SSL_PROC_CHK( ssl_tls13_postprocess_finished_message( ssl ) );
 
 cleanup:
 
@@ -1267,84 +1094,6 @@ static int ssl_tls13_prepare_finished_message( mbedtls_ssl_context *ssl )
     return( 0 );
 }
 
-static int ssl_tls13_finalize_finished_message( mbedtls_ssl_context *ssl )
-{
-    int ret = 0;
-
-#if defined(MBEDTLS_SSL_CLI_C)
-    if( ssl->conf->endpoint == MBEDTLS_SSL_IS_CLIENT )
-    {
-        /* Compute resumption_master_secret */
-        ret = mbedtls_ssl_tls13_generate_resumption_master_secret( ssl );
-        if( ret != 0 )
-        {
-            MBEDTLS_SSL_DEBUG_RET( 1,
-                    "mbedtls_ssl_tls13_generate_resumption_master_secret ", ret );
-            return ( ret );
-        }
-
-        mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_FLUSH_BUFFERS );
-    }
-    else
-#endif /* MBEDTLS_SSL_CLI_C */
-#if defined(MBEDTLS_SSL_SRV_C)
-    if( ssl->conf->endpoint == MBEDTLS_SSL_IS_SERVER )
-    {
-        mbedtls_ssl_key_set traffic_keys;
-        mbedtls_ssl_transform *transform_application;
-
-        ret = mbedtls_ssl_tls13_key_schedule_stage_application( ssl );
-        if( ret != 0 )
-        {
-            MBEDTLS_SSL_DEBUG_RET( 1,
-               "mbedtls_ssl_tls13_key_schedule_stage_application", ret );
-            return( ret );
-        }
-
-        ret = mbedtls_ssl_tls13_generate_application_keys(
-                     ssl, &traffic_keys );
-        if( ret != 0 )
-        {
-            MBEDTLS_SSL_DEBUG_RET( 1,
-                  "mbedtls_ssl_tls13_generate_application_keys", ret );
-            return( ret );
-        }
-
-        transform_application =
-            mbedtls_calloc( 1, sizeof( mbedtls_ssl_transform ) );
-        if( transform_application == NULL )
-            return( MBEDTLS_ERR_SSL_ALLOC_FAILED );
-
-        ret = mbedtls_ssl_tls13_populate_transform(
-            transform_application, ssl->conf->endpoint,
-            ssl->session_negotiate->ciphersuite,
-            &traffic_keys, ssl );
-        if( ret != 0 )
-            return( ret );
-
-#if !defined(MBEDTLS_SSL_USE_MPS)
-        ssl->transform_application = transform_application;
-#else /* MBEDTLS_SSL_USE_MPS */
-        /* Register transform with MPS. */
-        ret = mbedtls_mps_add_key_material( &ssl->mps->l4,
-                                            transform_application,
-                                            &ssl->epoch_application );
-        if( ret != 0 )
-            return( ret );
-#endif /* MBEDTLS_SSL_USE_MPS */
-
-        mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_EARLY_APP_DATA );
-    }
-    else
-#endif /* MBEDTLS_SSL_SRV_C */
-    {
-        /* Should never happen */
-        return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
-    }
-
-    return( 0 );
-}
-
 static int ssl_tls13_write_finished_message_body( mbedtls_ssl_context *ssl,
                                                   unsigned char *buf,
                                                   unsigned char *end,
@@ -1374,11 +1123,7 @@ int mbedtls_ssl_tls13_write_finished_message( mbedtls_ssl_context *ssl )
 
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> write finished message" ) );
 
-    if( !ssl->handshake->state_local.finished_out.preparation_done )
-    {
-        MBEDTLS_SSL_PROC_CHK( ssl_tls13_prepare_finished_message( ssl ) );
-        ssl->handshake->state_local.finished_out.preparation_done = 1;
-    }
+    MBEDTLS_SSL_PROC_CHK( ssl_tls13_prepare_finished_message( ssl ) );
 
     MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_start_handshake_msg( ssl,
                               MBEDTLS_SSL_HS_FINISHED, &buf, &buf_len ) );
@@ -1389,20 +1134,34 @@ int mbedtls_ssl_tls13_write_finished_message( mbedtls_ssl_context *ssl )
     mbedtls_ssl_add_hs_msg_to_checksum( ssl, MBEDTLS_SSL_HS_FINISHED,
                                         buf, msg_len );
 
-    MBEDTLS_SSL_PROC_CHK( ssl_tls13_finalize_finished_message( ssl ) );
     MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_finish_handshake_msg( ssl,
                                               buf_len, msg_len ) );
-
 cleanup:
 
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= write finished message" ) );
     return( ret );
 }
 
-void mbedtls_ssl_tls13_handshake_wrapup( mbedtls_ssl_context *ssl )
+int mbedtls_ssl_tls13_handshake_wrapup( mbedtls_ssl_context *ssl )
 {
-
     MBEDTLS_SSL_DEBUG_MSG( 3, ( "=> handshake wrapup" ) );
+
+#if defined(MBEDTLS_SSL_USE_MPS)
+    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
+
+    ret = mbedtls_mps_set_incoming_keys( &ssl->mps->l4,
+                                                 ssl->epoch_application );
+    if( ret != 0 )
+        return( ret );
+
+    ret = mbedtls_mps_set_outgoing_keys( &ssl->mps->l4,
+                                         ssl->epoch_application );
+    if( ret != 0 )
+        return( ret );
+#else
+    mbedtls_ssl_set_inbound_transform ( ssl, ssl->transform_application );
+    mbedtls_ssl_set_outbound_transform( ssl, ssl->transform_application );
+#endif /* MBEDTLS_SSL_USE_MPS */
 
     /*
      * Free the previous session and switch to the current one.
@@ -1416,6 +1175,8 @@ void mbedtls_ssl_tls13_handshake_wrapup( mbedtls_ssl_context *ssl )
     ssl->session_negotiate = NULL;
 
     MBEDTLS_SSL_DEBUG_MSG( 3, ( "<= handshake wrapup" ) );
+
+    return( 0 );
 }
 
 /*

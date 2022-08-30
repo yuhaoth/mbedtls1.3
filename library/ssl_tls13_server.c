@@ -2011,7 +2011,7 @@ static int ssl_tls13_parse_client_hello( mbedtls_ssl_context *ssl,
      */
 
     /*
-     * Minimal length ( with everything empty and extensions ommitted ) is
+     * Minimal length ( with everything empty and extensions omitted ) is
      * 2 + 32 + 1 + 2 + 1 = 38 bytes. Check that first, so that we can
      * read at least up to session id length without worrying.
      */
@@ -2263,7 +2263,7 @@ static int ssl_tls13_parse_client_hello( mbedtls_ssl_context *ssl,
             case MBEDTLS_TLS_EXT_SIG_ALG:
                 MBEDTLS_SSL_DEBUG_MSG( 3, ( "found signature_algorithms extension" ) );
 
-                ret = mbedtls_ssl_tls13_parse_sig_alg_ext(
+                ret = mbedtls_ssl_parse_sig_alg_ext(
                           ssl, p, extension_data_end );
                 if( ret != 0 )
                 {
@@ -3528,6 +3528,67 @@ static int ssl_tls13_write_certificate_verify( mbedtls_ssl_context *ssl )
 #endif /* MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED */
 
 /*
+ * Handler for MBEDTLS_SSL_SERVER_FINISHED
+ */
+static int ssl_tls13_write_server_finished( mbedtls_ssl_context *ssl )
+{
+    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
+
+    ret = mbedtls_ssl_tls13_write_finished_message( ssl );
+    if( ret != 0 )
+        return( ret );
+
+    ret = mbedtls_ssl_tls13_compute_application_transform( ssl );
+    if( ret != 0 )
+    {
+        MBEDTLS_SSL_PEND_FATAL_ALERT(
+                MBEDTLS_SSL_ALERT_MSG_HANDSHAKE_FAILURE,
+                MBEDTLS_ERR_SSL_HANDSHAKE_FAILURE );
+        return( ret );
+    }
+    mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_EARLY_APP_DATA );
+    return( 0 );
+}
+
+/*
+ * Handler for MBEDTLS_SSL_CLIENT_FINISHED
+ */
+static int ssl_tls13_process_client_finished( mbedtls_ssl_context *ssl )
+{
+    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
+
+    ret = mbedtls_ssl_tls13_process_finished_message( ssl );
+    if( ret != 0 )
+        return( ret );
+
+    ret = mbedtls_ssl_tls13_generate_resumption_master_secret( ssl );
+    if( ret != 0 )
+    {
+        MBEDTLS_SSL_DEBUG_RET( 1,
+            "mbedtls_ssl_tls13_generate_resumption_master_secret ", ret );
+    }
+
+    mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_HANDSHAKE_WRAPUP );
+    return( 0 );
+}
+
+/*
+ * Handler for MBEDTLS_SSL_HANDSHAKE_WRAPUP
+ */
+static int ssl_tls13_handshake_wrapup( mbedtls_ssl_context *ssl )
+{
+    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
+
+    ret = mbedtls_ssl_tls13_handshake_wrapup( ssl );
+    if( ret != 0 )
+        return( ret );
+
+    mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_SERVER_NEW_SESSION_TICKET );
+
+    return( 0 );
+}
+
+/*
  * TLS 1.3 State Machine -- server side
  */
 int mbedtls_ssl_tls13_handshake_server_step( mbedtls_ssl_context *ssl )
@@ -3676,8 +3737,7 @@ int mbedtls_ssl_tls13_handshake_server_step( mbedtls_ssl_context *ssl )
             /* ----- WRITE FINISHED ----*/
 
         case MBEDTLS_SSL_SERVER_FINISHED:
-            ret = mbedtls_ssl_tls13_write_finished_message( ssl );
-            mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_EARLY_APP_DATA );
+            ret = ssl_tls13_write_server_finished( ssl );
             break;
 
             /* ----- READ CLIENT CERTIFICATE ----*/
@@ -3709,37 +3769,11 @@ int mbedtls_ssl_tls13_handshake_server_step( mbedtls_ssl_context *ssl )
             /* ----- READ FINISHED ----*/
 
         case MBEDTLS_SSL_CLIENT_FINISHED:
-            ret = mbedtls_ssl_tls13_process_finished_message( ssl );
-            if( ret == 0 )
-            {
-                mbedtls_ssl_handshake_set_state(
-                    ssl, MBEDTLS_SSL_HANDSHAKE_WRAPUP );
-            }
+            ret = ssl_tls13_process_client_finished( ssl );
             break;
 
         case MBEDTLS_SSL_HANDSHAKE_WRAPUP:
-            MBEDTLS_SSL_DEBUG_MSG( 2, ( "handshake: done" ) );
-
-            MBEDTLS_SSL_DEBUG_MSG( 1, ( "Switch to application keys for all traffic" ) );
-
-#if defined(MBEDTLS_SSL_USE_MPS)
-            ret = mbedtls_mps_set_incoming_keys( &ssl->mps->l4,
-                                                 ssl->epoch_application );
-            if( ret != 0 )
-                return( ret );
-
-            ret = mbedtls_mps_set_outgoing_keys( &ssl->mps->l4,
-                                                 ssl->epoch_application );
-            if( ret != 0 )
-                return( ret );
-#else
-            mbedtls_ssl_set_inbound_transform ( ssl, ssl->transform_application );
-            mbedtls_ssl_set_outbound_transform( ssl, ssl->transform_application );
-#endif /* MBEDTLS_SSL_USE_MPS */
-
-            mbedtls_ssl_tls13_handshake_wrapup( ssl );
-            mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_SERVER_NEW_SESSION_TICKET );
-
+            ret = ssl_tls13_handshake_wrapup( ssl );
             break;
 
         case MBEDTLS_SSL_SERVER_NEW_SESSION_TICKET:
