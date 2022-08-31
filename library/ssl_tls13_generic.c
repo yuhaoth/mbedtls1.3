@@ -483,76 +483,9 @@ cleanup:
 
 /*
  *
- * STATE HANDLING: Incoming Certificate
+ * STATE HANDLING: Incoming Certificate.
  *
  */
-
-/* Coordination: Check if a certificate is expected.
- * Returns a negative error code on failure, and otherwise
- * SSL_CERTIFICATE_EXPECTED or
- * SSL_CERTIFICATE_SKIP
- * indicating whether a Certificate message is expected or not.
- */
-#define SSL_CERTIFICATE_EXPECTED   0
-#define SSL_CERTIFICATE_SKIP       1
-
-static int ssl_tls13_read_certificate_coordinate( mbedtls_ssl_context *ssl )
-{
-#if defined(MBEDTLS_SSL_SRV_C)
-    int authmode = ssl->conf->authmode;
-#endif /* MBEDTLS_SSL_SRV_C */
-
-#if defined(MBEDTLS_SSL_SRV_C)
-    if( ssl->conf->endpoint == MBEDTLS_SSL_IS_SERVER )
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "Switch to handshake keys for inbound traffic" ) );
-
-#if defined(MBEDTLS_SSL_USE_MPS)
-        {
-            int ret;
-            ret = mbedtls_mps_set_incoming_keys( &ssl->mps->l4,
-                                                 ssl->handshake->epoch_handshake );
-            if( ret != 0 )
-                return( ret );
-        }
-#else
-        mbedtls_ssl_set_inbound_transform( ssl, ssl->handshake->transform_handshake );
-#endif /* MBEDTLS_SSL_USE_MPS */
-    }
-#endif /* MBEDTLS_SSL_SRV_C */
-
-    if( mbedtls_ssl_tls13_kex_with_psk( ssl ) )
-        return( SSL_CERTIFICATE_SKIP );
-
-#if !defined(MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED)
-    ( ( void )authmode );
-    MBEDTLS_SSL_DEBUG_MSG( 1, ( "should never happen" ) );
-    return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
-#else
-#if defined(MBEDTLS_SSL_SRV_C)
-    if( ssl->conf->endpoint == MBEDTLS_SSL_IS_SERVER )
-    {
-        /* If SNI was used, overwrite authentication mode
-         * from the configuration. */
-#if defined(MBEDTLS_SSL_SERVER_NAME_INDICATION)
-        if( ssl->handshake->sni_authmode != MBEDTLS_SSL_VERIFY_UNSET )
-            authmode = ssl->handshake->sni_authmode;
-#endif /* MBEDTLS_SSL_SERVER_NAME_INDICATION */
-
-        if( authmode == MBEDTLS_SSL_VERIFY_NONE )
-        {
-            /* NOTE: Is it intentional that we set verify_result
-             * to SKIP_VERIFY on server-side only? */
-            ssl->session_negotiate->verify_result =
-                MBEDTLS_X509_BADCERT_SKIP_VERIFY;
-            return( SSL_CERTIFICATE_SKIP );
-        }
-    }
-#endif /* MBEDTLS_SSL_SRV_C */
-
-    return( SSL_CERTIFICATE_EXPECTED );
-#endif /* !MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED */
-}
 
 #if defined(MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED)
 #if defined(MBEDTLS_SSL_KEEP_PEER_CERTIFICATE)
@@ -601,26 +534,8 @@ static int ssl_tls13_parse_certificate( mbedtls_ssl_context *ssl,
 #if defined(MBEDTLS_SSL_SRV_C)
     if( ssl->conf->endpoint == MBEDTLS_SSL_IS_SERVER )
     {
-        MBEDTLS_SSL_CHK_BUF_READ_PTR( p, end,
-                                      certificate_request_context_len + 3 );
-
-        /* check whether we got an empty certificate message */
-        if( memcmp( p + certificate_request_context_len , "\0\0\0", 3 ) == 0 )
-        {
-            MBEDTLS_SSL_DEBUG_MSG( 1,
-                ( "client has no certificate - empty certificate message received" ) );
-
-            ssl->session_negotiate->verify_result = MBEDTLS_X509_BADCERT_MISSING;
-            if( ssl->conf->authmode == MBEDTLS_SSL_VERIFY_OPTIONAL )
-                return( 0 );
-            else
-            {
-                MBEDTLS_SSL_DEBUG_MSG( 1, ( "client certificate required" ) );
-                MBEDTLS_SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_CERT_REQUIRED,
-                                              MBEDTLS_ERR_SSL_NO_CLIENT_CERTIFICATE );
-                return( MBEDTLS_ERR_SSL_NO_CLIENT_CERTIFICATE );
-            }
-        }
+        MBEDTLS_SSL_CHK_BUF_READ_PTR( p, end, certificate_request_context_len );
+        p += certificate_request_context_len;
     }
 #endif /* MBEDTLS_SSL_SRV_C */
 
@@ -647,6 +562,13 @@ static int ssl_tls13_parse_certificate( mbedtls_ssl_context *ssl,
     {
         mbedtls_x509_crt_free( ssl->session_negotiate->peer_cert );
         mbedtls_free( ssl->session_negotiate->peer_cert );
+    }
+
+    if( certificate_list_len == 0 )
+    {
+        ssl->session_negotiate->peer_cert = NULL;
+        ret = 0;
+        goto exit;
     }
 
     if( ( ssl->session_negotiate->peer_cert =
@@ -724,6 +646,7 @@ static int ssl_tls13_parse_certificate( mbedtls_ssl_context *ssl,
         p += extensions_len;
     }
 
+exit:
     /* Check that all the message is consumed. */
     if( p != end )
     {
@@ -756,55 +679,62 @@ static int ssl_tls13_parse_certificate( mbedtls_ssl_context *ssl,
 static int ssl_tls13_validate_certificate( mbedtls_ssl_context *ssl )
 {
     int ret = 0;
-    int authmode = ssl->conf->authmode;
+    int authmode = MBEDTLS_SSL_VERIFY_REQUIRED;
     mbedtls_x509_crt *ca_chain;
     mbedtls_x509_crl *ca_crl;
     uint32_t verify_result = 0;
 
     /* If SNI was used, overwrite authentication mode
      * from the configuration. */
-#if defined(MBEDTLS_SSL_SERVER_NAME_INDICATION)
-    if( ssl->handshake->sni_authmode != MBEDTLS_SSL_VERIFY_UNSET )
-        authmode = ssl->handshake->sni_authmode;
-#endif
-
-    /*
-     * If the client hasn't sent a certificate ( i.e. it sent
-     * an empty certificate chain ), this is reflected in the peer CRT
-     * structure being unset.
-     * Check for that and handle it depending on the
-     * server's authentication mode.
-     */
 #if defined(MBEDTLS_SSL_SRV_C)
-    if( ssl->conf->endpoint == MBEDTLS_SSL_IS_SERVER &&
-        ssl->session_negotiate->peer_cert == NULL )
+    if( ssl->conf->endpoint == MBEDTLS_SSL_IS_SERVER )
     {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "client has no certificate" ) );
-
-        /* The client was asked for a certificate but didn't send
-           one. The client should know what's going on, so we
-           don't send an alert. */
-
-        /* Note that for authmode == VERIFY_NONE we don't end up in this
-         * routine in the first place, because ssl_tls13_read_certificate_coordinate
-         * will return CERTIFICATE_SKIP. */
-        ssl->session_negotiate->verify_result = MBEDTLS_X509_BADCERT_MISSING;
-        if( authmode == MBEDTLS_SSL_VERIFY_OPTIONAL )
-            return( 0 );
+#if defined(MBEDTLS_SSL_SERVER_NAME_INDICATION)
+        if( ssl->handshake->sni_authmode != MBEDTLS_SSL_VERIFY_UNSET )
+            authmode = ssl->handshake->sni_authmode;
         else
-            return( MBEDTLS_ERR_SSL_NO_CLIENT_CERTIFICATE );
+#endif
+            authmode = ssl->conf->authmode;
     }
 #endif /* MBEDTLS_SSL_SRV_C */
 
-
-    if( authmode == MBEDTLS_SSL_VERIFY_NONE )
+    /*
+     * If the peer hasn't sent a certificate ( i.e. it sent
+     * an empty certificate chain ), this is reflected in the peer CRT
+     * structure being unset.
+     * Check for that and handle it depending on the
+     * authentication mode.
+     */
+    if( ssl->session_negotiate->peer_cert == NULL )
     {
-        /* NOTE: This happens on client-side only, with the
-         * server-side case of VERIFY_NONE being handled earlier
-         * and leading to `ssl->verify_result` being set to
-         * MBEDTLS_X509_BADCERT_SKIP_VERIFY --
-         * is this difference intentional? */
-        return( 0 );
+#if defined(MBEDTLS_SSL_SRV_C)
+        if( ssl->conf->endpoint == MBEDTLS_SSL_IS_SERVER )
+        {
+            MBEDTLS_SSL_DEBUG_MSG( 1, ( "client has no certificate" ) );
+            /* The client was asked for a certificate but didn't send
+             * one. The client should know what's going on, so we
+             * don't send an alert.
+             */
+            ssl->session_negotiate->verify_result = MBEDTLS_X509_BADCERT_MISSING;
+            if( authmode == MBEDTLS_SSL_VERIFY_OPTIONAL )
+                return( 0 );
+            else
+            {
+                MBEDTLS_SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_NO_CERT,
+                                              MBEDTLS_ERR_SSL_NO_CLIENT_CERTIFICATE  );
+                return( MBEDTLS_ERR_SSL_NO_CLIENT_CERTIFICATE );
+            }
+        }
+#endif /* MBEDTLS_SSL_SRV_C */
+
+#if defined(MBEDTLS_SSL_CLI_C)
+        if( ssl->conf->endpoint == MBEDTLS_SSL_IS_CLIENT )
+        {
+            MBEDTLS_SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_NO_CERT,
+                                          MBEDTLS_ERR_SSL_FATAL_ALERT_MESSAGE );
+            return( MBEDTLS_ERR_SSL_FATAL_ALERT_MESSAGE );
+        }
+#endif /* MBEDTLS_SSL_CLI_C */
     }
 
 #if defined(MBEDTLS_SSL_SERVER_NAME_INDICATION)
@@ -922,47 +852,29 @@ int mbedtls_ssl_tls13_process_certificate( mbedtls_ssl_context *ssl )
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> parse certificate" ) );
 
-    /* Coordination:
-     * Check if we expect a certificate, and if yes,
-     * check if a non-empty certificate has been sent. */
-    MBEDTLS_SSL_PROC_CHK_NEG( ssl_tls13_read_certificate_coordinate( ssl ) );
 #if defined(MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED)
-    if( ret == SSL_CERTIFICATE_EXPECTED )
-    {
-        unsigned char *buf;
-        size_t buf_len;
+    unsigned char *buf;
+    size_t buf_len;
 
-        MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_tls13_fetch_handshake_msg(
-                              ssl, MBEDTLS_SSL_HS_CERTIFICATE,
-                              &buf, &buf_len ) );
+    MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_tls13_fetch_handshake_msg(
+                          ssl, MBEDTLS_SSL_HS_CERTIFICATE,
+                          &buf, &buf_len ) );
 
-        /* Parse the certificate chain sent by the peer. */
-        MBEDTLS_SSL_PROC_CHK( ssl_tls13_parse_certificate( ssl, buf,
-                                                           buf + buf_len ) );
-        /* Validate the certificate chain and set the verification results. */
-        MBEDTLS_SSL_PROC_CHK( ssl_tls13_validate_certificate( ssl ) );
+    /* Parse the certificate chain sent by the peer. */
+    MBEDTLS_SSL_PROC_CHK( ssl_tls13_parse_certificate( ssl, buf,
+                                                       buf + buf_len ) );
+    /* Validate the certificate chain and set the verification results. */
+    MBEDTLS_SSL_PROC_CHK( ssl_tls13_validate_certificate( ssl ) );
 
-        mbedtls_ssl_add_hs_msg_to_checksum( ssl, MBEDTLS_SSL_HS_CERTIFICATE,
-                                            buf, buf_len );
+    mbedtls_ssl_add_hs_msg_to_checksum( ssl, MBEDTLS_SSL_HS_CERTIFICATE,
+                                        buf, buf_len );
+
 #if defined(MBEDTLS_SSL_USE_MPS)
-        MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_mps_hs_consume_full_hs_msg( ssl ) );
-#endif /* MBEDTLS_SSL_USE_MPS */
-
-    }
-    else
-#endif /* MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED */
-    if( ret == SSL_CERTIFICATE_SKIP )
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= skip parse certificate" ) );
-        ret = 0;
-    }
-    else
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "should never happen" ) );
-        ret = MBEDTLS_ERR_SSL_INTERNAL_ERROR;
-    }
+    MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_mps_hs_consume_full_hs_msg( ssl ) );
+#endif
 
 cleanup:
+#endif /* MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED */
 
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= parse certificate" ) );
     return( ret );

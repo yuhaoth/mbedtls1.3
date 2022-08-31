@@ -537,6 +537,12 @@ struct mbedtls_ssl_handshake_params
     uint8_t sni_authmode;               /*!< authmode from SNI callback     */
 #endif /* MBEDTLS_SSL_SERVER_NAME_INDICATION */
 
+#if defined(MBEDTLS_SSL_SRV_C)
+    /* Flag indicating if a CertificateRequest message has been sent
+     * to the client or not. */
+    uint8_t certificate_request_sent;
+#endif /* MBEDTLS_SSL_SRV_C */
+
 #if defined(MBEDTLS_SSL_SESSION_TICKETS) || \
     ( defined(MBEDTLS_SSL_NEW_SESSION_TICKET) && defined(MBEDTLS_SSL_PROTO_TLS1_3) )
     uint8_t new_session_ticket;         /*!< use NewSessionTicket?    */

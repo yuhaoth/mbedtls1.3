@@ -1053,15 +1053,6 @@ for VERIFY in $VERIFIES; do
                     fi
                     filter_ciphersuites
 
-                    if [ "X" != "X$M_CIPHERS" ]; then
-                        start_server "OpenSSL"
-                        for i in $M_CIPHERS; do
-                            check_openssl_server_bug $i
-                            run_client mbedTLS $i
-                        done
-                        stop_server
-                    fi
-
                     if [ "X" != "X$O_CIPHERS" ]; then
                         start_server "mbedTLS"
                         for i in $O_CIPHERS; do
@@ -1070,6 +1061,17 @@ for VERIFY in $VERIFIES; do
                         stop_server
                     fi
 
+                    if [ "X" != "X$M_CIPHERS" ]; then
+                        if [ $VERIFY = "NO" ] && [ $MODE = "tls13" ]; then
+                            continue;
+                        fi
+                        start_server "OpenSSL"
+                        for i in $M_CIPHERS; do
+                            check_openssl_server_bug $i
+                            run_client mbedTLS $i
+                        done
+                        stop_server
+                    fi
                     ;;
 
                 [Gg]nu*)
@@ -1097,14 +1099,6 @@ for VERIFY in $VERIFIES; do
                     fi
                     filter_ciphersuites
 
-                    if [ "X" != "X$M_CIPHERS" ]; then
-                        start_server "GnuTLS"
-                        for i in $M_CIPHERS; do
-                            run_client mbedTLS $i
-                        done
-                        stop_server
-                    fi
-
                     if [ "X" != "X$G_CIPHERS" ]; then
                         start_server "mbedTLS"
                         for i in $G_CIPHERS; do
@@ -1113,6 +1107,16 @@ for VERIFY in $VERIFIES; do
                         stop_server
                     fi
 
+                    if [ "X" != "X$M_CIPHERS" ]; then
+                        if [ $VERIFY = "NO" ] && [ $MODE = "tls13" ]; then
+                            continue;
+                        fi
+                        start_server "GnuTLS"
+                        for i in $M_CIPHERS; do
+                            run_client mbedTLS $i
+                        done
+                        stop_server
+                    fi
                     ;;
 
                 mbed*)
@@ -1143,6 +1147,9 @@ for VERIFY in $VERIFIES; do
                     filter_ciphersuites
 
                     if [ "X" != "X$M_CIPHERS" ]; then
+                        if [ $VERIFY = "NO" ] && [ $MODE = "tls13" ]; then
+                            continue;
+                        fi
                         start_server "mbedTLS"
                         for i in $M_CIPHERS; do
                             run_client mbedTLS $i
