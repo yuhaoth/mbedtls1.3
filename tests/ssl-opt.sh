@@ -82,9 +82,11 @@ if [ -n "${OPENSSL_NEXT:-}" ]; then
     O_NEXT_SRV="$OPENSSL_NEXT s_server -www -cert data_files/server5.crt -key data_files/server5.key"
     O_NEXT_SRV_NO_CERT="$OPENSSL_NEXT s_server -www "
     O_NEXT_CLI="echo 'GET / HTTP/1.0' | $OPENSSL_NEXT s_client -CAfile data_files/test-ca_cat12.crt"
+    O_NEXT_CLI_NO_CERT="echo 'GET / HTTP/1.0' | $OPENSSL_NEXT s_client"
 else
     O_NEXT_SRV=false
     O_NEXT_SRV_NO_CERT=false
+    O_NEXT_CLI_NO_CERT=false
     O_NEXT_CLI=false
 fi
 
@@ -98,8 +100,10 @@ fi
 
 if [ -n "${GNUTLS_NEXT_CLI:-}" ]; then
     G_NEXT_CLI="echo 'GET / HTTP/1.0' | $GNUTLS_NEXT_CLI --x509cafile data_files/test-ca_cat12.crt"
+    G_NEXT_CLI_NO_CERT="echo 'GET / HTTP/1.0' | $GNUTLS_NEXT_CLI"
 else
     G_NEXT_CLI=false
+    G_NEXT_CLI_NO_CERT=false
 fi
 
 TESTS=0
@@ -1216,7 +1220,11 @@ do_run_test_once() {
     wait_server_start "$SRV_PORT" "$SRV_PID"
 
     printf '# %s\n%s\n' "$NAME" "$CLI_CMD" > $CLI_OUT
-    eval "$CLI_CMD" >> $CLI_OUT 2>&1 &
+    # The client must be a subprocess of the script in order for killing it to
+    # work properly, that's why the ampersand is placed inside the eval command,
+    # not at the end of the line: the latter approach will spawn eval as a
+    # subprocess, and the $CLI_CMD as a grandchild.
+    eval "$CLI_CMD &" >> $CLI_OUT 2>&1
     wait_client_done
 
     sleep 0.05
@@ -1557,6 +1565,7 @@ if [ -n "${OPENSSL_NEXT:-}" ]; then
     O_NEXT_SRV="$O_NEXT_SRV -accept $SRV_PORT"
     O_NEXT_SRV_NO_CERT="$O_NEXT_SRV_NO_CERT -accept $SRV_PORT"
     O_NEXT_CLI="$O_NEXT_CLI -connect 127.0.0.1:+SRV_PORT"
+    O_NEXT_CLI_NO_CERT="$O_NEXT_CLI_NO_CERT -connect 127.0.0.1:+SRV_PORT"
 fi
 
 if [ -n "${GNUTLS_NEXT_SERV:-}" ]; then
@@ -1566,6 +1575,7 @@ fi
 
 if [ -n "${GNUTLS_NEXT_CLI:-}" ]; then
     G_NEXT_CLI="$G_NEXT_CLI -p +SRV_PORT"
+    G_NEXT_CLI_NO_CERT="$G_NEXT_CLI_NO_CERT -p +SRV_PORT localhost"
 fi
 
 # Allow SHA-1, because many of our test certificates use it
