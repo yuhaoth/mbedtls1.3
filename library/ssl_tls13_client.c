@@ -2824,7 +2824,7 @@ static int ssl_tls13_process_certificate_request( mbedtls_ssl_context *ssl )
     }
     else if( ret == SSL_CERTIFICATE_REQUEST_SKIP )
     {
-        MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= skip parse certificate request" ) );
+        MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= skip tls13 parse certificate request" ) );
         ret = 0;
     }
     else
@@ -2938,7 +2938,7 @@ static int ssl_tls13_write_client_certificate( mbedtls_ssl_context *ssl )
     }
     else
     {
-        MBEDTLS_SSL_DEBUG_MSG( 2, ( "No certificate message to send." ) );
+        MBEDTLS_SSL_DEBUG_MSG( 2, ( "skip write certificate" ) );
     }
 #endif
 

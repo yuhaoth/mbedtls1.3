@@ -2645,4 +2645,13 @@ int mbedtls_ssl_validate_ciphersuite(
     mbedtls_ssl_protocol_version min_tls_version,
     mbedtls_ssl_protocol_version max_tls_version );
 
+#if defined(MBEDTLS_SSL_SERVER_NAME_INDICATION)
+int mbedtls_ssl_parse_server_name_ext( mbedtls_ssl_context *ssl,
+                                       const unsigned char *buf,
+                                       const unsigned char *end );
+#endif /* MBEDTLS_SSL_SERVER_NAME_INDICATION */
+
+int mbedtls_ssl_tls13_get_sig_alg_from_pk( mbedtls_ssl_context *ssl,
+                                           mbedtls_pk_context *own_key,
+                                           uint16_t *algorithm );
 #endif /* ssl_misc.h */
