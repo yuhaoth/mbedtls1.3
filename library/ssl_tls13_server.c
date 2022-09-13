@@ -1142,72 +1142,6 @@ static int ssl_tls13_parse_key_exchange_modes_ext( mbedtls_ssl_context *ssl,
 }
 #endif /* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED */
 
-#if defined(MBEDTLS_SSL_ALPN)
-static int ssl_tls13_parse_alpn_ext( mbedtls_ssl_context *ssl,
-                                     const unsigned char *buf, size_t len )
-{
-    const unsigned char *end = buf + len;
-    size_t list_len;
-
-    const char **cur_ours;
-    const unsigned char *cur_cli;
-    size_t cur_cli_len;
-
-    /* If ALPN not configured, just ignore the extension */
-    if( ssl->conf->alpn_list == NULL )
-        return( 0 );
-
-    /*
-     * opaque ProtocolName<1..2^8-1>;
-     *
-     * struct {
-     *     ProtocolName protocol_name_list<2..2^16-1>
-     * } ProtocolNameList;
-     */
-
-    if( len < 2 )
-        return( MBEDTLS_ERR_SSL_DECODE_ERROR );
-    list_len = MBEDTLS_GET_UINT16_BE( buf, 0 );
-    if( list_len != len - 2 )
-        return( MBEDTLS_ERR_SSL_DECODE_ERROR );
-
-    buf += 2;
-    len -= 2;
-
-    /* Validate peer's list (lengths) */
-    for( cur_cli = buf; cur_cli != end; cur_cli += cur_cli_len )
-    {
-        cur_cli_len = *cur_cli++;
-        if( cur_cli_len > (size_t)( end - cur_cli ) )
-            return( MBEDTLS_ERR_SSL_DECODE_ERROR );
-        if( cur_cli_len == 0 )
-            return( MBEDTLS_ERR_SSL_ILLEGAL_PARAMETER );
-    }
-
-    /* Use our order of preference */
-    for( cur_ours = ssl->conf->alpn_list; *cur_ours != NULL; cur_ours++ )
-    {
-        size_t const cur_ours_len = strlen( *cur_ours );
-        for( cur_cli = buf; cur_cli != end; cur_cli += cur_cli_len )
-        {
-            cur_cli_len = *cur_cli++;
-
-            if( cur_cli_len == cur_ours_len &&
-                memcmp( cur_cli, *cur_ours, cur_ours_len ) == 0 )
-            {
-                ssl->alpn_chosen = *cur_ours;
-                return( 0 );
-            }
-        }
-    }
-
-    /* If we get hhere, no match was found */
-    MBEDTLS_SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_LEVEL_FATAL,
-                                  MBEDTLS_SSL_ALERT_MSG_NO_APPLICATION_PROTOCOL );
-    return( MBEDTLS_ERR_SSL_NO_APPLICATION_PROTOCOL );
-}
-#endif /* MBEDTLS_SSL_ALPN */
-
 /*
  *
  * STATE HANDLING: NewSessionTicket message
@@ -2297,6 +2231,21 @@ static int ssl_tls13_parse_client_hello( mbedtls_ssl_context *ssl,
                 ssl->handshake->extensions_present |= MBEDTLS_SSL_EXT_SUPPORTED_VERSIONS;
                 break;
 
+#if defined(MBEDTLS_SSL_ALPN)
+            case MBEDTLS_TLS_EXT_ALPN:
+                MBEDTLS_SSL_DEBUG_MSG( 3, ( "found alpn extension" ) );
+
+                ret = mbedtls_ssl_parse_alpn_ext( ssl, p, extension_data_end );
+                if( ret != 0 )
+                {
+                    MBEDTLS_SSL_DEBUG_RET(
+                            1, ( "mbedtls_ssl_parse_alpn_ext" ), ret );
+                    return( ret );
+                }
+                ssl->handshake->extensions_present |= MBEDTLS_SSL_EXT_ALPN;
+                break;
+#endif /* MBEDTLS_SSL_ALPN */
+
 #if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
             case MBEDTLS_TLS_EXT_SIG_ALG:
                 MBEDTLS_SSL_DEBUG_MSG( 3, ( "found signature_algorithms extension" ) );
@@ -2390,20 +2339,6 @@ static int ssl_tls13_parse_client_hello( mbedtls_ssl_context *ssl,
                 ssl->handshake->extensions_present |= MBEDTLS_SSL_EXT_MAX_FRAGMENT_LENGTH;
                 break;
 #endif /* MBEDTLS_SSL_MAX_FRAGMENT_LENGTH */
-
-#if defined(MBEDTLS_SSL_ALPN)
-            case MBEDTLS_TLS_EXT_ALPN:
-                MBEDTLS_SSL_DEBUG_MSG( 3, ( "found alpn extension" ) );
-
-                ret = ssl_tls13_parse_alpn_ext( ssl, p, extension_data_len );
-                if( ret != 0 )
-                {
-                    MBEDTLS_SSL_DEBUG_RET( 1, ( "ssl_tls13_parse_alpn_ext" ), ret );
-                    return( ret );
-                }
-                ssl->handshake->extensions_present |= MBEDTLS_SSL_EXT_ALPN;
-                break;
-#endif /* MBEDTLS_SSL_ALPN */
 
             default:
                 MBEDTLS_SSL_DEBUG_MSG( 3,
@@ -2643,46 +2578,6 @@ static int ssl_tls13_write_max_fragment_length_ext( mbedtls_ssl_context *ssl,
     return( 0 );
 }
 #endif /* MBEDTLS_SSL_MAX_FRAGMENT_LENGTH */
-
-#if defined(MBEDTLS_SSL_ALPN)
-static int ssl_tls13_write_alpn_ext(
-    mbedtls_ssl_context *ssl,
-    unsigned char *buf, size_t buflen, size_t *olen )
-{
-    *olen = 0;
-
-    if( ( ssl->handshake->extensions_present & MBEDTLS_SSL_EXT_ALPN ) == 0 ||
-        ssl->alpn_chosen == NULL )
-    {
-        return( 0 );
-    }
-
-    if( buflen < 7 + strlen( ssl->alpn_chosen ) )
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "buffer too small" ) );
-        return ( MBEDTLS_ERR_SSL_BUFFER_TOO_SMALL );
-    }
-
-    MBEDTLS_SSL_DEBUG_MSG( 3, ( "server hello, adding alpn extension" ) );
-    /*
-     * 0 . 1    ext identifier
-     * 2 . 3    ext length
-     * 4 . 5    protocol list length
-     * 6 . 6    protocol name length
-     * 7 . 7+n  protocol name
-     */
-    MBEDTLS_PUT_UINT16_BE( MBEDTLS_TLS_EXT_ALPN, buf, 0 );
-
-    *olen = 7 + strlen( ssl->alpn_chosen );
-
-    MBEDTLS_PUT_UINT16_BE( *olen - 4, buf, 2 );
-    MBEDTLS_PUT_UINT16_BE( *olen - 6, buf, 4 );
-    buf[6] = MBEDTLS_BYTE_0( *olen - 7 );
-
-    memcpy( buf + 7, ssl->alpn_chosen, *olen - 7 );
-    return ( 0 );
-}
-#endif /* MBEDTLS_SSL_ALPN */
 
 /*
  * Handler for MBEDTLS_SSL_SERVER_HELLO
@@ -3318,6 +3213,10 @@ static int ssl_tls13_write_encrypted_extensions_body( mbedtls_ssl_context *ssl,
     p_extensions_len = p;
     p += 2;
 
+    ((void) ssl);
+    ((void) ret);
+    ((void) output_len);
+
 #if defined(MBEDTLS_SSL_SERVER_NAME_INDICATION)
     ret = ssl_tls13_write_sni_server_ext( ssl, p, end - p, &output_len );
     if( ret != 0 )
@@ -3326,7 +3225,7 @@ static int ssl_tls13_write_encrypted_extensions_body( mbedtls_ssl_context *ssl,
 #endif /* MBEDTLS_SSL_SERVER_NAME_INDICATION */
 
 #if defined(MBEDTLS_SSL_ALPN)
-    ret = ssl_tls13_write_alpn_ext( ssl, p, end - p, &output_len );
+    ret = mbedtls_ssl_write_alpn_ext( ssl, p, end, &output_len );
     if( ret != 0 )
         return( ret );
     p += output_len;
