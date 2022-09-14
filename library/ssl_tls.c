@@ -3476,6 +3476,8 @@ int mbedtls_ssl_mps_remap_error( int ret )
         ret = MBEDTLS_ERR_SSL_CONN_EOF;
     if( ret == MBEDTLS_ERR_MPS_RETRY )
         ret = MBEDTLS_ERR_SSL_WANT_READ;
+    if( ret == MBEDTLS_ERR_MPS_CLOSE_NOTIFY )
+        ret = MBEDTLS_ERR_SSL_PEER_CLOSE_NOTIFY;
 
     return( ret );
 }
@@ -6799,7 +6801,7 @@ static int ssl_srv_check_client_no_crt_notification( mbedtls_ssl_context *ssl )
         ssl->in_msg[0]  == MBEDTLS_SSL_HS_CERTIFICATE   &&
         memcmp( ssl->in_msg + mbedtls_ssl_hs_hdr_len( ssl ), "\0\0\0", 3 ) == 0 )
     {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "TLSv1 client has no certificate" ) );
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "peer has no certificate" ) );
         return( 0 );
     }
     return( -1 );

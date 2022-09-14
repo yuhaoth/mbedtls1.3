@@ -2635,8 +2635,13 @@ static int ssl_tls13_certificate_request_coordinate( mbedtls_ssl_context *ssl )
         MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read_handshake( &ssl->mps->l4, &msg ) );
 
         if( msg.type == MBEDTLS_SSL_HS_CERTIFICATE_REQUEST )
+        {
+            MBEDTLS_SSL_DEBUG_MSG( 3, ( "got a certificate request" ) );
             return( SSL_CERTIFICATE_REQUEST_EXPECT_REQUEST );
+        }
     }
+
+    MBEDTLS_SSL_DEBUG_MSG( 3, ( "got no certificate request" ) );
 
     return( SSL_CERTIFICATE_REQUEST_SKIP );
 
@@ -2664,8 +2669,11 @@ static int ssl_tls13_certificate_request_coordinate( mbedtls_ssl_context *ssl )
     if( ( ssl->in_msgtype == MBEDTLS_SSL_MSG_HANDSHAKE ) &&
         ( ssl->in_msg[0] == MBEDTLS_SSL_HS_CERTIFICATE_REQUEST ) )
     {
+        MBEDTLS_SSL_DEBUG_MSG( 3, ( "got a certificate request" ) );
         return( SSL_CERTIFICATE_REQUEST_EXPECT_REQUEST );
     }
+
+    MBEDTLS_SSL_DEBUG_MSG( 3, ( "got no certificate request" ) );
 
     return( SSL_CERTIFICATE_REQUEST_SKIP );
 }
@@ -2824,7 +2832,6 @@ static int ssl_tls13_process_certificate_request( mbedtls_ssl_context *ssl )
     }
     else if( ret == SSL_CERTIFICATE_REQUEST_SKIP )
     {
-        MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= skip tls13 parse certificate request" ) );
         ret = 0;
     }
     else
@@ -2833,9 +2840,6 @@ static int ssl_tls13_process_certificate_request( mbedtls_ssl_context *ssl )
         ret = MBEDTLS_ERR_SSL_INTERNAL_ERROR;
         goto cleanup;
     }
-
-    MBEDTLS_SSL_DEBUG_MSG( 3, ( "got %s certificate request",
-                                ssl->handshake->client_auth ? "a" : "no" ) );
 
     mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_SERVER_CERTIFICATE );
 
@@ -2948,7 +2952,10 @@ static int ssl_tls13_write_client_certificate( mbedtls_ssl_context *ssl )
                                          MBEDTLS_SSL_CLIENT_CERTIFICATE_VERIFY );
    }
    else
+   {
+        MBEDTLS_SSL_DEBUG_MSG( 2, ( "skip write certificate verify" ) );
         mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_CLIENT_FINISHED );
+   }
 
     return( 0 );
 }

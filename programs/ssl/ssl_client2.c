@@ -2705,8 +2705,6 @@ send_request:
     /*
      * 7. Read the HTTP response
      */
-    mbedtls_printf( "  < Read from server:" );
-    fflush( stdout );
 
     /*
      * TLS and DTLS need different reading styles (stream vs datagram)
@@ -2779,7 +2777,8 @@ send_request:
 
             len = ret;
             buf[len] = '\0';
-            mbedtls_printf( " %d bytes read\n\n%s", len, (char *) buf );
+            mbedtls_printf( "  < Read from server: %d bytes read\n\n%s", len, (char *) buf );
+            fflush( stdout );
 
             /* End of message should be detected according to the syntax of the
              * application protocol (eg HTTP), just use a dummy test here. */
@@ -2843,7 +2842,8 @@ send_request:
 
         len = ret;
         buf[len] = '\0';
-        mbedtls_printf( " %d bytes read\n\n%s", len, (char *) buf );
+        mbedtls_printf( "  < Read from server: %d bytes read\n\n%s", len, (char *) buf );
+        fflush( stdout );
         ret = 0;
     }
 

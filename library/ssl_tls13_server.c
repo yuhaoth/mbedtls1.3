@@ -1556,7 +1556,11 @@ static int ssl_tls13_read_end_of_early_data_postprocess( mbedtls_ssl_context *ss
 #endif /* MBEDTLS_SSL_USE_MPS */
     }
     else
+    {
+        MBEDTLS_SSL_DEBUG_MSG( 2, ( "skip parse certificate" ) );
+        MBEDTLS_SSL_DEBUG_MSG( 2, ( "skip parse certificate verify" ) );
         mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_CLIENT_FINISHED );
+    }
 
     return ( 0 );
 }
@@ -3710,6 +3714,7 @@ int mbedtls_ssl_tls13_handshake_server_step( mbedtls_ssl_context *ssl )
                 }
                 else
                 {
+                    MBEDTLS_SSL_DEBUG_MSG( 2, ( "skip parse certificate verify" ) );
                     mbedtls_ssl_handshake_set_state(
                         ssl, MBEDTLS_SSL_CLIENT_FINISHED );
                 }
