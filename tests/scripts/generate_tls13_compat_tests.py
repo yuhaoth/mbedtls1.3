@@ -77,11 +77,12 @@ class TLSProgram:
 
     # pylint: disable=too-many-arguments
     def __init__(self, ciphersuite=None, signature_algorithm=None, named_group=None,
-                 cert_sig_alg=None, compat_mode=True):
+                 cert_sig_alg=None, compat_mode=True, psk_identities=None):
         self._ciphers = []
         self._sig_algs = []
         self._named_groups = []
         self._cert_sig_algs = []
+        self._psk_identities = []
         if ciphersuite:
             self.add_ciphersuites(ciphersuite)
         if named_group:
@@ -90,6 +91,8 @@ class TLSProgram:
             self.add_signature_algorithms(signature_algorithm)
         if cert_sig_alg:
             self.add_cert_signature_algorithms(cert_sig_alg)
+        if psk_identities:
+            self.add_psk_identities(psk_identities)
         self._compat_mode = compat_mode
 
     # add_ciphersuites should not override by sub class
@@ -111,6 +114,11 @@ class TLSProgram:
     def add_cert_signature_algorithms(self, *signature_algorithms):
         self._cert_sig_algs.extend(
             [sig_alg for sig_alg in signature_algorithms if sig_alg not in self._cert_sig_algs])
+
+    # add_psk_identities should not override by sub class
+    def add_psk_identities(self, *psk_identities):
+        self._psk_identities.extend(
+            [psks for psks in psk_identities if psks not in self._psk_identities])
 
     # pylint: disable=no-self-use
     def pre_checks(self):
@@ -153,7 +161,8 @@ class OpenSSLBase(TLSProgram):
 
         if self._ciphers:
             ciphersuites = ':'.join(self._ciphers)
-            ret += ["-ciphersuites {ciphersuites}".format(ciphersuites=ciphersuites)]
+            ret += ["-ciphersuites {ciphersuites}".format(
+                ciphersuites=ciphersuites)]
 
         if self._sig_algs:
             signature_algorithms = set(self._sig_algs + self._cert_sig_algs)
@@ -276,7 +285,6 @@ class GnuTLSBase(TLSProgram):
         else:
             priority_string_list.append('SIGN-ALL')
 
-
         if self._named_groups:
             priority_string_list.extend(update_priority_string_list(
                 self._named_groups, self.NAMED_GROUP))
@@ -296,13 +304,15 @@ class GnuTLSBase(TLSProgram):
             priority_string=priority_string)]
         return ret
 
+
 class GnuTLSServ(GnuTLSBase):
     """
     Generate test commands for GnuTLS server.
     """
 
     def pre_cmd(self):
-        ret = ['$G_NEXT_SRV_NO_CERT', '--http', '--disable-client-cert', '--debug=4']
+        ret = ['$G_NEXT_SRV_NO_CERT', '--http',
+               '--disable-client-cert', '--debug=4']
 
         for _, cert, key in map(lambda sig_alg: CERTIFICATES[sig_alg], self._cert_sig_algs):
             ret += ['--x509certfile {cert} --x509keyfile {key}'.format(
@@ -338,7 +348,6 @@ class MbedTLSBase(TLSProgram):
     def cmd(self):
         ret = super().cmd()
         ret += ['debug_level=4']
-
 
         if self._ciphers:
             ciphers = ','.join(
@@ -395,8 +404,8 @@ class MbedTLSServ(MbedTLSBase):
 
         for named_group in self._named_groups:
             check_strings += ['got named group: {named_group}({iana_value:04x})'.format(
-                                named_group=named_group,
-                                iana_value=NAMED_GROUP_IANA_VALUE[named_group])]
+                named_group=named_group,
+                iana_value=NAMED_GROUP_IANA_VALUE[named_group])]
 
         check_strings.append("Verifying peer X.509 certificate... ok")
         return ['-s "{}"'.format(i) for i in check_strings]
@@ -404,7 +413,8 @@ class MbedTLSServ(MbedTLSBase):
     def pre_cmd(self):
         ret = ['$P_SRV']
         for _, cert, key in map(lambda sig_alg: CERTIFICATES[sig_alg], self._cert_sig_algs):
-            ret += ['crt_file={cert} key_file={key}'.format(cert=cert, key=key)]
+            ret += ['crt_file={cert} key_file={key}'.format(
+                cert=cert, key=key)]
         return ret
 
     def hrr_post_checks(self, named_group):
@@ -425,7 +435,8 @@ class MbedTLSCli(MbedTLSBase):
 
     def hrr_post_checks(self, named_group):
         ret = ['-c "received HelloRetryRequest message"']
-        ret += ['-c "selected_group ( {:d} )"'.format(NAMED_GROUP_IANA_VALUE[named_group])]
+        ret += ['-c "selected_group ( {:d} )"'.format(
+            NAMED_GROUP_IANA_VALUE[named_group])]
         return ret
 
     def post_checks(self):
@@ -442,15 +453,17 @@ class MbedTLSCli(MbedTLSBase):
 
         for named_group in self._named_groups:
             check_strings += ['NamedGroup: {named_group} ( {iana_value:x} )'.format(
-                                named_group=named_group,
-                                iana_value=NAMED_GROUP_IANA_VALUE[named_group])]
+                named_group=named_group,
+                iana_value=NAMED_GROUP_IANA_VALUE[named_group])]
 
         check_strings.append("Verifying peer X.509 certificate... ok")
         return ['-c "{}"'.format(i) for i in check_strings]
 
 
-SERVER_CLASSES = {'OpenSSL': OpenSSLServ, 'GnuTLS': GnuTLSServ, 'mbedTLS': MbedTLSServ}
-CLIENT_CLASSES = {'OpenSSL': OpenSSLCli, 'GnuTLS': GnuTLSCli, 'mbedTLS': MbedTLSCli}
+SERVER_CLASSES = {'OpenSSL': OpenSSLServ,
+                  'GnuTLS': GnuTLSServ, 'mbedTLS': MbedTLSServ}
+CLIENT_CLASSES = {'OpenSSL': OpenSSLCli,
+                  'GnuTLS': GnuTLSCli, 'mbedTLS': MbedTLSCli}
 
 
 def generate_compat_test(client=None, server=None, cipher=None, named_group=None, sig_alg=None):
@@ -511,6 +524,182 @@ def generate_hrr_compat_test(client=None, server=None,
                      client_object.pre_checks() +
                      [cmd])
 
+
+# Possible group tests
+PSK_DEFAULT_IDENTITIES = {
+    'default': ('Client_identity', '6162636465666768696a6b6c6d6e6f70'),
+    'dummy_key1': ('abc', 'dead'),
+    'dummy_key2': ('def', 'beef'),
+}
+
+
+class PossibleGroupOpenSSLCli(OpenSSLCli):
+    """
+    Generate PSK test command for OpenSSL Client
+    """
+    def cmd(self):
+        psk_identities = self._psk_identities or PSK_DEFAULT_IDENTITIES.values()
+        identity, psk = list(psk_identities)[0]
+        ret = super().pre_cmd() + ['-tls1_3', '-msg', '-allow_no_dhe_kex',
+                                   '-psk_identity', identity, '-psk', psk]
+
+        if self._named_groups:
+            named_groups = ':'.join(
+                map(lambda named_group: self.NAMED_GROUP[named_group], self._named_groups))
+            ret += ["-groups {named_groups}".format(named_groups=named_groups)]
+
+        return ret
+
+
+class PossibleGroupGnuTLSCli(GnuTLSCli):
+    """
+    Generate PSK test command for GnuTLS Client
+    """
+    def cmd(self):
+        psk_identities = self._psk_identities or PSK_DEFAULT_IDENTITIES.values()
+        identity, psk = list(psk_identities)[0]
+
+        def update_priority_string_list(items, map_table):
+            for item in items:
+                for i in map_table[item]:
+                    yield '+' + i
+
+        priority_string_list = ['NORMAL', '-VERS-ALL', '-KX-ALL', '+ECDHE-PSK', '+DHE-PSK', '+PSK',
+                                '+VERS-TLS1.3', '-GROUP-ALL']
+        if self._named_groups:
+            priority_string_list.extend(update_priority_string_list(
+                self._named_groups, self.NAMED_GROUP))
+        ret = ret = super().pre_cmd() + ['--priority', ':'.join(priority_string_list),
+                                         '--pskusername', identity, '--pskkey', psk, 'localhost']
+        return ret
+
+
+class PossibleGroupMbedTLSServ(MbedTLSServ):
+    """
+    Generate PSK test command for MbedTLS server
+    """
+    def cmd(self):
+        _psk_identities = self._psk_identities or PSK_DEFAULT_IDENTITIES.values()
+        psk_list = []
+        for psk in _psk_identities:
+            psk_list.extend(psk)
+        ret = super().pre_cmd() + ['force_version=tls13',
+                                   'tls13_kex_modes=psk_ephemeral', 'debug_level=5']
+        if psk_list:
+            ret.append('psk_list={}'.format(','.join(psk_list)))
+        if self._named_groups:
+            named_groups = ','.join(self._named_groups)
+            ret += ["curves={named_groups}".format(named_groups=named_groups)]
+        return ret
+
+    def pre_checks(self):
+        configs = ['requires_all_configs_enabled', 'MBEDTLS_SSL_PROTO_TLS1_3',
+                   'MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE', 'MBEDTLS_SSL_SRV_C', 'MBEDTLS_DEBUG_C']
+        some_psk_enabled = ['requires_any_configs_enabled',
+                            'MBEDTLS_KEY_EXCHANGE_PSK_ENABLED',
+                            'MBEDTLS_KEY_EXCHANGE_RSA_PSK_ENABLED',
+                            'MBEDTLS_KEY_EXCHANGE_DHE_PSK_ENABLED',
+                            'MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED']
+        some_ephemeral_enabled = ['requires_any_configs_enabled',
+                                  'MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED',
+                                  'MBEDTLS_KEY_EXCHANGE_ECDHE_RSA_ENABLED',
+                                  'MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED']
+        return [' '.join(configs), ' '.join(some_psk_enabled), ' '.join(some_ephemeral_enabled)]
+
+    def post_checks(self):
+        return ['-S "key exchange mode: psk$"', '-s "key exchange mode: psk_ephemeral"',
+                '-S "key exchange mode: ephemeral"']
+
+
+POSSIBALEGROUP_SERVER_CLASSES = {'mbedTLS': PossibleGroupMbedTLSServ}
+POSSIBALEGROUP_CLIENT_CLASSES = {
+    'OpenSSL': PossibleGroupOpenSSLCli, 'GnuTLS': PossibleGroupGnuTLSCli}
+
+
+def generate_psk_possible_group_test(client=None, server=None, client_named_group=None,
+                                     server_named_group=None, cert_sig_alg=None):
+    """
+    Generate Hello Retry Request test case with `ssl-opt.sh` format.
+    """
+    server_object = POSSIBALEGROUP_SERVER_CLASSES[server](named_group=server_named_group,
+                                                          cert_sig_alg=cert_sig_alg)
+    client_object = POSSIBALEGROUP_CLIENT_CLASSES[client](named_group=client_named_group,
+                                                          cert_sig_alg=cert_sig_alg)
+    if client_named_group != server_named_group:
+        name = 'TLS 1.3 {client[0]}->{server[0]}: ' \
+            'psk_ephemeral group({c_named_group}->{s_named_group}) check, good'.format(
+                client=client, server=server, c_named_group=client_named_group,
+                s_named_group=server_named_group)
+        client_object.add_named_groups(server_named_group)
+    else:
+        name = 'TLS 1.3 {client[0]}->{server[0]}: ' \
+               'psk_ephemeral group({c_named_group}) check, good'.format(
+                   client=client, server=server, c_named_group=client_named_group)
+
+    cmd = ['run_test "{}"'.format(name),
+           '"{}"'.format(' '.join(server_object.cmd())),
+           '"{}"'.format(' '.join(client_object.cmd())),
+           '0', '-s "write selected_group: {named_group}"'.format(named_group=server_named_group)]
+
+    if client_named_group != server_named_group:
+        cmd.append('-s "HRR selected_group: {:s}"'.format(server_named_group))
+
+    cmd += server_object.post_checks()
+    cmd += client_object.post_checks()
+
+    prefix = ' \\\n' + (' '*9)
+    cmd = prefix.join(cmd)
+
+    return '\n'.join(server_object.pre_checks() +
+                     client_object.pre_checks() +
+                     [cmd])
+
+
+def get_all_test_cases():
+    """
+    Main entry for code generator
+    """
+    # Generate normal compat test cases
+    for client, server, cipher, named_group, sig_alg in \
+        itertools.product(CLIENT_CLASSES.keys(),
+                          SERVER_CLASSES.keys(),
+                          CIPHER_SUITE_IANA_VALUE.keys(),
+                          NAMED_GROUP_IANA_VALUE.keys(),
+                          SIG_ALG_IANA_VALUE.keys()):
+        if server == 'mbedTLS' or client == 'mbedTLS':
+            yield generate_compat_test(client=client, server=server,
+                                       cipher=cipher, named_group=named_group,
+                                       sig_alg=sig_alg)
+
+    # Generate Hello Retry Request  compat test cases
+    for client, server, client_named_group, server_named_group in \
+        itertools.product(CLIENT_CLASSES.keys(),
+                          SERVER_CLASSES.keys(),
+                          NAMED_GROUP_IANA_VALUE.keys(),
+                          NAMED_GROUP_IANA_VALUE.keys()):
+
+        if (client == 'mbedTLS' or server == 'mbedTLS') and \
+                client_named_group != server_named_group:
+            yield generate_hrr_compat_test(client=client, server=server,
+                                           client_named_group=client_named_group,
+                                           server_named_group=server_named_group,
+                                           cert_sig_alg="ecdsa_secp256r1_sha256")
+
+    for client, server, client_named_group, server_named_group in \
+        itertools.product(POSSIBALEGROUP_CLIENT_CLASSES.keys(),
+                          POSSIBALEGROUP_SERVER_CLASSES.keys(),
+                          NAMED_GROUP_IANA_VALUE.keys(),
+                          NAMED_GROUP_IANA_VALUE.keys()):
+
+        if 'mbedTLS' in (client, server):
+            ret = generate_psk_possible_group_test(client=client, server=server,
+                                                   client_named_group=client_named_group,
+                                                   server_named_group=server_named_group,
+                                                   cert_sig_alg="ecdsa_secp256r1_sha256")
+            if ret:
+                yield ret
+
+
 SSL_OUTPUT_HEADER = '''#!/bin/sh
 
 # {filename}
@@ -539,6 +728,7 @@ SSL_OUTPUT_HEADER = '''#!/bin/sh
 # AND REGENERATE THIS FILE.
 #
 '''
+
 
 def main():
     """
@@ -584,34 +774,6 @@ def main():
                         help='Choose cipher suite for test')
 
     args = parser.parse_args()
-
-    def get_all_test_cases():
-        # Generate normal compat test cases
-        for client, server, cipher, named_group, sig_alg in \
-            itertools.product(CLIENT_CLASSES.keys(),
-                              SERVER_CLASSES.keys(),
-                              CIPHER_SUITE_IANA_VALUE.keys(),
-                              NAMED_GROUP_IANA_VALUE.keys(),
-                              SIG_ALG_IANA_VALUE.keys()):
-            if server == 'mbedTLS' or client == 'mbedTLS':
-                yield generate_compat_test(client=client, server=server,
-                                           cipher=cipher, named_group=named_group,
-                                           sig_alg=sig_alg)
-
-
-        # Generate Hello Retry Request  compat test cases
-        for client, server, client_named_group, server_named_group in \
-            itertools.product(CLIENT_CLASSES.keys(),
-                              SERVER_CLASSES.keys(),
-                              NAMED_GROUP_IANA_VALUE.keys(),
-                              NAMED_GROUP_IANA_VALUE.keys()):
-
-            if (client == 'mbedTLS' or server == 'mbedTLS') and \
-                client_named_group != server_named_group:
-                yield generate_hrr_compat_test(client=client, server=server,
-                                               client_named_group=client_named_group,
-                                               server_named_group=server_named_group,
-                                               cert_sig_alg="ecdsa_secp256r1_sha256")
 
     if args.generate_all_tls13_compat_tests:
         if args.output:

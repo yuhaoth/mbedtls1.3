@@ -11354,3 +11354,743 @@ run_test "TLS 1.3 m->m: HRR x448 -> x25519" \
          -s "HRR selected_group: x25519" \
          -c "received HelloRetryRequest message" \
          -c "selected_group ( 29 )"
+
+requires_all_configs_enabled MBEDTLS_SSL_PROTO_TLS1_3 MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE MBEDTLS_SSL_SRV_C MBEDTLS_DEBUG_C
+requires_any_configs_enabled MBEDTLS_KEY_EXCHANGE_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_RSA_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_DHE_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED
+requires_any_configs_enabled MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_RSA_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED
+requires_openssl_tls1_3
+run_test "TLS 1.3 O->m: psk_ephemeral group(secp256r1) check, good" \
+         "$P_SRV crt_file=data_files/ecdsa_secp256r1.crt key_file=data_files/ecdsa_secp256r1.key force_version=tls13 tls13_kex_modes=psk_ephemeral debug_level=5 psk_list=Client_identity,6162636465666768696a6b6c6d6e6f70,abc,dead,def,beef curves=secp256r1" \
+         "$O_NEXT_CLI_NO_CERT -CAfile data_files/test-ca2.crt -tls1_3 -msg -allow_no_dhe_kex -psk_identity Client_identity -psk 6162636465666768696a6b6c6d6e6f70 -groups P-256" \
+         0 \
+         -s "write selected_group: secp256r1" \
+         -S "key exchange mode: psk$" \
+         -s "key exchange mode: psk_ephemeral" \
+         -S "key exchange mode: ephemeral"
+
+requires_all_configs_enabled MBEDTLS_SSL_PROTO_TLS1_3 MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE MBEDTLS_SSL_SRV_C MBEDTLS_DEBUG_C
+requires_any_configs_enabled MBEDTLS_KEY_EXCHANGE_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_RSA_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_DHE_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED
+requires_any_configs_enabled MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_RSA_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED
+requires_openssl_tls1_3
+run_test "TLS 1.3 O->m: psk_ephemeral group(secp256r1->secp384r1) check, good" \
+         "$P_SRV crt_file=data_files/ecdsa_secp256r1.crt key_file=data_files/ecdsa_secp256r1.key force_version=tls13 tls13_kex_modes=psk_ephemeral debug_level=5 psk_list=Client_identity,6162636465666768696a6b6c6d6e6f70,abc,dead,def,beef curves=secp384r1" \
+         "$O_NEXT_CLI_NO_CERT -CAfile data_files/test-ca2.crt -tls1_3 -msg -allow_no_dhe_kex -psk_identity Client_identity -psk 6162636465666768696a6b6c6d6e6f70 -groups P-256:P-384" \
+         0 \
+         -s "write selected_group: secp384r1" \
+         -s "HRR selected_group: secp384r1" \
+         -S "key exchange mode: psk$" \
+         -s "key exchange mode: psk_ephemeral" \
+         -S "key exchange mode: ephemeral"
+
+requires_all_configs_enabled MBEDTLS_SSL_PROTO_TLS1_3 MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE MBEDTLS_SSL_SRV_C MBEDTLS_DEBUG_C
+requires_any_configs_enabled MBEDTLS_KEY_EXCHANGE_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_RSA_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_DHE_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED
+requires_any_configs_enabled MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_RSA_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED
+requires_openssl_tls1_3
+run_test "TLS 1.3 O->m: psk_ephemeral group(secp256r1->secp521r1) check, good" \
+         "$P_SRV crt_file=data_files/ecdsa_secp256r1.crt key_file=data_files/ecdsa_secp256r1.key force_version=tls13 tls13_kex_modes=psk_ephemeral debug_level=5 psk_list=Client_identity,6162636465666768696a6b6c6d6e6f70,abc,dead,def,beef curves=secp521r1" \
+         "$O_NEXT_CLI_NO_CERT -CAfile data_files/test-ca2.crt -tls1_3 -msg -allow_no_dhe_kex -psk_identity Client_identity -psk 6162636465666768696a6b6c6d6e6f70 -groups P-256:P-521" \
+         0 \
+         -s "write selected_group: secp521r1" \
+         -s "HRR selected_group: secp521r1" \
+         -S "key exchange mode: psk$" \
+         -s "key exchange mode: psk_ephemeral" \
+         -S "key exchange mode: ephemeral"
+
+requires_all_configs_enabled MBEDTLS_SSL_PROTO_TLS1_3 MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE MBEDTLS_SSL_SRV_C MBEDTLS_DEBUG_C
+requires_any_configs_enabled MBEDTLS_KEY_EXCHANGE_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_RSA_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_DHE_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED
+requires_any_configs_enabled MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_RSA_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED
+requires_openssl_tls1_3
+run_test "TLS 1.3 O->m: psk_ephemeral group(secp256r1->x25519) check, good" \
+         "$P_SRV crt_file=data_files/ecdsa_secp256r1.crt key_file=data_files/ecdsa_secp256r1.key force_version=tls13 tls13_kex_modes=psk_ephemeral debug_level=5 psk_list=Client_identity,6162636465666768696a6b6c6d6e6f70,abc,dead,def,beef curves=x25519" \
+         "$O_NEXT_CLI_NO_CERT -CAfile data_files/test-ca2.crt -tls1_3 -msg -allow_no_dhe_kex -psk_identity Client_identity -psk 6162636465666768696a6b6c6d6e6f70 -groups P-256:X25519" \
+         0 \
+         -s "write selected_group: x25519" \
+         -s "HRR selected_group: x25519" \
+         -S "key exchange mode: psk$" \
+         -s "key exchange mode: psk_ephemeral" \
+         -S "key exchange mode: ephemeral"
+
+requires_all_configs_enabled MBEDTLS_SSL_PROTO_TLS1_3 MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE MBEDTLS_SSL_SRV_C MBEDTLS_DEBUG_C
+requires_any_configs_enabled MBEDTLS_KEY_EXCHANGE_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_RSA_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_DHE_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED
+requires_any_configs_enabled MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_RSA_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED
+requires_openssl_tls1_3
+run_test "TLS 1.3 O->m: psk_ephemeral group(secp256r1->x448) check, good" \
+         "$P_SRV crt_file=data_files/ecdsa_secp256r1.crt key_file=data_files/ecdsa_secp256r1.key force_version=tls13 tls13_kex_modes=psk_ephemeral debug_level=5 psk_list=Client_identity,6162636465666768696a6b6c6d6e6f70,abc,dead,def,beef curves=x448" \
+         "$O_NEXT_CLI_NO_CERT -CAfile data_files/test-ca2.crt -tls1_3 -msg -allow_no_dhe_kex -psk_identity Client_identity -psk 6162636465666768696a6b6c6d6e6f70 -groups P-256:X448" \
+         0 \
+         -s "write selected_group: x448" \
+         -s "HRR selected_group: x448" \
+         -S "key exchange mode: psk$" \
+         -s "key exchange mode: psk_ephemeral" \
+         -S "key exchange mode: ephemeral"
+
+requires_all_configs_enabled MBEDTLS_SSL_PROTO_TLS1_3 MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE MBEDTLS_SSL_SRV_C MBEDTLS_DEBUG_C
+requires_any_configs_enabled MBEDTLS_KEY_EXCHANGE_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_RSA_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_DHE_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED
+requires_any_configs_enabled MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_RSA_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED
+requires_openssl_tls1_3
+run_test "TLS 1.3 O->m: psk_ephemeral group(secp384r1->secp256r1) check, good" \
+         "$P_SRV crt_file=data_files/ecdsa_secp256r1.crt key_file=data_files/ecdsa_secp256r1.key force_version=tls13 tls13_kex_modes=psk_ephemeral debug_level=5 psk_list=Client_identity,6162636465666768696a6b6c6d6e6f70,abc,dead,def,beef curves=secp256r1" \
+         "$O_NEXT_CLI_NO_CERT -CAfile data_files/test-ca2.crt -tls1_3 -msg -allow_no_dhe_kex -psk_identity Client_identity -psk 6162636465666768696a6b6c6d6e6f70 -groups P-384:P-256" \
+         0 \
+         -s "write selected_group: secp256r1" \
+         -s "HRR selected_group: secp256r1" \
+         -S "key exchange mode: psk$" \
+         -s "key exchange mode: psk_ephemeral" \
+         -S "key exchange mode: ephemeral"
+
+requires_all_configs_enabled MBEDTLS_SSL_PROTO_TLS1_3 MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE MBEDTLS_SSL_SRV_C MBEDTLS_DEBUG_C
+requires_any_configs_enabled MBEDTLS_KEY_EXCHANGE_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_RSA_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_DHE_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED
+requires_any_configs_enabled MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_RSA_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED
+requires_openssl_tls1_3
+run_test "TLS 1.3 O->m: psk_ephemeral group(secp384r1) check, good" \
+         "$P_SRV crt_file=data_files/ecdsa_secp256r1.crt key_file=data_files/ecdsa_secp256r1.key force_version=tls13 tls13_kex_modes=psk_ephemeral debug_level=5 psk_list=Client_identity,6162636465666768696a6b6c6d6e6f70,abc,dead,def,beef curves=secp384r1" \
+         "$O_NEXT_CLI_NO_CERT -CAfile data_files/test-ca2.crt -tls1_3 -msg -allow_no_dhe_kex -psk_identity Client_identity -psk 6162636465666768696a6b6c6d6e6f70 -groups P-384" \
+         0 \
+         -s "write selected_group: secp384r1" \
+         -S "key exchange mode: psk$" \
+         -s "key exchange mode: psk_ephemeral" \
+         -S "key exchange mode: ephemeral"
+
+requires_all_configs_enabled MBEDTLS_SSL_PROTO_TLS1_3 MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE MBEDTLS_SSL_SRV_C MBEDTLS_DEBUG_C
+requires_any_configs_enabled MBEDTLS_KEY_EXCHANGE_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_RSA_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_DHE_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED
+requires_any_configs_enabled MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_RSA_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED
+requires_openssl_tls1_3
+run_test "TLS 1.3 O->m: psk_ephemeral group(secp384r1->secp521r1) check, good" \
+         "$P_SRV crt_file=data_files/ecdsa_secp256r1.crt key_file=data_files/ecdsa_secp256r1.key force_version=tls13 tls13_kex_modes=psk_ephemeral debug_level=5 psk_list=Client_identity,6162636465666768696a6b6c6d6e6f70,abc,dead,def,beef curves=secp521r1" \
+         "$O_NEXT_CLI_NO_CERT -CAfile data_files/test-ca2.crt -tls1_3 -msg -allow_no_dhe_kex -psk_identity Client_identity -psk 6162636465666768696a6b6c6d6e6f70 -groups P-384:P-521" \
+         0 \
+         -s "write selected_group: secp521r1" \
+         -s "HRR selected_group: secp521r1" \
+         -S "key exchange mode: psk$" \
+         -s "key exchange mode: psk_ephemeral" \
+         -S "key exchange mode: ephemeral"
+
+requires_all_configs_enabled MBEDTLS_SSL_PROTO_TLS1_3 MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE MBEDTLS_SSL_SRV_C MBEDTLS_DEBUG_C
+requires_any_configs_enabled MBEDTLS_KEY_EXCHANGE_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_RSA_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_DHE_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED
+requires_any_configs_enabled MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_RSA_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED
+requires_openssl_tls1_3
+run_test "TLS 1.3 O->m: psk_ephemeral group(secp384r1->x25519) check, good" \
+         "$P_SRV crt_file=data_files/ecdsa_secp256r1.crt key_file=data_files/ecdsa_secp256r1.key force_version=tls13 tls13_kex_modes=psk_ephemeral debug_level=5 psk_list=Client_identity,6162636465666768696a6b6c6d6e6f70,abc,dead,def,beef curves=x25519" \
+         "$O_NEXT_CLI_NO_CERT -CAfile data_files/test-ca2.crt -tls1_3 -msg -allow_no_dhe_kex -psk_identity Client_identity -psk 6162636465666768696a6b6c6d6e6f70 -groups P-384:X25519" \
+         0 \
+         -s "write selected_group: x25519" \
+         -s "HRR selected_group: x25519" \
+         -S "key exchange mode: psk$" \
+         -s "key exchange mode: psk_ephemeral" \
+         -S "key exchange mode: ephemeral"
+
+requires_all_configs_enabled MBEDTLS_SSL_PROTO_TLS1_3 MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE MBEDTLS_SSL_SRV_C MBEDTLS_DEBUG_C
+requires_any_configs_enabled MBEDTLS_KEY_EXCHANGE_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_RSA_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_DHE_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED
+requires_any_configs_enabled MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_RSA_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED
+requires_openssl_tls1_3
+run_test "TLS 1.3 O->m: psk_ephemeral group(secp384r1->x448) check, good" \
+         "$P_SRV crt_file=data_files/ecdsa_secp256r1.crt key_file=data_files/ecdsa_secp256r1.key force_version=tls13 tls13_kex_modes=psk_ephemeral debug_level=5 psk_list=Client_identity,6162636465666768696a6b6c6d6e6f70,abc,dead,def,beef curves=x448" \
+         "$O_NEXT_CLI_NO_CERT -CAfile data_files/test-ca2.crt -tls1_3 -msg -allow_no_dhe_kex -psk_identity Client_identity -psk 6162636465666768696a6b6c6d6e6f70 -groups P-384:X448" \
+         0 \
+         -s "write selected_group: x448" \
+         -s "HRR selected_group: x448" \
+         -S "key exchange mode: psk$" \
+         -s "key exchange mode: psk_ephemeral" \
+         -S "key exchange mode: ephemeral"
+
+requires_all_configs_enabled MBEDTLS_SSL_PROTO_TLS1_3 MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE MBEDTLS_SSL_SRV_C MBEDTLS_DEBUG_C
+requires_any_configs_enabled MBEDTLS_KEY_EXCHANGE_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_RSA_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_DHE_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED
+requires_any_configs_enabled MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_RSA_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED
+requires_openssl_tls1_3
+run_test "TLS 1.3 O->m: psk_ephemeral group(secp521r1->secp256r1) check, good" \
+         "$P_SRV crt_file=data_files/ecdsa_secp256r1.crt key_file=data_files/ecdsa_secp256r1.key force_version=tls13 tls13_kex_modes=psk_ephemeral debug_level=5 psk_list=Client_identity,6162636465666768696a6b6c6d6e6f70,abc,dead,def,beef curves=secp256r1" \
+         "$O_NEXT_CLI_NO_CERT -CAfile data_files/test-ca2.crt -tls1_3 -msg -allow_no_dhe_kex -psk_identity Client_identity -psk 6162636465666768696a6b6c6d6e6f70 -groups P-521:P-256" \
+         0 \
+         -s "write selected_group: secp256r1" \
+         -s "HRR selected_group: secp256r1" \
+         -S "key exchange mode: psk$" \
+         -s "key exchange mode: psk_ephemeral" \
+         -S "key exchange mode: ephemeral"
+
+requires_all_configs_enabled MBEDTLS_SSL_PROTO_TLS1_3 MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE MBEDTLS_SSL_SRV_C MBEDTLS_DEBUG_C
+requires_any_configs_enabled MBEDTLS_KEY_EXCHANGE_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_RSA_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_DHE_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED
+requires_any_configs_enabled MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_RSA_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED
+requires_openssl_tls1_3
+run_test "TLS 1.3 O->m: psk_ephemeral group(secp521r1->secp384r1) check, good" \
+         "$P_SRV crt_file=data_files/ecdsa_secp256r1.crt key_file=data_files/ecdsa_secp256r1.key force_version=tls13 tls13_kex_modes=psk_ephemeral debug_level=5 psk_list=Client_identity,6162636465666768696a6b6c6d6e6f70,abc,dead,def,beef curves=secp384r1" \
+         "$O_NEXT_CLI_NO_CERT -CAfile data_files/test-ca2.crt -tls1_3 -msg -allow_no_dhe_kex -psk_identity Client_identity -psk 6162636465666768696a6b6c6d6e6f70 -groups P-521:P-384" \
+         0 \
+         -s "write selected_group: secp384r1" \
+         -s "HRR selected_group: secp384r1" \
+         -S "key exchange mode: psk$" \
+         -s "key exchange mode: psk_ephemeral" \
+         -S "key exchange mode: ephemeral"
+
+requires_all_configs_enabled MBEDTLS_SSL_PROTO_TLS1_3 MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE MBEDTLS_SSL_SRV_C MBEDTLS_DEBUG_C
+requires_any_configs_enabled MBEDTLS_KEY_EXCHANGE_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_RSA_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_DHE_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED
+requires_any_configs_enabled MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_RSA_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED
+requires_openssl_tls1_3
+run_test "TLS 1.3 O->m: psk_ephemeral group(secp521r1) check, good" \
+         "$P_SRV crt_file=data_files/ecdsa_secp256r1.crt key_file=data_files/ecdsa_secp256r1.key force_version=tls13 tls13_kex_modes=psk_ephemeral debug_level=5 psk_list=Client_identity,6162636465666768696a6b6c6d6e6f70,abc,dead,def,beef curves=secp521r1" \
+         "$O_NEXT_CLI_NO_CERT -CAfile data_files/test-ca2.crt -tls1_3 -msg -allow_no_dhe_kex -psk_identity Client_identity -psk 6162636465666768696a6b6c6d6e6f70 -groups P-521" \
+         0 \
+         -s "write selected_group: secp521r1" \
+         -S "key exchange mode: psk$" \
+         -s "key exchange mode: psk_ephemeral" \
+         -S "key exchange mode: ephemeral"
+
+requires_all_configs_enabled MBEDTLS_SSL_PROTO_TLS1_3 MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE MBEDTLS_SSL_SRV_C MBEDTLS_DEBUG_C
+requires_any_configs_enabled MBEDTLS_KEY_EXCHANGE_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_RSA_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_DHE_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED
+requires_any_configs_enabled MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_RSA_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED
+requires_openssl_tls1_3
+run_test "TLS 1.3 O->m: psk_ephemeral group(secp521r1->x25519) check, good" \
+         "$P_SRV crt_file=data_files/ecdsa_secp256r1.crt key_file=data_files/ecdsa_secp256r1.key force_version=tls13 tls13_kex_modes=psk_ephemeral debug_level=5 psk_list=Client_identity,6162636465666768696a6b6c6d6e6f70,abc,dead,def,beef curves=x25519" \
+         "$O_NEXT_CLI_NO_CERT -CAfile data_files/test-ca2.crt -tls1_3 -msg -allow_no_dhe_kex -psk_identity Client_identity -psk 6162636465666768696a6b6c6d6e6f70 -groups P-521:X25519" \
+         0 \
+         -s "write selected_group: x25519" \
+         -s "HRR selected_group: x25519" \
+         -S "key exchange mode: psk$" \
+         -s "key exchange mode: psk_ephemeral" \
+         -S "key exchange mode: ephemeral"
+
+requires_all_configs_enabled MBEDTLS_SSL_PROTO_TLS1_3 MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE MBEDTLS_SSL_SRV_C MBEDTLS_DEBUG_C
+requires_any_configs_enabled MBEDTLS_KEY_EXCHANGE_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_RSA_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_DHE_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED
+requires_any_configs_enabled MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_RSA_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED
+requires_openssl_tls1_3
+run_test "TLS 1.3 O->m: psk_ephemeral group(secp521r1->x448) check, good" \
+         "$P_SRV crt_file=data_files/ecdsa_secp256r1.crt key_file=data_files/ecdsa_secp256r1.key force_version=tls13 tls13_kex_modes=psk_ephemeral debug_level=5 psk_list=Client_identity,6162636465666768696a6b6c6d6e6f70,abc,dead,def,beef curves=x448" \
+         "$O_NEXT_CLI_NO_CERT -CAfile data_files/test-ca2.crt -tls1_3 -msg -allow_no_dhe_kex -psk_identity Client_identity -psk 6162636465666768696a6b6c6d6e6f70 -groups P-521:X448" \
+         0 \
+         -s "write selected_group: x448" \
+         -s "HRR selected_group: x448" \
+         -S "key exchange mode: psk$" \
+         -s "key exchange mode: psk_ephemeral" \
+         -S "key exchange mode: ephemeral"
+
+requires_all_configs_enabled MBEDTLS_SSL_PROTO_TLS1_3 MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE MBEDTLS_SSL_SRV_C MBEDTLS_DEBUG_C
+requires_any_configs_enabled MBEDTLS_KEY_EXCHANGE_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_RSA_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_DHE_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED
+requires_any_configs_enabled MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_RSA_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED
+requires_openssl_tls1_3
+run_test "TLS 1.3 O->m: psk_ephemeral group(x25519->secp256r1) check, good" \
+         "$P_SRV crt_file=data_files/ecdsa_secp256r1.crt key_file=data_files/ecdsa_secp256r1.key force_version=tls13 tls13_kex_modes=psk_ephemeral debug_level=5 psk_list=Client_identity,6162636465666768696a6b6c6d6e6f70,abc,dead,def,beef curves=secp256r1" \
+         "$O_NEXT_CLI_NO_CERT -CAfile data_files/test-ca2.crt -tls1_3 -msg -allow_no_dhe_kex -psk_identity Client_identity -psk 6162636465666768696a6b6c6d6e6f70 -groups X25519:P-256" \
+         0 \
+         -s "write selected_group: secp256r1" \
+         -s "HRR selected_group: secp256r1" \
+         -S "key exchange mode: psk$" \
+         -s "key exchange mode: psk_ephemeral" \
+         -S "key exchange mode: ephemeral"
+
+requires_all_configs_enabled MBEDTLS_SSL_PROTO_TLS1_3 MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE MBEDTLS_SSL_SRV_C MBEDTLS_DEBUG_C
+requires_any_configs_enabled MBEDTLS_KEY_EXCHANGE_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_RSA_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_DHE_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED
+requires_any_configs_enabled MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_RSA_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED
+requires_openssl_tls1_3
+run_test "TLS 1.3 O->m: psk_ephemeral group(x25519->secp384r1) check, good" \
+         "$P_SRV crt_file=data_files/ecdsa_secp256r1.crt key_file=data_files/ecdsa_secp256r1.key force_version=tls13 tls13_kex_modes=psk_ephemeral debug_level=5 psk_list=Client_identity,6162636465666768696a6b6c6d6e6f70,abc,dead,def,beef curves=secp384r1" \
+         "$O_NEXT_CLI_NO_CERT -CAfile data_files/test-ca2.crt -tls1_3 -msg -allow_no_dhe_kex -psk_identity Client_identity -psk 6162636465666768696a6b6c6d6e6f70 -groups X25519:P-384" \
+         0 \
+         -s "write selected_group: secp384r1" \
+         -s "HRR selected_group: secp384r1" \
+         -S "key exchange mode: psk$" \
+         -s "key exchange mode: psk_ephemeral" \
+         -S "key exchange mode: ephemeral"
+
+requires_all_configs_enabled MBEDTLS_SSL_PROTO_TLS1_3 MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE MBEDTLS_SSL_SRV_C MBEDTLS_DEBUG_C
+requires_any_configs_enabled MBEDTLS_KEY_EXCHANGE_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_RSA_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_DHE_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED
+requires_any_configs_enabled MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_RSA_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED
+requires_openssl_tls1_3
+run_test "TLS 1.3 O->m: psk_ephemeral group(x25519->secp521r1) check, good" \
+         "$P_SRV crt_file=data_files/ecdsa_secp256r1.crt key_file=data_files/ecdsa_secp256r1.key force_version=tls13 tls13_kex_modes=psk_ephemeral debug_level=5 psk_list=Client_identity,6162636465666768696a6b6c6d6e6f70,abc,dead,def,beef curves=secp521r1" \
+         "$O_NEXT_CLI_NO_CERT -CAfile data_files/test-ca2.crt -tls1_3 -msg -allow_no_dhe_kex -psk_identity Client_identity -psk 6162636465666768696a6b6c6d6e6f70 -groups X25519:P-521" \
+         0 \
+         -s "write selected_group: secp521r1" \
+         -s "HRR selected_group: secp521r1" \
+         -S "key exchange mode: psk$" \
+         -s "key exchange mode: psk_ephemeral" \
+         -S "key exchange mode: ephemeral"
+
+requires_all_configs_enabled MBEDTLS_SSL_PROTO_TLS1_3 MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE MBEDTLS_SSL_SRV_C MBEDTLS_DEBUG_C
+requires_any_configs_enabled MBEDTLS_KEY_EXCHANGE_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_RSA_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_DHE_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED
+requires_any_configs_enabled MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_RSA_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED
+requires_openssl_tls1_3
+run_test "TLS 1.3 O->m: psk_ephemeral group(x25519) check, good" \
+         "$P_SRV crt_file=data_files/ecdsa_secp256r1.crt key_file=data_files/ecdsa_secp256r1.key force_version=tls13 tls13_kex_modes=psk_ephemeral debug_level=5 psk_list=Client_identity,6162636465666768696a6b6c6d6e6f70,abc,dead,def,beef curves=x25519" \
+         "$O_NEXT_CLI_NO_CERT -CAfile data_files/test-ca2.crt -tls1_3 -msg -allow_no_dhe_kex -psk_identity Client_identity -psk 6162636465666768696a6b6c6d6e6f70 -groups X25519" \
+         0 \
+         -s "write selected_group: x25519" \
+         -S "key exchange mode: psk$" \
+         -s "key exchange mode: psk_ephemeral" \
+         -S "key exchange mode: ephemeral"
+
+requires_all_configs_enabled MBEDTLS_SSL_PROTO_TLS1_3 MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE MBEDTLS_SSL_SRV_C MBEDTLS_DEBUG_C
+requires_any_configs_enabled MBEDTLS_KEY_EXCHANGE_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_RSA_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_DHE_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED
+requires_any_configs_enabled MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_RSA_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED
+requires_openssl_tls1_3
+run_test "TLS 1.3 O->m: psk_ephemeral group(x25519->x448) check, good" \
+         "$P_SRV crt_file=data_files/ecdsa_secp256r1.crt key_file=data_files/ecdsa_secp256r1.key force_version=tls13 tls13_kex_modes=psk_ephemeral debug_level=5 psk_list=Client_identity,6162636465666768696a6b6c6d6e6f70,abc,dead,def,beef curves=x448" \
+         "$O_NEXT_CLI_NO_CERT -CAfile data_files/test-ca2.crt -tls1_3 -msg -allow_no_dhe_kex -psk_identity Client_identity -psk 6162636465666768696a6b6c6d6e6f70 -groups X25519:X448" \
+         0 \
+         -s "write selected_group: x448" \
+         -s "HRR selected_group: x448" \
+         -S "key exchange mode: psk$" \
+         -s "key exchange mode: psk_ephemeral" \
+         -S "key exchange mode: ephemeral"
+
+requires_all_configs_enabled MBEDTLS_SSL_PROTO_TLS1_3 MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE MBEDTLS_SSL_SRV_C MBEDTLS_DEBUG_C
+requires_any_configs_enabled MBEDTLS_KEY_EXCHANGE_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_RSA_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_DHE_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED
+requires_any_configs_enabled MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_RSA_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED
+requires_openssl_tls1_3
+run_test "TLS 1.3 O->m: psk_ephemeral group(x448->secp256r1) check, good" \
+         "$P_SRV crt_file=data_files/ecdsa_secp256r1.crt key_file=data_files/ecdsa_secp256r1.key force_version=tls13 tls13_kex_modes=psk_ephemeral debug_level=5 psk_list=Client_identity,6162636465666768696a6b6c6d6e6f70,abc,dead,def,beef curves=secp256r1" \
+         "$O_NEXT_CLI_NO_CERT -CAfile data_files/test-ca2.crt -tls1_3 -msg -allow_no_dhe_kex -psk_identity Client_identity -psk 6162636465666768696a6b6c6d6e6f70 -groups X448:P-256" \
+         0 \
+         -s "write selected_group: secp256r1" \
+         -s "HRR selected_group: secp256r1" \
+         -S "key exchange mode: psk$" \
+         -s "key exchange mode: psk_ephemeral" \
+         -S "key exchange mode: ephemeral"
+
+requires_all_configs_enabled MBEDTLS_SSL_PROTO_TLS1_3 MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE MBEDTLS_SSL_SRV_C MBEDTLS_DEBUG_C
+requires_any_configs_enabled MBEDTLS_KEY_EXCHANGE_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_RSA_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_DHE_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED
+requires_any_configs_enabled MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_RSA_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED
+requires_openssl_tls1_3
+run_test "TLS 1.3 O->m: psk_ephemeral group(x448->secp384r1) check, good" \
+         "$P_SRV crt_file=data_files/ecdsa_secp256r1.crt key_file=data_files/ecdsa_secp256r1.key force_version=tls13 tls13_kex_modes=psk_ephemeral debug_level=5 psk_list=Client_identity,6162636465666768696a6b6c6d6e6f70,abc,dead,def,beef curves=secp384r1" \
+         "$O_NEXT_CLI_NO_CERT -CAfile data_files/test-ca2.crt -tls1_3 -msg -allow_no_dhe_kex -psk_identity Client_identity -psk 6162636465666768696a6b6c6d6e6f70 -groups X448:P-384" \
+         0 \
+         -s "write selected_group: secp384r1" \
+         -s "HRR selected_group: secp384r1" \
+         -S "key exchange mode: psk$" \
+         -s "key exchange mode: psk_ephemeral" \
+         -S "key exchange mode: ephemeral"
+
+requires_all_configs_enabled MBEDTLS_SSL_PROTO_TLS1_3 MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE MBEDTLS_SSL_SRV_C MBEDTLS_DEBUG_C
+requires_any_configs_enabled MBEDTLS_KEY_EXCHANGE_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_RSA_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_DHE_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED
+requires_any_configs_enabled MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_RSA_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED
+requires_openssl_tls1_3
+run_test "TLS 1.3 O->m: psk_ephemeral group(x448->secp521r1) check, good" \
+         "$P_SRV crt_file=data_files/ecdsa_secp256r1.crt key_file=data_files/ecdsa_secp256r1.key force_version=tls13 tls13_kex_modes=psk_ephemeral debug_level=5 psk_list=Client_identity,6162636465666768696a6b6c6d6e6f70,abc,dead,def,beef curves=secp521r1" \
+         "$O_NEXT_CLI_NO_CERT -CAfile data_files/test-ca2.crt -tls1_3 -msg -allow_no_dhe_kex -psk_identity Client_identity -psk 6162636465666768696a6b6c6d6e6f70 -groups X448:P-521" \
+         0 \
+         -s "write selected_group: secp521r1" \
+         -s "HRR selected_group: secp521r1" \
+         -S "key exchange mode: psk$" \
+         -s "key exchange mode: psk_ephemeral" \
+         -S "key exchange mode: ephemeral"
+
+requires_all_configs_enabled MBEDTLS_SSL_PROTO_TLS1_3 MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE MBEDTLS_SSL_SRV_C MBEDTLS_DEBUG_C
+requires_any_configs_enabled MBEDTLS_KEY_EXCHANGE_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_RSA_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_DHE_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED
+requires_any_configs_enabled MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_RSA_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED
+requires_openssl_tls1_3
+run_test "TLS 1.3 O->m: psk_ephemeral group(x448->x25519) check, good" \
+         "$P_SRV crt_file=data_files/ecdsa_secp256r1.crt key_file=data_files/ecdsa_secp256r1.key force_version=tls13 tls13_kex_modes=psk_ephemeral debug_level=5 psk_list=Client_identity,6162636465666768696a6b6c6d6e6f70,abc,dead,def,beef curves=x25519" \
+         "$O_NEXT_CLI_NO_CERT -CAfile data_files/test-ca2.crt -tls1_3 -msg -allow_no_dhe_kex -psk_identity Client_identity -psk 6162636465666768696a6b6c6d6e6f70 -groups X448:X25519" \
+         0 \
+         -s "write selected_group: x25519" \
+         -s "HRR selected_group: x25519" \
+         -S "key exchange mode: psk$" \
+         -s "key exchange mode: psk_ephemeral" \
+         -S "key exchange mode: ephemeral"
+
+requires_all_configs_enabled MBEDTLS_SSL_PROTO_TLS1_3 MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE MBEDTLS_SSL_SRV_C MBEDTLS_DEBUG_C
+requires_any_configs_enabled MBEDTLS_KEY_EXCHANGE_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_RSA_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_DHE_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED
+requires_any_configs_enabled MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_RSA_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED
+requires_openssl_tls1_3
+run_test "TLS 1.3 O->m: psk_ephemeral group(x448) check, good" \
+         "$P_SRV crt_file=data_files/ecdsa_secp256r1.crt key_file=data_files/ecdsa_secp256r1.key force_version=tls13 tls13_kex_modes=psk_ephemeral debug_level=5 psk_list=Client_identity,6162636465666768696a6b6c6d6e6f70,abc,dead,def,beef curves=x448" \
+         "$O_NEXT_CLI_NO_CERT -CAfile data_files/test-ca2.crt -tls1_3 -msg -allow_no_dhe_kex -psk_identity Client_identity -psk 6162636465666768696a6b6c6d6e6f70 -groups X448" \
+         0 \
+         -s "write selected_group: x448" \
+         -S "key exchange mode: psk$" \
+         -s "key exchange mode: psk_ephemeral" \
+         -S "key exchange mode: ephemeral"
+
+requires_all_configs_enabled MBEDTLS_SSL_PROTO_TLS1_3 MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE MBEDTLS_SSL_SRV_C MBEDTLS_DEBUG_C
+requires_any_configs_enabled MBEDTLS_KEY_EXCHANGE_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_RSA_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_DHE_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED
+requires_any_configs_enabled MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_RSA_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED
+requires_gnutls_tls1_3
+requires_gnutls_next_no_ticket
+requires_gnutls_next_disable_tls13_compat
+run_test "TLS 1.3 G->m: psk_ephemeral group(secp256r1) check, good" \
+         "$P_SRV crt_file=data_files/ecdsa_secp256r1.crt key_file=data_files/ecdsa_secp256r1.key force_version=tls13 tls13_kex_modes=psk_ephemeral debug_level=5 psk_list=Client_identity,6162636465666768696a6b6c6d6e6f70,abc,dead,def,beef curves=secp256r1" \
+         "$G_NEXT_CLI_NO_CERT --debug=4 --single-key-share --x509cafile data_files/test-ca2.crt --priority NORMAL:-VERS-ALL:-KX-ALL:+ECDHE-PSK:+DHE-PSK:+PSK:+VERS-TLS1.3:-GROUP-ALL:+GROUP-SECP256R1 --pskusername Client_identity --pskkey 6162636465666768696a6b6c6d6e6f70 localhost" \
+         0 \
+         -s "write selected_group: secp256r1" \
+         -S "key exchange mode: psk$" \
+         -s "key exchange mode: psk_ephemeral" \
+         -S "key exchange mode: ephemeral"
+
+requires_all_configs_enabled MBEDTLS_SSL_PROTO_TLS1_3 MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE MBEDTLS_SSL_SRV_C MBEDTLS_DEBUG_C
+requires_any_configs_enabled MBEDTLS_KEY_EXCHANGE_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_RSA_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_DHE_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED
+requires_any_configs_enabled MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_RSA_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED
+requires_gnutls_tls1_3
+requires_gnutls_next_no_ticket
+requires_gnutls_next_disable_tls13_compat
+run_test "TLS 1.3 G->m: psk_ephemeral group(secp256r1->secp384r1) check, good" \
+         "$P_SRV crt_file=data_files/ecdsa_secp256r1.crt key_file=data_files/ecdsa_secp256r1.key force_version=tls13 tls13_kex_modes=psk_ephemeral debug_level=5 psk_list=Client_identity,6162636465666768696a6b6c6d6e6f70,abc,dead,def,beef curves=secp384r1" \
+         "$G_NEXT_CLI_NO_CERT --debug=4 --single-key-share --x509cafile data_files/test-ca2.crt --priority NORMAL:-VERS-ALL:-KX-ALL:+ECDHE-PSK:+DHE-PSK:+PSK:+VERS-TLS1.3:-GROUP-ALL:+GROUP-SECP256R1:+GROUP-SECP384R1 --pskusername Client_identity --pskkey 6162636465666768696a6b6c6d6e6f70 localhost" \
+         0 \
+         -s "write selected_group: secp384r1" \
+         -s "HRR selected_group: secp384r1" \
+         -S "key exchange mode: psk$" \
+         -s "key exchange mode: psk_ephemeral" \
+         -S "key exchange mode: ephemeral"
+
+requires_all_configs_enabled MBEDTLS_SSL_PROTO_TLS1_3 MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE MBEDTLS_SSL_SRV_C MBEDTLS_DEBUG_C
+requires_any_configs_enabled MBEDTLS_KEY_EXCHANGE_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_RSA_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_DHE_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED
+requires_any_configs_enabled MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_RSA_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED
+requires_gnutls_tls1_3
+requires_gnutls_next_no_ticket
+requires_gnutls_next_disable_tls13_compat
+run_test "TLS 1.3 G->m: psk_ephemeral group(secp256r1->secp521r1) check, good" \
+         "$P_SRV crt_file=data_files/ecdsa_secp256r1.crt key_file=data_files/ecdsa_secp256r1.key force_version=tls13 tls13_kex_modes=psk_ephemeral debug_level=5 psk_list=Client_identity,6162636465666768696a6b6c6d6e6f70,abc,dead,def,beef curves=secp521r1" \
+         "$G_NEXT_CLI_NO_CERT --debug=4 --single-key-share --x509cafile data_files/test-ca2.crt --priority NORMAL:-VERS-ALL:-KX-ALL:+ECDHE-PSK:+DHE-PSK:+PSK:+VERS-TLS1.3:-GROUP-ALL:+GROUP-SECP256R1:+GROUP-SECP521R1 --pskusername Client_identity --pskkey 6162636465666768696a6b6c6d6e6f70 localhost" \
+         0 \
+         -s "write selected_group: secp521r1" \
+         -s "HRR selected_group: secp521r1" \
+         -S "key exchange mode: psk$" \
+         -s "key exchange mode: psk_ephemeral" \
+         -S "key exchange mode: ephemeral"
+
+requires_all_configs_enabled MBEDTLS_SSL_PROTO_TLS1_3 MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE MBEDTLS_SSL_SRV_C MBEDTLS_DEBUG_C
+requires_any_configs_enabled MBEDTLS_KEY_EXCHANGE_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_RSA_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_DHE_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED
+requires_any_configs_enabled MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_RSA_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED
+requires_gnutls_tls1_3
+requires_gnutls_next_no_ticket
+requires_gnutls_next_disable_tls13_compat
+run_test "TLS 1.3 G->m: psk_ephemeral group(secp256r1->x25519) check, good" \
+         "$P_SRV crt_file=data_files/ecdsa_secp256r1.crt key_file=data_files/ecdsa_secp256r1.key force_version=tls13 tls13_kex_modes=psk_ephemeral debug_level=5 psk_list=Client_identity,6162636465666768696a6b6c6d6e6f70,abc,dead,def,beef curves=x25519" \
+         "$G_NEXT_CLI_NO_CERT --debug=4 --single-key-share --x509cafile data_files/test-ca2.crt --priority NORMAL:-VERS-ALL:-KX-ALL:+ECDHE-PSK:+DHE-PSK:+PSK:+VERS-TLS1.3:-GROUP-ALL:+GROUP-SECP256R1:+GROUP-X25519 --pskusername Client_identity --pskkey 6162636465666768696a6b6c6d6e6f70 localhost" \
+         0 \
+         -s "write selected_group: x25519" \
+         -s "HRR selected_group: x25519" \
+         -S "key exchange mode: psk$" \
+         -s "key exchange mode: psk_ephemeral" \
+         -S "key exchange mode: ephemeral"
+
+requires_all_configs_enabled MBEDTLS_SSL_PROTO_TLS1_3 MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE MBEDTLS_SSL_SRV_C MBEDTLS_DEBUG_C
+requires_any_configs_enabled MBEDTLS_KEY_EXCHANGE_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_RSA_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_DHE_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED
+requires_any_configs_enabled MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_RSA_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED
+requires_gnutls_tls1_3
+requires_gnutls_next_no_ticket
+requires_gnutls_next_disable_tls13_compat
+run_test "TLS 1.3 G->m: psk_ephemeral group(secp256r1->x448) check, good" \
+         "$P_SRV crt_file=data_files/ecdsa_secp256r1.crt key_file=data_files/ecdsa_secp256r1.key force_version=tls13 tls13_kex_modes=psk_ephemeral debug_level=5 psk_list=Client_identity,6162636465666768696a6b6c6d6e6f70,abc,dead,def,beef curves=x448" \
+         "$G_NEXT_CLI_NO_CERT --debug=4 --single-key-share --x509cafile data_files/test-ca2.crt --priority NORMAL:-VERS-ALL:-KX-ALL:+ECDHE-PSK:+DHE-PSK:+PSK:+VERS-TLS1.3:-GROUP-ALL:+GROUP-SECP256R1:+GROUP-X448 --pskusername Client_identity --pskkey 6162636465666768696a6b6c6d6e6f70 localhost" \
+         0 \
+         -s "write selected_group: x448" \
+         -s "HRR selected_group: x448" \
+         -S "key exchange mode: psk$" \
+         -s "key exchange mode: psk_ephemeral" \
+         -S "key exchange mode: ephemeral"
+
+requires_all_configs_enabled MBEDTLS_SSL_PROTO_TLS1_3 MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE MBEDTLS_SSL_SRV_C MBEDTLS_DEBUG_C
+requires_any_configs_enabled MBEDTLS_KEY_EXCHANGE_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_RSA_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_DHE_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED
+requires_any_configs_enabled MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_RSA_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED
+requires_gnutls_tls1_3
+requires_gnutls_next_no_ticket
+requires_gnutls_next_disable_tls13_compat
+run_test "TLS 1.3 G->m: psk_ephemeral group(secp384r1->secp256r1) check, good" \
+         "$P_SRV crt_file=data_files/ecdsa_secp256r1.crt key_file=data_files/ecdsa_secp256r1.key force_version=tls13 tls13_kex_modes=psk_ephemeral debug_level=5 psk_list=Client_identity,6162636465666768696a6b6c6d6e6f70,abc,dead,def,beef curves=secp256r1" \
+         "$G_NEXT_CLI_NO_CERT --debug=4 --single-key-share --x509cafile data_files/test-ca2.crt --priority NORMAL:-VERS-ALL:-KX-ALL:+ECDHE-PSK:+DHE-PSK:+PSK:+VERS-TLS1.3:-GROUP-ALL:+GROUP-SECP384R1:+GROUP-SECP256R1 --pskusername Client_identity --pskkey 6162636465666768696a6b6c6d6e6f70 localhost" \
+         0 \
+         -s "write selected_group: secp256r1" \
+         -s "HRR selected_group: secp256r1" \
+         -S "key exchange mode: psk$" \
+         -s "key exchange mode: psk_ephemeral" \
+         -S "key exchange mode: ephemeral"
+
+requires_all_configs_enabled MBEDTLS_SSL_PROTO_TLS1_3 MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE MBEDTLS_SSL_SRV_C MBEDTLS_DEBUG_C
+requires_any_configs_enabled MBEDTLS_KEY_EXCHANGE_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_RSA_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_DHE_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED
+requires_any_configs_enabled MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_RSA_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED
+requires_gnutls_tls1_3
+requires_gnutls_next_no_ticket
+requires_gnutls_next_disable_tls13_compat
+run_test "TLS 1.3 G->m: psk_ephemeral group(secp384r1) check, good" \
+         "$P_SRV crt_file=data_files/ecdsa_secp256r1.crt key_file=data_files/ecdsa_secp256r1.key force_version=tls13 tls13_kex_modes=psk_ephemeral debug_level=5 psk_list=Client_identity,6162636465666768696a6b6c6d6e6f70,abc,dead,def,beef curves=secp384r1" \
+         "$G_NEXT_CLI_NO_CERT --debug=4 --single-key-share --x509cafile data_files/test-ca2.crt --priority NORMAL:-VERS-ALL:-KX-ALL:+ECDHE-PSK:+DHE-PSK:+PSK:+VERS-TLS1.3:-GROUP-ALL:+GROUP-SECP384R1 --pskusername Client_identity --pskkey 6162636465666768696a6b6c6d6e6f70 localhost" \
+         0 \
+         -s "write selected_group: secp384r1" \
+         -S "key exchange mode: psk$" \
+         -s "key exchange mode: psk_ephemeral" \
+         -S "key exchange mode: ephemeral"
+
+requires_all_configs_enabled MBEDTLS_SSL_PROTO_TLS1_3 MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE MBEDTLS_SSL_SRV_C MBEDTLS_DEBUG_C
+requires_any_configs_enabled MBEDTLS_KEY_EXCHANGE_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_RSA_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_DHE_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED
+requires_any_configs_enabled MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_RSA_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED
+requires_gnutls_tls1_3
+requires_gnutls_next_no_ticket
+requires_gnutls_next_disable_tls13_compat
+run_test "TLS 1.3 G->m: psk_ephemeral group(secp384r1->secp521r1) check, good" \
+         "$P_SRV crt_file=data_files/ecdsa_secp256r1.crt key_file=data_files/ecdsa_secp256r1.key force_version=tls13 tls13_kex_modes=psk_ephemeral debug_level=5 psk_list=Client_identity,6162636465666768696a6b6c6d6e6f70,abc,dead,def,beef curves=secp521r1" \
+         "$G_NEXT_CLI_NO_CERT --debug=4 --single-key-share --x509cafile data_files/test-ca2.crt --priority NORMAL:-VERS-ALL:-KX-ALL:+ECDHE-PSK:+DHE-PSK:+PSK:+VERS-TLS1.3:-GROUP-ALL:+GROUP-SECP384R1:+GROUP-SECP521R1 --pskusername Client_identity --pskkey 6162636465666768696a6b6c6d6e6f70 localhost" \
+         0 \
+         -s "write selected_group: secp521r1" \
+         -s "HRR selected_group: secp521r1" \
+         -S "key exchange mode: psk$" \
+         -s "key exchange mode: psk_ephemeral" \
+         -S "key exchange mode: ephemeral"
+
+requires_all_configs_enabled MBEDTLS_SSL_PROTO_TLS1_3 MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE MBEDTLS_SSL_SRV_C MBEDTLS_DEBUG_C
+requires_any_configs_enabled MBEDTLS_KEY_EXCHANGE_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_RSA_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_DHE_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED
+requires_any_configs_enabled MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_RSA_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED
+requires_gnutls_tls1_3
+requires_gnutls_next_no_ticket
+requires_gnutls_next_disable_tls13_compat
+run_test "TLS 1.3 G->m: psk_ephemeral group(secp384r1->x25519) check, good" \
+         "$P_SRV crt_file=data_files/ecdsa_secp256r1.crt key_file=data_files/ecdsa_secp256r1.key force_version=tls13 tls13_kex_modes=psk_ephemeral debug_level=5 psk_list=Client_identity,6162636465666768696a6b6c6d6e6f70,abc,dead,def,beef curves=x25519" \
+         "$G_NEXT_CLI_NO_CERT --debug=4 --single-key-share --x509cafile data_files/test-ca2.crt --priority NORMAL:-VERS-ALL:-KX-ALL:+ECDHE-PSK:+DHE-PSK:+PSK:+VERS-TLS1.3:-GROUP-ALL:+GROUP-SECP384R1:+GROUP-X25519 --pskusername Client_identity --pskkey 6162636465666768696a6b6c6d6e6f70 localhost" \
+         0 \
+         -s "write selected_group: x25519" \
+         -s "HRR selected_group: x25519" \
+         -S "key exchange mode: psk$" \
+         -s "key exchange mode: psk_ephemeral" \
+         -S "key exchange mode: ephemeral"
+
+requires_all_configs_enabled MBEDTLS_SSL_PROTO_TLS1_3 MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE MBEDTLS_SSL_SRV_C MBEDTLS_DEBUG_C
+requires_any_configs_enabled MBEDTLS_KEY_EXCHANGE_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_RSA_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_DHE_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED
+requires_any_configs_enabled MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_RSA_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED
+requires_gnutls_tls1_3
+requires_gnutls_next_no_ticket
+requires_gnutls_next_disable_tls13_compat
+run_test "TLS 1.3 G->m: psk_ephemeral group(secp384r1->x448) check, good" \
+         "$P_SRV crt_file=data_files/ecdsa_secp256r1.crt key_file=data_files/ecdsa_secp256r1.key force_version=tls13 tls13_kex_modes=psk_ephemeral debug_level=5 psk_list=Client_identity,6162636465666768696a6b6c6d6e6f70,abc,dead,def,beef curves=x448" \
+         "$G_NEXT_CLI_NO_CERT --debug=4 --single-key-share --x509cafile data_files/test-ca2.crt --priority NORMAL:-VERS-ALL:-KX-ALL:+ECDHE-PSK:+DHE-PSK:+PSK:+VERS-TLS1.3:-GROUP-ALL:+GROUP-SECP384R1:+GROUP-X448 --pskusername Client_identity --pskkey 6162636465666768696a6b6c6d6e6f70 localhost" \
+         0 \
+         -s "write selected_group: x448" \
+         -s "HRR selected_group: x448" \
+         -S "key exchange mode: psk$" \
+         -s "key exchange mode: psk_ephemeral" \
+         -S "key exchange mode: ephemeral"
+
+requires_all_configs_enabled MBEDTLS_SSL_PROTO_TLS1_3 MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE MBEDTLS_SSL_SRV_C MBEDTLS_DEBUG_C
+requires_any_configs_enabled MBEDTLS_KEY_EXCHANGE_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_RSA_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_DHE_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED
+requires_any_configs_enabled MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_RSA_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED
+requires_gnutls_tls1_3
+requires_gnutls_next_no_ticket
+requires_gnutls_next_disable_tls13_compat
+run_test "TLS 1.3 G->m: psk_ephemeral group(secp521r1->secp256r1) check, good" \
+         "$P_SRV crt_file=data_files/ecdsa_secp256r1.crt key_file=data_files/ecdsa_secp256r1.key force_version=tls13 tls13_kex_modes=psk_ephemeral debug_level=5 psk_list=Client_identity,6162636465666768696a6b6c6d6e6f70,abc,dead,def,beef curves=secp256r1" \
+         "$G_NEXT_CLI_NO_CERT --debug=4 --single-key-share --x509cafile data_files/test-ca2.crt --priority NORMAL:-VERS-ALL:-KX-ALL:+ECDHE-PSK:+DHE-PSK:+PSK:+VERS-TLS1.3:-GROUP-ALL:+GROUP-SECP521R1:+GROUP-SECP256R1 --pskusername Client_identity --pskkey 6162636465666768696a6b6c6d6e6f70 localhost" \
+         0 \
+         -s "write selected_group: secp256r1" \
+         -s "HRR selected_group: secp256r1" \
+         -S "key exchange mode: psk$" \
+         -s "key exchange mode: psk_ephemeral" \
+         -S "key exchange mode: ephemeral"
+
+requires_all_configs_enabled MBEDTLS_SSL_PROTO_TLS1_3 MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE MBEDTLS_SSL_SRV_C MBEDTLS_DEBUG_C
+requires_any_configs_enabled MBEDTLS_KEY_EXCHANGE_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_RSA_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_DHE_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED
+requires_any_configs_enabled MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_RSA_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED
+requires_gnutls_tls1_3
+requires_gnutls_next_no_ticket
+requires_gnutls_next_disable_tls13_compat
+run_test "TLS 1.3 G->m: psk_ephemeral group(secp521r1->secp384r1) check, good" \
+         "$P_SRV crt_file=data_files/ecdsa_secp256r1.crt key_file=data_files/ecdsa_secp256r1.key force_version=tls13 tls13_kex_modes=psk_ephemeral debug_level=5 psk_list=Client_identity,6162636465666768696a6b6c6d6e6f70,abc,dead,def,beef curves=secp384r1" \
+         "$G_NEXT_CLI_NO_CERT --debug=4 --single-key-share --x509cafile data_files/test-ca2.crt --priority NORMAL:-VERS-ALL:-KX-ALL:+ECDHE-PSK:+DHE-PSK:+PSK:+VERS-TLS1.3:-GROUP-ALL:+GROUP-SECP521R1:+GROUP-SECP384R1 --pskusername Client_identity --pskkey 6162636465666768696a6b6c6d6e6f70 localhost" \
+         0 \
+         -s "write selected_group: secp384r1" \
+         -s "HRR selected_group: secp384r1" \
+         -S "key exchange mode: psk$" \
+         -s "key exchange mode: psk_ephemeral" \
+         -S "key exchange mode: ephemeral"
+
+requires_all_configs_enabled MBEDTLS_SSL_PROTO_TLS1_3 MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE MBEDTLS_SSL_SRV_C MBEDTLS_DEBUG_C
+requires_any_configs_enabled MBEDTLS_KEY_EXCHANGE_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_RSA_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_DHE_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED
+requires_any_configs_enabled MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_RSA_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED
+requires_gnutls_tls1_3
+requires_gnutls_next_no_ticket
+requires_gnutls_next_disable_tls13_compat
+run_test "TLS 1.3 G->m: psk_ephemeral group(secp521r1) check, good" \
+         "$P_SRV crt_file=data_files/ecdsa_secp256r1.crt key_file=data_files/ecdsa_secp256r1.key force_version=tls13 tls13_kex_modes=psk_ephemeral debug_level=5 psk_list=Client_identity,6162636465666768696a6b6c6d6e6f70,abc,dead,def,beef curves=secp521r1" \
+         "$G_NEXT_CLI_NO_CERT --debug=4 --single-key-share --x509cafile data_files/test-ca2.crt --priority NORMAL:-VERS-ALL:-KX-ALL:+ECDHE-PSK:+DHE-PSK:+PSK:+VERS-TLS1.3:-GROUP-ALL:+GROUP-SECP521R1 --pskusername Client_identity --pskkey 6162636465666768696a6b6c6d6e6f70 localhost" \
+         0 \
+         -s "write selected_group: secp521r1" \
+         -S "key exchange mode: psk$" \
+         -s "key exchange mode: psk_ephemeral" \
+         -S "key exchange mode: ephemeral"
+
+requires_all_configs_enabled MBEDTLS_SSL_PROTO_TLS1_3 MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE MBEDTLS_SSL_SRV_C MBEDTLS_DEBUG_C
+requires_any_configs_enabled MBEDTLS_KEY_EXCHANGE_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_RSA_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_DHE_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED
+requires_any_configs_enabled MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_RSA_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED
+requires_gnutls_tls1_3
+requires_gnutls_next_no_ticket
+requires_gnutls_next_disable_tls13_compat
+run_test "TLS 1.3 G->m: psk_ephemeral group(secp521r1->x25519) check, good" \
+         "$P_SRV crt_file=data_files/ecdsa_secp256r1.crt key_file=data_files/ecdsa_secp256r1.key force_version=tls13 tls13_kex_modes=psk_ephemeral debug_level=5 psk_list=Client_identity,6162636465666768696a6b6c6d6e6f70,abc,dead,def,beef curves=x25519" \
+         "$G_NEXT_CLI_NO_CERT --debug=4 --single-key-share --x509cafile data_files/test-ca2.crt --priority NORMAL:-VERS-ALL:-KX-ALL:+ECDHE-PSK:+DHE-PSK:+PSK:+VERS-TLS1.3:-GROUP-ALL:+GROUP-SECP521R1:+GROUP-X25519 --pskusername Client_identity --pskkey 6162636465666768696a6b6c6d6e6f70 localhost" \
+         0 \
+         -s "write selected_group: x25519" \
+         -s "HRR selected_group: x25519" \
+         -S "key exchange mode: psk$" \
+         -s "key exchange mode: psk_ephemeral" \
+         -S "key exchange mode: ephemeral"
+
+requires_all_configs_enabled MBEDTLS_SSL_PROTO_TLS1_3 MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE MBEDTLS_SSL_SRV_C MBEDTLS_DEBUG_C
+requires_any_configs_enabled MBEDTLS_KEY_EXCHANGE_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_RSA_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_DHE_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED
+requires_any_configs_enabled MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_RSA_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED
+requires_gnutls_tls1_3
+requires_gnutls_next_no_ticket
+requires_gnutls_next_disable_tls13_compat
+run_test "TLS 1.3 G->m: psk_ephemeral group(secp521r1->x448) check, good" \
+         "$P_SRV crt_file=data_files/ecdsa_secp256r1.crt key_file=data_files/ecdsa_secp256r1.key force_version=tls13 tls13_kex_modes=psk_ephemeral debug_level=5 psk_list=Client_identity,6162636465666768696a6b6c6d6e6f70,abc,dead,def,beef curves=x448" \
+         "$G_NEXT_CLI_NO_CERT --debug=4 --single-key-share --x509cafile data_files/test-ca2.crt --priority NORMAL:-VERS-ALL:-KX-ALL:+ECDHE-PSK:+DHE-PSK:+PSK:+VERS-TLS1.3:-GROUP-ALL:+GROUP-SECP521R1:+GROUP-X448 --pskusername Client_identity --pskkey 6162636465666768696a6b6c6d6e6f70 localhost" \
+         0 \
+         -s "write selected_group: x448" \
+         -s "HRR selected_group: x448" \
+         -S "key exchange mode: psk$" \
+         -s "key exchange mode: psk_ephemeral" \
+         -S "key exchange mode: ephemeral"
+
+requires_all_configs_enabled MBEDTLS_SSL_PROTO_TLS1_3 MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE MBEDTLS_SSL_SRV_C MBEDTLS_DEBUG_C
+requires_any_configs_enabled MBEDTLS_KEY_EXCHANGE_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_RSA_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_DHE_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED
+requires_any_configs_enabled MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_RSA_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED
+requires_gnutls_tls1_3
+requires_gnutls_next_no_ticket
+requires_gnutls_next_disable_tls13_compat
+run_test "TLS 1.3 G->m: psk_ephemeral group(x25519->secp256r1) check, good" \
+         "$P_SRV crt_file=data_files/ecdsa_secp256r1.crt key_file=data_files/ecdsa_secp256r1.key force_version=tls13 tls13_kex_modes=psk_ephemeral debug_level=5 psk_list=Client_identity,6162636465666768696a6b6c6d6e6f70,abc,dead,def,beef curves=secp256r1" \
+         "$G_NEXT_CLI_NO_CERT --debug=4 --single-key-share --x509cafile data_files/test-ca2.crt --priority NORMAL:-VERS-ALL:-KX-ALL:+ECDHE-PSK:+DHE-PSK:+PSK:+VERS-TLS1.3:-GROUP-ALL:+GROUP-X25519:+GROUP-SECP256R1 --pskusername Client_identity --pskkey 6162636465666768696a6b6c6d6e6f70 localhost" \
+         0 \
+         -s "write selected_group: secp256r1" \
+         -s "HRR selected_group: secp256r1" \
+         -S "key exchange mode: psk$" \
+         -s "key exchange mode: psk_ephemeral" \
+         -S "key exchange mode: ephemeral"
+
+requires_all_configs_enabled MBEDTLS_SSL_PROTO_TLS1_3 MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE MBEDTLS_SSL_SRV_C MBEDTLS_DEBUG_C
+requires_any_configs_enabled MBEDTLS_KEY_EXCHANGE_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_RSA_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_DHE_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED
+requires_any_configs_enabled MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_RSA_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED
+requires_gnutls_tls1_3
+requires_gnutls_next_no_ticket
+requires_gnutls_next_disable_tls13_compat
+run_test "TLS 1.3 G->m: psk_ephemeral group(x25519->secp384r1) check, good" \
+         "$P_SRV crt_file=data_files/ecdsa_secp256r1.crt key_file=data_files/ecdsa_secp256r1.key force_version=tls13 tls13_kex_modes=psk_ephemeral debug_level=5 psk_list=Client_identity,6162636465666768696a6b6c6d6e6f70,abc,dead,def,beef curves=secp384r1" \
+         "$G_NEXT_CLI_NO_CERT --debug=4 --single-key-share --x509cafile data_files/test-ca2.crt --priority NORMAL:-VERS-ALL:-KX-ALL:+ECDHE-PSK:+DHE-PSK:+PSK:+VERS-TLS1.3:-GROUP-ALL:+GROUP-X25519:+GROUP-SECP384R1 --pskusername Client_identity --pskkey 6162636465666768696a6b6c6d6e6f70 localhost" \
+         0 \
+         -s "write selected_group: secp384r1" \
+         -s "HRR selected_group: secp384r1" \
+         -S "key exchange mode: psk$" \
+         -s "key exchange mode: psk_ephemeral" \
+         -S "key exchange mode: ephemeral"
+
+requires_all_configs_enabled MBEDTLS_SSL_PROTO_TLS1_3 MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE MBEDTLS_SSL_SRV_C MBEDTLS_DEBUG_C
+requires_any_configs_enabled MBEDTLS_KEY_EXCHANGE_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_RSA_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_DHE_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED
+requires_any_configs_enabled MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_RSA_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED
+requires_gnutls_tls1_3
+requires_gnutls_next_no_ticket
+requires_gnutls_next_disable_tls13_compat
+run_test "TLS 1.3 G->m: psk_ephemeral group(x25519->secp521r1) check, good" \
+         "$P_SRV crt_file=data_files/ecdsa_secp256r1.crt key_file=data_files/ecdsa_secp256r1.key force_version=tls13 tls13_kex_modes=psk_ephemeral debug_level=5 psk_list=Client_identity,6162636465666768696a6b6c6d6e6f70,abc,dead,def,beef curves=secp521r1" \
+         "$G_NEXT_CLI_NO_CERT --debug=4 --single-key-share --x509cafile data_files/test-ca2.crt --priority NORMAL:-VERS-ALL:-KX-ALL:+ECDHE-PSK:+DHE-PSK:+PSK:+VERS-TLS1.3:-GROUP-ALL:+GROUP-X25519:+GROUP-SECP521R1 --pskusername Client_identity --pskkey 6162636465666768696a6b6c6d6e6f70 localhost" \
+         0 \
+         -s "write selected_group: secp521r1" \
+         -s "HRR selected_group: secp521r1" \
+         -S "key exchange mode: psk$" \
+         -s "key exchange mode: psk_ephemeral" \
+         -S "key exchange mode: ephemeral"
+
+requires_all_configs_enabled MBEDTLS_SSL_PROTO_TLS1_3 MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE MBEDTLS_SSL_SRV_C MBEDTLS_DEBUG_C
+requires_any_configs_enabled MBEDTLS_KEY_EXCHANGE_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_RSA_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_DHE_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED
+requires_any_configs_enabled MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_RSA_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED
+requires_gnutls_tls1_3
+requires_gnutls_next_no_ticket
+requires_gnutls_next_disable_tls13_compat
+run_test "TLS 1.3 G->m: psk_ephemeral group(x25519) check, good" \
+         "$P_SRV crt_file=data_files/ecdsa_secp256r1.crt key_file=data_files/ecdsa_secp256r1.key force_version=tls13 tls13_kex_modes=psk_ephemeral debug_level=5 psk_list=Client_identity,6162636465666768696a6b6c6d6e6f70,abc,dead,def,beef curves=x25519" \
+         "$G_NEXT_CLI_NO_CERT --debug=4 --single-key-share --x509cafile data_files/test-ca2.crt --priority NORMAL:-VERS-ALL:-KX-ALL:+ECDHE-PSK:+DHE-PSK:+PSK:+VERS-TLS1.3:-GROUP-ALL:+GROUP-X25519 --pskusername Client_identity --pskkey 6162636465666768696a6b6c6d6e6f70 localhost" \
+         0 \
+         -s "write selected_group: x25519" \
+         -S "key exchange mode: psk$" \
+         -s "key exchange mode: psk_ephemeral" \
+         -S "key exchange mode: ephemeral"
+
+requires_all_configs_enabled MBEDTLS_SSL_PROTO_TLS1_3 MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE MBEDTLS_SSL_SRV_C MBEDTLS_DEBUG_C
+requires_any_configs_enabled MBEDTLS_KEY_EXCHANGE_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_RSA_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_DHE_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED
+requires_any_configs_enabled MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_RSA_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED
+requires_gnutls_tls1_3
+requires_gnutls_next_no_ticket
+requires_gnutls_next_disable_tls13_compat
+run_test "TLS 1.3 G->m: psk_ephemeral group(x25519->x448) check, good" \
+         "$P_SRV crt_file=data_files/ecdsa_secp256r1.crt key_file=data_files/ecdsa_secp256r1.key force_version=tls13 tls13_kex_modes=psk_ephemeral debug_level=5 psk_list=Client_identity,6162636465666768696a6b6c6d6e6f70,abc,dead,def,beef curves=x448" \
+         "$G_NEXT_CLI_NO_CERT --debug=4 --single-key-share --x509cafile data_files/test-ca2.crt --priority NORMAL:-VERS-ALL:-KX-ALL:+ECDHE-PSK:+DHE-PSK:+PSK:+VERS-TLS1.3:-GROUP-ALL:+GROUP-X25519:+GROUP-X448 --pskusername Client_identity --pskkey 6162636465666768696a6b6c6d6e6f70 localhost" \
+         0 \
+         -s "write selected_group: x448" \
+         -s "HRR selected_group: x448" \
+         -S "key exchange mode: psk$" \
+         -s "key exchange mode: psk_ephemeral" \
+         -S "key exchange mode: ephemeral"
+
+requires_all_configs_enabled MBEDTLS_SSL_PROTO_TLS1_3 MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE MBEDTLS_SSL_SRV_C MBEDTLS_DEBUG_C
+requires_any_configs_enabled MBEDTLS_KEY_EXCHANGE_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_RSA_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_DHE_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED
+requires_any_configs_enabled MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_RSA_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED
+requires_gnutls_tls1_3
+requires_gnutls_next_no_ticket
+requires_gnutls_next_disable_tls13_compat
+run_test "TLS 1.3 G->m: psk_ephemeral group(x448->secp256r1) check, good" \
+         "$P_SRV crt_file=data_files/ecdsa_secp256r1.crt key_file=data_files/ecdsa_secp256r1.key force_version=tls13 tls13_kex_modes=psk_ephemeral debug_level=5 psk_list=Client_identity,6162636465666768696a6b6c6d6e6f70,abc,dead,def,beef curves=secp256r1" \
+         "$G_NEXT_CLI_NO_CERT --debug=4 --single-key-share --x509cafile data_files/test-ca2.crt --priority NORMAL:-VERS-ALL:-KX-ALL:+ECDHE-PSK:+DHE-PSK:+PSK:+VERS-TLS1.3:-GROUP-ALL:+GROUP-X448:+GROUP-SECP256R1 --pskusername Client_identity --pskkey 6162636465666768696a6b6c6d6e6f70 localhost" \
+         0 \
+         -s "write selected_group: secp256r1" \
+         -s "HRR selected_group: secp256r1" \
+         -S "key exchange mode: psk$" \
+         -s "key exchange mode: psk_ephemeral" \
+         -S "key exchange mode: ephemeral"
+
+requires_all_configs_enabled MBEDTLS_SSL_PROTO_TLS1_3 MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE MBEDTLS_SSL_SRV_C MBEDTLS_DEBUG_C
+requires_any_configs_enabled MBEDTLS_KEY_EXCHANGE_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_RSA_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_DHE_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED
+requires_any_configs_enabled MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_RSA_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED
+requires_gnutls_tls1_3
+requires_gnutls_next_no_ticket
+requires_gnutls_next_disable_tls13_compat
+run_test "TLS 1.3 G->m: psk_ephemeral group(x448->secp384r1) check, good" \
+         "$P_SRV crt_file=data_files/ecdsa_secp256r1.crt key_file=data_files/ecdsa_secp256r1.key force_version=tls13 tls13_kex_modes=psk_ephemeral debug_level=5 psk_list=Client_identity,6162636465666768696a6b6c6d6e6f70,abc,dead,def,beef curves=secp384r1" \
+         "$G_NEXT_CLI_NO_CERT --debug=4 --single-key-share --x509cafile data_files/test-ca2.crt --priority NORMAL:-VERS-ALL:-KX-ALL:+ECDHE-PSK:+DHE-PSK:+PSK:+VERS-TLS1.3:-GROUP-ALL:+GROUP-X448:+GROUP-SECP384R1 --pskusername Client_identity --pskkey 6162636465666768696a6b6c6d6e6f70 localhost" \
+         0 \
+         -s "write selected_group: secp384r1" \
+         -s "HRR selected_group: secp384r1" \
+         -S "key exchange mode: psk$" \
+         -s "key exchange mode: psk_ephemeral" \
+         -S "key exchange mode: ephemeral"
+
+requires_all_configs_enabled MBEDTLS_SSL_PROTO_TLS1_3 MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE MBEDTLS_SSL_SRV_C MBEDTLS_DEBUG_C
+requires_any_configs_enabled MBEDTLS_KEY_EXCHANGE_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_RSA_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_DHE_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED
+requires_any_configs_enabled MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_RSA_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED
+requires_gnutls_tls1_3
+requires_gnutls_next_no_ticket
+requires_gnutls_next_disable_tls13_compat
+run_test "TLS 1.3 G->m: psk_ephemeral group(x448->secp521r1) check, good" \
+         "$P_SRV crt_file=data_files/ecdsa_secp256r1.crt key_file=data_files/ecdsa_secp256r1.key force_version=tls13 tls13_kex_modes=psk_ephemeral debug_level=5 psk_list=Client_identity,6162636465666768696a6b6c6d6e6f70,abc,dead,def,beef curves=secp521r1" \
+         "$G_NEXT_CLI_NO_CERT --debug=4 --single-key-share --x509cafile data_files/test-ca2.crt --priority NORMAL:-VERS-ALL:-KX-ALL:+ECDHE-PSK:+DHE-PSK:+PSK:+VERS-TLS1.3:-GROUP-ALL:+GROUP-X448:+GROUP-SECP521R1 --pskusername Client_identity --pskkey 6162636465666768696a6b6c6d6e6f70 localhost" \
+         0 \
+         -s "write selected_group: secp521r1" \
+         -s "HRR selected_group: secp521r1" \
+         -S "key exchange mode: psk$" \
+         -s "key exchange mode: psk_ephemeral" \
+         -S "key exchange mode: ephemeral"
+
+requires_all_configs_enabled MBEDTLS_SSL_PROTO_TLS1_3 MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE MBEDTLS_SSL_SRV_C MBEDTLS_DEBUG_C
+requires_any_configs_enabled MBEDTLS_KEY_EXCHANGE_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_RSA_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_DHE_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED
+requires_any_configs_enabled MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_RSA_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED
+requires_gnutls_tls1_3
+requires_gnutls_next_no_ticket
+requires_gnutls_next_disable_tls13_compat
+run_test "TLS 1.3 G->m: psk_ephemeral group(x448->x25519) check, good" \
+         "$P_SRV crt_file=data_files/ecdsa_secp256r1.crt key_file=data_files/ecdsa_secp256r1.key force_version=tls13 tls13_kex_modes=psk_ephemeral debug_level=5 psk_list=Client_identity,6162636465666768696a6b6c6d6e6f70,abc,dead,def,beef curves=x25519" \
+         "$G_NEXT_CLI_NO_CERT --debug=4 --single-key-share --x509cafile data_files/test-ca2.crt --priority NORMAL:-VERS-ALL:-KX-ALL:+ECDHE-PSK:+DHE-PSK:+PSK:+VERS-TLS1.3:-GROUP-ALL:+GROUP-X448:+GROUP-X25519 --pskusername Client_identity --pskkey 6162636465666768696a6b6c6d6e6f70 localhost" \
+         0 \
+         -s "write selected_group: x25519" \
+         -s "HRR selected_group: x25519" \
+         -S "key exchange mode: psk$" \
+         -s "key exchange mode: psk_ephemeral" \
+         -S "key exchange mode: ephemeral"
+
+requires_all_configs_enabled MBEDTLS_SSL_PROTO_TLS1_3 MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE MBEDTLS_SSL_SRV_C MBEDTLS_DEBUG_C
+requires_any_configs_enabled MBEDTLS_KEY_EXCHANGE_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_RSA_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_DHE_PSK_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED
+requires_any_configs_enabled MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_RSA_ENABLED MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED
+requires_gnutls_tls1_3
+requires_gnutls_next_no_ticket
+requires_gnutls_next_disable_tls13_compat
+run_test "TLS 1.3 G->m: psk_ephemeral group(x448) check, good" \
+         "$P_SRV crt_file=data_files/ecdsa_secp256r1.crt key_file=data_files/ecdsa_secp256r1.key force_version=tls13 tls13_kex_modes=psk_ephemeral debug_level=5 psk_list=Client_identity,6162636465666768696a6b6c6d6e6f70,abc,dead,def,beef curves=x448" \
+         "$G_NEXT_CLI_NO_CERT --debug=4 --single-key-share --x509cafile data_files/test-ca2.crt --priority NORMAL:-VERS-ALL:-KX-ALL:+ECDHE-PSK:+DHE-PSK:+PSK:+VERS-TLS1.3:-GROUP-ALL:+GROUP-X448 --pskusername Client_identity --pskkey 6162636465666768696a6b6c6d6e6f70 localhost" \
+         0 \
+         -s "write selected_group: x448" \
+         -S "key exchange mode: psk$" \
+         -s "key exchange mode: psk_ephemeral" \
+         -S "key exchange mode: ephemeral"
