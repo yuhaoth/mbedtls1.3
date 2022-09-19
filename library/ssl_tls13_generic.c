@@ -63,6 +63,20 @@ int mbedtls_ssl_tls13_fetch_handshake_msg( mbedtls_ssl_context *ssl,
 
     MBEDTLS_SSL_PROC_CHK_NEG( mbedtls_mps_read( &ssl->mps->l4 ) );
 
+    if( ret == MBEDTLS_MPS_MSG_CCS )
+    {
+#if defined(MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE)
+        MBEDTLS_SSL_DEBUG_MSG( 1,
+                ( "Ignore ChangeCipherSpec in TLS 1.3 compatibility mode" ) );
+        MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read_consume( &ssl->mps->l4 ) );
+        return( MBEDTLS_ERR_SSL_WANT_READ );
+#else
+        MBEDTLS_SSL_DEBUG_MSG( 1,
+                ( "ChangeCipherSpec invalid in TLS 1.3 without compatibility mode" ) );
+            return( MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE );
+#endif /* MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE */
+    }
+
     if( ret != MBEDTLS_MPS_MSG_HS )
         return( MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE );
 
@@ -1154,7 +1168,7 @@ static int ssl_tls13_finalize_change_cipher_spec( mbedtls_ssl_context *ssl )
                 ssl->handshake->ccs_sent++;
                 break;
 
-            case MBEDTLS_SSL_SERVER_CCS_AFTER_HRR:
+            case MBEDTLS_SSL_SERVER_CCS_AFTER_HELLO_RETRY_REQUEST:
                 mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_SECOND_CLIENT_HELLO );
                 ssl->handshake->ccs_sent++;
                 break;
