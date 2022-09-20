@@ -161,8 +161,16 @@ def is_full_section(section):
     return section.endswith('support') or section.endswith('modules')
 
 def realfull_adapter(_name, active, section):
-    """Activate all symbols found in the system and feature sections."""
-    if not is_full_section(section):
+    """Activate all symbols found in the global and boolean feature sections.
+
+    This is intended for building the documentation, including the
+    documentation of settings that are activated by defining an optional
+    preprocessor macro.
+
+    Do not activate definitions in the section containing symbols that are
+    supposed to be defined and documented in their own module.
+    """
+    if section == 'Module configuration options':
         return active
     return True
 
@@ -317,6 +325,9 @@ def crypto_adapter(adapter):
         return adapter(name, active, section)
     return continuation
 
+DEPRECATED = frozenset([
+    'MBEDTLS_PSA_CRYPTO_SE_C',
+])
 def no_deprecated_adapter(adapter):
     """Modify an adapter to disable deprecated symbols.
 
@@ -327,6 +338,8 @@ def no_deprecated_adapter(adapter):
     def continuation(name, active, section):
         if name == 'MBEDTLS_DEPRECATED_REMOVED':
             return True
+        if name in DEPRECATED:
+            return False
         if adapter is None:
             return active
         return adapter(name, active, section)
@@ -411,7 +424,7 @@ class ConfigFile(Config):
         value = setting.value
         if value is None:
             value = ''
-        # Normally the whitespace to separte the symbol name from the
+        # Normally the whitespace to separate the symbol name from the
         # value is part of middle, and there's no whitespace for a symbol
         # with no value. But if a symbol has been changed from having a
         # value to not having one, the whitespace is wrong, so fix it.

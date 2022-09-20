@@ -46,6 +46,7 @@
 #include "ssl_debug_helpers.h"
 
 #if defined(MBEDTLS_SSL_SERVER_NAME_INDICATION)
+MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_write_hostname_ext( mbedtls_ssl_context *ssl,
                                    unsigned char *buf,
                                    const unsigned char *end,
@@ -129,6 +130,7 @@ static int ssl_write_hostname_ext( mbedtls_ssl_context *ssl,
  * } ProtocolNameList;
  *
  */
+MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_write_alpn_ext( mbedtls_ssl_context *ssl,
                                unsigned char *buf,
                                const unsigned char *end,
@@ -226,6 +228,7 @@ static int ssl_write_alpn_ext( mbedtls_ssl_context *ssl,
  *
  * DHE groups are not supported yet.
  */
+MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_write_supported_groups_ext( mbedtls_ssl_context *ssl,
                                            unsigned char *buf,
                                            const unsigned char *end,
@@ -317,6 +320,7 @@ static int ssl_write_supported_groups_ext( mbedtls_ssl_context *ssl,
  * } MaxFragmentLength;
  *
  */
+MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_write_max_fragment_length_ext( mbedtls_ssl_context *ssl,
                                               unsigned char *buf,
                                               const unsigned char *end,
@@ -346,45 +350,7 @@ static int ssl_write_max_fragment_length_ext( mbedtls_ssl_context *ssl,
 }
 #endif /* MBEDTLS_SSL_MAX_FRAGMENT_LENGTH */
 
-int mbedtls_ssl_validate_ciphersuite(
-    const mbedtls_ssl_context *ssl,
-    const mbedtls_ssl_ciphersuite_t *suite_info,
-    mbedtls_ssl_protocol_version min_tls_version,
-    mbedtls_ssl_protocol_version max_tls_version )
-{
-    (void) ssl;
-
-    if( suite_info == NULL )
-        return( -1 );
-
-    if( ( suite_info->min_tls_version > max_tls_version ) ||
-        ( suite_info->max_tls_version < min_tls_version ) )
-    {
-        return( -1 );
-    }
-
-#if defined(MBEDTLS_SSL_PROTO_TLS1_2)
-#if defined(MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED)
-    if( suite_info->key_exchange == MBEDTLS_KEY_EXCHANGE_ECJPAKE &&
-        mbedtls_ecjpake_check( &ssl->handshake->ecjpake_ctx ) != 0 )
-    {
-        return( -1 );
-    }
-#endif
-
-    /* Don't suggest PSK-based ciphersuite if no PSK is available. */
-#if defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
-    if( mbedtls_ssl_ciphersuite_uses_psk( suite_info ) &&
-        mbedtls_ssl_conf_has_static_psk( ssl->conf ) == 0 )
-    {
-        return( -1 );
-    }
-#endif /* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED */
-#endif /* MBEDTLS_SSL_PROTO_TLS1_2 */
-
-    return( 0 );
-}
-
+MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_write_client_hello_cipher_suites(
             mbedtls_ssl_context *ssl,
             unsigned char *buf,
@@ -501,6 +467,7 @@ static int ssl_write_client_hello_cipher_suites(
  *     };
  * } ClientHello;
  */
+MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_write_client_hello_body( mbedtls_ssl_context *ssl,
                                         unsigned char *buf,
                                         unsigned char *end,
@@ -754,6 +721,7 @@ static int ssl_write_client_hello_body( mbedtls_ssl_context *ssl,
     return( 0 );
 }
 
+MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_generate_random( mbedtls_ssl_context *ssl )
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
@@ -791,6 +759,7 @@ static int ssl_generate_random( mbedtls_ssl_context *ssl )
     return( ret );
 }
 
+MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_prepare_client_hello( mbedtls_ssl_context *ssl )
 {
     int ret;

@@ -88,6 +88,12 @@
 
 #define ARRAY_LENGTH( array ) ( sizeof( array ) / sizeof( *( array ) ) )
 
+#if defined(MBEDTLS_PSA_BUILTIN_ALG_HKDF) ||          \
+    defined(MBEDTLS_PSA_BUILTIN_ALG_HKDF_EXTRACT) ||  \
+    defined(MBEDTLS_PSA_BUILTIN_ALG_HKDF_EXPAND)
+#define BUILTIN_ALG_ANY_HKDF 1
+#endif
+
 /****************************************************************/
 /* Global data, support functions and library management */
 /****************************************************************/
@@ -913,7 +919,7 @@ static psa_status_t psa_get_and_lock_key_slot_with_policy(
         goto error;
     }
 
-    /* Enforce that the usage policy permits the requested algortihm. */
+    /* Enforce that the usage policy permits the requested algorithm. */
     if( alg != 0 )
     {
         status = psa_key_policy_permits( &slot->attr.policy,
@@ -4235,13 +4241,13 @@ psa_status_t psa_aead_abort( psa_aead_operation_t *operation )
 /* Generators */
 /****************************************************************/
 
-#if defined(MBEDTLS_PSA_BUILTIN_ALG_HKDF) || \
+#if defined(BUILTIN_ALG_ANY_HKDF) || \
     defined(MBEDTLS_PSA_BUILTIN_ALG_TLS12_PRF) || \
     defined(MBEDTLS_PSA_BUILTIN_ALG_TLS12_PSK_TO_MS)
 #define AT_LEAST_ONE_BUILTIN_KDF
 #endif /* At least one builtin KDF */
 
-#if defined(MBEDTLS_PSA_BUILTIN_ALG_HKDF) || \
+#if defined(BUILTIN_ALG_ANY_HKDF) || \
     defined(MBEDTLS_PSA_BUILTIN_ALG_TLS12_PRF) || \
     defined(MBEDTLS_PSA_BUILTIN_ALG_TLS12_PSK_TO_MS)
 static psa_status_t psa_key_derivation_start_hmac(
@@ -4294,14 +4300,14 @@ psa_status_t psa_key_derivation_abort( psa_key_derivation_operation_t *operation
          * nothing to do. */
     }
     else
-#if defined(MBEDTLS_PSA_BUILTIN_ALG_HKDF)
-    if( PSA_ALG_IS_HKDF( kdf_alg ) )
+#if defined(BUILTIN_ALG_ANY_HKDF)
+    if( PSA_ALG_IS_ANY_HKDF( kdf_alg ) )
     {
         mbedtls_free( operation->ctx.hkdf.info );
         status = psa_mac_abort( &operation->ctx.hkdf.hmac );
     }
     else
-#endif /* defined(MBEDTLS_PSA_BUILTIN_ALG_HKDF */
+#endif /* BUILTIN_ALG_ANY_HKDF */
 #if defined(MBEDTLS_PSA_BUILTIN_ALG_TLS12_PRF) || \
     defined(MBEDTLS_PSA_BUILTIN_ALG_TLS12_PSK_TO_MS)
     if( PSA_ALG_IS_TLS12_PRF( kdf_alg ) ||
@@ -4327,6 +4333,13 @@ psa_status_t psa_key_derivation_abort( psa_key_derivation_operation_t *operation
             mbedtls_platform_zeroize( operation->ctx.tls12_prf.label,
                                       operation->ctx.tls12_prf.label_length );
             mbedtls_free( operation->ctx.tls12_prf.label );
+        }
+
+        if( operation->ctx.tls12_prf.other_secret != NULL )
+        {
+            mbedtls_platform_zeroize( operation->ctx.tls12_prf.other_secret,
+                                      operation->ctx.tls12_prf.other_secret_length );
+            mbedtls_free( operation->ctx.tls12_prf.other_secret );
         }
 
         status = PSA_SUCCESS;
@@ -4368,19 +4381,29 @@ psa_status_t psa_key_derivation_set_capacity( psa_key_derivation_operation_t *op
     return( PSA_SUCCESS );
 }
 
-#if defined(MBEDTLS_PSA_BUILTIN_ALG_HKDF)
-/* Read some bytes from an HKDF-based operation. This performs a chunk
- * of the expand phase of the HKDF algorithm. */
+#if defined(BUILTIN_ALG_ANY_HKDF)
+/* Read some bytes from an HKDF-based operation. */
 static psa_status_t psa_key_derivation_hkdf_read( psa_hkdf_key_derivation_t *hkdf,
-                                                  psa_algorithm_t hash_alg,
+                                                  psa_algorithm_t kdf_alg,
                                                   uint8_t *output,
                                                   size_t output_length )
 {
+    psa_algorithm_t hash_alg = PSA_ALG_HKDF_GET_HASH( kdf_alg );
     uint8_t hash_length = PSA_HASH_LENGTH( hash_alg );
     size_t hmac_output_length;
     psa_status_t status;
+#if defined(MBEDTLS_PSA_BUILTIN_ALG_HKDF_EXTRACT)
+    const uint8_t last_block = PSA_ALG_IS_HKDF_EXTRACT( kdf_alg ) ? 0 : 0xff;
+#else
+    const uint8_t last_block = 0xff;
+#endif /* MBEDTLS_PSA_BUILTIN_ALG_HKDF_EXTRACT */
 
-    if( hkdf->state < HKDF_STATE_KEYED || ! hkdf->info_set )
+    if( hkdf->state < HKDF_STATE_KEYED ||
+        ( !hkdf->info_set
+#if defined(MBEDTLS_PSA_BUILTIN_ALG_HKDF_EXTRACT)
+         && !PSA_ALG_IS_HKDF_EXTRACT( kdf_alg )
+#endif /* MBEDTLS_PSA_BUILTIN_ALG_HKDF_EXTRACT */
+    ) )
         return( PSA_ERROR_BAD_STATE );
     hkdf->state = HKDF_STATE_OUTPUT;
 
@@ -4396,12 +4419,12 @@ static psa_status_t psa_key_derivation_hkdf_read( psa_hkdf_key_derivation_t *hkd
         hkdf->offset_in_block += n;
         if( output_length == 0 )
             break;
-        /* We can't be wanting more output after block 0xff, otherwise
+        /* We can't be wanting more output after the last block, otherwise
          * the capacity check in psa_key_derivation_output_bytes() would have
          * prevented this call. It could happen only if the operation
          * object was corrupted or if this function is called directly
          * inside the library. */
-        if( hkdf->block_number == 0xff )
+        if( hkdf->block_number == last_block )
             return( PSA_ERROR_BAD_STATE );
 
         /* We need a new block */
@@ -4442,7 +4465,7 @@ static psa_status_t psa_key_derivation_hkdf_read( psa_hkdf_key_derivation_t *hkd
 
     return( PSA_SUCCESS );
 }
-#endif /* MBEDTLS_PSA_BUILTIN_ALG_HKDF */
+#endif /* BUILTIN_ALG_ANY_HKDF */
 
 #if defined(MBEDTLS_PSA_BUILTIN_ALG_TLS12_PRF) || \
     defined(MBEDTLS_PSA_BUILTIN_ALG_TLS12_PSK_TO_MS)
@@ -4642,15 +4665,14 @@ psa_status_t psa_key_derivation_output_bytes(
     }
     operation->capacity -= output_length;
 
-#if defined(MBEDTLS_PSA_BUILTIN_ALG_HKDF)
-    if( PSA_ALG_IS_HKDF( kdf_alg ) )
+#if defined(BUILTIN_ALG_ANY_HKDF)
+    if( PSA_ALG_IS_ANY_HKDF( kdf_alg ) )
     {
-        psa_algorithm_t hash_alg = PSA_ALG_HKDF_GET_HASH( kdf_alg );
-        status = psa_key_derivation_hkdf_read( &operation->ctx.hkdf, hash_alg,
+        status = psa_key_derivation_hkdf_read( &operation->ctx.hkdf, kdf_alg,
                                           output, output_length );
     }
     else
-#endif /* MBEDTLS_PSA_BUILTIN_ALG_HKDF */
+#endif /* BUILTIN_ALG_ANY_HKDF */
 #if defined(MBEDTLS_PSA_BUILTIN_ALG_TLS12_PRF) || \
     defined(MBEDTLS_PSA_BUILTIN_ALG_TLS12_PSK_TO_MS)
     if( PSA_ALG_IS_TLS12_PRF( kdf_alg ) ||
@@ -4803,7 +4825,7 @@ static psa_status_t psa_generate_derived_ecc_key_weierstrass_helper(
 
         /* 4. If k > N - 2, discard the result and return to step 1.
         *    Result of comparison is returned. When it indicates error
-        *    then this fuction is called again.
+        *    then this function is called again.
         */
         MBEDTLS_MPI_CHK( mbedtls_mpi_lt_mpi_ct( &diff_N_2, &k, &key_out_of_range ) );
     }
@@ -5039,6 +5061,14 @@ static int is_kdf_alg_supported( psa_algorithm_t kdf_alg )
     if( PSA_ALG_IS_HKDF( kdf_alg ) )
         return( 1 );
 #endif
+#if defined(MBEDTLS_PSA_BUILTIN_ALG_HKDF_EXTRACT)
+    if( PSA_ALG_IS_HKDF_EXTRACT( kdf_alg ) )
+        return( 1 );
+#endif
+#if defined(MBEDTLS_PSA_BUILTIN_ALG_HKDF_EXPAND)
+    if( PSA_ALG_IS_HKDF_EXPAND( kdf_alg ) )
+        return( 1 );
+#endif
 #if defined(MBEDTLS_PSA_BUILTIN_ALG_TLS12_PRF)
     if( PSA_ALG_IS_TLS12_PRF( kdf_alg ) )
         return( 1 );
@@ -5090,8 +5120,12 @@ static psa_status_t psa_key_derivation_setup_kdf(
     {
         return( PSA_ERROR_NOT_SUPPORTED );
     }
-
-    operation->capacity = 255 * hash_size;
+#if defined(MBEDTLS_PSA_BUILTIN_ALG_HKDF_EXTRACT)
+    if( PSA_ALG_IS_HKDF_EXTRACT( kdf_alg ) )
+        operation->capacity = hash_size;
+    else
+#endif /* MBEDTLS_PSA_BUILTIN_ALG_HKDF_EXTRACT */
+        operation->capacity = 255 * hash_size;
     return( PSA_SUCCESS );
 }
 
@@ -5145,17 +5179,22 @@ psa_status_t psa_key_derivation_setup( psa_key_derivation_operation_t *operation
     return( status );
 }
 
-#if defined(MBEDTLS_PSA_BUILTIN_ALG_HKDF)
+#if defined(BUILTIN_ALG_ANY_HKDF)
 static psa_status_t psa_hkdf_input( psa_hkdf_key_derivation_t *hkdf,
-                                    psa_algorithm_t hash_alg,
+                                    psa_algorithm_t kdf_alg,
                                     psa_key_derivation_step_t step,
                                     const uint8_t *data,
                                     size_t data_length )
 {
+    psa_algorithm_t hash_alg = PSA_ALG_HKDF_GET_HASH( kdf_alg );
     psa_status_t status;
     switch( step )
     {
         case PSA_KEY_DERIVATION_INPUT_SALT:
+#if defined(MBEDTLS_PSA_BUILTIN_ALG_HKDF_EXPAND)
+            if( PSA_ALG_IS_HKDF_EXPAND( kdf_alg ) )
+                return( PSA_ERROR_INVALID_ARGUMENT );
+#endif /* MBEDTLS_PSA_BUILTIN_ALG_HKDF_EXPAND */
             if( hkdf->state != HKDF_STATE_INIT )
                 return( PSA_ERROR_BAD_STATE );
             else
@@ -5169,33 +5208,82 @@ static psa_status_t psa_hkdf_input( psa_hkdf_key_derivation_t *hkdf,
                 return( PSA_SUCCESS );
             }
         case PSA_KEY_DERIVATION_INPUT_SECRET:
-            /* If no salt was provided, use an empty salt. */
-            if( hkdf->state == HKDF_STATE_INIT )
+#if defined(MBEDTLS_PSA_BUILTIN_ALG_HKDF_EXPAND)
+            if( PSA_ALG_IS_HKDF_EXPAND( kdf_alg ) )
             {
-                status = psa_key_derivation_start_hmac( &hkdf->hmac,
-                                                        hash_alg,
-                                                        NULL, 0 );
+                /* We shouldn't be in different state as HKDF_EXPAND only allows
+                 * two inputs: SECRET (this case) and INFO which does not modify
+                 * the state. It could happen only if the hkdf
+                 * object was corrupted. */
+                if( hkdf->state != HKDF_STATE_INIT )
+                    return( PSA_ERROR_BAD_STATE );
+
+                /* Allow only input that fits expected prk size */
+                if( data_length != PSA_HASH_LENGTH( hash_alg ) )
+                    return( PSA_ERROR_INVALID_ARGUMENT );
+
+                memcpy( hkdf->prk, data, data_length );
+            }
+            else
+#endif /* MBEDTLS_PSA_BUILTIN_ALG_HKDF_EXPAND */
+            {
+                /* HKDF: If no salt was provided, use an empty salt.
+                 * HKDF-EXTRACT: salt is mandatory. */
+                if( hkdf->state == HKDF_STATE_INIT )
+                {
+#if defined(MBEDTLS_PSA_BUILTIN_ALG_HKDF_EXTRACT)
+                    if( PSA_ALG_IS_HKDF_EXTRACT( kdf_alg ) )
+                        return( PSA_ERROR_BAD_STATE );
+#endif /* MBEDTLS_PSA_BUILTIN_ALG_HKDF_EXTRACT */
+                    status = psa_key_derivation_start_hmac( &hkdf->hmac,
+                                                            hash_alg,
+                                                            NULL, 0 );
+                    if( status != PSA_SUCCESS )
+                        return( status );
+                    hkdf->state = HKDF_STATE_STARTED;
+                }
+                if( hkdf->state != HKDF_STATE_STARTED )
+                    return( PSA_ERROR_BAD_STATE );
+                status = psa_mac_update( &hkdf->hmac,
+                                        data, data_length );
                 if( status != PSA_SUCCESS )
                     return( status );
-                hkdf->state = HKDF_STATE_STARTED;
+                status = psa_mac_sign_finish( &hkdf->hmac,
+                                            hkdf->prk,
+                                            sizeof( hkdf->prk ),
+                                            &data_length );
+                if( status != PSA_SUCCESS )
+                    return( status );
             }
-            if( hkdf->state != HKDF_STATE_STARTED )
-                return( PSA_ERROR_BAD_STATE );
-            status = psa_mac_update( &hkdf->hmac,
-                                     data, data_length );
-            if( status != PSA_SUCCESS )
-                return( status );
-            status = psa_mac_sign_finish( &hkdf->hmac,
-                                          hkdf->prk,
-                                          sizeof( hkdf->prk ),
-                                          &data_length );
-            if( status != PSA_SUCCESS )
-                return( status );
-            hkdf->offset_in_block = PSA_HASH_LENGTH( hash_alg );
-            hkdf->block_number = 0;
+
             hkdf->state = HKDF_STATE_KEYED;
+            hkdf->block_number = 0;
+#if defined(MBEDTLS_PSA_BUILTIN_ALG_HKDF_EXTRACT)
+            if( PSA_ALG_IS_HKDF_EXTRACT( kdf_alg ) )
+            {
+                /* The only block of output is the PRK. */
+                memcpy( hkdf->output_block, hkdf->prk, PSA_HASH_LENGTH( hash_alg ) );
+                hkdf->offset_in_block = 0;
+            }
+            else
+#endif /* MBEDTLS_PSA_BUILTIN_ALG_HKDF_EXTRACT */
+            {
+                /* Block 0 is empty, and the next block will be
+                 * generated by psa_key_derivation_hkdf_read(). */
+                hkdf->offset_in_block = PSA_HASH_LENGTH( hash_alg );
+            }
+
             return( PSA_SUCCESS );
         case PSA_KEY_DERIVATION_INPUT_INFO:
+#if defined(MBEDTLS_PSA_BUILTIN_ALG_HKDF_EXTRACT)
+            if( PSA_ALG_IS_HKDF_EXTRACT( kdf_alg ) )
+                return( PSA_ERROR_INVALID_ARGUMENT );
+#endif /* MBEDTLS_PSA_BUILTIN_ALG_HKDF_EXTRACT */
+#if defined(MBEDTLS_PSA_BUILTIN_ALG_HKDF_EXPAND)
+            if( PSA_ALG_IS_HKDF_EXPAND( kdf_alg ) &&
+                hkdf->state == HKDF_STATE_INIT )
+                return( PSA_ERROR_BAD_STATE );
+#endif /* MBEDTLS_PSA_BUILTIN_ALG_HKDF_EXTRACT */
             if( hkdf->state == HKDF_STATE_OUTPUT )
                 return( PSA_ERROR_BAD_STATE );
             if( hkdf->info_set )
@@ -5214,7 +5302,7 @@ static psa_status_t psa_hkdf_input( psa_hkdf_key_derivation_t *hkdf,
             return( PSA_ERROR_INVALID_ARGUMENT );
     }
 }
-#endif /* MBEDTLS_PSA_BUILTIN_ALG_HKDF */
+#endif /* BUILTIN_ALG_ANY_HKDF */
 
 #if defined(MBEDTLS_PSA_BUILTIN_ALG_TLS12_PRF) || \
     defined(MBEDTLS_PSA_BUILTIN_ALG_TLS12_PSK_TO_MS)
@@ -5244,7 +5332,8 @@ static psa_status_t psa_tls12_prf_set_key( psa_tls12_prf_key_derivation_t *prf,
                                            const uint8_t *data,
                                            size_t data_length )
 {
-    if( prf->state != PSA_TLS12_PRF_STATE_SEED_SET )
+    if( prf->state != PSA_TLS12_PRF_STATE_SEED_SET &&
+        prf->state != PSA_TLS12_PRF_STATE_OTHER_KEY_SET )
         return( PSA_ERROR_BAD_STATE );
 
     if( data_length != 0 )
@@ -5311,32 +5400,92 @@ static psa_status_t psa_tls12_prf_psk_to_ms_set_key(
     size_t data_length )
 {
     psa_status_t status;
-    uint8_t pms[ 4 + 2 * PSA_TLS12_PSK_TO_MS_PSK_MAX_SIZE ];
-    uint8_t *cur = pms;
+    const size_t pms_len = ( prf->state == PSA_TLS12_PRF_STATE_OTHER_KEY_SET ?
+        4 + data_length + prf->other_secret_length :
+        4 + 2 * data_length );
 
     if( data_length > PSA_TLS12_PSK_TO_MS_PSK_MAX_SIZE )
         return( PSA_ERROR_INVALID_ARGUMENT );
 
-    /* Quoting RFC 4279, Section 2:
+    uint8_t *pms = mbedtls_calloc( 1, pms_len );
+    if( pms == NULL )
+        return( PSA_ERROR_INSUFFICIENT_MEMORY );
+    uint8_t *cur = pms;
+
+    /* pure-PSK:
+     * Quoting RFC 4279, Section 2:
      *
      * The premaster secret is formed as follows: if the PSK is N octets
      * long, concatenate a uint16 with the value N, N zero octets, a second
      * uint16 with the value N, and the PSK itself.
+     *
+     * mixed-PSK:
+     * In a DHE-PSK, RSA-PSK, ECDHE-PSK the premaster secret is formed as
+     * follows: concatenate a uint16 with the length of the other secret,
+     * the other secret itself, uint16 with the length of PSK, and the
+     * PSK itself.
+     * For details please check:
+     * - RFC 4279, Section 4 for the definition of RSA-PSK,
+     * - RFC 4279, Section 3 for the definition of DHE-PSK,
+     * - RFC 5489 for the definition of ECDHE-PSK.
      */
+
+    if( prf->state == PSA_TLS12_PRF_STATE_OTHER_KEY_SET )
+    {
+        *cur++ = MBEDTLS_BYTE_1( prf->other_secret_length );
+        *cur++ = MBEDTLS_BYTE_0( prf->other_secret_length );
+        if( prf->other_secret_length != 0 )
+        {
+            memcpy( cur, prf->other_secret, prf->other_secret_length );
+            mbedtls_platform_zeroize( prf->other_secret, prf->other_secret_length );
+            cur += prf->other_secret_length;
+        }
+    }
+    else
+    {
+        *cur++ = MBEDTLS_BYTE_1( data_length );
+        *cur++ = MBEDTLS_BYTE_0( data_length );
+        memset( cur, 0, data_length );
+        cur += data_length;
+    }
 
     *cur++ = MBEDTLS_BYTE_1( data_length );
     *cur++ = MBEDTLS_BYTE_0( data_length );
-    memset( cur, 0, data_length );
-    cur += data_length;
-    *cur++ = pms[0];
-    *cur++ = pms[1];
     memcpy( cur, data, data_length );
     cur += data_length;
 
     status = psa_tls12_prf_set_key( prf, pms, cur - pms );
 
-    mbedtls_platform_zeroize( pms, sizeof( pms ) );
+    mbedtls_platform_zeroize( pms, pms_len );
+    mbedtls_free( pms );
     return( status );
+}
+
+static psa_status_t psa_tls12_prf_psk_to_ms_set_other_key(
+    psa_tls12_prf_key_derivation_t *prf,
+    const uint8_t *data,
+    size_t data_length )
+{
+    if( prf->state != PSA_TLS12_PRF_STATE_SEED_SET )
+        return( PSA_ERROR_BAD_STATE );
+
+    if( data_length != 0 )
+    {
+        prf->other_secret = mbedtls_calloc( 1, data_length );
+        if( prf->other_secret == NULL )
+            return( PSA_ERROR_INSUFFICIENT_MEMORY );
+
+        memcpy( prf->other_secret, data, data_length );
+        prf->other_secret_length = data_length;
+    }
+    else
+    {
+        prf->other_secret_length = 0;
+    }
+
+    prf->state = PSA_TLS12_PRF_STATE_OTHER_KEY_SET;
+
+    return( PSA_SUCCESS );
 }
 
 static psa_status_t psa_tls12_prf_psk_to_ms_input(
@@ -5345,13 +5494,22 @@ static psa_status_t psa_tls12_prf_psk_to_ms_input(
     const uint8_t *data,
     size_t data_length )
 {
-    if( step == PSA_KEY_DERIVATION_INPUT_SECRET )
+    switch( step )
     {
-        return( psa_tls12_prf_psk_to_ms_set_key( prf,
-                                                 data, data_length ) );
-    }
+        case PSA_KEY_DERIVATION_INPUT_SECRET:
+            return( psa_tls12_prf_psk_to_ms_set_key( prf,
+                                                     data, data_length ) );
+            break;
+        case PSA_KEY_DERIVATION_INPUT_OTHER_SECRET:
+            return( psa_tls12_prf_psk_to_ms_set_other_key( prf,
+                                                           data,
+                                                           data_length ) );
+            break;
+        default:
+            return( psa_tls12_prf_input( prf, step, data, data_length ) );
+            break;
 
-    return( psa_tls12_prf_input( prf, step, data, data_length ) );
+    }
 }
 #endif /* MBEDTLS_PSA_BUILTIN_ALG_TLS12_PSK_TO_MS */
 
@@ -5371,6 +5529,12 @@ static int psa_key_derivation_check_input_type(
     switch( step )
     {
         case PSA_KEY_DERIVATION_INPUT_SECRET:
+            if( key_type == PSA_KEY_TYPE_DERIVE )
+                return( PSA_SUCCESS );
+            if( key_type == PSA_KEY_TYPE_NONE )
+                return( PSA_SUCCESS );
+            break;
+        case PSA_KEY_DERIVATION_INPUT_OTHER_SECRET:
             if( key_type == PSA_KEY_TYPE_DERIVE )
                 return( PSA_SUCCESS );
             if( key_type == PSA_KEY_TYPE_NONE )
@@ -5403,15 +5567,14 @@ static psa_status_t psa_key_derivation_input_internal(
     if( status != PSA_SUCCESS )
         goto exit;
 
-#if defined(MBEDTLS_PSA_BUILTIN_ALG_HKDF)
-    if( PSA_ALG_IS_HKDF( kdf_alg ) )
+#if defined(BUILTIN_ALG_ANY_HKDF)
+    if( PSA_ALG_IS_ANY_HKDF( kdf_alg ) )
     {
-        status = psa_hkdf_input( &operation->ctx.hkdf,
-                                 PSA_ALG_HKDF_GET_HASH( kdf_alg ),
+        status = psa_hkdf_input( &operation->ctx.hkdf, kdf_alg,
                                  step, data, data_length );
     }
     else
-#endif /* MBEDTLS_PSA_BUILTIN_ALG_HKDF */
+#endif /* BUILTIN_ALG_ANY_HKDF */
 #if defined(MBEDTLS_PSA_BUILTIN_ALG_TLS12_PRF)
     if( PSA_ALG_IS_TLS12_PRF( kdf_alg ) )
     {
@@ -5682,6 +5845,22 @@ psa_status_t psa_raw_key_agreement( psa_algorithm_t alg,
                  private_key, &slot, PSA_KEY_USAGE_DERIVE, alg );
     if( status != PSA_SUCCESS )
         goto exit;
+
+    /* PSA_RAW_KEY_AGREEMENT_OUTPUT_SIZE() is in general an upper bound
+     * for the output size. The PSA specification only guarantees that this
+     * function works if output_size >= PSA_RAW_KEY_AGREEMENT_OUTPUT_SIZE(...),
+     * but it might be nice to allow smaller buffers if the output fits.
+     * At the time of writing this comment, with only ECDH implemented,
+     * PSA_RAW_KEY_AGREEMENT_OUTPUT_SIZE() is exact so the point is moot.
+     * If FFDH is implemented, PSA_RAW_KEY_AGREEMENT_OUTPUT_SIZE() can easily
+     * be exact for it as well. */
+    size_t expected_length =
+        PSA_RAW_KEY_AGREEMENT_OUTPUT_SIZE( slot->attr.type, slot->attr.bits );
+    if( output_size < expected_length )
+    {
+        status = PSA_ERROR_BUFFER_TOO_SMALL;
+        goto exit;
+    }
 
     status = psa_key_agreement_raw_internal( alg, slot,
                                              peer_key, peer_key_length,

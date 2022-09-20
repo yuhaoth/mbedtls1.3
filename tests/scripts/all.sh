@@ -259,7 +259,7 @@ General options:
      --no-force         Refuse to overwrite modified files (default).
      --no-keep-going    Stop at the first error (default).
      --no-memory        No additional memory tests (default).
-     --no-quiet         Print full ouput from components.
+     --no-quiet         Print full output from components.
      --out-of-source-dir=<path>  Directory used for CMake out-of-source build tests.
      --outcome-file=<path>  File where test outcomes are written (not done if
                             empty; default: \$MBEDTLS_TEST_OUTCOME_FILE).
@@ -866,6 +866,12 @@ component_check_test_cases () {
     fi
     tests/scripts/check_test_cases.py $opt
     unset opt
+
+    # Check that no tests are explicitely disabled when USE_PSA_CRYPTO is set
+    # as a matter of policy to ensure there is no missed testing
+    msg "Check: explicitely disabled test with USE_PSA_CRYPTO"  # < 1s
+    not grep -n 'depends_on:.*!MBEDTLS_USE_PSA_CRYPTO' tests/suites/*.function tests/suites/*.data
+    not grep -n '^ *requires_config_disabled.*MBEDTLS_USE_PSA_CRYPTO' tests/ssl-opt.sh tests/opt-testcases/*.sh
 }
 
 component_check_doxygen_warnings () {
@@ -1195,6 +1201,81 @@ component_test_psa_external_rng_no_drbg_use_psa () {
 
     msg "test: PSA_CRYPTO_EXTERNAL_RNG minus *_DRBG, PSA crypto - ssl-opt.sh (subset)"
     tests/ssl-opt.sh -f 'Default\|opaque'
+}
+
+component_test_crypto_full_no_md () {
+    msg "build: crypto_full minus MD"
+    scripts/config.py crypto_full
+    scripts/config.py unset MBEDTLS_MD_C
+    # Direct dependencies
+    scripts/config.py unset MBEDTLS_ECJPAKE_C
+    scripts/config.py unset MBEDTLS_HKDF_C
+    scripts/config.py unset MBEDTLS_HMAC_DRBG_C
+    scripts/config.py unset MBEDTLS_PK_C
+    scripts/config.py unset MBEDTLS_PKCS1_V15
+    scripts/config.py unset MBEDTLS_PKCS1_V21
+    scripts/config.py unset MBEDTLS_PKCS5_C
+    scripts/config.py unset MBEDTLS_PKCS12_C
+    # Indirect dependencies
+    scripts/config.py unset MBEDTLS_ECDSA_DETERMINISTIC
+    scripts/config.py unset MBEDTLS_PK_PARSE_C
+    scripts/config.py unset MBEDTLS_PK_WRITE_C
+    scripts/config.py unset MBEDTLS_RSA_C
+    make
+
+    msg "test: crypto_full minus MD"
+    make test
+}
+
+component_test_full_no_cipher () {
+    msg "build: full minus CIPHER"
+    scripts/config.py full
+    scripts/config.py unset MBEDTLS_CIPHER_C
+    # Direct dependencies
+    scripts/config.py unset MBEDTLS_CCM_C
+    scripts/config.py unset MBEDTLS_CMAC_C
+    scripts/config.py unset MBEDTLS_GCM_C
+    scripts/config.py unset MBEDTLS_NIST_KW_C
+    scripts/config.py unset MBEDTLS_PKCS12_C
+    scripts/config.py unset MBEDTLS_PKCS5_C
+    scripts/config.py unset MBEDTLS_PSA_CRYPTO_C
+    scripts/config.py unset MBEDTLS_SSL_TLS_C
+    scripts/config.py unset MBEDTLS_SSL_TICKET_C
+    # Indirect dependencies
+    scripts/config.py unset MBEDTLS_SSL_CLI_C
+    scripts/config.py unset MBEDTLS_PSA_CRYPTO_SE_C
+    scripts/config.py unset MBEDTLS_PSA_CRYPTO_STORAGE_C
+    scripts/config.py unset MBEDTLS_SSL_DTLS_ANTI_REPLAY
+    scripts/config.py unset MBEDTLS_SSL_DTLS_CONNECTION_ID
+    scripts/config.py unset MBEDTLS_SSL_PROTO_TLS1_3
+    scripts/config.py unset MBEDTLS_SSL_SRV_C
+    scripts/config.py unset MBEDTLS_USE_PSA_CRYPTO
+    make
+
+    msg "test: full minus CIPHER"
+    make test
+}
+
+component_test_crypto_full_no_cipher () {
+    msg "build: crypto_full minus CIPHER"
+    scripts/config.py crypto_full
+    scripts/config.py unset MBEDTLS_CIPHER_C
+    # Direct dependencies
+    scripts/config.py unset MBEDTLS_CCM_C
+    scripts/config.py unset MBEDTLS_CMAC_C
+    scripts/config.py unset MBEDTLS_GCM_C
+    scripts/config.py unset MBEDTLS_NIST_KW_C
+    scripts/config.py unset MBEDTLS_PKCS12_C
+    scripts/config.py unset MBEDTLS_PKCS5_C
+    scripts/config.py unset MBEDTLS_PSA_CRYPTO_C
+    # Indirect dependencies
+    scripts/config.py unset MBEDTLS_PSA_CRYPTO_SE_C
+    scripts/config.py unset MBEDTLS_PSA_CRYPTO_STORAGE_C
+    scripts/config.py unset MBEDTLS_USE_PSA_CRYPTO
+    make
+
+    msg "test: crypto_full minus CIPHER"
+    make test
 }
 
 component_test_psa_external_rng_use_psa_crypto () {
@@ -2172,6 +2253,7 @@ component_test_no_platform () {
     scripts/config.py unset MBEDTLS_PLATFORM_SNPRINTF_ALT
     scripts/config.py unset MBEDTLS_PLATFORM_TIME_ALT
     scripts/config.py unset MBEDTLS_PLATFORM_EXIT_ALT
+    scripts/config.py unset MBEDTLS_PLATFORM_SETBUF_ALT
     scripts/config.py unset MBEDTLS_PLATFORM_NV_SEED_ALT
     scripts/config.py unset MBEDTLS_ENTROPY_NV_SEED
     scripts/config.py unset MBEDTLS_FS_IO
@@ -2324,18 +2406,6 @@ component_test_variable_ssl_in_out_buffer_len_CID () {
 
     msg "test: compat.sh, MBEDTLS_SSL_VARIABLE_BUFFER_LENGTH and MBEDTLS_SSL_DTLS_CONNECTION_ID enabled"
     tests/compat.sh
-}
-
-component_test_CID_no_debug() {
-    msg "build: Connection ID enabled, debug disabled"
-    scripts/config.py unset MBEDTLS_DEBUG_C
-    scripts/config.py set MBEDTLS_SSL_DTLS_CONNECTION_ID
-
-    CC=gcc cmake .
-    make
-
-    msg "test: Connection ID enabled, debug disabled"
-    make test
 }
 
 component_test_ssl_alloc_buffer_and_mfl () {
@@ -2704,13 +2774,42 @@ component_test_gcc_opt () {
 
 component_build_mbedtls_config_file () {
     msg "build: make with MBEDTLS_CONFIG_FILE" # ~40s
-    # Use the full config so as to catch a maximum of places where
-    # the check of MBEDTLS_CONFIG_FILE might be missing.
-    scripts/config.py full
-    sed 's!"check_config.h"!"mbedtls/check_config.h"!' <"$CONFIG_H" >full_config.h
+    scripts/config.py -w full_config.h full
     echo '#error "MBEDTLS_CONFIG_FILE is not working"' >"$CONFIG_H"
     make CFLAGS="-I '$PWD' -DMBEDTLS_CONFIG_FILE='\"full_config.h\"'"
-    rm -f full_config.h
+    # Make sure this feature is enabled. We'll disable it in the next phase.
+    programs/test/query_compile_time_config MBEDTLS_NIST_KW_C
+    make clean
+
+    msg "build: make with MBEDTLS_CONFIG_FILE + MBEDTLS_USER_CONFIG_FILE"
+    # In the user config, disable one feature (for simplicity, pick a feature
+    # that nothing else depends on).
+    echo '#undef MBEDTLS_NIST_KW_C' >user_config.h
+    make CFLAGS="-I '$PWD' -DMBEDTLS_CONFIG_FILE='\"full_config.h\"' -DMBEDTLS_USER_CONFIG_FILE='\"user_config.h\"'"
+    not programs/test/query_compile_time_config MBEDTLS_NIST_KW_C
+
+    rm -f user_config.h full_config.h
+}
+
+component_build_psa_config_file () {
+    msg "build: make with MBEDTLS_PSA_CRYPTO_CONFIG_FILE" # ~40s
+    scripts/config.py set MBEDTLS_PSA_CRYPTO_CONFIG
+    cp "$CRYPTO_CONFIG_H" psa_test_config.h
+    echo '#error "MBEDTLS_PSA_CRYPTO_CONFIG_FILE is not working"' >"$CRYPTO_CONFIG_H"
+    make CFLAGS="-I '$PWD' -DMBEDTLS_PSA_CRYPTO_CONFIG_FILE='\"psa_test_config.h\"'"
+    # Make sure this feature is enabled. We'll disable it in the next phase.
+    programs/test/query_compile_time_config MBEDTLS_CMAC_C
+    make clean
+
+    msg "build: make with MBEDTLS_PSA_CRYPTO_CONFIG_FILE + MBEDTLS_PSA_CRYPTO_USER_CONFIG_FILE" # ~40s
+    # In the user config, disable one feature, which will reflect on the
+    # mbedtls configuration so we can query it with query_compile_time_config.
+    echo '#undef PSA_WANT_ALG_CMAC' >psa_user_config.h
+    scripts/config.py unset MBEDTLS_CMAC_C
+    make CFLAGS="-I '$PWD' -DMBEDTLS_PSA_CRYPTO_CONFIG_FILE='\"psa_test_config.h\"' -DMBEDTLS_PSA_CRYPTO_USER_CONFIG_FILE='\"psa_user_config.h\"'"
+    not programs/test/query_compile_time_config MBEDTLS_CMAC_C
+
+    rm -f psa_test_config.h psa_user_config.h
 }
 
 component_test_m32_o0 () {
@@ -3061,16 +3160,17 @@ component_test_cmake_out_of_source () {
 
     msg "test: cmake 'out-of-source' build"
     make test
-    # Test an SSL option that requires an auxiliary script in test/scripts/.
+    # Check that ssl-opt.sh can find the test programs.
     # Also ensure that there are no error messages such as
     # "No such file or directory", which would indicate that some required
     # file is missing (ssl-opt.sh tolerates the absence of some files so
     # may exit with status 0 but emit errors).
-    ./tests/ssl-opt.sh -f 'Fallback SCSV: beginning of list' 2>ssl-opt.err
+    ./tests/ssl-opt.sh -f 'Default' >ssl-opt.out 2>ssl-opt.err
+    grep PASS ssl-opt.out
     cat ssl-opt.err >&2
     # If ssl-opt.err is non-empty, record an error and keep going.
     [ ! -s ssl-opt.err ]
-    rm ssl-opt.err
+    rm ssl-opt.out ssl-opt.err
     cd "$MBEDTLS_ROOT_DIR"
     rm -rf "$OUT_OF_SOURCE_DIR"
 }
