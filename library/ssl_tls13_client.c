@@ -54,6 +54,7 @@
  *      ProtocolVersion versions<2..254>;
  * } SupportedVersions;
  */
+MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_tls13_write_supported_versions_ext( mbedtls_ssl_context *ssl,
                                                    unsigned char *buf,
                                                    unsigned char *end,
@@ -103,6 +104,7 @@ static int ssl_tls13_write_supported_versions_ext( mbedtls_ssl_context *ssl,
     return( 0 );
 }
 
+MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_tls13_parse_supported_versions_ext( mbedtls_ssl_context *ssl,
                                                    const unsigned char *buf,
                                                    const unsigned char *end )
@@ -141,6 +143,7 @@ static int ssl_tls13_parse_supported_versions_ext( mbedtls_ssl_context *ssl,
 }
 
 #if defined(MBEDTLS_SSL_ALPN)
+MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_tls13_parse_alpn_ext( mbedtls_ssl_context *ssl,
                                      const unsigned char *buf, size_t len )
 {
@@ -189,6 +192,7 @@ static int ssl_tls13_parse_alpn_ext( mbedtls_ssl_context *ssl,
 }
 #endif /* MBEDTLS_SSL_ALPN */
 
+MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_tls13_reset_key_share( mbedtls_ssl_context *ssl )
 {
     uint16_t group_id = ssl->handshake->offered_group_id;
@@ -227,6 +231,7 @@ static int ssl_tls13_reset_key_share( mbedtls_ssl_context *ssl )
 /*
  * Functions for writing key_share extension.
  */
+MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_tls13_get_default_group_id( mbedtls_ssl_context *ssl,
                                            uint16_t *group_id )
 {
@@ -276,6 +281,7 @@ static int ssl_tls13_get_default_group_id( mbedtls_ssl_context *ssl,
  *          KeyShareEntry client_shares<0..2^16-1>;
  *      } KeyShareClientHello;
  */
+MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_tls13_write_key_share_ext( mbedtls_ssl_context *ssl,
                                           unsigned char *buf,
                                           unsigned char *end,
@@ -388,6 +394,7 @@ cleanup:
  *        NamedGroup selected_group;
  * } KeyShareHelloRetryRequest;
  */
+MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_tls13_parse_hrr_key_share_ext( mbedtls_ssl_context *ssl,
                                               const unsigned char *buf,
                                               const unsigned char *end )
@@ -462,6 +469,7 @@ static int ssl_tls13_parse_hrr_key_share_ext( mbedtls_ssl_context *ssl,
  *        opaque key_exchange<1..2^16-1>;
  * } KeyShareEntry;
  */
+MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_tls13_parse_key_share_ext( mbedtls_ssl_context *ssl,
                                           const unsigned char *buf,
                                           const unsigned char *end )
@@ -536,6 +544,7 @@ static int ssl_tls13_parse_key_share_ext( mbedtls_ssl_context *ssl,
  * a "cookie" extension in the new ClientHello.  Clients MUST NOT use
  * cookies in their initial ClientHello in subsequent connections.
  */
+MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_tls13_parse_cookie_ext( mbedtls_ssl_context *ssl,
                                        const unsigned char *buf,
                                        const unsigned char *end )
@@ -569,6 +578,7 @@ static int ssl_tls13_parse_cookie_ext( mbedtls_ssl_context *ssl,
     return( 0 );
 }
 
+MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_tls13_write_cookie_ext( mbedtls_ssl_context *ssl,
                                        unsigned char *buf,
                                        unsigned char *end,
@@ -616,6 +626,7 @@ static int ssl_tls13_write_cookie_ext( mbedtls_ssl_context *ssl,
  * } PskKeyExchangeModes;
  */
 
+MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_tls13_write_psk_key_exchange_modes_ext( mbedtls_ssl_context *ssl,
                                                        unsigned char *buf,
                                                        unsigned char *end,
@@ -1021,6 +1032,7 @@ int mbedtls_ssl_tls13_write_client_hello_exts( mbedtls_ssl_context *ssl,
  * \return 1 if the ServerHello contains a supported_versions extension
  * \return A negative value if an error occurred while parsing the ServerHello.
  */
+MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_tls13_is_supported_versions_ext_present(
     mbedtls_ssl_context *ssl,
     const unsigned char *buf,
@@ -1096,6 +1108,7 @@ static int ssl_tls13_is_supported_versions_ext_present(
  *     the server is TLS 1.3 capable but negotiating TLS 1.2 or below.
  * - 0 otherwise
  */
+MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_tls13_is_downgrade_negotiation( mbedtls_ssl_context *ssl,
                                                const unsigned char *buf,
                                                const unsigned char *end )
@@ -1128,6 +1141,7 @@ static int ssl_tls13_is_downgrade_negotiation( mbedtls_ssl_context *ssl,
  */
 #define SSL_SERVER_HELLO 0
 #define SSL_SERVER_HELLO_HRR 1
+MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_server_hello_is_hrr( mbedtls_ssl_context *ssl,
                                     const unsigned char *buf,
                                     const unsigned char *end )
@@ -1169,6 +1183,7 @@ static int ssl_server_hello_is_hrr( mbedtls_ssl_context *ssl,
 #define SSL_SERVER_HELLO_TLS1_2 2
 
 #if defined(MBEDTLS_SSL_USE_MPS)
+MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_tls13_preprocess_server_hello( mbedtls_ssl_context *ssl,
                                               const unsigned char *buf,
                                               const unsigned char *end )
@@ -1259,6 +1274,7 @@ cleanup:
     return( ret );
 }
 #else /* MBEDTLS_SSL_USE_MPS */
+MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_tls13_preprocess_server_hello( mbedtls_ssl_context *ssl,
                                               const unsigned char *buf,
                                               const unsigned char *end )
@@ -1350,6 +1366,7 @@ cleanup:
 }
 #endif /* MBEDTLS_SSL_USE_MPS */
 
+MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_tls13_check_server_hello_session_id_echo( mbedtls_ssl_context *ssl,
                                                          const unsigned char **buf,
                                                          const unsigned char *end )
@@ -1387,6 +1404,7 @@ static int ssl_tls13_check_server_hello_session_id_echo( mbedtls_ssl_context *ss
 }
 
 #if defined(MBEDTLS_SSL_MAX_FRAGMENT_LENGTH)
+MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_tls13_parse_max_fragment_length_ext( mbedtls_ssl_context *ssl,
                                                     const unsigned char *buf,
                                                     size_t len )
@@ -1428,6 +1446,7 @@ static int ssl_tls13_parse_max_fragment_length_ext( mbedtls_ssl_context *ssl,
  *
  */
 
+MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_tls13_parse_server_psk_identity_ext( mbedtls_ssl_context *ssl,
                                                     const unsigned char *buf,
                                                     size_t len )
@@ -1513,6 +1532,8 @@ static int ssl_tls13_parse_server_psk_identity_ext( mbedtls_ssl_context *ssl,
 *
 * This function only handles the case of the EncryptedExtensions message.
 */
+
+MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_tls13_parse_encrypted_extensions_early_data_ext(
     mbedtls_ssl_context *ssl,
     const unsigned char *buf, size_t len )
@@ -1571,6 +1592,7 @@ int mbedtls_ssl_set_early_data( mbedtls_ssl_context *ssl,
  *    Extension extensions<6..2^16-1>;
  * } ServerHello;
  */
+MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_tls13_parse_server_hello( mbedtls_ssl_context *ssl,
                                          const unsigned char *buf,
                                          const unsigned char *end,
@@ -1841,6 +1863,7 @@ cleanup:
     return( ret );
 }
 
+MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_tls13_postprocess_server_hello( mbedtls_ssl_context *ssl )
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
@@ -1931,6 +1954,7 @@ cleanup:
     return( ret );
 }
 
+MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_tls13_postprocess_hrr( mbedtls_ssl_context *ssl )
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
@@ -1954,6 +1978,7 @@ static int ssl_tls13_postprocess_hrr( mbedtls_ssl_context *ssl )
  * Wait and parse ServerHello handshake message.
  * Handler for MBEDTLS_SSL_SERVER_HELLO
  */
+MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_tls13_process_server_hello( mbedtls_ssl_context *ssl )
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
@@ -2031,6 +2056,7 @@ cleanup:
  *     Extension extensions<0..2^16-1>;
  * } EncryptedExtensions;
  */
+MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_tls13_parse_encrypted_extensions( mbedtls_ssl_context *ssl,
                                                  const unsigned char *buf,
                                                  const unsigned char *end )
@@ -2152,6 +2178,7 @@ static int ssl_tls13_parse_encrypted_extensions( mbedtls_ssl_context *ssl,
     return( ret );
 }
 
+MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_tls13_process_encrypted_extensions( mbedtls_ssl_context *ssl )
 {
     int ret;
@@ -2226,6 +2253,7 @@ static int ssl_tls13_write_early_data_postprocess( mbedtls_ssl_context *ssl );
  * Implementation
  */
 
+MBEDTLS_CHECK_RETURN_CRITICAL
 int ssl_tls13_write_early_data_process( mbedtls_ssl_context *ssl )
 {
     int ret;
@@ -2300,6 +2328,7 @@ cleanup:
 
 #if defined(MBEDTLS_ZERO_RTT)
 
+MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_tls13_write_early_data_coordinate( mbedtls_ssl_context *ssl )
 {
     if( ssl->handshake->early_data != MBEDTLS_SSL_EARLY_DATA_ON )
@@ -2308,6 +2337,7 @@ static int ssl_tls13_write_early_data_coordinate( mbedtls_ssl_context *ssl )
     return( SSL_EARLY_DATA_WRITE );
 }
 
+MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_tls13_write_early_data_prepare( mbedtls_ssl_context *ssl )
 {
     int ret;
@@ -2398,6 +2428,7 @@ static int ssl_tls13_write_early_data_prepare( mbedtls_ssl_context *ssl )
     return( 0 );
 }
 
+MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_tls13_write_early_data_write( mbedtls_ssl_context *ssl,
     unsigned char *buf,
     size_t buf_len,
@@ -2428,6 +2459,7 @@ static int ssl_tls13_write_early_data_write( mbedtls_ssl_context *ssl,
 
 #else /* MBEDTLS_ZERO_RTT */
 
+MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_tls13_write_early_data_coordinate( mbedtls_ssl_context *ssl )
 {
     ((void) ssl);
@@ -2436,6 +2468,7 @@ static int ssl_tls13_write_early_data_coordinate( mbedtls_ssl_context *ssl )
 
 #endif /* MBEDTLS_ZERO_RTT */
 
+MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_tls13_write_early_data_postprocess( mbedtls_ssl_context *ssl )
 {
     /* Clear PSK we've used for the 0-RTT. */
@@ -2501,6 +2534,7 @@ cleanup:
     return( ret );
 }
 
+MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_tls13_write_end_of_early_data_coordinate( mbedtls_ssl_context *ssl )
 {
     ((void) ssl);
@@ -2525,6 +2559,7 @@ static int ssl_tls13_write_end_of_early_data_coordinate( mbedtls_ssl_context *ss
     return( SSL_END_OF_EARLY_DATA_SKIP );
 }
 
+MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_tls13_write_end_of_early_data_postprocess( mbedtls_ssl_context *ssl )
 {
 #if defined(MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE)
@@ -2553,6 +2588,7 @@ static int ssl_tls13_write_end_of_early_data_postprocess( mbedtls_ssl_context *s
  * indicating if a Certificate Request is expected or not.
  */
 #if defined(MBEDTLS_SSL_USE_MPS)
+MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_tls13_certificate_request_coordinate( mbedtls_ssl_context *ssl )
 {
     int ret;
@@ -2584,6 +2620,7 @@ cleanup:
     return( ret);
 }
 #else /* MBEDTLS_SSL_USE_MPS */
+MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_tls13_certificate_request_coordinate( mbedtls_ssl_context *ssl )
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
@@ -2622,6 +2659,7 @@ static int ssl_tls13_certificate_request_coordinate( mbedtls_ssl_context *ssl )
  *   Extension extensions<2..2^16-1>;
  * } CertificateRequest;
  */
+MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_tls13_parse_certificate_request( mbedtls_ssl_context *ssl,
                                                 const unsigned char *buf,
                                                 const unsigned char *end )
@@ -2738,6 +2776,7 @@ decode_error:
 /*
  * Handler for  MBEDTLS_SSL_CERTIFICATE_REQUEST
  */
+MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_tls13_process_certificate_request( mbedtls_ssl_context *ssl )
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
@@ -2787,6 +2826,7 @@ cleanup:
 /*
  * Handler for MBEDTLS_SSL_SERVER_CERTIFICATE
  */
+MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_tls13_process_server_certificate( mbedtls_ssl_context *ssl )
 {
     int ret;
@@ -2803,6 +2843,7 @@ static int ssl_tls13_process_server_certificate( mbedtls_ssl_context *ssl )
 /*
  * Handler for MBEDTLS_SSL_CERTIFICATE_VERIFY
  */
+MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_tls13_process_certificate_verify( mbedtls_ssl_context *ssl )
 {
     int ret;
@@ -2819,6 +2860,7 @@ static int ssl_tls13_process_certificate_verify( mbedtls_ssl_context *ssl )
 /*
  * Handler for MBEDTLS_SSL_SERVER_FINISHED
  */
+MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_tls13_process_server_finished( mbedtls_ssl_context *ssl )
 {
     int ret;
@@ -2844,6 +2886,7 @@ static int ssl_tls13_process_server_finished( mbedtls_ssl_context *ssl )
 /*
  * Handler for MBEDTLS_SSL_CLIENT_CERTIFICATE
  */
+MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_tls13_write_client_certificate( mbedtls_ssl_context *ssl )
 {
     int non_empty_certificate_msg = 0;
@@ -2899,6 +2942,7 @@ static int ssl_tls13_write_client_certificate( mbedtls_ssl_context *ssl )
 /*
  * Handler for MBEDTLS_SSL_CLIENT_CERTIFICATE_VERIFY
  */
+MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_tls13_write_client_certificate_verify( mbedtls_ssl_context *ssl )
 {
     int ret = mbedtls_ssl_tls13_write_certificate_verify( ssl );
@@ -2913,6 +2957,7 @@ static int ssl_tls13_write_client_certificate_verify( mbedtls_ssl_context *ssl )
 /*
  * Handler for MBEDTLS_SSL_CLIENT_FINISHED
  */
+MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_tls13_write_client_finished( mbedtls_ssl_context *ssl )
 {
     int ret;
@@ -2936,6 +2981,7 @@ static int ssl_tls13_write_client_finished( mbedtls_ssl_context *ssl )
 /*
  * Handler for MBEDTLS_SSL_FLUSH_BUFFERS
  */
+MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_tls13_flush_buffers( mbedtls_ssl_context *ssl )
 {
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "handshake: done" ) );
@@ -2947,6 +2993,7 @@ static int ssl_tls13_flush_buffers( mbedtls_ssl_context *ssl )
 /*
  * Handler for MBEDTLS_SSL_HANDSHAKE_WRAPUP
  */
+MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_tls13_handshake_wrapup( mbedtls_ssl_context *ssl )
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
@@ -2968,6 +3015,7 @@ static int ssl_tls13_handshake_wrapup( mbedtls_ssl_context *ssl )
 
 #if defined(MBEDTLS_SSL_NEW_SESSION_TICKET)
 
+MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_tls13_new_session_ticket_early_data_ext_parse(
     mbedtls_ssl_context *ssl,
     const unsigned char *buf, size_t ext_size )
@@ -2995,6 +3043,7 @@ static int ssl_tls13_new_session_ticket_early_data_ext_parse(
     return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
 }
 
+MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_tls13_new_session_ticket_extensions_parse(
     mbedtls_ssl_context *ssl,
     const unsigned char *buf, size_t buf_remain )
@@ -3042,6 +3091,7 @@ static int ssl_tls13_new_session_ticket_extensions_parse(
     return( 0 );
 }
 
+MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_tls13_new_session_ticket_parse( mbedtls_ssl_context *ssl,
                                                unsigned char *buf,
                                                size_t buf_len )
@@ -3233,6 +3283,7 @@ static int ssl_tls13_new_session_ticket_parse( mbedtls_ssl_context *ssl,
     return( 0 );
 }
 
+MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_tls13_new_session_ticket_postprocess( mbedtls_ssl_context *ssl )
 {
     mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_HANDSHAKE_OVER );
@@ -3245,6 +3296,7 @@ static int ssl_tls13_new_session_ticket_postprocess( mbedtls_ssl_context *ssl )
  * handshake message.
  */
 
+MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_tls13_new_session_ticket_process( mbedtls_ssl_context *ssl )
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;

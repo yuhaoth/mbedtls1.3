@@ -46,6 +46,7 @@
 #include "ssl_debug_helpers.h"
 
 #if defined(MBEDTLS_SSL_SERVER_NAME_INDICATION)
+MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_write_hostname_ext( mbedtls_ssl_context *ssl,
                                    unsigned char *buf,
                                    const unsigned char *end,
@@ -129,6 +130,7 @@ static int ssl_write_hostname_ext( mbedtls_ssl_context *ssl,
  * } ProtocolNameList;
  *
  */
+MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_write_alpn_ext( mbedtls_ssl_context *ssl,
                                unsigned char *buf,
                                const unsigned char *end,
@@ -226,6 +228,7 @@ static int ssl_write_alpn_ext( mbedtls_ssl_context *ssl,
  *
  * DHE groups are not supported yet.
  */
+MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_write_supported_groups_ext( mbedtls_ssl_context *ssl,
                                            unsigned char *buf,
                                            const unsigned char *end,
@@ -317,6 +320,7 @@ static int ssl_write_supported_groups_ext( mbedtls_ssl_context *ssl,
  * } MaxFragmentLength;
  *
  */
+MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_write_max_fragment_length_ext( mbedtls_ssl_context *ssl,
                                               unsigned char *buf,
                                               const unsigned char *end,
@@ -346,6 +350,7 @@ static int ssl_write_max_fragment_length_ext( mbedtls_ssl_context *ssl,
 }
 #endif /* MBEDTLS_SSL_MAX_FRAGMENT_LENGTH */
 
+MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_write_client_hello_cipher_suites(
             mbedtls_ssl_context *ssl,
             unsigned char *buf,
@@ -462,6 +467,7 @@ static int ssl_write_client_hello_cipher_suites(
  *     };
  * } ClientHello;
  */
+MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_write_client_hello_body( mbedtls_ssl_context *ssl,
                                         unsigned char *buf,
                                         unsigned char *end,
@@ -715,6 +721,7 @@ static int ssl_write_client_hello_body( mbedtls_ssl_context *ssl,
     return( 0 );
 }
 
+MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_generate_random( mbedtls_ssl_context *ssl )
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
@@ -752,6 +759,7 @@ static int ssl_generate_random( mbedtls_ssl_context *ssl )
     return( ret );
 }
 
+MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_prepare_client_hello( mbedtls_ssl_context *ssl )
 {
     int ret;
