@@ -992,6 +992,15 @@ static int ssl_conf_check(const mbedtls_ssl_context *ssl)
     if( ret != 0 )
         return( ret );
 
+#if defined(MBEDTLS_SSL_PROTO_TLS1_2) && defined(MBEDTLS_SSL_PROTO_TLS1_3)
+    if( ssl->conf->endpoint == MBEDTLS_SSL_IS_CLIENT &&
+        ssl->conf->min_tls_version == MBEDTLS_SSL_VERSION_TLS1_2 &&
+        ssl->conf->max_tls_version == MBEDTLS_SSL_VERSION_TLS1_3 &&
+        !mbedtls_ssl_conf_tls13_ephemeral_enabled( (mbedtls_ssl_context *)ssl ) )
+    {
+        return( MBEDTLS_ERR_SSL_BAD_CONFIG );
+    }
+#endif
     /* Space for further checks */
 
     return( 0 );
