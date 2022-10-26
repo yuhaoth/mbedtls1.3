@@ -4831,6 +4831,88 @@ int mbedtls_ssl_send_alert_message( mbedtls_ssl_context *ssl,
  */
 int mbedtls_ssl_close_notify( mbedtls_ssl_context *ssl );
 
+#if defined(MBEDTLS_SSL_EARLY_DATA)
+/**
+ * \brief          Try to write exactly 'len' application data bytes while
+ *                 performing the handshake (early data)
+ *
+ * \note           This function behaves mainly as mbedtls_ssl_write(). All the
+ *                 documentation of mbedtls_ssl_write() applies to this function
+ *                 and the present documentation is restricted to the
+ *                 differences with mbedtls_ssl_write().
+ *
+ * \param ssl      SSL context
+ * \param buf      buffer holding the data
+ * \param len      how many bytes must be written
+ *
+ * \return         One additional specific return value:
+ *                 #MBEDTLS_ERR_SSL_CANNOT_WRITE_EARLY_DATA.
+ *
+ *                 #MBEDTLS_ERR_SSL_CANNOT_WRITE_EARLY_DATA is returned when it
+ *                 is not possible to send early data for the SSL context
+ *                 \p ssl. It may have been possible and it is not possible
+ *                 anymore because the client received the server Finished
+ *                 message, the server rejected early data or the maximum
+ *                 number of allowed early data for the PSK in use has been
+ *                 reached.
+ *
+ *                 You should stop using the SSL context \p ssl for writing
+ *                 early data but this does not preclude for using it with
+ *                 mbedtls_ssl_write(), mbedtls_ssl_read() or
+ *                 mbedtls_ssl_handshake().
+ *
+ * \note           This function may write early data only if the SSL context
+ *                 has been configured for the handshake with a PSK (external
+ *                 or established via the ticket mechanism) for which early
+ *                 data is allowed.
+ *
+ * \note           It is expected that this function is used to start the
+ *                 handshake for the SSL context \p ssl to maximize the number
+ *                 of early data that can be written in the course of the
+ *                 handshake. But this is not mandatory.
+ *
+ * \note           This function does not provide any information on whether
+ *                 the server has accepted or will accept early data or not.
+ *                 When it returns a non-negative value, it just means that it
+ *                 has written early data to the server. To know whether the
+ *                 server has accepted early data or not, you should call
+ *                 mbedtls_ssl_get_early_data_status().
+ */
+int mbedtls_ssl_write_early_data( mbedtls_ssl_context *ssl,
+                                  const unsigned char *buf, size_t len );
+
+#if defined(MBEDTLS_SSL_CLI_C)
+#define MBEDTLS_SSL_EARLY_DATA_STATUS_UNKNOWN   0
+#define MBEDTLS_SSL_EARLY_DATA_STATUS_NOT_SENT  1
+#define MBEDTLS_SSL_EARLY_DATA_STATUS_REJECTED  2
+#define MBEDTLS_SSL_EARLY_DATA_STATUS_ACCEPTED  3
+
+/**
+ * \brief Get information about the use of 0-RTT in a TLS 1.3 handshake
+ *
+ * \param ssl      The SSL context to query
+ *
+ * \return         #MBEDTLS_ERR_SSL_BAD_INPUT_DATA if this function is called
+ *                 from the server-side.
+ * \return         #MBEDTLS_SSL_EARLY_DATA_STATUS_UNKNOWN if it is not decided
+ *                 yet if the client will indicate the usage of early data or
+ *                 not.
+ * \return         #MBEDTLS_SSL_EARLY_DATA_STATUS_NOT_SENT if the client has
+ *                 not indicated the use of early data.
+ * \return         #MBEDTLS_SSL_EARLY_DATA_STATUS_REJECTED if the client has
+ *                 indicated the use of early data but the server has not
+ *                 accepted it. In this situation, the client may want to
+ *                 re-send the early data it may have sent via
+ *                 mbedtls_ssl_write_early_data() as ordinary post-handshake
+ *                 application data via mbedtls_ssl_write().
+ * \return         #MBEDTLS_SSL_EARLY_DATA_STATUS_ACCEPTED if the client has
+ *                 indicated the use of early data and the server has accepted
+ *                 it.
+ */
+int mbedtls_ssl_get_early_data_status( mbedtls_ssl_context *ssl );
+#endif /* MBEDTLS_SSL_CLI_C */
+#endif /* MBEDTLS_SSL_EARLY_DATA */
+
 /**
  * \brief          Free referenced items in an SSL context and clear memory
  *
