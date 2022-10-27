@@ -1989,75 +1989,525 @@ support_build_baremetal () {
 }
 
 # depends.py family of tests
-component_test_depends_py_cipher_id () {
-    msg "test/build: depends.py cipher_id (gcc)"
-    tests/scripts/depends.py cipher_id --unset-use-psa
+
+component_test_depends_py_not_mbedtls_ecdsa_c_psa () {
+    msg "test/build: depends.py !MBEDTLS_ECDSA_C (gcc) with MBEDTLS_USE_PSA_CRYPTO defined"
+    tests/scripts/depends.py !MBEDTLS_ECDSA_C --unset-use-psa
 }
 
-component_test_depends_py_cipher_chaining () {
-    msg "test/build: depends.py cipher_chaining (gcc)"
-    tests/scripts/depends.py cipher_chaining --unset-use-psa
+component_test_depends_py_not_mbedtls_ecp_c_psa () {
+    msg "test/build: depends.py !MBEDTLS_ECP_C (gcc) with MBEDTLS_USE_PSA_CRYPTO defined"
+    tests/scripts/depends.py !MBEDTLS_ECP_C --unset-use-psa
 }
 
-component_test_depends_py_cipher_padding () {
-    msg "test/build: depends.py cipher_padding (gcc)"
-    tests/scripts/depends.py cipher_padding --unset-use-psa
+component_test_depends_py_not_mbedtls_md5_c_psa () {
+    msg "test/build: depends.py !MBEDTLS_MD5_C (gcc) with MBEDTLS_USE_PSA_CRYPTO defined"
+    tests/scripts/depends.py !MBEDTLS_MD5_C --unset-use-psa
 }
 
-component_test_depends_py_curves () {
-    msg "test/build: depends.py curves (gcc)"
-    tests/scripts/depends.py curves --unset-use-psa
+component_test_depends_py_not_mbedtls_pkcs1_v15_psa () {
+    msg "test/build: depends.py !MBEDTLS_PKCS1_V15 (gcc) with MBEDTLS_USE_PSA_CRYPTO defined"
+    tests/scripts/depends.py !MBEDTLS_PKCS1_V15 --unset-use-psa
 }
 
-component_test_depends_py_hashes () {
-    msg "test/build: depends.py hashes (gcc)"
-    tests/scripts/depends.py hashes --unset-use-psa
+component_test_depends_py_not_mbedtls_pkcs1_v21_psa () {
+    msg "test/build: depends.py !MBEDTLS_PKCS1_V21 (gcc) with MBEDTLS_USE_PSA_CRYPTO defined"
+    tests/scripts/depends.py !MBEDTLS_PKCS1_V21 --unset-use-psa
 }
 
-component_test_depends_py_kex () {
-    msg "test/build: depends.py kex (gcc)"
-    tests/scripts/depends.py kex --unset-use-psa
+component_test_depends_py_not_mbedtls_ripemd160_c_psa () {
+    msg "test/build: depends.py !MBEDTLS_RIPEMD160_C (gcc) with MBEDTLS_USE_PSA_CRYPTO defined"
+    tests/scripts/depends.py !MBEDTLS_RIPEMD160_C --unset-use-psa
 }
 
-component_test_depends_py_pkalgs () {
-    msg "test/build: depends.py pkalgs (gcc)"
-    tests/scripts/depends.py pkalgs --unset-use-psa
+component_test_depends_py_not_mbedtls_rsa_c_psa () {
+    msg "test/build: depends.py !MBEDTLS_RSA_C (gcc) with MBEDTLS_USE_PSA_CRYPTO defined"
+    tests/scripts/depends.py !MBEDTLS_RSA_C --unset-use-psa
 }
 
-# PSA equivalents of the depends.py tests
-component_test_depends_py_cipher_id_psa () {
-    msg "test/build: depends.py cipher_id (gcc) with MBEDTLS_USE_PSA_CRYPTO defined"
-    tests/scripts/depends.py cipher_id
+component_test_depends_py_not_mbedtls_sha1_c_psa () {
+    msg "test/build: depends.py !MBEDTLS_SHA1_C (gcc) with MBEDTLS_USE_PSA_CRYPTO defined"
+    tests/scripts/depends.py !MBEDTLS_SHA1_C --unset-use-psa
 }
 
-component_test_depends_py_cipher_chaining_psa () {
-    msg "test/build: depends.py cipher_chaining (gcc) with MBEDTLS_USE_PSA_CRYPTO defined"
-    tests/scripts/depends.py cipher_chaining
+component_test_depends_py_not_mbedtls_sha256_c_psa () {
+    msg "test/build: depends.py !MBEDTLS_SHA256_C (gcc) with MBEDTLS_USE_PSA_CRYPTO defined"
+    tests/scripts/depends.py !MBEDTLS_SHA256_C --unset-use-psa
 }
 
-component_test_depends_py_cipher_padding_psa () {
-    msg "test/build: depends.py cipher_padding (gcc) with MBEDTLS_USE_PSA_CRYPTO defined"
-    tests/scripts/depends.py cipher_padding
+component_test_depends_py_not_mbedtls_sha512_c_psa () {
+    msg "test/build: depends.py !MBEDTLS_SHA512_C (gcc) with MBEDTLS_USE_PSA_CRYPTO defined"
+    tests/scripts/depends.py !MBEDTLS_SHA512_C --unset-use-psa
 }
 
-component_test_depends_py_curves_psa () {
-    msg "test/build: depends.py curves (gcc) with MBEDTLS_USE_PSA_CRYPTO defined"
-    tests/scripts/depends.py curves
+component_test_depends_py_not_mbedtls_x509_rsassa_pss_support_psa () {
+    msg "test/build: depends.py !MBEDTLS_X509_RSASSA_PSS_SUPPORT (gcc) with MBEDTLS_USE_PSA_CRYPTO defined"
+    tests/scripts/depends.py !MBEDTLS_X509_RSASSA_PSS_SUPPORT --unset-use-psa
 }
 
-component_test_depends_py_hashes_psa () {
-    msg "test/build: depends.py hashes (gcc) with MBEDTLS_USE_PSA_CRYPTO defined"
-    tests/scripts/depends.py hashes
+component_test_depends_py_mbedtls_aes_c_psa () {
+    msg "test/build: depends.py MBEDTLS_AES_C (gcc) with MBEDTLS_USE_PSA_CRYPTO defined"
+    tests/scripts/depends.py MBEDTLS_AES_C --unset-use-psa
 }
 
-component_test_depends_py_kex_psa () {
-    msg "test/build: depends.py kex (gcc) with MBEDTLS_USE_PSA_CRYPTO defined"
-    tests/scripts/depends.py kex
+component_test_depends_py_mbedtls_aria_c_psa () {
+    msg "test/build: depends.py MBEDTLS_ARIA_C (gcc) with MBEDTLS_USE_PSA_CRYPTO defined"
+    tests/scripts/depends.py MBEDTLS_ARIA_C --unset-use-psa
 }
 
-component_test_depends_py_pkalgs_psa () {
-    msg "test/build: depends.py pkalgs (gcc) with MBEDTLS_USE_PSA_CRYPTO defined"
-    tests/scripts/depends.py pkalgs
+component_test_depends_py_mbedtls_camellia_c_psa () {
+    msg "test/build: depends.py MBEDTLS_CAMELLIA_C (gcc) with MBEDTLS_USE_PSA_CRYPTO defined"
+    tests/scripts/depends.py MBEDTLS_CAMELLIA_C --unset-use-psa
+}
+
+component_test_depends_py_mbedtls_chacha20_c_psa () {
+    msg "test/build: depends.py MBEDTLS_CHACHA20_C (gcc) with MBEDTLS_USE_PSA_CRYPTO defined"
+    tests/scripts/depends.py MBEDTLS_CHACHA20_C --unset-use-psa
+}
+
+component_test_depends_py_mbedtls_cipher_mode_cbc_psa () {
+    msg "test/build: depends.py MBEDTLS_CIPHER_MODE_CBC (gcc) with MBEDTLS_USE_PSA_CRYPTO defined"
+    tests/scripts/depends.py MBEDTLS_CIPHER_MODE_CBC --unset-use-psa
+}
+
+component_test_depends_py_mbedtls_cipher_mode_cfb_psa () {
+    msg "test/build: depends.py MBEDTLS_CIPHER_MODE_CFB (gcc) with MBEDTLS_USE_PSA_CRYPTO defined"
+    tests/scripts/depends.py MBEDTLS_CIPHER_MODE_CFB --unset-use-psa
+}
+
+component_test_depends_py_mbedtls_cipher_mode_ctr_psa () {
+    msg "test/build: depends.py MBEDTLS_CIPHER_MODE_CTR (gcc) with MBEDTLS_USE_PSA_CRYPTO defined"
+    tests/scripts/depends.py MBEDTLS_CIPHER_MODE_CTR --unset-use-psa
+}
+
+component_test_depends_py_mbedtls_cipher_mode_ofb_psa () {
+    msg "test/build: depends.py MBEDTLS_CIPHER_MODE_OFB (gcc) with MBEDTLS_USE_PSA_CRYPTO defined"
+    tests/scripts/depends.py MBEDTLS_CIPHER_MODE_OFB --unset-use-psa
+}
+
+component_test_depends_py_mbedtls_cipher_mode_xts_psa () {
+    msg "test/build: depends.py MBEDTLS_CIPHER_MODE_XTS (gcc) with MBEDTLS_USE_PSA_CRYPTO defined"
+    tests/scripts/depends.py MBEDTLS_CIPHER_MODE_XTS --unset-use-psa
+}
+
+component_test_depends_py_mbedtls_cipher_padding_one_and_zeros_psa () {
+    msg "test/build: depends.py MBEDTLS_CIPHER_PADDING_ONE_AND_ZEROS (gcc) with MBEDTLS_USE_PSA_CRYPTO defined"
+    tests/scripts/depends.py MBEDTLS_CIPHER_PADDING_ONE_AND_ZEROS --unset-use-psa
+}
+
+component_test_depends_py_mbedtls_cipher_padding_pkcs7_psa () {
+    msg "test/build: depends.py MBEDTLS_CIPHER_PADDING_PKCS7 (gcc) with MBEDTLS_USE_PSA_CRYPTO defined"
+    tests/scripts/depends.py MBEDTLS_CIPHER_PADDING_PKCS7 --unset-use-psa
+}
+
+component_test_depends_py_mbedtls_cipher_padding_zeros_psa () {
+    msg "test/build: depends.py MBEDTLS_CIPHER_PADDING_ZEROS (gcc) with MBEDTLS_USE_PSA_CRYPTO defined"
+    tests/scripts/depends.py MBEDTLS_CIPHER_PADDING_ZEROS --unset-use-psa
+}
+
+component_test_depends_py_mbedtls_cipher_padding_zeros_and_len_psa () {
+    msg "test/build: depends.py MBEDTLS_CIPHER_PADDING_ZEROS_AND_LEN (gcc) with MBEDTLS_USE_PSA_CRYPTO defined"
+    tests/scripts/depends.py MBEDTLS_CIPHER_PADDING_ZEROS_AND_LEN --unset-use-psa
+}
+
+component_test_depends_py_mbedtls_des_c_psa () {
+    msg "test/build: depends.py MBEDTLS_DES_C (gcc) with MBEDTLS_USE_PSA_CRYPTO defined"
+    tests/scripts/depends.py MBEDTLS_DES_C --unset-use-psa
+}
+
+component_test_depends_py_mbedtls_ecp_dp_bp256r1_enabled_psa () {
+    msg "test/build: depends.py MBEDTLS_ECP_DP_BP256R1_ENABLED (gcc) with MBEDTLS_USE_PSA_CRYPTO defined"
+    tests/scripts/depends.py MBEDTLS_ECP_DP_BP256R1_ENABLED --unset-use-psa
+}
+
+component_test_depends_py_mbedtls_ecp_dp_bp384r1_enabled_psa () {
+    msg "test/build: depends.py MBEDTLS_ECP_DP_BP384R1_ENABLED (gcc) with MBEDTLS_USE_PSA_CRYPTO defined"
+    tests/scripts/depends.py MBEDTLS_ECP_DP_BP384R1_ENABLED --unset-use-psa
+}
+
+component_test_depends_py_mbedtls_ecp_dp_bp512r1_enabled_psa () {
+    msg "test/build: depends.py MBEDTLS_ECP_DP_BP512R1_ENABLED (gcc) with MBEDTLS_USE_PSA_CRYPTO defined"
+    tests/scripts/depends.py MBEDTLS_ECP_DP_BP512R1_ENABLED --unset-use-psa
+}
+
+component_test_depends_py_mbedtls_ecp_dp_curve25519_enabled_psa () {
+    msg "test/build: depends.py MBEDTLS_ECP_DP_CURVE25519_ENABLED (gcc) with MBEDTLS_USE_PSA_CRYPTO defined"
+    tests/scripts/depends.py MBEDTLS_ECP_DP_CURVE25519_ENABLED --unset-use-psa
+}
+
+component_test_depends_py_mbedtls_ecp_dp_curve448_enabled_psa () {
+    msg "test/build: depends.py MBEDTLS_ECP_DP_CURVE448_ENABLED (gcc) with MBEDTLS_USE_PSA_CRYPTO defined"
+    tests/scripts/depends.py MBEDTLS_ECP_DP_CURVE448_ENABLED --unset-use-psa
+}
+
+component_test_depends_py_mbedtls_ecp_dp_secp192k1_enabled_psa () {
+    msg "test/build: depends.py MBEDTLS_ECP_DP_SECP192K1_ENABLED (gcc) with MBEDTLS_USE_PSA_CRYPTO defined"
+    tests/scripts/depends.py MBEDTLS_ECP_DP_SECP192K1_ENABLED --unset-use-psa
+}
+
+component_test_depends_py_mbedtls_ecp_dp_secp192r1_enabled_psa () {
+    msg "test/build: depends.py MBEDTLS_ECP_DP_SECP192R1_ENABLED (gcc) with MBEDTLS_USE_PSA_CRYPTO defined"
+    tests/scripts/depends.py MBEDTLS_ECP_DP_SECP192R1_ENABLED --unset-use-psa
+}
+
+component_test_depends_py_mbedtls_ecp_dp_secp224k1_enabled_psa () {
+    msg "test/build: depends.py MBEDTLS_ECP_DP_SECP224K1_ENABLED (gcc) with MBEDTLS_USE_PSA_CRYPTO defined"
+    tests/scripts/depends.py MBEDTLS_ECP_DP_SECP224K1_ENABLED --unset-use-psa
+}
+
+component_test_depends_py_mbedtls_ecp_dp_secp224r1_enabled_psa () {
+    msg "test/build: depends.py MBEDTLS_ECP_DP_SECP224R1_ENABLED (gcc) with MBEDTLS_USE_PSA_CRYPTO defined"
+    tests/scripts/depends.py MBEDTLS_ECP_DP_SECP224R1_ENABLED --unset-use-psa
+}
+
+component_test_depends_py_mbedtls_ecp_dp_secp256k1_enabled_psa () {
+    msg "test/build: depends.py MBEDTLS_ECP_DP_SECP256K1_ENABLED (gcc) with MBEDTLS_USE_PSA_CRYPTO defined"
+    tests/scripts/depends.py MBEDTLS_ECP_DP_SECP256K1_ENABLED --unset-use-psa
+}
+
+component_test_depends_py_mbedtls_ecp_dp_secp256r1_enabled_psa () {
+    msg "test/build: depends.py MBEDTLS_ECP_DP_SECP256R1_ENABLED (gcc) with MBEDTLS_USE_PSA_CRYPTO defined"
+    tests/scripts/depends.py MBEDTLS_ECP_DP_SECP256R1_ENABLED --unset-use-psa
+}
+
+component_test_depends_py_mbedtls_ecp_dp_secp384r1_enabled_psa () {
+    msg "test/build: depends.py MBEDTLS_ECP_DP_SECP384R1_ENABLED (gcc) with MBEDTLS_USE_PSA_CRYPTO defined"
+    tests/scripts/depends.py MBEDTLS_ECP_DP_SECP384R1_ENABLED --unset-use-psa
+}
+
+component_test_depends_py_mbedtls_ecp_dp_secp521r1_enabled_psa () {
+    msg "test/build: depends.py MBEDTLS_ECP_DP_SECP521R1_ENABLED (gcc) with MBEDTLS_USE_PSA_CRYPTO defined"
+    tests/scripts/depends.py MBEDTLS_ECP_DP_SECP521R1_ENABLED --unset-use-psa
+}
+
+component_test_depends_py_mbedtls_key_exchange_dhe_psk_enabled_psa () {
+    msg "test/build: depends.py MBEDTLS_KEY_EXCHANGE_DHE_PSK_ENABLED (gcc) with MBEDTLS_USE_PSA_CRYPTO defined"
+    tests/scripts/depends.py MBEDTLS_KEY_EXCHANGE_DHE_PSK_ENABLED --unset-use-psa
+}
+
+component_test_depends_py_mbedtls_key_exchange_dhe_rsa_enabled_psa () {
+    msg "test/build: depends.py MBEDTLS_KEY_EXCHANGE_DHE_RSA_ENABLED (gcc) with MBEDTLS_USE_PSA_CRYPTO defined"
+    tests/scripts/depends.py MBEDTLS_KEY_EXCHANGE_DHE_RSA_ENABLED --unset-use-psa
+}
+
+component_test_depends_py_mbedtls_key_exchange_ecdhe_ecdsa_enabled_psa () {
+    msg "test/build: depends.py MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED (gcc) with MBEDTLS_USE_PSA_CRYPTO defined"
+    tests/scripts/depends.py MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED --unset-use-psa
+}
+
+component_test_depends_py_mbedtls_key_exchange_ecdhe_psk_enabled_psa () {
+    msg "test/build: depends.py MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED (gcc) with MBEDTLS_USE_PSA_CRYPTO defined"
+    tests/scripts/depends.py MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED --unset-use-psa
+}
+
+component_test_depends_py_mbedtls_key_exchange_ecdhe_rsa_enabled_psa () {
+    msg "test/build: depends.py MBEDTLS_KEY_EXCHANGE_ECDHE_RSA_ENABLED (gcc) with MBEDTLS_USE_PSA_CRYPTO defined"
+    tests/scripts/depends.py MBEDTLS_KEY_EXCHANGE_ECDHE_RSA_ENABLED --unset-use-psa
+}
+
+component_test_depends_py_mbedtls_key_exchange_ecdh_ecdsa_enabled_psa () {
+    msg "test/build: depends.py MBEDTLS_KEY_EXCHANGE_ECDH_ECDSA_ENABLED (gcc) with MBEDTLS_USE_PSA_CRYPTO defined"
+    tests/scripts/depends.py MBEDTLS_KEY_EXCHANGE_ECDH_ECDSA_ENABLED --unset-use-psa
+}
+
+component_test_depends_py_mbedtls_key_exchange_ecdh_rsa_enabled_psa () {
+    msg "test/build: depends.py MBEDTLS_KEY_EXCHANGE_ECDH_RSA_ENABLED (gcc) with MBEDTLS_USE_PSA_CRYPTO defined"
+    tests/scripts/depends.py MBEDTLS_KEY_EXCHANGE_ECDH_RSA_ENABLED --unset-use-psa
+}
+
+component_test_depends_py_mbedtls_key_exchange_ecjpake_enabled_psa () {
+    msg "test/build: depends.py MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED (gcc) with MBEDTLS_USE_PSA_CRYPTO defined"
+    tests/scripts/depends.py MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED --unset-use-psa
+}
+
+component_test_depends_py_mbedtls_key_exchange_psk_enabled_psa () {
+    msg "test/build: depends.py MBEDTLS_KEY_EXCHANGE_PSK_ENABLED (gcc) with MBEDTLS_USE_PSA_CRYPTO defined"
+    tests/scripts/depends.py MBEDTLS_KEY_EXCHANGE_PSK_ENABLED --unset-use-psa
+}
+
+component_test_depends_py_mbedtls_key_exchange_rsa_enabled_psa () {
+    msg "test/build: depends.py MBEDTLS_KEY_EXCHANGE_RSA_ENABLED (gcc) with MBEDTLS_USE_PSA_CRYPTO defined"
+    tests/scripts/depends.py MBEDTLS_KEY_EXCHANGE_RSA_ENABLED --unset-use-psa
+}
+
+component_test_depends_py_mbedtls_key_exchange_rsa_psk_enabled_psa () {
+    msg "test/build: depends.py MBEDTLS_KEY_EXCHANGE_RSA_PSK_ENABLED (gcc) with MBEDTLS_USE_PSA_CRYPTO defined"
+    tests/scripts/depends.py MBEDTLS_KEY_EXCHANGE_RSA_PSK_ENABLED --unset-use-psa
+}
+
+component_test_depends_py_mbedtls_sha256_c_psa () {
+    msg "test/build: depends.py MBEDTLS_SHA256_C (gcc) with MBEDTLS_USE_PSA_CRYPTO defined"
+    tests/scripts/depends.py MBEDTLS_SHA256_C --unset-use-psa
+}
+
+component_test_depends_py_mbedtls_sha384_c_psa () {
+    msg "test/build: depends.py MBEDTLS_SHA384_C (gcc) with MBEDTLS_USE_PSA_CRYPTO defined"
+    tests/scripts/depends.py MBEDTLS_SHA384_C --unset-use-psa
+}
+
+component_test_depends_py_mbedtls_sha512_c_psa () {
+    msg "test/build: depends.py MBEDTLS_SHA512_C (gcc) with MBEDTLS_USE_PSA_CRYPTO defined"
+    tests/scripts/depends.py MBEDTLS_SHA512_C --unset-use-psa
+}
+
+component_test_depends_py_not_mbedtls_ecdsa_c () {
+    msg "test/build: depends.py !MBEDTLS_ECDSA_C (gcc)"
+    tests/scripts/depends.py !MBEDTLS_ECDSA_C --unset-use-psa
+}
+
+component_test_depends_py_not_mbedtls_ecp_c () {
+    msg "test/build: depends.py !MBEDTLS_ECP_C (gcc)"
+    tests/scripts/depends.py !MBEDTLS_ECP_C --unset-use-psa
+}
+
+component_test_depends_py_not_mbedtls_md5_c () {
+    msg "test/build: depends.py !MBEDTLS_MD5_C (gcc)"
+    tests/scripts/depends.py !MBEDTLS_MD5_C --unset-use-psa
+}
+
+component_test_depends_py_not_mbedtls_pkcs1_v15 () {
+    msg "test/build: depends.py !MBEDTLS_PKCS1_V15 (gcc)"
+    tests/scripts/depends.py !MBEDTLS_PKCS1_V15 --unset-use-psa
+}
+
+component_test_depends_py_not_mbedtls_pkcs1_v21 () {
+    msg "test/build: depends.py !MBEDTLS_PKCS1_V21 (gcc)"
+    tests/scripts/depends.py !MBEDTLS_PKCS1_V21 --unset-use-psa
+}
+
+component_test_depends_py_not_mbedtls_ripemd160_c () {
+    msg "test/build: depends.py !MBEDTLS_RIPEMD160_C (gcc)"
+    tests/scripts/depends.py !MBEDTLS_RIPEMD160_C --unset-use-psa
+}
+
+component_test_depends_py_not_mbedtls_rsa_c () {
+    msg "test/build: depends.py !MBEDTLS_RSA_C (gcc)"
+    tests/scripts/depends.py !MBEDTLS_RSA_C --unset-use-psa
+}
+
+component_test_depends_py_not_mbedtls_sha1_c () {
+    msg "test/build: depends.py !MBEDTLS_SHA1_C (gcc)"
+    tests/scripts/depends.py !MBEDTLS_SHA1_C --unset-use-psa
+}
+
+component_test_depends_py_not_mbedtls_sha256_c () {
+    msg "test/build: depends.py !MBEDTLS_SHA256_C (gcc)"
+    tests/scripts/depends.py !MBEDTLS_SHA256_C --unset-use-psa
+}
+
+component_test_depends_py_not_mbedtls_sha512_c () {
+    msg "test/build: depends.py !MBEDTLS_SHA512_C (gcc)"
+    tests/scripts/depends.py !MBEDTLS_SHA512_C --unset-use-psa
+}
+
+component_test_depends_py_not_mbedtls_x509_rsassa_pss_support () {
+    msg "test/build: depends.py !MBEDTLS_X509_RSASSA_PSS_SUPPORT (gcc)"
+    tests/scripts/depends.py !MBEDTLS_X509_RSASSA_PSS_SUPPORT --unset-use-psa
+}
+
+component_test_depends_py_mbedtls_aes_c () {
+    msg "test/build: depends.py MBEDTLS_AES_C (gcc)"
+    tests/scripts/depends.py MBEDTLS_AES_C --unset-use-psa
+}
+
+component_test_depends_py_mbedtls_aria_c () {
+    msg "test/build: depends.py MBEDTLS_ARIA_C (gcc)"
+    tests/scripts/depends.py MBEDTLS_ARIA_C --unset-use-psa
+}
+
+component_test_depends_py_mbedtls_camellia_c () {
+    msg "test/build: depends.py MBEDTLS_CAMELLIA_C (gcc)"
+    tests/scripts/depends.py MBEDTLS_CAMELLIA_C --unset-use-psa
+}
+
+component_test_depends_py_mbedtls_chacha20_c () {
+    msg "test/build: depends.py MBEDTLS_CHACHA20_C (gcc)"
+    tests/scripts/depends.py MBEDTLS_CHACHA20_C --unset-use-psa
+}
+
+component_test_depends_py_mbedtls_cipher_mode_cbc () {
+    msg "test/build: depends.py MBEDTLS_CIPHER_MODE_CBC (gcc)"
+    tests/scripts/depends.py MBEDTLS_CIPHER_MODE_CBC --unset-use-psa
+}
+
+component_test_depends_py_mbedtls_cipher_mode_cfb () {
+    msg "test/build: depends.py MBEDTLS_CIPHER_MODE_CFB (gcc)"
+    tests/scripts/depends.py MBEDTLS_CIPHER_MODE_CFB --unset-use-psa
+}
+
+component_test_depends_py_mbedtls_cipher_mode_ctr () {
+    msg "test/build: depends.py MBEDTLS_CIPHER_MODE_CTR (gcc)"
+    tests/scripts/depends.py MBEDTLS_CIPHER_MODE_CTR --unset-use-psa
+}
+
+component_test_depends_py_mbedtls_cipher_mode_ofb () {
+    msg "test/build: depends.py MBEDTLS_CIPHER_MODE_OFB (gcc)"
+    tests/scripts/depends.py MBEDTLS_CIPHER_MODE_OFB --unset-use-psa
+}
+
+component_test_depends_py_mbedtls_cipher_mode_xts () {
+    msg "test/build: depends.py MBEDTLS_CIPHER_MODE_XTS (gcc)"
+    tests/scripts/depends.py MBEDTLS_CIPHER_MODE_XTS --unset-use-psa
+}
+
+component_test_depends_py_mbedtls_cipher_padding_one_and_zeros () {
+    msg "test/build: depends.py MBEDTLS_CIPHER_PADDING_ONE_AND_ZEROS (gcc)"
+    tests/scripts/depends.py MBEDTLS_CIPHER_PADDING_ONE_AND_ZEROS --unset-use-psa
+}
+
+component_test_depends_py_mbedtls_cipher_padding_pkcs7 () {
+    msg "test/build: depends.py MBEDTLS_CIPHER_PADDING_PKCS7 (gcc)"
+    tests/scripts/depends.py MBEDTLS_CIPHER_PADDING_PKCS7 --unset-use-psa
+}
+
+component_test_depends_py_mbedtls_cipher_padding_zeros () {
+    msg "test/build: depends.py MBEDTLS_CIPHER_PADDING_ZEROS (gcc)"
+    tests/scripts/depends.py MBEDTLS_CIPHER_PADDING_ZEROS --unset-use-psa
+}
+
+component_test_depends_py_mbedtls_cipher_padding_zeros_and_len () {
+    msg "test/build: depends.py MBEDTLS_CIPHER_PADDING_ZEROS_AND_LEN (gcc)"
+    tests/scripts/depends.py MBEDTLS_CIPHER_PADDING_ZEROS_AND_LEN --unset-use-psa
+}
+
+component_test_depends_py_mbedtls_des_c () {
+    msg "test/build: depends.py MBEDTLS_DES_C (gcc)"
+    tests/scripts/depends.py MBEDTLS_DES_C --unset-use-psa
+}
+
+component_test_depends_py_mbedtls_ecp_dp_bp256r1_enabled () {
+    msg "test/build: depends.py MBEDTLS_ECP_DP_BP256R1_ENABLED (gcc)"
+    tests/scripts/depends.py MBEDTLS_ECP_DP_BP256R1_ENABLED --unset-use-psa
+}
+
+component_test_depends_py_mbedtls_ecp_dp_bp384r1_enabled () {
+    msg "test/build: depends.py MBEDTLS_ECP_DP_BP384R1_ENABLED (gcc)"
+    tests/scripts/depends.py MBEDTLS_ECP_DP_BP384R1_ENABLED --unset-use-psa
+}
+
+component_test_depends_py_mbedtls_ecp_dp_bp512r1_enabled () {
+    msg "test/build: depends.py MBEDTLS_ECP_DP_BP512R1_ENABLED (gcc)"
+    tests/scripts/depends.py MBEDTLS_ECP_DP_BP512R1_ENABLED --unset-use-psa
+}
+
+component_test_depends_py_mbedtls_ecp_dp_curve25519_enabled () {
+    msg "test/build: depends.py MBEDTLS_ECP_DP_CURVE25519_ENABLED (gcc)"
+    tests/scripts/depends.py MBEDTLS_ECP_DP_CURVE25519_ENABLED --unset-use-psa
+}
+
+component_test_depends_py_mbedtls_ecp_dp_curve448_enabled () {
+    msg "test/build: depends.py MBEDTLS_ECP_DP_CURVE448_ENABLED (gcc)"
+    tests/scripts/depends.py MBEDTLS_ECP_DP_CURVE448_ENABLED --unset-use-psa
+}
+
+component_test_depends_py_mbedtls_ecp_dp_secp192k1_enabled () {
+    msg "test/build: depends.py MBEDTLS_ECP_DP_SECP192K1_ENABLED (gcc)"
+    tests/scripts/depends.py MBEDTLS_ECP_DP_SECP192K1_ENABLED --unset-use-psa
+}
+
+component_test_depends_py_mbedtls_ecp_dp_secp192r1_enabled () {
+    msg "test/build: depends.py MBEDTLS_ECP_DP_SECP192R1_ENABLED (gcc)"
+    tests/scripts/depends.py MBEDTLS_ECP_DP_SECP192R1_ENABLED --unset-use-psa
+}
+
+component_test_depends_py_mbedtls_ecp_dp_secp224k1_enabled () {
+    msg "test/build: depends.py MBEDTLS_ECP_DP_SECP224K1_ENABLED (gcc)"
+    tests/scripts/depends.py MBEDTLS_ECP_DP_SECP224K1_ENABLED --unset-use-psa
+}
+
+component_test_depends_py_mbedtls_ecp_dp_secp224r1_enabled () {
+    msg "test/build: depends.py MBEDTLS_ECP_DP_SECP224R1_ENABLED (gcc)"
+    tests/scripts/depends.py MBEDTLS_ECP_DP_SECP224R1_ENABLED --unset-use-psa
+}
+
+component_test_depends_py_mbedtls_ecp_dp_secp256k1_enabled () {
+    msg "test/build: depends.py MBEDTLS_ECP_DP_SECP256K1_ENABLED (gcc)"
+    tests/scripts/depends.py MBEDTLS_ECP_DP_SECP256K1_ENABLED --unset-use-psa
+}
+
+component_test_depends_py_mbedtls_ecp_dp_secp256r1_enabled () {
+    msg "test/build: depends.py MBEDTLS_ECP_DP_SECP256R1_ENABLED (gcc)"
+    tests/scripts/depends.py MBEDTLS_ECP_DP_SECP256R1_ENABLED --unset-use-psa
+}
+
+component_test_depends_py_mbedtls_ecp_dp_secp384r1_enabled () {
+    msg "test/build: depends.py MBEDTLS_ECP_DP_SECP384R1_ENABLED (gcc)"
+    tests/scripts/depends.py MBEDTLS_ECP_DP_SECP384R1_ENABLED --unset-use-psa
+}
+
+component_test_depends_py_mbedtls_ecp_dp_secp521r1_enabled () {
+    msg "test/build: depends.py MBEDTLS_ECP_DP_SECP521R1_ENABLED (gcc)"
+    tests/scripts/depends.py MBEDTLS_ECP_DP_SECP521R1_ENABLED --unset-use-psa
+}
+
+component_test_depends_py_mbedtls_key_exchange_dhe_psk_enabled () {
+    msg "test/build: depends.py MBEDTLS_KEY_EXCHANGE_DHE_PSK_ENABLED (gcc)"
+    tests/scripts/depends.py MBEDTLS_KEY_EXCHANGE_DHE_PSK_ENABLED --unset-use-psa
+}
+
+component_test_depends_py_mbedtls_key_exchange_dhe_rsa_enabled () {
+    msg "test/build: depends.py MBEDTLS_KEY_EXCHANGE_DHE_RSA_ENABLED (gcc)"
+    tests/scripts/depends.py MBEDTLS_KEY_EXCHANGE_DHE_RSA_ENABLED --unset-use-psa
+}
+
+component_test_depends_py_mbedtls_key_exchange_ecdhe_ecdsa_enabled () {
+    msg "test/build: depends.py MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED (gcc)"
+    tests/scripts/depends.py MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED --unset-use-psa
+}
+
+component_test_depends_py_mbedtls_key_exchange_ecdhe_psk_enabled () {
+    msg "test/build: depends.py MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED (gcc)"
+    tests/scripts/depends.py MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED --unset-use-psa
+}
+
+component_test_depends_py_mbedtls_key_exchange_ecdhe_rsa_enabled () {
+    msg "test/build: depends.py MBEDTLS_KEY_EXCHANGE_ECDHE_RSA_ENABLED (gcc)"
+    tests/scripts/depends.py MBEDTLS_KEY_EXCHANGE_ECDHE_RSA_ENABLED --unset-use-psa
+}
+
+component_test_depends_py_mbedtls_key_exchange_ecdh_ecdsa_enabled () {
+    msg "test/build: depends.py MBEDTLS_KEY_EXCHANGE_ECDH_ECDSA_ENABLED (gcc)"
+    tests/scripts/depends.py MBEDTLS_KEY_EXCHANGE_ECDH_ECDSA_ENABLED --unset-use-psa
+}
+
+component_test_depends_py_mbedtls_key_exchange_ecdh_rsa_enabled () {
+    msg "test/build: depends.py MBEDTLS_KEY_EXCHANGE_ECDH_RSA_ENABLED (gcc)"
+    tests/scripts/depends.py MBEDTLS_KEY_EXCHANGE_ECDH_RSA_ENABLED --unset-use-psa
+}
+
+component_test_depends_py_mbedtls_key_exchange_ecjpake_enabled () {
+    msg "test/build: depends.py MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED (gcc)"
+    tests/scripts/depends.py MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED --unset-use-psa
+}
+
+component_test_depends_py_mbedtls_key_exchange_psk_enabled () {
+    msg "test/build: depends.py MBEDTLS_KEY_EXCHANGE_PSK_ENABLED (gcc)"
+    tests/scripts/depends.py MBEDTLS_KEY_EXCHANGE_PSK_ENABLED --unset-use-psa
+}
+
+component_test_depends_py_mbedtls_key_exchange_rsa_enabled () {
+    msg "test/build: depends.py MBEDTLS_KEY_EXCHANGE_RSA_ENABLED (gcc)"
+    tests/scripts/depends.py MBEDTLS_KEY_EXCHANGE_RSA_ENABLED --unset-use-psa
+}
+
+component_test_depends_py_mbedtls_key_exchange_rsa_psk_enabled () {
+    msg "test/build: depends.py MBEDTLS_KEY_EXCHANGE_RSA_PSK_ENABLED (gcc)"
+    tests/scripts/depends.py MBEDTLS_KEY_EXCHANGE_RSA_PSK_ENABLED --unset-use-psa
+}
+
+component_test_depends_py_mbedtls_sha256_c () {
+    msg "test/build: depends.py MBEDTLS_SHA256_C (gcc)"
+    tests/scripts/depends.py MBEDTLS_SHA256_C --unset-use-psa
+}
+
+component_test_depends_py_mbedtls_sha384_c () {
+    msg "test/build: depends.py MBEDTLS_SHA384_C (gcc)"
+    tests/scripts/depends.py MBEDTLS_SHA384_C --unset-use-psa
+}
+
+component_test_depends_py_mbedtls_sha512_c () {
+    msg "test/build: depends.py MBEDTLS_SHA512_C (gcc)"
+    tests/scripts/depends.py MBEDTLS_SHA512_C --unset-use-psa
 }
 
 component_build_no_pk_rsa_alt_support () {
