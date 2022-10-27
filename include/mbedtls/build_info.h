@@ -140,12 +140,12 @@
 
 /* quick fix for Aarch64 compile fail */
 #if defined(__aarch64__)
-#if !defined(__ARM_FEATURE_SHA512) && \
+#if (!defined(__ARM_FEATURE_SHA512) && \
     ( defined(MBEDTLS_SHA512_USE_A64_CRYPTO_IF_PRESENT) || \
-      defined(MBEDTLS_SHA512_USE_A64_CRYPTO_ONLY) ) && \
-    !defined(__ARM_FEATURE_CRYPTO) && \
+      defined(MBEDTLS_SHA512_USE_A64_CRYPTO_ONLY) ) )&& \
+    (!defined(__ARM_FEATURE_CRYPTO) && \
     ( defined(MBEDTLS_SHA256_USE_A64_CRYPTO_IF_PRESENT) || \
-      defined(MBEDTLS_SHA256_USE_A64_CRYPTO_ONLY) )
+      defined(MBEDTLS_SHA256_USE_A64_CRYPTO_ONLY) ))
 #  if defined(__clang__)
 #    if __clang_major__ < 7
 #      error "A more recent Clang is required for MBEDTLS_SHA512_USE_A64_CRYPTO_*"
@@ -195,13 +195,13 @@
          (__clang_major__ == 13 && __clang_minor__ == 0 && __clang_patchlevel__ == 0)
        /* We implement the intrinsics with inline assembler, so don't error */
 #    else
-#      pragma clang attribute push (__attribute__((target("arch=armv8-a+sha3"))), apply_to=function)
+#      pragma clang attribute push (__attribute__((target("arch=armv8-a+crypto"))), apply_to=function)
 #    endif
 #  elif defined(__GNUC__)
 #    if __GNUC__ < 8
 #      error "A more recent GCC is required for MBEDTLS_SHA512_USE_A64_CRYPTO_*"
 #    else
-#      pragma GCC target ("arch=armv8-a+sha3")
+#      pragma GCC target ("arch=armv8-a+crypto")
 #    endif
 #  else
 #    error "Only GCC and Clang supported for MBEDTLS_SHA512_USE_A64_CRYPTO_*"
