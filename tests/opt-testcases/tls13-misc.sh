@@ -486,3 +486,14 @@ run_test "TLS 1.3 G->m: EarlyData: psk*: size exceeds the limit, fail." \
          -s "EncryptedExtensions: early_data(42) extension exists."         \
          -s "ssl->conf->max_early_data_size=$EARLY_DATA_INPUT_LINE1_LEN"    \
          -S "Ignore application message"
+
+requires_gnutls_next
+requires_all_configs_enabled MBEDTLS_SSL_EARLY_DATA MBEDTLS_SSL_SESSION_TICKETS MBEDTLS_SSL_SRV_C \
+                             MBEDTLS_SSL_CLI_C MBEDTLS_DEBUG_C MBEDTLS_HAVE_TIME
+run_test "TLS 1.3 G->m: EarlyData: HRR check, good." \
+         "$P_SRV force_version=tls13 debug_level=4 reco_group=secp384r1" \
+         "$G_NEXT_CLI localhost --priority=NORMAL:-VERS-ALL:+VERS-TLS1.3:-GROUP-ALL:+GROUP-SECP256R1:+GROUP-SECP384R1 -d 10 -r --earlydata data_files/early_data.txt" \
+         1 \
+         -s "ClientHello: early_data(42) extension received." \
+         -s "tls13 server state: MBEDTLS_SSL_HELLO_RETRY_REQUEST"
+

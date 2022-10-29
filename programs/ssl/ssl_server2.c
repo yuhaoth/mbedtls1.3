@@ -130,6 +130,7 @@ int main( void )
 #define DFL_ALPN_STRING         NULL
 #define DFL_CURVES              NULL
 #define DFL_MAX_EARLY_DATA_SIZE 0
+#define DFL_RECO_GROUP          NULL
 #define DFL_SIG_ALGS            NULL
 #define DFL_DHM_FILE            NULL
 #define DFL_TRANSPORT           MBEDTLS_SSL_TRANSPORT_STREAM
@@ -437,6 +438,7 @@ int main( void )
 
 #if defined(MBEDTLS_ECP_C)
 #define USAGE_CURVES \
+    "    reco_group=group    default: NULL named group of re-connection\n"  \
     "    curves=a,b,c,d      default: \"default\" (library default)\n"  \
     "                        example: \"secp521r1,brainpoolP512r1\"\n"  \
     "                        - use \"none\" for empty list\n"           \
@@ -664,6 +666,7 @@ struct options
 #endif
     char *sni;                  /* string describing sni information        */
     const char *curves;         /* list of supported elliptic curves        */
+    const char *reco_group;     /* group of re-connection */
     const char *sig_algs;       /* supported TLS 1.3 signature algorithms   */
     const char *alpn_string;    /* ALPN supported protocols                 */
     const char *dhm_file;       /* the file with the DH parameters          */
@@ -1731,6 +1734,7 @@ int main( int argc, char *argv[] )
     opt.alpn_string         = DFL_ALPN_STRING;
     opt.curves              = DFL_CURVES;
     opt.max_early_data_size = DFL_MAX_EARLY_DATA_SIZE;
+    opt.reco_group          = DFL_RECO_GROUP;
     opt.sig_algs            = DFL_SIG_ALGS;
     opt.dhm_file            = DFL_DHM_FILE;
     opt.transport           = DFL_TRANSPORT;
@@ -1923,6 +1927,8 @@ int main( int argc, char *argv[] )
         }
         else if( strcmp( p, "curves" ) == 0 )
             opt.curves = q;
+        else if( strcmp( p, "reco_group" ) == 0 )
+            opt.reco_group = q;
 #if defined(MBEDTLS_SSL_HANDSHAKE_WITH_CERT_ENABLED)
         else if( strcmp( p, "sig_algs" ) == 0 )
             opt.sig_algs = q;
@@ -4344,6 +4350,21 @@ close_notify:
 #if defined(MBEDTLS_DEBUG_C)
     if( opt.reco_debug_level )
         mbedtls_debug_set_threshold( opt.reco_debug_level );
+#endif
+
+#if defined(MBEDTLS_ECP_C)
+    if( opt.reco_group != NULL )
+    {
+        if( ( curve_cur = mbedtls_ecp_curve_info_from_name(
+                              opt.reco_group ) ) == NULL )
+        {
+            mbedtls_printf(" fail! Reconnection named group is invalid\n");
+            goto exit;
+        }
+        group_list[0] = curve_cur->tls_id;
+        group_list[1] = 0;
+        mbedtls_ssl_conf_groups( &conf, group_list );
+    }
 #endif
 
     goto reset;
