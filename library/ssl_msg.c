@@ -3700,6 +3700,32 @@ static int ssl_prepare_record_content( mbedtls_ssl_context *ssl,
         {
             MBEDTLS_SSL_DEBUG_RET( 1, "ssl_decrypt_buf", ret );
 
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3) && defined(MBEDTLS_SSL_SRV_C)
+            /* Although early_data was reject, server might receive early
+             * application data, it is encrypted with early keys and should be
+             * ignore.
+             *
+             * RFC 8446 section 4.2.10
+             *
+             * Ignore the extension and return a regular 1-RTT response. The
+             * server then skips past early data by attempting to deprotect
+             * received records using the handshake traffic key, discarding
+             * records which fail deprotection (up to the configured
+             * max_early_data_size). Once a record is deprotected successfully,
+             * it is treated as the start of the client's second flight and the
+             * server proceeds as with an ordinary 1-RTT handshake.
+             */
+            if( mbedtls_ssl_tls13_get_early_data_status( ssl ) ==
+                    MBEDTLS_SSL_EARLY_DATA_STATUS_REJECTED )
+            {
+                MBEDTLS_SSL_DEBUG_MSG(
+                    3, ( "Ignore application message when early_data was "
+                            "received and rejected. Decrypt error is "
+                            "expected." ) );
+                ret = MBEDTLS_ERR_SSL_CONTINUE_PROCESSING;
+            }
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3 && MBEDTLS_SSL_SRV_C */
+
 #if defined(MBEDTLS_SSL_DTLS_CONNECTION_ID)
             if( ret == MBEDTLS_ERR_SSL_UNEXPECTED_CID &&
                 ssl->conf->ignore_unexpected_cid
@@ -4839,6 +4865,29 @@ int mbedtls_ssl_handle_message_type( mbedtls_ssl_context *ssl )
         }
     }
 #endif /* MBEDTLS_SSL_PROTO_DTLS */
+
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3) && defined(MBEDTLS_SSL_SRV_C)
+    /* Ignore application data message before 2nd ClientHello when early_data
+     * was received in 1st ClientHello
+     *
+     * all below condition should be matched:
+     *  - Is application message.
+     *  - Expect 2nd ClientHello.
+     *  - Expect plaintext.
+     *  - Is rejected.
+     */
+    if( ssl->in_msgtype == MBEDTLS_SSL_MSG_APPLICATION_DATA &&
+        ssl->handshake != NULL &&
+        ssl->handshake->hello_retry_request_count > 0 &&
+        ssl->transform_in == NULL &&
+        mbedtls_ssl_tls13_get_early_data_status( ssl ) ==
+            MBEDTLS_SSL_EARLY_DATA_STATUS_REJECTED )
+    {
+        MBEDTLS_SSL_DEBUG_MSG(
+            3, ( "Ignore application message before 2nd ClientHello" ) );
+        return( MBEDTLS_ERR_SSL_CONTINUE_PROCESSING );
+    }
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3 && MBEDTLS_SSL_SRV_C */
 
     return( 0 );
 }
