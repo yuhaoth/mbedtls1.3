@@ -2384,7 +2384,10 @@ static int ssl_tls13_write_encrypted_extensions_body( mbedtls_ssl_context *ssl,
     if( mbedtls_ssl_get_early_data_status( ssl ) ==
             MBEDTLS_SSL_EARLY_DATA_STATUS_ACCEPTED )
     {
-        /* TODO: Write early data extension here. */
+        ret = mbedtls_ssl_tls13_write_early_data_ext( ssl, p, end, &output_len );
+        if( ret != 0 )
+            return( ret );
+        p += output_len;
     }
 #endif /* MBEDTLS_SSL_EARLY_DATA */
 

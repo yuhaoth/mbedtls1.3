@@ -1377,6 +1377,7 @@ cleanup:
 
 #endif /* MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE */
 
+#if defined(MBEDTLS_SSL_EARLY_DATA)
 /* Early Data Indication Extension
  *
  * struct {
@@ -1387,7 +1388,6 @@ cleanup:
  *   };
  * } EarlyDataIndication;
  */
-#if defined(MBEDTLS_SSL_EARLY_DATA)
 int mbedtls_ssl_tls13_write_early_data_ext( mbedtls_ssl_context *ssl,
                                             unsigned char *buf,
                                             const unsigned char *end,
@@ -1405,7 +1405,6 @@ int mbedtls_ssl_tls13_write_early_data_ext( mbedtls_ssl_context *ssl,
     *out_len = 4;
 
     mbedtls_ssl_tls13_set_hs_sent_ext_mask( ssl, MBEDTLS_TLS_EXT_EARLY_DATA );
-
     return( 0 );
 }
 #endif /* MBEDTLS_SSL_EARLY_DATA */
