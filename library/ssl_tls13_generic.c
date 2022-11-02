@@ -257,7 +257,7 @@ static int ssl_tls13_parse_certificate_verify( mbedtls_ssl_context *ssl,
         goto error;
     }
 
-    MBEDTLS_SSL_DEBUG_BUF( 3, "verify hash", verify_hash, verify_hash_len );
+    MBEDTLS_SSL_DEBUG_BUF( 5, "verify hash", verify_hash, verify_hash_len );
 #if defined(MBEDTLS_X509_RSASSA_PSS_SUPPORT)
     if( sig_alg == MBEDTLS_PK_RSASSA_PSS )
     {
@@ -324,7 +324,7 @@ int mbedtls_ssl_tls13_process_certificate_verify( mbedtls_ssl_context *ssl )
         return( ret );
     }
 
-    MBEDTLS_SSL_DEBUG_BUF( 3, "handshake hash", transcript, transcript_len );
+    MBEDTLS_SSL_DEBUG_BUF( 5, "handshake hash", transcript, transcript_len );
 
     /* Create verify structure */
     ssl_tls13_create_verify_structure( transcript,
@@ -1007,7 +1007,7 @@ static int ssl_tls13_write_certificate_verify_body( mbedtls_ssl_context *ssl,
     if( ret != 0 )
         return( ret );
 
-    MBEDTLS_SSL_DEBUG_BUF( 3, "handshake hash",
+    MBEDTLS_SSL_DEBUG_BUF( 5, "handshake hash",
         handshake_hash,
         handshake_hash_len);
 
@@ -1060,7 +1060,7 @@ static int ssl_tls13_write_certificate_verify_body( mbedtls_ssl_context *ssl,
         if( status != PSA_SUCCESS )
             return( psa_ssl_status_to_mbedtls( status ) );
 
-        MBEDTLS_SSL_DEBUG_BUF( 3, "verify hash", verify_hash, verify_hash_len );
+        MBEDTLS_SSL_DEBUG_BUF( 5, "verify hash", verify_hash, verify_hash_len );
 
         if( ( ret = mbedtls_pk_sign_ext( pk_type, own_key,
                         md_alg, verify_hash, verify_hash_len,
@@ -1181,10 +1181,10 @@ static int ssl_tls13_parse_finished_message( mbedtls_ssl_context *ssl,
         return( MBEDTLS_ERR_SSL_DECODE_ERROR );
     }
 
-    MBEDTLS_SSL_DEBUG_BUF( 4, "verify_data (self-computed):",
+    MBEDTLS_SSL_DEBUG_BUF( 5, "verify_data (self-computed):",
                            expected_verify_data,
                            expected_verify_data_len );
-    MBEDTLS_SSL_DEBUG_BUF( 4, "verify_data (received message):", buf,
+    MBEDTLS_SSL_DEBUG_BUF( 5, "verify_data (received message):", buf,
                            expected_verify_data_len );
 
     /* Semantic validation */
@@ -1451,7 +1451,7 @@ int mbedtls_ssl_reset_transcript_for_hrr( mbedtls_ssl_context *ssl )
 #if defined(MBEDTLS_HAS_ALG_SHA_256_VIA_MD_OR_PSA_BASED_ON_USE_PSA)
     if( ciphersuite_info->mac == MBEDTLS_MD_SHA256 )
     {
-        MBEDTLS_SSL_DEBUG_BUF( 4, "Truncated SHA-256 handshake transcript",
+        MBEDTLS_SSL_DEBUG_BUF( 5, "Truncated SHA-256 handshake transcript",
                                hash_transcript, hash_len );
 
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
@@ -1465,7 +1465,7 @@ int mbedtls_ssl_reset_transcript_for_hrr( mbedtls_ssl_context *ssl )
 #if defined(MBEDTLS_HAS_ALG_SHA_384_VIA_MD_OR_PSA_BASED_ON_USE_PSA)
     if( ciphersuite_info->mac == MBEDTLS_MD_SHA384 )
     {
-        MBEDTLS_SSL_DEBUG_BUF( 4, "Truncated SHA-384 handshake transcript",
+        MBEDTLS_SSL_DEBUG_BUF( 5, "Truncated SHA-384 handshake transcript",
                                hash_transcript, hash_len );
 
 #if defined(MBEDTLS_USE_PSA_CRYPTO)

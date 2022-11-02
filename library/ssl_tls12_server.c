@@ -402,7 +402,7 @@ static int ssl_parse_cid_ext( mbedtls_ssl_context *ssl,
     memcpy( ssl->handshake->peer_cid, buf, peer_cid_len );
 
     MBEDTLS_SSL_DEBUG_MSG( 3, ( "Use of CID extension negotiated" ) );
-    MBEDTLS_SSL_DEBUG_BUF( 3, "Client CID", buf, peer_cid_len );
+    MBEDTLS_SSL_DEBUG_BUF( 5, "Client CID", buf, peer_cid_len );
 
     return( 0 );
 }
@@ -646,7 +646,7 @@ static int ssl_parse_use_srtp_ext( mbedtls_ssl_context *ssl,
 
         memcpy( ssl->dtls_srtp_info.mki_value, buf, mki_length );
 
-        MBEDTLS_SSL_DEBUG_BUF( 3, "using mki",  ssl->dtls_srtp_info.mki_value,
+        MBEDTLS_SSL_DEBUG_BUF( 5, "using mki",  ssl->dtls_srtp_info.mki_value,
                                                 ssl->dtls_srtp_info.mki_len );
     }
 
@@ -948,7 +948,7 @@ read_record_header:
 
     buf = ssl->in_hdr;
 
-    MBEDTLS_SSL_DEBUG_BUF( 4, "record header", buf, mbedtls_ssl_in_hdr_len( ssl ) );
+    MBEDTLS_SSL_DEBUG_BUF( 5, "record header", buf, mbedtls_ssl_in_hdr_len( ssl ) );
 
     /*
      * TLS Client Hello
@@ -1043,7 +1043,7 @@ read_record_header:
 
     buf = ssl->in_msg;
 
-    MBEDTLS_SSL_DEBUG_BUF( 4, "record contents", buf, msg_len );
+    MBEDTLS_SSL_DEBUG_BUF( 5, "record contents", buf, msg_len );
 
     ssl->handshake->update_checksum( ssl, buf, msg_len );
 
@@ -1180,7 +1180,7 @@ read_record_header:
     /*
      * Check and save the protocol version
      */
-    MBEDTLS_SSL_DEBUG_BUF( 3, "client hello, version", buf, 2 );
+    MBEDTLS_SSL_DEBUG_BUF( 5, "client hello, version", buf, 2 );
 
     ssl->tls_version = mbedtls_ssl_read_version( buf, ssl->conf->transport );
     ssl->session_negotiate->tls_version = ssl->tls_version;
@@ -1196,7 +1196,7 @@ read_record_header:
     /*
      * Save client random (inc. Unix time)
      */
-    MBEDTLS_SSL_DEBUG_BUF( 3, "client hello, random bytes", buf + 2, 32 );
+    MBEDTLS_SSL_DEBUG_BUF( 5, "client hello, random bytes", buf + 2, 32 );
 
     memcpy( ssl->handshake->randbytes, buf + 2, 32 );
 
@@ -1214,7 +1214,7 @@ read_record_header:
         return( MBEDTLS_ERR_SSL_DECODE_ERROR );
     }
 
-    MBEDTLS_SSL_DEBUG_BUF( 3, "client hello, session id", buf + 35, sess_len );
+    MBEDTLS_SSL_DEBUG_BUF( 5, "client hello, session id", buf + 35, sess_len );
 
     ssl->session_negotiate->id_len = sess_len;
     memset( ssl->session_negotiate->id, 0,
@@ -1239,7 +1239,7 @@ read_record_header:
             return( MBEDTLS_ERR_SSL_DECODE_ERROR );
         }
 
-        MBEDTLS_SSL_DEBUG_BUF( 3, "client hello, cookie",
+        MBEDTLS_SSL_DEBUG_BUF( 5, "client hello, cookie",
                        buf + cookie_offset + 1, cookie_len );
 
 #if defined(MBEDTLS_SSL_DTLS_HELLO_VERIFY)
@@ -1298,7 +1298,7 @@ read_record_header:
         return( MBEDTLS_ERR_SSL_DECODE_ERROR );
     }
 
-    MBEDTLS_SSL_DEBUG_BUF( 3, "client hello, ciphersuitelist",
+    MBEDTLS_SSL_DEBUG_BUF( 5, "client hello, ciphersuitelist",
                    buf + ciph_offset + 2,  ciph_len );
 
     /*
@@ -1321,7 +1321,7 @@ read_record_header:
         return( MBEDTLS_ERR_SSL_DECODE_ERROR );
     }
 
-    MBEDTLS_SSL_DEBUG_BUF( 3, "client hello, compression",
+    MBEDTLS_SSL_DEBUG_BUF( 5, "client hello, compression",
                       buf + comp_offset + 1, comp_len );
 
         /*
@@ -1353,7 +1353,7 @@ read_record_header:
             ext_len = 0;
 
         ext = buf + ext_offset + 2;
-        MBEDTLS_SSL_DEBUG_BUF( 3, "client hello extensions", ext, ext_len );
+        MBEDTLS_SSL_DEBUG_BUF( 5, "client hello extensions", ext, ext_len );
 
         while( ext_len != 0 )
         {
@@ -2101,7 +2101,7 @@ static int ssl_write_hello_verify_request( mbedtls_ssl_context *ssl )
     /* The RFC is not clear on this point, but sending the actual negotiated
      * version looks like the most interoperable thing to do. */
     mbedtls_ssl_write_version( p, ssl->conf->transport, ssl->tls_version );
-    MBEDTLS_SSL_DEBUG_BUF( 3, "server version", p, 2 );
+    MBEDTLS_SSL_DEBUG_BUF( 5, "server version", p, 2 );
     p += 2;
 
     /* If we get here, f_cookie_check is not null */
@@ -2124,7 +2124,7 @@ static int ssl_write_hello_verify_request( mbedtls_ssl_context *ssl )
 
     *cookie_len_byte = (unsigned char)( p - ( cookie_len_byte + 1 ) );
 
-    MBEDTLS_SSL_DEBUG_BUF( 3, "cookie sent", cookie_len_byte + 1, *cookie_len_byte );
+    MBEDTLS_SSL_DEBUG_BUF( 5, "cookie sent", cookie_len_byte + 1, *cookie_len_byte );
 
     ssl->out_msglen  = p - ssl->out_msg;
     ssl->out_msgtype = MBEDTLS_SSL_MSG_HANDSHAKE;
@@ -2266,7 +2266,7 @@ static int ssl_write_server_hello( mbedtls_ssl_context *ssl )
 
     memcpy( ssl->handshake->randbytes + 32, buf + 6, 32 );
 
-    MBEDTLS_SSL_DEBUG_BUF( 3, "server hello, random bytes", buf + 6, 32 );
+    MBEDTLS_SSL_DEBUG_BUF( 5, "server hello, random bytes", buf + 6, 32 );
 
     ssl_handle_id_based_session_resumption( ssl );
 
@@ -2325,7 +2325,7 @@ static int ssl_write_server_hello( mbedtls_ssl_context *ssl )
     p += ssl->session_negotiate->id_len;
 
     MBEDTLS_SSL_DEBUG_MSG( 3, ( "server hello, session id len.: %" MBEDTLS_PRINTF_SIZET, n ) );
-    MBEDTLS_SSL_DEBUG_BUF( 3,   "server hello, session id", buf + 39, n );
+    MBEDTLS_SSL_DEBUG_BUF( 5,   "server hello, session id", buf + 39, n );
     MBEDTLS_SSL_DEBUG_MSG( 3, ( "%s session has been resumed",
                    ssl->handshake->resume ? "a" : "no" ) );
 
@@ -2588,7 +2588,7 @@ static int ssl_write_certificate_request( mbedtls_ssl_context *ssl )
             memcpy( p, crt->subject_raw.p, dn_size );
             p += dn_size;
 
-            MBEDTLS_SSL_DEBUG_BUF( 3, "requested DN", p - dn_size, dn_size );
+            MBEDTLS_SSL_DEBUG_BUF( 5, "requested DN", p - dn_size, dn_size );
 
             total_dn_size += 2 + dn_size;
             crt = crt->next;
@@ -3112,7 +3112,7 @@ curve_matching_done:
             return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
         }
 
-        MBEDTLS_SSL_DEBUG_BUF( 3, "parameters hash", hash, hashlen );
+        MBEDTLS_SSL_DEBUG_BUF( 5, "parameters hash", hash, hashlen );
 
         /*
          * 2.3: Compute and add the signature
@@ -3270,7 +3270,7 @@ static int ssl_write_server_key_exchange( mbedtls_ssl_context *ssl )
         ssl->out_msg[ssl->out_msglen++] = MBEDTLS_BYTE_1( signature_len );
         ssl->out_msg[ssl->out_msglen++] = MBEDTLS_BYTE_0( signature_len );
 
-        MBEDTLS_SSL_DEBUG_BUF( 3, "my signature",
+        MBEDTLS_SSL_DEBUG_BUF( 5, "my signature",
                                ssl->out_msg + ssl->out_msglen,
                                signature_len );
 
@@ -3627,7 +3627,7 @@ static int ssl_parse_client_psk_identity( mbedtls_ssl_context *ssl, unsigned cha
 
     if( ret == MBEDTLS_ERR_SSL_UNKNOWN_IDENTITY )
     {
-        MBEDTLS_SSL_DEBUG_BUF( 3, "Unknown PSK identity", *p, n );
+        MBEDTLS_SSL_DEBUG_BUF( 5, "Unknown PSK identity", *p, n );
         mbedtls_ssl_send_alert_message( ssl, MBEDTLS_SSL_ALERT_LEVEL_FATAL,
                                         MBEDTLS_SSL_ALERT_MSG_UNKNOWN_PSK_IDENTITY );
         return( MBEDTLS_ERR_SSL_UNKNOWN_IDENTITY );

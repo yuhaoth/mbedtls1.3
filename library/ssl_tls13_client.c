@@ -361,7 +361,7 @@ static int ssl_tls13_write_key_share_ext( mbedtls_ssl_context *ssl,
     /* Output the total length of key_share extension. */
     *out_len = p - buf;
 
-    MBEDTLS_SSL_DEBUG_BUF( 3, "client hello, key_share extension", buf, *out_len );
+    MBEDTLS_SSL_DEBUG_BUF( 5, "client hello, key_share extension", buf, *out_len );
 
     mbedtls_ssl_tls13_set_hs_sent_ext_mask( ssl, MBEDTLS_TLS_EXT_KEY_SHARE );
 
@@ -394,7 +394,7 @@ static int ssl_tls13_parse_hrr_key_share_ext( mbedtls_ssl_context *ssl,
     if( group_list == NULL )
         return( MBEDTLS_ERR_SSL_BAD_CONFIG );
 
-    MBEDTLS_SSL_DEBUG_BUF( 3, "key_share extension", p, end - buf );
+    MBEDTLS_SSL_DEBUG_BUF( 5, "key_share extension", p, end - buf );
 
     /* Read selected_group */
     MBEDTLS_SSL_CHK_BUF_READ_PTR( p, end, 2 );
@@ -550,7 +550,7 @@ static int ssl_tls13_parse_cookie_ext( mbedtls_ssl_context *ssl,
     p += 2;
 
     MBEDTLS_SSL_CHK_BUF_READ_PTR( p, end, cookie_len );
-    MBEDTLS_SSL_DEBUG_BUF( 3, "cookie extension", p, cookie_len );
+    MBEDTLS_SSL_DEBUG_BUF( 5, "cookie extension", p, cookie_len );
 
     mbedtls_free( handshake->cookie );
     handshake->hrr_cookie_len = 0;
@@ -585,7 +585,7 @@ static int ssl_tls13_write_cookie_ext( mbedtls_ssl_context *ssl,
         return( 0 );
     }
 
-    MBEDTLS_SSL_DEBUG_BUF( 3, "client hello, cookie",
+    MBEDTLS_SSL_DEBUG_BUF( 5, "client hello, cookie",
                            handshake->cookie,
                            handshake->hrr_cookie_len );
 
@@ -810,7 +810,7 @@ static int ssl_tls13_write_identity( mbedtls_ssl_context *ssl,
     memcpy( buf + 2, identity, identity_len );
     MBEDTLS_PUT_UINT32_BE( obfuscated_ticket_age, buf, 2 + identity_len );
 
-    MBEDTLS_SSL_DEBUG_BUF( 4, "write identity", buf, 6 + identity_len );
+    MBEDTLS_SSL_DEBUG_BUF( 5, "write identity", buf, 6 + identity_len );
 
     *out_len = 6 + identity_len;
 
@@ -859,7 +859,7 @@ static int ssl_tls13_write_binder( mbedtls_ssl_context *ssl,
         MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_tls13_create_psk_binder", ret );
         return( ret );
     }
-    MBEDTLS_SSL_DEBUG_BUF( 4, "write binder", buf, 1 + binder_len );
+    MBEDTLS_SSL_DEBUG_BUF( 5, "write binder", buf, 1 + binder_len );
 
     *out_len = 1 + binder_len;
 
@@ -995,7 +995,7 @@ int mbedtls_ssl_tls13_write_identities_of_pre_shared_key_ext(
     *out_len = ( p - buf ) + l_binders_len;
     *binders_len = l_binders_len;
 
-    MBEDTLS_SSL_DEBUG_BUF( 3, "pre_shared_key identities", buf, p - buf );
+    MBEDTLS_SSL_DEBUG_BUF( 5, "pre_shared_key identities", buf, p - buf );
 
     return( 0 );
 }
@@ -1049,7 +1049,7 @@ int mbedtls_ssl_tls13_write_binders_of_pre_shared_key_ext(
      */
     MBEDTLS_PUT_UINT16_BE( p - buf - 2, buf, 0 );
 
-    MBEDTLS_SSL_DEBUG_BUF( 3, "pre_shared_key binders", buf, p - buf );
+    MBEDTLS_SSL_DEBUG_BUF( 5, "pre_shared_key binders", buf, p - buf );
 
     mbedtls_ssl_tls13_set_hs_sent_ext_mask(
         ssl, MBEDTLS_TLS_EXT_PRE_SHARED_KEY );
@@ -1506,10 +1506,10 @@ static int ssl_tls13_check_server_hello_session_id_echo( mbedtls_ssl_context *ss
     if( ssl->session_negotiate->id_len != legacy_session_id_echo_len ||
         memcmp( ssl->session_negotiate->id, p , legacy_session_id_echo_len ) != 0 )
     {
-        MBEDTLS_SSL_DEBUG_BUF( 3, "Expected Session ID",
+        MBEDTLS_SSL_DEBUG_BUF( 5, "Expected Session ID",
                                ssl->session_negotiate->id,
                                ssl->session_negotiate->id_len );
-        MBEDTLS_SSL_DEBUG_BUF( 3, "Received Session ID", p,
+        MBEDTLS_SSL_DEBUG_BUF( 5, "Received Session ID", p,
                                legacy_session_id_echo_len );
 
         MBEDTLS_SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_ILLEGAL_PARAMETER,
@@ -1521,7 +1521,7 @@ static int ssl_tls13_check_server_hello_session_id_echo( mbedtls_ssl_context *ss
     p += legacy_session_id_echo_len;
     *buf = p;
 
-    MBEDTLS_SSL_DEBUG_BUF( 3, "Session ID", ssl->session_negotiate->id,
+    MBEDTLS_SSL_DEBUG_BUF( 5, "Session ID", ssl->session_negotiate->id,
                             ssl->session_negotiate->id_len );
     return( 0 );
 }
@@ -1566,8 +1566,8 @@ static int ssl_tls13_parse_server_hello( mbedtls_ssl_context *ssl,
      */
     MBEDTLS_SSL_CHK_BUF_READ_PTR( p, end, MBEDTLS_SERVER_HELLO_RANDOM_LEN + 6 );
 
-    MBEDTLS_SSL_DEBUG_BUF( 4, "server hello", p, end - p );
-    MBEDTLS_SSL_DEBUG_BUF( 3, "server hello, version", p, 2 );
+    MBEDTLS_SSL_DEBUG_BUF( 5, "server hello", p, end - p );
+    MBEDTLS_SSL_DEBUG_BUF( 5, "server hello, version", p, 2 );
 
     /* ...
      * ProtocolVersion legacy_version = 0x0303; // TLS 1.2
@@ -1596,7 +1596,7 @@ static int ssl_tls13_parse_server_hello( mbedtls_ssl_context *ssl,
     {
         memcpy( &handshake->randbytes[MBEDTLS_CLIENT_HELLO_RANDOM_LEN], p,
                 MBEDTLS_SERVER_HELLO_RANDOM_LEN );
-        MBEDTLS_SSL_DEBUG_BUF( 3, "server hello, random bytes",
+        MBEDTLS_SSL_DEBUG_BUF( 5, "server hello, random bytes",
                                p, MBEDTLS_SERVER_HELLO_RANDOM_LEN );
     }
     p += MBEDTLS_SERVER_HELLO_RANDOM_LEN;
@@ -1694,7 +1694,7 @@ static int ssl_tls13_parse_server_hello( mbedtls_ssl_context *ssl,
     MBEDTLS_SSL_CHK_BUF_READ_PTR( p, end, extensions_len );
     extensions_end = p + extensions_len;
 
-    MBEDTLS_SSL_DEBUG_BUF( 3, "server hello extensions", p, extensions_len );
+    MBEDTLS_SSL_DEBUG_BUF( 5, "server hello extensions", p, extensions_len );
 
     handshake->received_extensions = MBEDTLS_SSL_EXT_MASK_NONE;
     allowed_extensions_mask = is_hrr ?
@@ -2030,7 +2030,7 @@ static int ssl_tls13_parse_encrypted_extensions( mbedtls_ssl_context *ssl,
     extensions_len = MBEDTLS_GET_UINT16_BE( p, 0 );
     p += 2;
 
-    MBEDTLS_SSL_DEBUG_BUF( 3, "encrypted extensions", p, extensions_len );
+    MBEDTLS_SSL_DEBUG_BUF( 5, "encrypted extensions", p, extensions_len );
     MBEDTLS_SSL_CHK_BUF_READ_PTR( p, end, extensions_len );
     extensions_end = p + extensions_len;
 
@@ -2204,7 +2204,7 @@ static int ssl_tls13_parse_certificate_request( mbedtls_ssl_context *ssl,
     if( certificate_request_context_len > 0 )
     {
         MBEDTLS_SSL_CHK_BUF_READ_PTR( p, end, certificate_request_context_len );
-        MBEDTLS_SSL_DEBUG_BUF( 3, "Certificate Request Context",
+        MBEDTLS_SSL_DEBUG_BUF( 5, "Certificate Request Context",
                                p, certificate_request_context_len );
 
         handshake->certificate_request_context =
@@ -2675,7 +2675,7 @@ static int ssl_tls13_parse_new_session_ticket( mbedtls_ssl_context *ssl,
 
     MBEDTLS_SSL_CHK_BUF_READ_PTR( p, end, *ticket_nonce_len );
     *ticket_nonce = p;
-    MBEDTLS_SSL_DEBUG_BUF( 3, "ticket_nonce:", *ticket_nonce, *ticket_nonce_len );
+    MBEDTLS_SSL_DEBUG_BUF( 5, "ticket_nonce:", *ticket_nonce, *ticket_nonce_len );
     p += *ticket_nonce_len;
 
     /* Ticket */
@@ -2683,7 +2683,7 @@ static int ssl_tls13_parse_new_session_ticket( mbedtls_ssl_context *ssl,
     ticket_len = MBEDTLS_GET_UINT16_BE( p, 0 );
     p += 2;
     MBEDTLS_SSL_CHK_BUF_READ_PTR( p, end, ticket_len );
-    MBEDTLS_SSL_DEBUG_BUF( 3, "received ticket", p, ticket_len ) ;
+    MBEDTLS_SSL_DEBUG_BUF( 5, "received ticket", p, ticket_len ) ;
 
     /* Check if we previously received a ticket already. */
     if( session->ticket != NULL || session->ticket_len > 0 )
@@ -2708,7 +2708,7 @@ static int ssl_tls13_parse_new_session_ticket( mbedtls_ssl_context *ssl,
     p += 2;
     MBEDTLS_SSL_CHK_BUF_READ_PTR( p, end, extensions_len );
 
-    MBEDTLS_SSL_DEBUG_BUF( 3, "ticket extension", p, extensions_len );
+    MBEDTLS_SSL_DEBUG_BUF( 5, "ticket extension", p, extensions_len );
 
     ret = ssl_tls13_parse_new_session_ticket_exts( ssl, p, p + extensions_len );
     if( ret != 0 )
@@ -2757,7 +2757,7 @@ static int ssl_tls13_postprocess_new_session_ticket( mbedtls_ssl_context *ssl,
     }
 
 
-    MBEDTLS_SSL_DEBUG_BUF( 3, "resumption_master_secret",
+    MBEDTLS_SSL_DEBUG_BUF( 5, "resumption_master_secret",
                            session->app_secrets.resumption_master_secret,
                            hash_length );
 
@@ -2786,7 +2786,7 @@ static int ssl_tls13_postprocess_new_session_ticket( mbedtls_ssl_context *ssl,
 
     session->resumption_key_len = hash_length;
 
-    MBEDTLS_SSL_DEBUG_BUF( 3, "Ticket-resumed PSK",
+    MBEDTLS_SSL_DEBUG_BUF( 5, "Ticket-resumed PSK",
                            session->resumption_key,
                            session->resumption_key_len );
 

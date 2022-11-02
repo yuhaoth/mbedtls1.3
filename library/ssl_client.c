@@ -296,7 +296,7 @@ static int ssl_write_supported_groups_ext( mbedtls_ssl_context *ssl,
     /* Write length of named_group_list */
     MBEDTLS_PUT_UINT16_BE( named_group_list_len, buf, 4 );
 
-    MBEDTLS_SSL_DEBUG_BUF( 3, "Supported groups extension",
+    MBEDTLS_SSL_DEBUG_BUF( 5, "Supported groups extension",
                            buf + 4, named_group_list_len + 2 );
 
     *out_len = p - buf;
@@ -482,7 +482,7 @@ static int ssl_write_client_hello_body( mbedtls_ssl_context *ssl,
      */
     MBEDTLS_SSL_CHK_BUF_PTR( p, end, MBEDTLS_CLIENT_HELLO_RANDOM_LEN );
     memcpy( p, handshake->randbytes, MBEDTLS_CLIENT_HELLO_RANDOM_LEN );
-    MBEDTLS_SSL_DEBUG_BUF( 3, "client hello, random bytes",
+    MBEDTLS_SSL_DEBUG_BUF( 5, "client hello, random bytes",
                            p, MBEDTLS_CLIENT_HELLO_RANDOM_LEN );
     p += MBEDTLS_CLIENT_HELLO_RANDOM_LEN;
 
@@ -507,7 +507,7 @@ static int ssl_write_client_hello_body( mbedtls_ssl_context *ssl,
     memcpy( p, ssl->session_negotiate->id, ssl->session_negotiate->id_len );
     p += ssl->session_negotiate->id_len;
 
-    MBEDTLS_SSL_DEBUG_BUF( 3, "session id", ssl->session_negotiate->id,
+    MBEDTLS_SSL_DEBUG_BUF( 5, "session id", ssl->session_negotiate->id,
                               ssl->session_negotiate->id_len );
 
     /* DTLS 1.2 ONLY
@@ -522,7 +522,7 @@ static int ssl_write_client_hello_body( mbedtls_ssl_context *ssl,
 
         if( handshake->cookie != NULL )
         {
-            MBEDTLS_SSL_DEBUG_BUF( 3, "client hello, cookie",
+            MBEDTLS_SSL_DEBUG_BUF( 5, "client hello, cookie",
                                    handshake->cookie,
                                    handshake->verify_cookie_len );
             cookie_len = handshake->verify_cookie_len;
@@ -670,7 +670,7 @@ static int ssl_write_client_hello_body( mbedtls_ssl_context *ssl,
         MBEDTLS_PUT_UINT16_BE( extensions_len, p_extensions_len, 0 );
         MBEDTLS_SSL_DEBUG_MSG( 3, ( "client hello, total extension length: %" \
                                     MBEDTLS_PRINTF_SIZET, extensions_len ) );
-        MBEDTLS_SSL_DEBUG_BUF( 3, "client hello extensions",
+        MBEDTLS_SSL_DEBUG_BUF( 5, "client hello extensions",
                                   p_extensions_len, extensions_len );
     }
 

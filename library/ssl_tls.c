@@ -114,7 +114,7 @@ int mbedtls_ssl_set_cid( mbedtls_ssl_context *ssl,
         return( 0 );
     }
     MBEDTLS_SSL_DEBUG_MSG( 3, ( "Enable use of CID extension." ) );
-    MBEDTLS_SSL_DEBUG_BUF( 3, "Own CID", own_cid, own_cid_len );
+    MBEDTLS_SSL_DEBUG_BUF( 5, "Own CID", own_cid, own_cid_len );
 
     if( own_cid_len != ssl->conf->cid_len )
     {
@@ -4493,7 +4493,7 @@ int mbedtls_ssl_context_save( mbedtls_ssl_context *ssl,
     if( used > buf_len )
         return( MBEDTLS_ERR_SSL_BUFFER_TOO_SMALL );
 
-    MBEDTLS_SSL_DEBUG_BUF( 4, "saved context", buf, used );
+    MBEDTLS_SSL_DEBUG_BUF( 5, "saved context", buf, used );
 
     return( mbedtls_ssl_session_reset_int( ssl, 0 ) );
 }
@@ -4544,7 +4544,7 @@ static int ssl_context_load( mbedtls_ssl_context *ssl,
         return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
     }
 
-    MBEDTLS_SSL_DEBUG_BUF( 4, "context to load", buf, len );
+    MBEDTLS_SSL_DEBUG_BUF( 5, "context to load", buf, len );
 
     /*
      * Check version identifier
@@ -6222,7 +6222,7 @@ static int ssl_compute_master( mbedtls_ssl_handshake_params *handshake,
         seed = session_hash;
         handshake->calc_verify( ssl, session_hash, &seed_len );
 
-        MBEDTLS_SSL_DEBUG_BUF( 3, "session hash for extended master secret",
+        MBEDTLS_SSL_DEBUG_BUF( 5, "session hash for extended master secret",
                                   session_hash, seed_len );
     }
 #endif /* MBEDTLS_SSL_EXTENDED_MASTER_SECRET */
@@ -6310,7 +6310,7 @@ static int ssl_compute_master( mbedtls_ssl_handshake_params *handshake,
             return( ret );
         }
 
-        MBEDTLS_SSL_DEBUG_BUF( 3, "premaster secret",
+        MBEDTLS_SSL_DEBUG_BUF( 5, "premaster secret",
                                handshake->premaster,
                                handshake->pmslen );
 
@@ -6436,7 +6436,7 @@ void ssl_calc_verify_tls_sha256( const mbedtls_ssl_context *ssl,
     }
 
     *hlen = 32;
-    MBEDTLS_SSL_DEBUG_BUF( 3, "PSA calculated verify result", hash, *hlen );
+    MBEDTLS_SSL_DEBUG_BUF( 5, "PSA calculated verify result", hash, *hlen );
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= PSA calc verify" ) );
 #else
     mbedtls_sha256_context sha256;
@@ -6450,7 +6450,7 @@ void ssl_calc_verify_tls_sha256( const mbedtls_ssl_context *ssl,
 
     *hlen = 32;
 
-    MBEDTLS_SSL_DEBUG_BUF( 3, "calculated verify result", hash, *hlen );
+    MBEDTLS_SSL_DEBUG_BUF( 5, "calculated verify result", hash, *hlen );
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= calc verify" ) );
 
     mbedtls_sha256_free( &sha256 );
@@ -6485,7 +6485,7 @@ void ssl_calc_verify_tls_sha384( const mbedtls_ssl_context *ssl,
     }
 
     *hlen = 48;
-    MBEDTLS_SSL_DEBUG_BUF( 3, "PSA calculated verify result", hash, *hlen );
+    MBEDTLS_SSL_DEBUG_BUF( 5, "PSA calculated verify result", hash, *hlen );
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= PSA calc verify" ) );
 #else
     mbedtls_sha512_context sha512;
@@ -6499,7 +6499,7 @@ void ssl_calc_verify_tls_sha384( const mbedtls_ssl_context *ssl,
 
     *hlen = 48;
 
-    MBEDTLS_SSL_DEBUG_BUF( 3, "calculated verify result", hash, *hlen );
+    MBEDTLS_SSL_DEBUG_BUF( 5, "calculated verify result", hash, *hlen );
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= calc verify" ) );
 
     mbedtls_sha512_free( &sha512 );
@@ -7525,7 +7525,7 @@ static void ssl_calc_finished_tls_sha256(
         MBEDTLS_SSL_DEBUG_MSG( 2, ( "PSA hash finish failed" ) );
         return;
     }
-    MBEDTLS_SSL_DEBUG_BUF( 3, "PSA calculated padbuf", padbuf, 32 );
+    MBEDTLS_SSL_DEBUG_BUF( 5, "PSA calculated padbuf", padbuf, 32 );
 #else
 
     mbedtls_sha256_init( &sha256 );
@@ -7541,7 +7541,7 @@ static void ssl_calc_finished_tls_sha256(
      */
 
 #if !defined(MBEDTLS_SHA256_ALT)
-    MBEDTLS_SSL_DEBUG_BUF( 4, "finished sha2 state", (unsigned char *)
+    MBEDTLS_SSL_DEBUG_BUF( 5, "finished sha2 state", (unsigned char *)
                    sha256.state, sizeof( sha256.state ) );
 #endif
 
@@ -7552,7 +7552,7 @@ static void ssl_calc_finished_tls_sha256(
     ssl->handshake->tls_prf( session->master, 48, sender,
                              padbuf, 32, buf, len );
 
-    MBEDTLS_SSL_DEBUG_BUF( 3, "calc finished result", buf, len );
+    MBEDTLS_SSL_DEBUG_BUF( 5, "calc finished result", buf, len );
 
     mbedtls_platform_zeroize(  padbuf, sizeof(  padbuf ) );
 
@@ -7602,7 +7602,7 @@ static void ssl_calc_finished_tls_sha384(
         MBEDTLS_SSL_DEBUG_MSG( 2, ( "PSA hash finish failed" ) );
         return;
     }
-    MBEDTLS_SSL_DEBUG_BUF( 3, "PSA calculated padbuf", padbuf, 48 );
+    MBEDTLS_SSL_DEBUG_BUF( 5, "PSA calculated padbuf", padbuf, 48 );
 #else
     mbedtls_sha512_init( &sha512 );
 
@@ -7617,7 +7617,7 @@ static void ssl_calc_finished_tls_sha384(
      */
 
 #if !defined(MBEDTLS_SHA512_ALT)
-    MBEDTLS_SSL_DEBUG_BUF( 4, "finished sha512 state", (unsigned char *)
+    MBEDTLS_SSL_DEBUG_BUF( 5, "finished sha512 state", (unsigned char *)
                    sha512.state, sizeof( sha512.state ) );
 #endif
     mbedtls_sha512_finish( &sha512, padbuf );
@@ -7628,7 +7628,7 @@ static void ssl_calc_finished_tls_sha384(
     ssl->handshake->tls_prf( session->master, 48, sender,
                              padbuf, 48, buf, len );
 
-    MBEDTLS_SSL_DEBUG_BUF( 3, "calc finished result", buf, len );
+    MBEDTLS_SSL_DEBUG_BUF( 5, "calc finished result", buf, len );
 
     mbedtls_platform_zeroize(  padbuf, sizeof( padbuf ) );
 
@@ -8126,13 +8126,13 @@ static int ssl_tls12_populate_transform( mbedtls_ssl_transform *transform,
 
         transform->in_cid_len = ssl->own_cid_len;
         memcpy( transform->in_cid, ssl->own_cid, ssl->own_cid_len );
-        MBEDTLS_SSL_DEBUG_BUF( 3, "Incoming CID", transform->in_cid,
+        MBEDTLS_SSL_DEBUG_BUF( 5, "Incoming CID", transform->in_cid,
                                transform->in_cid_len );
 
         transform->out_cid_len = ssl->handshake->peer_cid_len;
         memcpy( transform->out_cid, ssl->handshake->peer_cid,
                 ssl->handshake->peer_cid_len );
-        MBEDTLS_SSL_DEBUG_BUF( 3, "Outgoing CID", transform->out_cid,
+        MBEDTLS_SSL_DEBUG_BUF( 5, "Outgoing CID", transform->out_cid,
                                transform->out_cid_len );
     }
 #endif /* MBEDTLS_SSL_DTLS_CONNECTION_ID */
@@ -8149,9 +8149,9 @@ static int ssl_tls12_populate_transform( mbedtls_ssl_transform *transform,
 
     MBEDTLS_SSL_DEBUG_MSG( 3, ( "ciphersuite = %s",
                            mbedtls_ssl_get_ciphersuite_name( ciphersuite ) ) );
-    MBEDTLS_SSL_DEBUG_BUF( 3, "master secret", master, 48 );
-    MBEDTLS_SSL_DEBUG_BUF( 4, "random bytes", randbytes, 64 );
-    MBEDTLS_SSL_DEBUG_BUF( 4, "key block", keyblk, 256 );
+    MBEDTLS_SSL_DEBUG_BUF( 5, "master secret", master, 48 );
+    MBEDTLS_SSL_DEBUG_BUF( 5, "random bytes", randbytes, 64 );
+    MBEDTLS_SSL_DEBUG_BUF( 5, "key block", keyblk, 256 );
 
     /*
      * Determine the appropriate key, IV and MAC length.

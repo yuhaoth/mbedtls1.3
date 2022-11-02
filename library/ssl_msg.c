@@ -92,7 +92,7 @@ int mbedtls_ssl_check_record( mbedtls_ssl_context const *ssl,
 {
     int ret = 0;
     MBEDTLS_SSL_DEBUG_MSG( 1, ( "=> mbedtls_ssl_check_record" ) );
-    MBEDTLS_SSL_DEBUG_BUF( 3, "record buffer", buf, buflen );
+    MBEDTLS_SSL_DEBUG_BUF( 5, "record buffer", buf, buflen );
 
     /* We don't support record checking in TLS because
      * there doesn't seem to be a usecase for it.
@@ -574,7 +574,7 @@ int mbedtls_ssl_encrypt_buf( mbedtls_ssl_context *ssl,
 
     data = rec->buf + rec->data_offset;
     post_avail = rec->buf_len - ( rec->data_len + rec->data_offset );
-    MBEDTLS_SSL_DEBUG_BUF( 4, "before encrypt: output payload",
+    MBEDTLS_SSL_DEBUG_BUF( 5, "before encrypt: output payload",
                            data, rec->data_len );
 
     if( rec->data_len > MBEDTLS_SSL_OUT_CONTENT_LEN )
@@ -623,7 +623,7 @@ int mbedtls_ssl_encrypt_buf( mbedtls_ssl_context *ssl,
      */
     rec->cid_len = transform->out_cid_len;
     memcpy( rec->cid, transform->out_cid, transform->out_cid_len );
-    MBEDTLS_SSL_DEBUG_BUF( 3, "CID", rec->cid, rec->cid_len );
+    MBEDTLS_SSL_DEBUG_BUF( 5, "CID", rec->cid, rec->cid_len );
 
     if( rec->cid_len != 0 )
     {
@@ -714,7 +714,7 @@ int mbedtls_ssl_encrypt_buf( mbedtls_ssl_context *ssl,
         memcpy( data + rec->data_len, mac, transform->maclen );
 #endif
 
-        MBEDTLS_SSL_DEBUG_BUF( 4, "computed mac", data + rec->data_len,
+        MBEDTLS_SSL_DEBUG_BUF( 5, "computed mac", data + rec->data_len,
                                transform->maclen );
 
         rec->data_len += transform->maclen;
@@ -804,12 +804,12 @@ int mbedtls_ssl_encrypt_buf( mbedtls_ssl_context *ssl,
                                           transform->tls_version,
                                           transform->taglen );
 
-        MBEDTLS_SSL_DEBUG_BUF( 4, "IV used (internal)",
+        MBEDTLS_SSL_DEBUG_BUF( 5, "IV used (internal)",
                                iv, transform->ivlen );
-        MBEDTLS_SSL_DEBUG_BUF( 4, "IV used (transmitted)",
+        MBEDTLS_SSL_DEBUG_BUF( 5, "IV used (transmitted)",
                                dynamic_iv,
                                dynamic_iv_is_explicit ? dynamic_iv_len : 0 );
-        MBEDTLS_SSL_DEBUG_BUF( 4, "additional data used for AEAD",
+        MBEDTLS_SSL_DEBUG_BUF( 5, "additional data used for AEAD",
                                add_data, add_data_len );
         MBEDTLS_SSL_DEBUG_MSG( 3, ( "before encrypt: msglen = %" MBEDTLS_PRINTF_SIZET ", "
                                     "including 0 bytes of padding",
@@ -847,7 +847,7 @@ int mbedtls_ssl_encrypt_buf( mbedtls_ssl_context *ssl,
         }
 #endif /* MBEDTLS_USE_PSA_CRYPTO */
 
-        MBEDTLS_SSL_DEBUG_BUF( 4, "after encrypt: tag",
+        MBEDTLS_SSL_DEBUG_BUF( 5, "after encrypt: tag",
                                data + rec->data_len - transform->taglen,
                                transform->taglen );
         /* Account for authentication tag. */
@@ -1035,7 +1035,7 @@ int mbedtls_ssl_encrypt_buf( mbedtls_ssl_context *ssl,
                                               transform->taglen );
 
             MBEDTLS_SSL_DEBUG_MSG( 3, ( "using encrypt then mac" ) );
-            MBEDTLS_SSL_DEBUG_BUF( 4, "MAC'd meta-data", add_data,
+            MBEDTLS_SSL_DEBUG_BUF( 5, "MAC'd meta-data", add_data,
                                    add_data_len );
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
             status = psa_mac_sign_setup( &operation, transform->psa_mac_enc,
@@ -1238,7 +1238,7 @@ int mbedtls_ssl_decrypt_buf( mbedtls_ssl_context const *ssl,
         ssl_extract_add_data_from_record( add_data, &add_data_len, rec,
                                           transform->tls_version,
                                           transform->taglen );
-        MBEDTLS_SSL_DEBUG_BUF( 4, "additional data used for AEAD",
+        MBEDTLS_SSL_DEBUG_BUF( 5, "additional data used for AEAD",
                                add_data, add_data_len );
 
         /* Because of the check above, we know that there are
@@ -1247,8 +1247,8 @@ int mbedtls_ssl_decrypt_buf( mbedtls_ssl_context const *ssl,
          * the debug message and the invocation of
          * mbedtls_cipher_auth_decrypt_ext() below. */
 
-        MBEDTLS_SSL_DEBUG_BUF( 4, "IV used", iv, transform->ivlen );
-        MBEDTLS_SSL_DEBUG_BUF( 4, "TAG used", data + rec->data_len,
+        MBEDTLS_SSL_DEBUG_BUF( 5, "IV used", iv, transform->ivlen );
+        MBEDTLS_SSL_DEBUG_BUF( 5, "TAG used", data + rec->data_len,
                                transform->taglen );
 
         /*
@@ -1379,7 +1379,7 @@ int mbedtls_ssl_decrypt_buf( mbedtls_ssl_context const *ssl,
                                               transform->taglen );
 
             /* Calculate expected MAC. */
-            MBEDTLS_SSL_DEBUG_BUF( 4, "MAC'd meta-data", add_data,
+            MBEDTLS_SSL_DEBUG_BUF( 5, "MAC'd meta-data", add_data,
                                    add_data_len );
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
             status = psa_mac_verify_setup( &operation, transform->psa_mac_dec,
@@ -1416,9 +1416,9 @@ int mbedtls_ssl_decrypt_buf( mbedtls_ssl_context const *ssl,
             if( ret != 0 )
                 goto hmac_failed_etm_enabled;
 
-            MBEDTLS_SSL_DEBUG_BUF( 4, "message  mac", data + rec->data_len,
+            MBEDTLS_SSL_DEBUG_BUF( 5, "message  mac", data + rec->data_len,
                                    transform->maclen );
-            MBEDTLS_SSL_DEBUG_BUF( 4, "expected mac", mac_expect,
+            MBEDTLS_SSL_DEBUG_BUF( 5, "expected mac", mac_expect,
                                    transform->maclen );
 
             /* Compare expected MAC with MAC at the end of the record. */
@@ -1631,7 +1631,7 @@ int mbedtls_ssl_decrypt_buf( mbedtls_ssl_context const *ssl,
     }
 
 #if defined(MBEDTLS_SSL_DEBUG_ALL)
-    MBEDTLS_SSL_DEBUG_BUF( 4, "raw buffer after decryption",
+    MBEDTLS_SSL_DEBUG_BUF( 5, "raw buffer after decryption",
                            data, rec->data_len );
 #endif
 
@@ -1702,8 +1702,8 @@ int mbedtls_ssl_decrypt_buf( mbedtls_ssl_context const *ssl,
 #endif /* MBEDTLS_SSL_PROTO_TLS1_2 */
 
 #if defined(MBEDTLS_SSL_DEBUG_ALL)
-        MBEDTLS_SSL_DEBUG_BUF( 4, "expected mac", mac_expect, transform->maclen );
-        MBEDTLS_SSL_DEBUG_BUF( 4, "message  mac", mac_peer, transform->maclen );
+        MBEDTLS_SSL_DEBUG_BUF( 5, "expected mac", mac_expect, transform->maclen );
+        MBEDTLS_SSL_DEBUG_BUF( 5, "message  mac", mac_peer, transform->maclen );
 #endif
 
         if( mbedtls_ct_memcmp( mac_peer, mac_expect,
@@ -2077,7 +2077,7 @@ static int ssl_flight_append( mbedtls_ssl_context *ssl )
 {
     mbedtls_ssl_flight_item *msg;
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> ssl_flight_append" ) );
-    MBEDTLS_SSL_DEBUG_BUF( 4, "message appended to flight",
+    MBEDTLS_SSL_DEBUG_BUF( 5, "message appended to flight",
                            ssl->out_msg, ssl->out_msglen );
 
     /* Allocate space for current message */
@@ -2305,7 +2305,7 @@ int mbedtls_ssl_flight_transmit( mbedtls_ssl_context *ssl )
             ssl->out_msg[10] = MBEDTLS_BYTE_1( cur_hs_frag_len );
             ssl->out_msg[11] = MBEDTLS_BYTE_0( cur_hs_frag_len );
 
-            MBEDTLS_SSL_DEBUG_BUF( 3, "handshake header", ssl->out_msg, 12 );
+            MBEDTLS_SSL_DEBUG_BUF( 5, "handshake header", ssl->out_msg, 12 );
 
             /* Copy the handshake message content and set records fields */
             memcpy( ssl->out_msg + 12, p, cur_hs_frag_len );
@@ -2717,7 +2717,7 @@ int mbedtls_ssl_write_record( mbedtls_ssl_context *ssl, int force_flush )
                                     ssl->out_hdr[0], ssl->out_hdr[1],
                                     ssl->out_hdr[2], len ) );
 
-        MBEDTLS_SSL_DEBUG_BUF( 4, "output record sent to network",
+        MBEDTLS_SSL_DEBUG_BUF( 5, "output record sent to network",
                                ssl->out_hdr, protected_record_size );
 
         ssl->out_left += protected_record_size;
@@ -3200,7 +3200,7 @@ int mbedtls_ssl_check_dtls_clihlo_cookie(
      */
     MBEDTLS_SSL_DEBUG_MSG( 4, ( "check cookie: in_len=%u",
                                 (unsigned) in_len ) );
-    MBEDTLS_SSL_DEBUG_BUF( 4, "cli_id", cli_id, cli_id_len );
+    MBEDTLS_SSL_DEBUG_BUF( 5, "cli_id", cli_id, cli_id_len );
     if( in_len < 61 )
     {
         MBEDTLS_SSL_DEBUG_MSG( 4, ( "check cookie: record too short" ) );
@@ -3228,7 +3228,7 @@ int mbedtls_ssl_check_dtls_clihlo_cookie(
                                     (unsigned) in_len - 61 ) );
         return( MBEDTLS_ERR_SSL_DECODE_ERROR );
     }
-    MBEDTLS_SSL_DEBUG_BUF( 4, "sid received from network",
+    MBEDTLS_SSL_DEBUG_BUF( 5, "sid received from network",
                            in + 60, sid_len );
 
     cookie_len = in[60 + sid_len];
@@ -3240,7 +3240,7 @@ int mbedtls_ssl_check_dtls_clihlo_cookie(
         return( MBEDTLS_ERR_SSL_DECODE_ERROR );
     }
 
-    MBEDTLS_SSL_DEBUG_BUF( 4, "cookie received from network",
+    MBEDTLS_SSL_DEBUG_BUF( 5, "cookie received from network",
                            in + sid_len + 61, cookie_len );
     if( ssl->conf->f_cookie_check( ssl->conf->p_cookie,
                                    in + sid_len + 61, cookie_len,
@@ -3350,7 +3350,7 @@ static int ssl_handle_possible_reconnect( mbedtls_ssl_context *ssl )
     {
         int send_ret;
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "sending HelloVerifyRequest" ) );
-        MBEDTLS_SSL_DEBUG_BUF( 4, "output record sent to network",
+        MBEDTLS_SSL_DEBUG_BUF( 5, "output record sent to network",
                                   ssl->out_buf, len );
         /* Don't check write errors as we can't do anything here.
          * If the error is permanent we'll catch it later,
@@ -3562,7 +3562,7 @@ static int ssl_parse_record_header( mbedtls_ssl_context const *ssl,
     rec->data_offset = rec_hdr_len_offset + rec_hdr_len_len;
     rec->data_len    = ( (size_t) buf[ rec_hdr_len_offset + 0 ] << 8 ) |
                        ( (size_t) buf[ rec_hdr_len_offset + 1 ] << 0 );
-    MBEDTLS_SSL_DEBUG_BUF( 4, "input record header", buf, rec->data_offset );
+    MBEDTLS_SSL_DEBUG_BUF( 5, "input record header", buf, rec->data_offset );
 
     MBEDTLS_SSL_DEBUG_MSG( 3, ( "input record: msgtype = %u, "
                                 "version = [0x%x], msglen = %" MBEDTLS_PRINTF_SIZET,
@@ -3674,7 +3674,7 @@ static int ssl_prepare_record_content( mbedtls_ssl_context *ssl,
 {
     int ret, done = 0;
 
-    MBEDTLS_SSL_DEBUG_BUF( 4, "input record from network",
+    MBEDTLS_SSL_DEBUG_BUF( 5, "input record from network",
                            rec->buf, rec->buf_len );
 
     /*
@@ -3745,7 +3745,7 @@ static int ssl_prepare_record_content( mbedtls_ssl_context *ssl,
                                         old_msg_type, rec->type ) );
         }
 
-        MBEDTLS_SSL_DEBUG_BUF( 4, "input payload after decrypt",
+        MBEDTLS_SSL_DEBUG_BUF( 5, "input payload after decrypt",
                                rec->buf + rec->data_offset, rec->data_len );
 
 #if defined(MBEDTLS_SSL_DTLS_CONNECTION_ID)
@@ -4021,7 +4021,7 @@ static int ssl_load_buffered_message( mbedtls_ssl_context *ssl )
         }
 
         MBEDTLS_SSL_DEBUG_MSG( 2, ( "Next handshake message has been buffered - load" ) );
-        MBEDTLS_SSL_DEBUG_BUF( 3, "Buffered handshake message (incl. header)",
+        MBEDTLS_SSL_DEBUG_BUF( 5, "Buffered handshake message (incl. header)",
                                hs_buf->data, msg_len + 12 );
 
         ssl->in_msgtype = MBEDTLS_SSL_MSG_HANDSHAKE;
@@ -4358,7 +4358,7 @@ static int ssl_consume_current_message( mbedtls_ssl_context *ssl )
             memmove( ssl->in_msg, ssl->in_msg + ssl->in_hslen,
                      ssl->in_msglen );
 
-            MBEDTLS_SSL_DEBUG_BUF( 4, "remaining content in record",
+            MBEDTLS_SSL_DEBUG_BUF( 5, "remaining content in record",
                                    ssl->in_msg, ssl->in_msglen );
         }
         else
@@ -4502,7 +4502,7 @@ static int ssl_buffer_future_record( mbedtls_ssl_context *ssl,
     /* Buffer record */
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "Buffer record from epoch %u",
                                 ssl->in_epoch + 1U ) );
-    MBEDTLS_SSL_DEBUG_BUF( 3, "Buffered record", rec->buf, rec->buf_len );
+    MBEDTLS_SSL_DEBUG_BUF( 5, "Buffered record", rec->buf, rec->buf_len );
 
     /* ssl_parse_record_header() only considers records
      * of the next epoch as candidates for buffering. */

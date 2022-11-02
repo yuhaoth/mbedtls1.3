@@ -483,7 +483,7 @@ static int ssl_write_use_srtp_ext( mbedtls_ssl_context *ssl,
          * Increment p to point to the current position.
          */
         p += mki_len;
-        MBEDTLS_SSL_DEBUG_BUF( 3, "sending mki",  ssl->dtls_srtp_info.mki_value,
+        MBEDTLS_SSL_DEBUG_BUF( 5, "sending mki",  ssl->dtls_srtp_info.mki_value,
                                ssl->dtls_srtp_info.mki_len );
     }
 
@@ -735,7 +735,7 @@ static int ssl_parse_cid_ext( mbedtls_ssl_context *ssl,
     memcpy( ssl->handshake->peer_cid, buf, peer_cid_len );
 
     MBEDTLS_SSL_DEBUG_MSG( 3, ( "Use of CID extension negotiated" ) );
-    MBEDTLS_SSL_DEBUG_BUF( 3, "Server CID", buf, peer_cid_len );
+    MBEDTLS_SSL_DEBUG_BUF( 5, "Server CID", buf, peer_cid_len );
 
     return( 0 );
 }
@@ -1085,7 +1085,7 @@ static int ssl_parse_use_srtp_ext( mbedtls_ssl_context *ssl,
 #if defined (MBEDTLS_DEBUG_C)
     if( len > 5 )
     {
-        MBEDTLS_SSL_DEBUG_BUF( 3, "received mki", ssl->dtls_srtp_info.mki_value,
+        MBEDTLS_SSL_DEBUG_BUF( 5, "received mki", ssl->dtls_srtp_info.mki_value,
                                                   ssl->dtls_srtp_info.mki_len );
     }
 #endif
@@ -1125,7 +1125,7 @@ static int ssl_parse_hello_verify_request( mbedtls_ssl_context *ssl )
      *   opaque cookie<0..2^8-1>;
      * } HelloVerifyRequest;
      */
-    MBEDTLS_SSL_DEBUG_BUF( 3, "server version", p, 2 );
+    MBEDTLS_SSL_DEBUG_BUF( 5, "server version", p, 2 );
     dtls_legacy_version = MBEDTLS_GET_UINT16_BE( p, 0 );
     p += 2;
 
@@ -1153,7 +1153,7 @@ static int ssl_parse_hello_verify_request( mbedtls_ssl_context *ssl )
                                     MBEDTLS_SSL_ALERT_MSG_DECODE_ERROR );
         return( MBEDTLS_ERR_SSL_DECODE_ERROR );
     }
-    MBEDTLS_SSL_DEBUG_BUF( 3, "cookie", p, cookie_len );
+    MBEDTLS_SSL_DEBUG_BUF( 5, "cookie", p, cookie_len );
 
     mbedtls_free( ssl->handshake->cookie );
 
@@ -1276,7 +1276,7 @@ static int ssl_parse_server_hello( mbedtls_ssl_context *ssl )
      */
     buf += mbedtls_ssl_hs_hdr_len( ssl );
 
-    MBEDTLS_SSL_DEBUG_BUF( 3, "server hello, version", buf, 2 );
+    MBEDTLS_SSL_DEBUG_BUF( 5, "server hello, version", buf, 2 );
     ssl->tls_version = mbedtls_ssl_read_version( buf, ssl->conf->transport );
     ssl->session_negotiate->tls_version = ssl->tls_version;
 
@@ -1305,7 +1305,7 @@ static int ssl_parse_server_hello( mbedtls_ssl_context *ssl )
 
     n = buf[34];
 
-    MBEDTLS_SSL_DEBUG_BUF( 3,   "server hello, random bytes", buf + 2, 32 );
+    MBEDTLS_SSL_DEBUG_BUF( 5,   "server hello, random bytes", buf + 2, 32 );
 
     if( n > 32 )
     {
@@ -1378,7 +1378,7 @@ static int ssl_parse_server_hello( mbedtls_ssl_context *ssl )
     mbedtls_ssl_optimize_checksum( ssl, ssl->handshake->ciphersuite_info );
 
     MBEDTLS_SSL_DEBUG_MSG( 3, ( "server hello, session id len.: %" MBEDTLS_PRINTF_SIZET, n ) );
-    MBEDTLS_SSL_DEBUG_BUF( 3,   "server hello, session id", buf + 35, n );
+    MBEDTLS_SSL_DEBUG_BUF( 5,   "server hello, session id", buf + 35, n );
 
     /*
      * Check if the session can be resumed
@@ -2226,7 +2226,7 @@ start_processing:
 #endif
     p   = ssl->in_msg + mbedtls_ssl_hs_hdr_len( ssl );
     end = ssl->in_msg + ssl->in_hslen;
-    MBEDTLS_SSL_DEBUG_BUF( 3,   "server key exchange", p, end - p );
+    MBEDTLS_SSL_DEBUG_BUF( 5,   "server key exchange", p, end - p );
 
 #if defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
     if( ciphersuite_info->key_exchange == MBEDTLS_KEY_EXCHANGE_PSK ||
@@ -2399,7 +2399,7 @@ start_processing:
             return( MBEDTLS_ERR_SSL_DECODE_ERROR );
         }
 
-        MBEDTLS_SSL_DEBUG_BUF( 3, "signature", p, sig_len );
+        MBEDTLS_SSL_DEBUG_BUF( 5, "signature", p, sig_len );
 
         /*
          * Compute the hash that has been signed
@@ -2418,7 +2418,7 @@ start_processing:
             return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
         }
 
-        MBEDTLS_SSL_DEBUG_BUF( 3, "parameters hash", hash, hashlen );
+        MBEDTLS_SSL_DEBUG_BUF( 5, "parameters hash", hash, hashlen );
 
         /*
          * Verify signature
