@@ -2704,6 +2704,83 @@ static int ssl_tls13_write_server_finished( mbedtls_ssl_context *ssl )
     return( 0 );
 }
 
+#if defined(MBEDTLS_SSL_EARLY_DATA)
+/*
+ * Handler for MBEDTLS_SSL_WAIT_EOED
+ *
+ * RFC 8446 section A.2
+ *
+ *                 |
+ *    +------> WAIT_EOED -+
+ *    |       Recv |      | Recv EndOfEarlyData
+ *    | early data |      | K_recv = handshake
+ *    +------------+      |
+ *                        |
+ *  WAIT_FLIGHT2 <--------+
+ *                                 |
+ */
+MBEDTLS_CHECK_RETURN_CRITICAL
+static int ssl_tls13_process_wait_eoed( mbedtls_ssl_context *ssl )
+{
+    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
+
+    MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> ssl_tls13_process_wait_eoed" ) );
+
+    if( ( ret = mbedtls_ssl_read_record( ssl, 0 ) ) != 0 )
+    {
+        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_read_record", ret );
+        return( ret );
+    }
+
+    /* RFC 8446 section 4.5
+     *
+     * struct {} EndOfEarlyData;
+     */
+    if( ssl->in_msgtype == MBEDTLS_SSL_MSG_HANDSHAKE        &&
+        ssl->in_msg[0]  == MBEDTLS_SSL_HS_END_OF_EARLY_DATA )
+    {
+        MBEDTLS_SSL_DEBUG_MSG(
+            1, ( "Switch to handshake keys for inbound traffic"
+                     "( K_recv = handshake )" ) );
+        mbedtls_ssl_set_inbound_transform(
+            ssl, ssl->handshake->transform_handshake );
+        mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_WAIT_FLIGHT2 );
+
+        mbedtls_ssl_add_hs_hdr_to_checksum( ssl,
+                                            MBEDTLS_SSL_HS_END_OF_EARLY_DATA,
+                                            0 );
+
+        ret = 0;
+        goto cleanup;
+
+    }
+
+    /* RFC 8446 section 4.6.1
+     *
+     * A server receiving more than max_early_data_size bytes of 0-RTT data
+     * SHOULD terminate the connection with an "unexpected_message" alert.
+     */
+    ssl->handshake->received_early_data_size += ssl->in_msglen;
+    if( ssl->in_msgtype != MBEDTLS_SSL_MSG_APPLICATION_DATA ||
+        ssl->handshake->received_early_data_size > ssl->conf->max_early_data_size )
+    {
+        MBEDTLS_SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_UNEXPECTED_MESSAGE,
+                                      MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE );
+        ret = MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE;
+        goto cleanup;
+    }
+
+    /* TODO: copy data to staging area */
+    /* execute callback to process application data */
+    ret = ssl->conf->early_data_callback(
+              ssl->conf->early_data_conext, ssl->in_msg, ssl->in_msglen );
+
+cleanup:
+    MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= ssl_tls13_process_wait_eoed" ) );
+    return( ret );
+}
+#endif /* MBEDTLS_SSL_EARLY_DATA */
+
 /*
  * Handler for MBEDTLS_SSL_WAIT_FLIGHT2
  *
@@ -3166,6 +3243,12 @@ int mbedtls_ssl_tls13_handshake_server_step( mbedtls_ssl_context *ssl )
         case MBEDTLS_SSL_SERVER_FINISHED:
             ret = ssl_tls13_write_server_finished( ssl );
             break;
+
+#if defined(MBEDTLS_SSL_EARLY_DATA)
+        case MBEDTLS_SSL_WAIT_EOED:
+            ret = ssl_tls13_process_wait_eoed( ssl );
+            break;
+#endif /* MBEDTLS_SSL_EARLY_DATA */
 
         case MBEDTLS_SSL_WAIT_FLIGHT2:
             ret = ssl_tls13_process_wait_flight2( ssl );

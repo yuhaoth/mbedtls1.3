@@ -986,6 +986,9 @@ struct mbedtls_ssl_handshake_params
     mbedtls_ssl_tls13_early_secrets tls13_early_secrets;
     /** TLS 1.3 transform for 0-RTT application and handshake messages. */
     mbedtls_ssl_transform *transform_earlydata;
+#if defined(MBEDTLS_SSL_SRV_C)
+    size_t received_early_data_size;
+#endif
 #endif
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
 
