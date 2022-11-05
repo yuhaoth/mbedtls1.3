@@ -2623,6 +2623,22 @@ static int ssl_tls13_write_certificate_verify( mbedtls_ssl_context *ssl )
 
 /*
  * Handler for MBEDTLS_SSL_SERVER_FINISHED
+ *
+ * RFC 8446 section A.2
+ *
+ *                                 | Send Finished
+ *                                 | K_send = application
+ *                        +--------+--------+
+ *               No 0-RTT |                 | 0-RTT
+ *                        |                 |
+ *    K_recv = handshake  |                 | K_recv = early data
+ *  [Skip decrypt errors] |             WAIT_EOED
+ *                        |
+ *                        |
+ *                        |
+ *                        |
+ *                        +> WAIT_FLIGHT2
+ *                                 |
  */
 MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_tls13_write_server_finished( mbedtls_ssl_context *ssl )
@@ -2641,8 +2657,6 @@ static int ssl_tls13_write_server_finished( mbedtls_ssl_context *ssl )
                 MBEDTLS_ERR_SSL_HANDSHAKE_FAILURE );
         return( ret );
     }
-
-#if defined(MBEDTLS_SSL_EARLY_DATA)
     /*
      * RFC 8446 section A.2
      *
@@ -2660,6 +2674,12 @@ static int ssl_tls13_write_server_finished( mbedtls_ssl_context *ssl )
      *                        +> WAIT_FLIGHT2
      *                                 |
      */
+    MBEDTLS_SSL_DEBUG_MSG(
+        1, ( "Switch to application keys for outbound traffic"
+                 "( K_send = application )" ) );
+    mbedtls_ssl_set_outbound_transform( ssl, ssl->transform_application );
+
+#if defined(MBEDTLS_SSL_EARLY_DATA)
     if( mbedtls_ssl_get_early_data_status( ssl ) ==
             MBEDTLS_SSL_EARLY_DATA_STATUS_ACCEPTED )
     {
@@ -2674,17 +2694,12 @@ static int ssl_tls13_write_server_finished( mbedtls_ssl_context *ssl )
     }
 #endif /* MBEDTLS_SSL_EARLY_DATA */
 
-    MBEDTLS_SSL_DEBUG_MSG( 1, ( "Switch to handshake keys for inbound traffic" ) );
-    mbedtls_ssl_set_inbound_transform( ssl, ssl->handshake->transform_handshake );
-
-    if( ssl->handshake->certificate_request_sent )
-        mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_CLIENT_CERTIFICATE );
-    else
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 2, ( "skip parse certificate" ) );
-        MBEDTLS_SSL_DEBUG_MSG( 2, ( "skip parse certificate verify" ) );
-        mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_CLIENT_FINISHED );
-    }
+    MBEDTLS_SSL_DEBUG_MSG(
+        1, ( "Switch to handshake keys for inbound traffic"
+                    "( K_recv = handshake )" ) );
+    mbedtls_ssl_set_inbound_transform(
+        ssl, ssl->handshake->transform_handshake );
+    mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_WAIT_FLIGHT2 );
 
     return( 0 );
 }
