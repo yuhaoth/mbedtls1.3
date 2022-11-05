@@ -129,6 +129,7 @@ int main( void )
 #define DFL_SNI                 NULL
 #define DFL_ALPN_STRING         NULL
 #define DFL_CURVES              NULL
+#define DFL_MAX_EARLY_DATA_SIZE 0
 #define DFL_SIG_ALGS            NULL
 #define DFL_DHM_FILE            NULL
 #define DFL_TRANSPORT           MBEDTLS_SSL_TRANSPORT_STREAM
@@ -424,6 +425,16 @@ int main( void )
 #define USAGE_ECJPAKE ""
 #endif
 
+#if defined(MBEDTLS_SSL_EARLY_DATA)
+#define USAGE_EARLY_DATA \
+    "    max_early_data_size=%%d default: 0 (disabled)\n"             \
+    "                            options: 0     (disabled), "           \
+    "                                     -1    (enabled, builtin max size), " \
+    "                                     n > 0 (enabled, max amount data for 0-RTT )\n"
+#else
+#define USAGE_EARLY_DATA ""
+#endif /* MBEDTLS_SSL_EARLY_DATA */
+
 #if defined(MBEDTLS_ECP_C)
 #define USAGE_CURVES \
     "    curves=a,b,c,d      default: \"default\" (library default)\n"  \
@@ -680,6 +691,7 @@ struct options
     const char *cid_val_renego; /* the CID to use for incoming messages
                                  * after renegotiation                      */
     int reproducible;           /* make communication reproducible          */
+    uint32_t max_early_data_size; /* max amount early data                   */
     int query_config_mode;      /* whether to read config                   */
     int use_srtp;               /* Support SRTP                             */
     int force_srtp_profile;     /* SRTP protection profile to use or all    */
@@ -1026,6 +1038,29 @@ int psk_callback( void *p_info, mbedtls_ssl_context *ssl,
     return( -1 );
 }
 #endif /* MBEDTLS_SSL_HANDSHAKE_WITH_PSK_ENABLED */
+
+#if defined(MBEDTLS_SSL_EARLY_DATA)
+/*
+* Early data callback.
+*/
+int early_data_callback( void *context,
+                         const unsigned char *buffer,
+                         size_t len )
+{
+    // In this example we don't need access to the SSL structure
+    ((void) context);
+    char *buffer_to_print;
+    if( len > 0 && buffer != NULL )
+    {
+        buffer_to_print = mbedtls_calloc( 1, len + 1 );
+        memcpy( buffer_to_print, buffer, len );
+        buffer_to_print[len] = '\0';
+        mbedtls_printf( " %zu bytes early data received: %s\n", len, buffer_to_print );
+        mbedtls_free( buffer_to_print );
+    }
+    return( 0 );
+}
+#endif /* MBEDTLS_SSL_EARLY_DATA */
 
 static mbedtls_net_context listen_fd, client_fd;
 
@@ -1695,6 +1730,7 @@ int main( int argc, char *argv[] )
     opt.sni                 = DFL_SNI;
     opt.alpn_string         = DFL_ALPN_STRING;
     opt.curves              = DFL_CURVES;
+    opt.max_early_data_size = DFL_MAX_EARLY_DATA_SIZE;
     opt.sig_algs            = DFL_SIG_ALGS;
     opt.dhm_file            = DFL_DHM_FILE;
     opt.transport           = DFL_TRANSPORT;
@@ -1891,6 +1927,12 @@ int main( int argc, char *argv[] )
         else if( strcmp( p, "sig_algs" ) == 0 )
             opt.sig_algs = q;
 #endif
+#if defined(MBEDTLS_SSL_EARLY_DATA)
+        else if( strcmp( p, "max_early_data_size" ) == 0 )
+        {
+            opt.max_early_data_size = atoi( q );
+        }
+#endif /* MBEDTLS_SSL_EARLY_DATA */
         else if( strcmp( p, "renegotiation" ) == 0 )
         {
             opt.renegotiation = (atoi( q )) ?
@@ -2885,6 +2927,11 @@ int main( int argc, char *argv[] )
 
     if( opt.cert_req_ca_list != DFL_CERT_REQ_CA_LIST )
         mbedtls_ssl_conf_cert_req_ca_list( &conf, opt.cert_req_ca_list );
+
+#if defined(MBEDTLS_SSL_EARLY_DATA)
+    mbedtls_ssl_tls13_conf_early_data( &conf, opt.max_early_data_size );
+    mbedtls_ssl_tls13_conf_early_data_cb( &conf, early_data_callback, NULL );
+#endif /* MBEDTLS_SSL_EARLY_DATA */
 
 #if defined(MBEDTLS_KEY_EXCHANGE_CERT_REQ_ALLOWED_ENABLED)
     /* exercise setting DN hints for server certificate request
