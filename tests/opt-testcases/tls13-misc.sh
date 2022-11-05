@@ -407,3 +407,35 @@ run_test "TLS 1.3 G->m: EarlyData: psk*: feature is disabled, good." \
          -s "ClientHello: early_data(42) extension exists."                 \
          -s "EncryptedExtensions: early_data(42) extension does not exist." \
          -s "Ignore application message"
+
+requires_gnutls_next
+requires_all_configs_enabled MBEDTLS_SSL_EARLY_DATA MBEDTLS_SSL_SESSION_TICKETS \
+                             MBEDTLS_SSL_SRV_C MBEDTLS_DEBUG_C MBEDTLS_HAVE_TIME \
+                             MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
+run_test "TLS 1.3 G->m: EarlyData: ephemeral: enabled and max_size=1024, good." \
+         "$P_SRV force_version=tls13 reco_debug_level=5 early_data=1024" \
+         "$G_NEXT_CLI localhost --priority=NORMAL:-VERS-ALL:+VERS-TLS1.3:+GROUP-ALL -d 10 -r --earlydata $EARLY_DATA_INPUT" \
+         0 \
+         -c "This is a resumed session"                                     \
+         -s "ClientHello: early_data(42) extension exists."                 \
+         -s "EncryptedExtensions: early_data(42) extension exists."         \
+         -s "$( cat $EARLY_DATA_INPUT )"                                    \
+         -S "Ignore application message"
+
+requires_gnutls_next
+requires_all_configs_enabled MBEDTLS_SSL_EARLY_DATA MBEDTLS_SSL_SESSION_TICKETS \
+                             MBEDTLS_SSL_SRV_C MBEDTLS_DEBUG_C MBEDTLS_HAVE_TIME \
+                             MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
+requires_any_configs_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_ENABLED \
+                             MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_EPHEMERAL_ENABLED
+run_test "TLS 1.3 G->m: EarlyData: psk*: enabled and max_size=1024, good." \
+         "$P_SRV force_version=tls13 reco_debug_level=4 early_data=1024 $(get_srv_psk_list)" \
+         "$G_NEXT_CLI localhost --priority=NORMAL:-VERS-ALL:+VERS-TLS1.3:+GROUP-ALL:-KX-ALL:+ECDHE-PSK:+DHE-PSK:+PSK \
+                      -d 10 -r --earlydata $EARLY_DATA_INPUT \
+                      --pskusername Client_identity --pskkey=6162636465666768696a6b6c6d6e6f70" \
+         0 \
+         -c "This is a resumed session"                                     \
+         -s "ClientHello: early_data(42) extension exists."                 \
+         -s "EncryptedExtensions: early_data(42) extension exists."         \
+         -s "$( cat $EARLY_DATA_INPUT )"                                    \
+         -S "Ignore application message"
