@@ -41,6 +41,36 @@
 #include "ssl_debug_helpers.h"
 
 
+int mbedtls_ssl_tls13_get_early_data_status( mbedtls_ssl_context *ssl )
+{
+    if( mbedtls_ssl_is_handshake_over( ssl ) == 1       ||
+        ssl->conf->endpoint != MBEDTLS_SSL_IS_SERVER    ||
+        ssl->tls_version != MBEDTLS_SSL_VERSION_TLS1_3 )
+    {
+        return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
+    }
+
+    if( ( ssl->handshake->received_extensions &
+          MBEDTLS_SSL_EXT_MASK( EARLY_DATA ) ) == 0 )
+    {
+        return( MBEDTLS_SSL_EARLY_DATA_STATUS_NOT_SENT );
+    }
+
+#if defined(MBEDTLS_SSL_EARLY_DATA)
+    if( !mbedtls_ssl_tls13_some_psk_enabled( ssl )  ||
+        ssl->handshake->selected_identity != 0      ||
+        ssl->conf->max_early_data_size == 0         ||
+        ssl->handshake->resume == 0 )
+    {
+        return( MBEDTLS_SSL_EARLY_DATA_STATUS_REJECTED );
+    }
+
+    return( MBEDTLS_SSL_EARLY_DATA_STATUS_ACCEPTED );
+#else
+    return( MBEDTLS_SSL_EARLY_DATA_STATUS_REJECTED );
+#endif
+}
+
 static const mbedtls_ssl_ciphersuite_t *ssl_tls13_validate_peer_ciphersuite(
                                       mbedtls_ssl_context *ssl,
                                       unsigned int cipher_suite )
