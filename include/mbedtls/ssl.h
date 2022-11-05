@@ -1391,6 +1391,31 @@ struct mbedtls_ssl_config
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3)
     /** Allowed TLS 1.3 key exchange modes.                                 */
     int MBEDTLS_PRIVATE(tls13_kex_modes);
+
+#if defined(MBEDTLS_SSL_EARLY_DATA)
+    /**
+     *  Server: The maximum amount of 0-RTT data that the client is allowed to
+     *          send when using this ticket, in bytes.
+     *          - 0      Disable early_data.
+     *          - others The maximum amount.
+     *  Client: Enable/disable early_data
+     *          - 0      Disable early_data
+     *          - others enable early_data
+     */
+    size_t MBEDTLS_PRIVATE(max_early_data_size);
+#if defined(MBEDTLS_SSL_SRV_C)
+    /**
+     * \brief early_data_callback
+     *        callback function for received early data
+     *
+     * \return 0 on success. negative on failure.
+     */
+    int (*MBEDTLS_PRIVATE(early_data_callback))(
+                              void *, const unsigned char *, size_t );
+    void (*MBEDTLS_PRIVATE(early_data_conext));
+#endif /* MBEDTLS_SSL_SRV_C */
+#endif /* MBEDTLS_SSL_EARLY_DATA */
+
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
 
     /** Callback for printing debug output                                  */
@@ -1521,12 +1546,6 @@ struct mbedtls_ssl_config
                                      *   \c psk is not \c NULL or \c psk_opaque
                                      *   is not \c 0. */
 #endif /* MBEDTLS_SSL_HANDSHAKE_WITH_PSK_ENABLED */
-
-#if defined(MBEDTLS_SSL_EARLY_DATA)
-    int MBEDTLS_PRIVATE(early_data_enabled);     /*!< Early data enablement:
-                                                  *   - MBEDTLS_SSL_EARLY_DATA_DISABLED,
-                                                  *   - MBEDTLS_SSL_EARLY_DATA_ENABLED */
-#endif /* MBEDTLS_SSL_EARLY_DATA */
 
 #if defined(MBEDTLS_SSL_ALPN)
     const char **MBEDTLS_PRIVATE(alpn_list);         /*!< ordered list of protocols          */
@@ -1942,27 +1961,47 @@ void mbedtls_ssl_conf_transport( mbedtls_ssl_config *conf, int transport );
 void mbedtls_ssl_conf_authmode( mbedtls_ssl_config *conf, int authmode );
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3) && defined(MBEDTLS_SSL_EARLY_DATA)
+
 /**
-* \brief    Set the early data mode
-*           Default: disabled on server and client
-*
-* \param conf   The SSL configuration to use.
-* \param early_data_enabled can be:
-*
-*  MBEDTLS_SSL_EARLY_DATA_DISABLED:  early data functionality is disabled
-*                                    This is the default on client and server.
-*
-*  MBEDTLS_SSL_EARLY_DATA_ENABLED:  early data functionality is enabled and
-*                        may be negotiated in the handshake. Application using
-*                        early data functionality needs to be aware of the
-*                        lack of replay protection of the early data application
-*                        payloads.
-*
-* \warning This interface is experimental and may change without notice.
-*
-*/
+ * \brief    Set early data parameter.
+ *
+ * \param conf   The SSL configuration to use.
+ * \param max_early_data_size It is reused for client and server with different
+ *                            meaning.
+ *                            Server:
+ *                            The maximium amount of 0-RTT data in bytes on
+ *                            server. Enable/disable early data on client.
+ *                              - 0      Disable early_data.
+ *                              - others The maximum amount.
+ *                            Client: Enable or disable early data feature.
+ *                              - 0      Disable early_data
+ *                              - others Enable early_data.
+ *
+ * \warning This interface is experimental and may change without notice.
+ *
+ */
 void mbedtls_ssl_tls13_conf_early_data( mbedtls_ssl_config *conf,
-                                        int early_data_enabled );
+                                        size_t max_early_data_size );
+
+#if defined(MBEDTLS_SSL_SRV_C)
+/**
+ * \brief    Configure early data callback.
+ *
+ * \param conf   The SSL configuration to use.
+ * \param early_data_callback callback function for received early data
+ *                            - void *                : Context of callback
+ *                            - const unsigned char * : Start of received data.
+ *                            - size_t                : Length of received data.
+ * \param context             context of callback function.
+ *
+ * \warning This interface is experimental and may change without notice.
+ *
+ */
+void mbedtls_ssl_tls13_conf_early_data_cb(
+         mbedtls_ssl_config *conf,
+         int(*early_data_callback)( void *, const unsigned char *, size_t ),
+         void *context );
+#endif /* MBEDTLS_SSL_SRV_C */
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3 && MBEDTLS_SSL_EARLY_DATA */
 
 #if defined(MBEDTLS_X509_CRT_PARSE_C)

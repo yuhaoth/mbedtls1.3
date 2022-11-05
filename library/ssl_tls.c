@@ -1693,10 +1693,23 @@ void mbedtls_ssl_conf_tls13_key_exchange_modes( mbedtls_ssl_config *conf,
 
 #if defined(MBEDTLS_SSL_EARLY_DATA)
 void mbedtls_ssl_tls13_conf_early_data( mbedtls_ssl_config *conf,
-                                        int early_data_enabled )
+                                        size_t max_early_data_size )
 {
-    conf->early_data_enabled = early_data_enabled;
+    conf->max_early_data_size =
+        max_early_data_size < MBEDTLS_SSL_MAX_EARLY_DATA_SIZE ?
+                        max_early_data_size : MBEDTLS_SSL_MAX_EARLY_DATA_SIZE;
 }
+
+#if defined(MBEDTLS_SSL_SRV_C)
+void mbedtls_ssl_tls13_conf_early_data_cb(
+         mbedtls_ssl_config *conf,
+         int(*early_data_callback)( void *, const unsigned char*, size_t ),
+         void *context )
+{
+    conf->early_data_callback = early_data_callback;
+    conf->early_data_conext = context;
+}
+#endif /* MBEDTLS_SSL_SRV_C */
 #endif /* MBEDTLS_SSL_EARLY_DATA */
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
 
