@@ -1651,6 +1651,18 @@
 #define MBEDTLS_SSL_EARLY_DATA
 
 /**
+ * \def MBEDTLS_SSL_MAX_EARLY_DATA_SIZE
+ *
+ * The maximium amount of 0-RTT data. It only work when MBEDTLS_SSL_EARLY_DATA
+ * is enabled.
+ *
+ * This feature is experimental, not completed and thus not ready for
+ * production.
+ *
+ */
+#define MBEDTLS_SSL_MAX_EARLY_DATA_SIZE        1024
+
+/**
  * \def MBEDTLS_SSL_PROTO_DTLS
  *
  * Enable support for DTLS (all available versions).
