@@ -18,7 +18,7 @@
 
 import itertools
 import re
-from typing import Dict, IO, Iterable, Iterator, List, Optional, Pattern, Set, Tuple, Union
+from typing import Any, Dict, IO, Iterable, Iterator, List, Optional, Pattern, Set, Tuple, Union
 
 
 class ReadFileLineException(Exception):
@@ -58,7 +58,7 @@ class read_file_lines:
         self.file = open(self.filename, 'rb' if self.binary else 'r')
         self.generator = enumerate(self.file)
         return self
-    def __iter__(self) -> Iterator[str]:
+    def __iter__(self) -> Iterator[Any]:
         assert self.generator is not None
         for line_number, content in self.generator:
             self.line_number = line_number
