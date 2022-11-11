@@ -3115,7 +3115,7 @@ requires_config_enabled MBEDTLS_DEBUG_C
 run_test    "TLS 1.3: psk_key_exchange_modes: basic check, O->m" \
             "$P_SRV force_version=tls13 debug_level=5" \
             "$O_NEXT_CLI -tls1_3 -psk 6162636465666768696a6b6c6d6e6f70 -allow_no_dhe_kex" \
-            0 \
+            1 \
             -s "found psk key exchange modes extension" \
             -s "Found PSK_EPHEMERAL KEX MODE" \
             -s "Found PSK KEX MODE"

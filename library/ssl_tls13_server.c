@@ -2447,7 +2447,7 @@ static int ssl_tls13_parse_client_hello( mbedtls_ssl_context *ssl,
                   ssl, pre_shared_key_ext, pre_shared_key_ext_len );
         if( ret != 0 )
         {
-            MBEDTLS_SSL_DEBUG_RET( 1, ( "mbedtls_ssl_tls13_parse_client_psk_identity" ),
+            MBEDTLS_SSL_DEBUG_RET( 1, ( "mbedtls_ssl_tls13_parse_client_psk_identity_ext" ),
                                    ret );
             return( ret );
         }
