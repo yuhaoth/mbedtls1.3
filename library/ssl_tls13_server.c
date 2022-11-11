@@ -1162,56 +1162,6 @@ static int ssl_tls13_parse_max_fragment_length_ext( mbedtls_ssl_context *ssl,
 }
 #endif /* MBEDTLS_SSL_MAX_FRAGMENT_LENGTH */
 
-#if defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
-/* From RFC 8446:
- *
- *   enum { psk_ke(0), psk_dhe_ke(1), (255) } PskKeyExchangeMode;
- *   struct {
- *       PskKeyExchangeMode ke_modes<1..255>;
- *   } PskKeyExchangeModes;
- */
-MBEDTLS_CHECK_RETURN_CRITICAL
-static int ssl_tls13_parse_key_exchange_modes_ext( mbedtls_ssl_context *ssl,
-                                                   const unsigned char *buf,
-                                                   size_t len )
-{
-    size_t ke_modes_len;
-    int ke_modes = 0;
-
-    /* Read PSK mode list length (1 Byte) */
-    ke_modes_len = *buf++;
-    len--;
-
-    /* There's no content after the PSK mode list, to its length
-     * must match the total length of the extension. */
-    if( ke_modes_len != len )
-        return( MBEDTLS_ERR_SSL_DECODE_ERROR );
-
-    /* Currently, there are only two PSK modes, so even without looking
-     * at the content, something's wrong if the list has more than 2 items. */
-    if( ke_modes_len > 2 )
-        return( MBEDTLS_ERR_SSL_HANDSHAKE_FAILURE );
-
-    while( ke_modes_len-- != 0 )
-    {
-        switch( *buf )
-        {
-        case MBEDTLS_SSL_TLS1_3_PSK_MODE_PURE:
-            ke_modes |= MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK;
-            break;
-        case MBEDTLS_SSL_TLS1_3_PSK_MODE_ECDHE:
-            ke_modes |= MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_EPHEMERAL;
-            break;
-        default:
-            return( MBEDTLS_ERR_SSL_ILLEGAL_PARAMETER );
-        }
-    }
-
-    ssl->handshake->tls13_kex_modes = ke_modes;
-    return( 0 );
-}
-#endif /* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED */
-
 /*
  *
  * STATE HANDLING: NewSessionTicket message
@@ -2421,21 +2371,6 @@ static int ssl_tls13_parse_client_hello( mbedtls_ssl_context *ssl,
                 ssl->handshake->extensions_present |= MBEDTLS_SSL_EXT_EARLY_DATA;
                 break;
 #endif /* MBEDTLS_ZERO_RTT */
-
-#if defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
-            case MBEDTLS_TLS_EXT_PSK_KEY_EXCHANGE_MODES:
-                MBEDTLS_SSL_DEBUG_MSG( 3, ( "found psk key exchange modes extension" ) );
-
-                ret = ssl_tls13_parse_key_exchange_modes_ext( ssl, p, extension_data_len );
-                if( ret != 0 )
-                {
-                    MBEDTLS_SSL_DEBUG_RET( 1, "ssl_tls13_parse_key_exchange_modes_ext", ret );
-                    return( ret );
-                }
-
-                ssl->handshake->extensions_present |= MBEDTLS_SSL_EXT_PSK_KEY_EXCHANGE_MODES;
-                break;
-#endif /* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED */
 
 #if defined(MBEDTLS_SSL_MAX_FRAGMENT_LENGTH)
             case MBEDTLS_TLS_EXT_MAX_FRAGMENT_LENGTH:
