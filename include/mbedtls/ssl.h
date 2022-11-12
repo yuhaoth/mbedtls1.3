@@ -4861,6 +4861,10 @@ int mbedtls_ssl_close_notify( mbedtls_ssl_context *ssl );
  *                 mbedtls_ssl_write(), mbedtls_ssl_read() or
  *                 mbedtls_ssl_handshake().
  *
+ *                 When mbedtls_ssl_get_early_data_status() does not return
+ *                 MBEDTLS_SSL_EARLY_DATA_STATUS_CAN_SENT,
+ *                 MBEDTLS_ERR_SSL_CANNOT_WRITE_EARLY_DATA will be always return.
+ *
  * \note           This function may write early data only if the SSL context
  *                 has been configured for the handshake with a PSK (external
  *                 or established via the ticket mechanism) for which early
@@ -4882,29 +4886,53 @@ int mbedtls_ssl_write_early_data( mbedtls_ssl_context *ssl,
                                   const unsigned char *buf, size_t len );
 
 #if defined(MBEDTLS_SSL_CLI_C)
-#define MBEDTLS_SSL_EARLY_DATA_STATUS_UNKNOWN   0
-#define MBEDTLS_SSL_EARLY_DATA_STATUS_NOT_SENT  1
-#define MBEDTLS_SSL_EARLY_DATA_STATUS_REJECTED  2
-#define MBEDTLS_SSL_EARLY_DATA_STATUS_ACCEPTED  3
+/* MBEDTLS_SSL_EARLY_DATA_STATUS_UNKOWN
+ * Initial status
+ * in mbedtls_ssl_setup(), the status should be update to
+ * MBEDTLS_ERR_SSL_BAD_INPUT_DATA or MBEDTLS_SSL_EARLY_DATA_STATUS_CAN_DO
+ */
+#define MBEDTLS_SSL_EARLY_DATA_STATUS_UNKOWN    0
+/* MBEDTLS_SSL_EARLY_DATA_STATUS_CAN_DO
+ * after client hello it should be update to
+ * MBEDTLS_SSL_EARLY_DATA_STATUS_CAN_SENT
+ */
+#define MBEDTLS_SSL_EARLY_DATA_STATUS_CAN_DO    1
+/* MBEDTLS_SSL_EARLY_DATA_STATUS_CAN_SENT
+ *
+ * If early_data was received in EncryptedExtensions, update to MBEDTLS_SSL_EARLY_DATA_STATUS_ACCEPTED
+ * otherwise update to MBEDTLS_SSL_EARLY_DATA_STATUS_REJECTED.
+ *
+ */
+#define MBEDTLS_SSL_EARLY_DATA_STATUS_CAN_SENT  2
+#define MBEDTLS_SSL_EARLY_DATA_STATUS_REJECTED  3
+#define MBEDTLS_SSL_EARLY_DATA_STATUS_ACCEPTED  4
 
 /**
  * \brief Get information about the use of 0-RTT in a TLS 1.3 handshake
  *
  * \param ssl      The SSL context to query
  *
- * \return         #MBEDTLS_ERR_SSL_BAD_INPUT_DATA if this function is called
- *                 from the server-side.
- * \return         #MBEDTLS_SSL_EARLY_DATA_STATUS_UNKNOWN if it is not decided
- *                 yet if the client will indicate the usage of early data or
- *                 not.
- * \return         #MBEDTLS_SSL_EARLY_DATA_STATUS_NOT_SENT if the client has
- *                 not indicated the use of early data.
+ * \return         #MBEDTLS_ERR_SSL_BAD_INPUT_DATA
+ *                 - If this function is called from the server-side. Or,
+ *                 - If the session is not resumption session.
+ *                 - If the ticket is not valid.
+ *                 - If the ticket is not allowed for early data.
+ *                 - If early_data is disabled.
+ * \return        other negative value that reported in negotiation
+ *
+ * \return         #MBEDTLS_SSL_EARLY_DATA_STATUS_CAN_DO the SSL context \p ssl
+ *                 is allowed to send early data, but not ready for sending
+ *                 early data.
+ *
+ * \return         #MBEDTLS_SSL_EARLY_DATA_STATUS_CAN_SENT it is possible to
+ *                 send early data for the SSL context \p ssl.
+ *
  * \return         #MBEDTLS_SSL_EARLY_DATA_STATUS_REJECTED if the client has
- *                 indicated the use of early data but the server has not
- *                 accepted it. In this situation, the client may want to
- *                 re-send the early data it may have sent via
- *                 mbedtls_ssl_write_early_data() as ordinary post-handshake
- *                 application data via mbedtls_ssl_write().
+ *                 indicated the use of early data but the server has rejected
+ *                 it. In this situation, the client may want to re-send the
+ *                 early data, it may have sent early data as ordinary
+ *                 post-handshake application data via mbedtls_ssl_write().
+ *
  * \return         #MBEDTLS_SSL_EARLY_DATA_STATUS_ACCEPTED if the client has
  *                 indicated the use of early data and the server has accepted
  *                 it.
