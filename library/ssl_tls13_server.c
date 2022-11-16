@@ -2974,6 +2974,39 @@ static int ssl_tls13_prepare_new_session_ticket( mbedtls_ssl_context *ssl,
     return( 0 );
 }
 
+#if defined(MBEDTLS_SSL_EARLY_DATA)
+/* RFC 8446 section 4.2.10
+ *
+ * struct {
+ *   select ( Handshake.msg_type ) {
+ *     case new_session_ticket:   uint32 max_early_data_size;
+ *     ...
+ *   };
+ * } EarlyDataIndication;
+ */
+MBEDTLS_CHECK_RETURN_CRITICAL
+static int ssl_tls13_write_early_data_ext_of_nst( mbedtls_ssl_context *ssl,
+                                                  unsigned char *buf,
+                                                  const unsigned char *end,
+                                                  size_t *out_len )
+{
+    unsigned char *p = buf;
+    *out_len = 0;
+
+    MBEDTLS_SSL_CHK_BUF_PTR( p, end, 8 );
+
+    MBEDTLS_PUT_UINT16_BE( MBEDTLS_TLS_EXT_EARLY_DATA, p, 0 );
+    MBEDTLS_PUT_UINT16_BE( 4, p, 2 );
+    MBEDTLS_PUT_UINT32_BE( ssl->conf->max_early_data_size, p, 4 );
+
+    *out_len = 8;
+
+    mbedtls_ssl_tls13_set_hs_sent_ext_mask( ssl, MBEDTLS_TLS_EXT_EARLY_DATA );
+
+    return( 0 );
+}
+#endif /* MBEDTLS_SSL_EARLY_DATA */
+
 /* This function creates a NewSessionTicket message in the following format:
  *
  * struct {
@@ -3011,6 +3044,8 @@ static int ssl_tls13_write_new_session_ticket_body( mbedtls_ssl_context *ssl,
     mbedtls_ssl_session *session = ssl->session;
     size_t ticket_len;
     uint32_t ticket_lifetime;
+    unsigned char *p_extensions_len;
+    size_t output_len;
 
     *out_len = 0;
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> write NewSessionTicket msg" ) );
@@ -3071,19 +3106,33 @@ static int ssl_tls13_write_new_session_ticket_body( mbedtls_ssl_context *ssl,
     MBEDTLS_SSL_DEBUG_BUF( 4, "ticket", p, ticket_len);
     p += ticket_len;
 
-    /* Ticket Extensions
-     *
-     * Note: We currently don't have any extensions.
-     * Set length to zero.
-     */
     ssl->handshake->sent_extensions = MBEDTLS_SSL_EXT_MASK_NONE;
 
+    /* Ticket Extensions
+     *
+     * Extension extensions<0..2^16-2>;
+     */
     MBEDTLS_SSL_CHK_BUF_PTR( p, end, 2 );
-    MBEDTLS_PUT_UINT16_BE( 0, p, 0 );
+    p_extensions_len = p;
     p += 2;
 
+#if defined(MBEDTLS_SSL_EARLY_DATA)
+    if( /* session->ticket_flags & allow_early && TODO: add early data flag check here */
+        ( ret = ssl_tls13_write_early_data_ext_of_nst(
+                    ssl, p, end, &output_len ) ) != 0 )
+    {
+        MBEDTLS_SSL_DEBUG_RET( 1, "ssl_tls13_write_early_data_ext_of_nst", ret );
+        return( ret );
+    }
+    p += output_len;
+#endif /* MBEDTLS_SSL_EARLY_DATA */
+
+    MBEDTLS_PUT_UINT16_BE( p - p_extensions_len - 2, p_extensions_len, 0 );
+
     *out_len = p - buf;
-    MBEDTLS_SSL_DEBUG_BUF( 4, "ticket", buf, *out_len );
+
+    MBEDTLS_SSL_DEBUG_BUF( 5, "ticket", buf, *out_len );
+
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= write new session ticket" ) );
 
     MBEDTLS_SSL_PRINT_EXTS(
