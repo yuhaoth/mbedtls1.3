@@ -2998,6 +2998,7 @@ static int ssl_tls13_write_early_data_ext_of_nst( mbedtls_ssl_context *ssl,
     MBEDTLS_PUT_UINT16_BE( MBEDTLS_TLS_EXT_EARLY_DATA, p, 0 );
     MBEDTLS_PUT_UINT16_BE( 4, p, 2 );
     MBEDTLS_PUT_UINT32_BE( ssl->conf->max_early_data_size, p, 4 );
+    MBEDTLS_SSL_DEBUG_MSG( 3, ( "ssl->conf->max_early_data_size=%" MBEDTLS_PRINTF_SIZET, ssl->conf->max_early_data_size ) );
 
     *out_len = 8;
 
