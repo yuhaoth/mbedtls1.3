@@ -412,14 +412,16 @@ run_test "TLS 1.3 G->m: EarlyData: psk*: feature is disabled, good." \
 
 EARLY_DATA_INPUT_LEN=$( cat $EARLY_DATA_INPUT | wc -c )
 MAX_EARLY_DATA_SIZE=$(( 1024 > $EARLY_DATA_INPUT_LEN ? 1024 : $EARLY_DATA_INPUT_LEN ))
+
 requires_gnutls_next
 requires_all_configs_enabled MBEDTLS_SSL_EARLY_DATA MBEDTLS_SSL_SESSION_TICKETS \
                              MBEDTLS_SSL_SRV_C MBEDTLS_DEBUG_C MBEDTLS_HAVE_TIME \
-                             MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
+                             MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED \
+                             MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_any_configs_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_ENABLED \
                              MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_EPHEMERAL_ENABLED
 run_test "TLS 1.3 G->m: EarlyData: ephemeral: all data is accepted, good." \
-         "$P_SRV force_version=tls13 reco_debug_level=5 early_data=$MAX_EARLY_DATA_SIZE" \
+         "$P_SRV force_version=tls13 reco_debug_level=5 max_early_data_size=$MAX_EARLY_DATA_SIZE" \
          "$G_NEXT_CLI localhost --priority=NORMAL:-VERS-ALL:+VERS-TLS1.3:+GROUP-ALL -d 10 -r --earlydata $EARLY_DATA_INPUT" \
          0 \
          -c "This is a resumed session"                                     \
@@ -437,7 +439,7 @@ requires_all_configs_enabled MBEDTLS_SSL_EARLY_DATA MBEDTLS_SSL_SESSION_TICKETS 
 requires_any_configs_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_ENABLED \
                              MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_EPHEMERAL_ENABLED
 run_test "TLS 1.3 G->m: EarlyData: psk*: all data is accepted, good." \
-         "$P_SRV force_version=tls13 reco_debug_level=4 early_data=$MAX_EARLY_DATA_SIZE $(get_srv_psk_list)" \
+         "$P_SRV force_version=tls13 reco_debug_level=4 max_early_data_size=$MAX_EARLY_DATA_SIZE $(get_srv_psk_list)" \
          "$G_NEXT_CLI localhost --priority=NORMAL:-VERS-ALL:+VERS-TLS1.3:+GROUP-ALL:-KX-ALL:+ECDHE-PSK:+DHE-PSK:+PSK \
                       -d 10 -r --earlydata $EARLY_DATA_INPUT \
                       --pskusername Client_identity --pskkey=6162636465666768696a6b6c6d6e6f70" \
@@ -453,15 +455,15 @@ EARLY_DATA_INPUT_LINE1_LEN=$(head -1 $EARLY_DATA_INPUT | wc -c)
 requires_gnutls_next
 requires_all_configs_enabled MBEDTLS_SSL_EARLY_DATA MBEDTLS_SSL_SESSION_TICKETS \
                              MBEDTLS_SSL_SRV_C MBEDTLS_DEBUG_C MBEDTLS_HAVE_TIME \
-                             MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
+                             MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED \
+                             MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_any_configs_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_ENABLED \
                              MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_EPHEMERAL_ENABLED
 run_test "TLS 1.3 G->m: EarlyData: ephemeral: size exceeds the limit, fail." \
-         "$P_SRV force_version=tls13 debug_level=5 early_data=$EARLY_DATA_INPUT_LINE1_LEN" \
+         "$P_SRV force_version=tls13 debug_level=5 max_early_data_size=$EARLY_DATA_INPUT_LINE1_LEN" \
          "$G_NEXT_CLI localhost --priority=NORMAL:-VERS-ALL:+VERS-TLS1.3:+GROUP-ALL -d 10 -r --earlydata $EARLY_DATA_INPUT" \
          1 \
-         -c "This is a resumed session"                                     \
-         -c "Unexpected message - was received"                             \
+         -s "unexpected message was received"                               \
          -s "ClientHello: early_data(42) extension exists."                 \
          -s "EncryptedExtensions: early_data(42) extension exists."         \
          -s "ssl->conf->max_early_data_size=$EARLY_DATA_INPUT_LINE1_LEN"    \
@@ -474,13 +476,12 @@ requires_all_configs_enabled MBEDTLS_SSL_EARLY_DATA MBEDTLS_SSL_SESSION_TICKETS 
 requires_any_configs_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_ENABLED \
                              MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_EPHEMERAL_ENABLED
 run_test "TLS 1.3 G->m: EarlyData: psk*: size exceeds the limit, fail." \
-         "$P_SRV force_version=tls13 debug_level=4 early_data=$EARLY_DATA_INPUT_LINE1_LEN $(get_srv_psk_list)" \
+         "$P_SRV force_version=tls13 debug_level=4 max_early_data_size=$EARLY_DATA_INPUT_LINE1_LEN $(get_srv_psk_list)" \
          "$G_NEXT_CLI localhost --priority=NORMAL:-VERS-ALL:+VERS-TLS1.3:+GROUP-ALL:-KX-ALL:+ECDHE-PSK:+DHE-PSK:+PSK \
                       -d 10 -r --earlydata $EARLY_DATA_INPUT \
                       --pskusername Client_identity --pskkey=6162636465666768696a6b6c6d6e6f70" \
          1 \
-         -c "This is a resumed session"                                     \
-         -c "Unexpected message - was received"                             \
+         -s "unexpected message was received"                               \
          -s "ClientHello: early_data(42) extension exists."                 \
          -s "EncryptedExtensions: early_data(42) extension exists."         \
          -s "ssl->conf->max_early_data_size=$EARLY_DATA_INPUT_LINE1_LEN"    \

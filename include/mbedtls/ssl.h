@@ -668,7 +668,6 @@ typedef enum
     MBEDTLS_SSL_SERVER_HELLO_VERIFY_REQUEST_SENT,
     MBEDTLS_SSL_HELLO_RETRY_REQUEST,
     MBEDTLS_SSL_ENCRYPTED_EXTENSIONS,
-    MBEDTLS_SSL_WAIT_EOED,
     MBEDTLS_SSL_WAIT_FLIGHT2,
     MBEDTLS_SSL_CLIENT_CERTIFICATE_VERIFY,
     MBEDTLS_SSL_CLIENT_CCS_AFTER_SERVER_FINISHED,
@@ -4950,13 +4949,13 @@ int mbedtls_ssl_close_notify( mbedtls_ssl_context *ssl );
  *
  * How about change it to negative value?
  */
-#define MBEDTLS_SSL_EARLY_DATA_STATUS_REJECTED  2
+#define MBEDTLS_SSL_EARLY_DATA_STATUS_REJECTED  3
 /* Client: early data indaction of EE IS received.
  *         Update in MBEDTLS_SSL_ENCRYPTED_EXTENSIONS.
  * Sever:  early data indaction of EE WILL be sent. Next state is wait_eoed.
  *         Update in MBEDTLS_SSL_CLIENT_HELLO.
  */
-#define MBEDTLS_SSL_EARLY_DATA_STATUS_ACCEPTED  3
+#define MBEDTLS_SSL_EARLY_DATA_STATUS_ACCEPTED  4
 
 /**
  * \brief Get information about the use of 0-RTT in a TLS 1.3 handshake

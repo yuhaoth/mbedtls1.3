@@ -3715,7 +3715,7 @@ static int ssl_prepare_record_content( mbedtls_ssl_context *ssl,
              * it is treated as the start of the client's second flight and the
              * server proceeds as with an ordinary 1-RTT handshake.
              */
-            if( mbedtls_ssl_tls13_get_early_data_status( ssl ) ==
+            if( mbedtls_ssl_get_early_data_status( ssl ) ==
                     MBEDTLS_SSL_EARLY_DATA_STATUS_REJECTED )
             {
                 MBEDTLS_SSL_DEBUG_MSG(
@@ -4880,7 +4880,7 @@ int mbedtls_ssl_handle_message_type( mbedtls_ssl_context *ssl )
         ssl->handshake != NULL &&
         ssl->handshake->hello_retry_request_count > 0 &&
         ssl->transform_in == NULL &&
-        mbedtls_ssl_tls13_get_early_data_status( ssl ) ==
+        mbedtls_ssl_get_early_data_status( ssl ) ==
             MBEDTLS_SSL_EARLY_DATA_STATUS_REJECTED )
     {
         MBEDTLS_SSL_DEBUG_MSG(

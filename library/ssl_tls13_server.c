@@ -40,37 +40,6 @@
 #include "ssl_tls13_keys.h"
 #include "ssl_debug_helpers.h"
 
-
-int mbedtls_ssl_tls13_get_early_data_status( mbedtls_ssl_context *ssl )
-{
-    if( mbedtls_ssl_is_handshake_over( ssl ) == 1       ||
-        ssl->conf->endpoint != MBEDTLS_SSL_IS_SERVER    ||
-        ssl->tls_version != MBEDTLS_SSL_VERSION_TLS1_3 )
-    {
-        return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
-    }
-
-    if( ( ssl->handshake->received_extensions &
-          MBEDTLS_SSL_EXT_MASK( EARLY_DATA ) ) == 0 )
-    {
-        return( MBEDTLS_SSL_EARLY_DATA_STATUS_NOT_SENT );
-    }
-
-#if defined(MBEDTLS_SSL_EARLY_DATA)
-    if( !mbedtls_ssl_tls13_some_psk_enabled( ssl )  ||
-        ssl->handshake->selected_identity != 0      ||
-        ssl->conf->max_early_data_size == 0         ||
-        ssl->handshake->resume == 0 )
-    {
-        return( MBEDTLS_SSL_EARLY_DATA_STATUS_REJECTED );
-    }
-
-    return( MBEDTLS_SSL_EARLY_DATA_STATUS_ACCEPTED );
-#else
-    return( MBEDTLS_SSL_EARLY_DATA_STATUS_REJECTED );
-#endif
-}
-
 static const mbedtls_ssl_ciphersuite_t *ssl_tls13_validate_peer_ciphersuite(
                                       mbedtls_ssl_context *ssl,
                                       unsigned int cipher_suite )
@@ -1738,21 +1707,34 @@ static int ssl_tls13_postprocess_client_hello( mbedtls_ssl_context* ssl )
         return( ret );
     }
 
-    /* There is enough information, update early data status. */
-    int early_data_status = mbedtls_ssl_get_early_data_status( ssl );
+
 
     if( ssl->handshake->received_extensions & MBEDTLS_SSL_EXT_MASK( EARLY_DATA ) )
     {
+        /* There is enough information, update early data status. */
+        int early_data_status = mbedtls_ssl_get_early_data_status( ssl );
+#if defined(MBEDTLS_SSL_EARLY_DATA)
         if( early_data_status != MBEDTLS_SSL_EARLY_DATA_STATUS_UNKNOWN )
+        {
             /* discarding records which fail deprotection. */
             early_data_status = MBEDTLS_SSL_EARLY_DATA_STATUS_REJECTED;
+        }
         else
         {
             early_data_status = MBEDTLS_SSL_EARLY_DATA_STATUS_ACCEPTED;
             /* TODO: compute early transform here? */
+            ret = mbedtls_ssl_tls13_compute_early_transform( ssl );
+            if( ret != 0 )
+            {
+                MBEDTLS_SSL_DEBUG_RET(
+                    1, "mbedtls_ssl_tls13_compute_early_transform", ret );
+                return( ret );
+            }
         }
+#endif /* MBEDTLS_SSL_EARLY_DATA */
+        ssl->early_data_status = early_data_status;
     }
-    ssl->early_data_status = early_data_status;
+
 
     return( 0 );
 }
@@ -2706,7 +2688,7 @@ static int ssl_tls13_write_server_finished( mbedtls_ssl_context *ssl )
 
 #if defined(MBEDTLS_SSL_EARLY_DATA)
 /*
- * Handler for MBEDTLS_SSL_WAIT_EOED
+ * Handler for MBEDTLS_SSL_END_OF_EARLY_DATA( WAIT_EOED )
  *
  * RFC 8446 section A.2
  *
@@ -3051,6 +3033,13 @@ static int ssl_tls13_write_new_session_ticket_body( mbedtls_ssl_context *ssl,
     *out_len = 0;
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> write NewSessionTicket msg" ) );
 
+#if defined(MBEDTLS_SSL_EARLY_DATA)
+    if( ssl->conf->max_early_data_size > 0 )
+    {
+        session->ticket_flags |= MBEDTLS_SSL_TLS1_3_TICKET_ALLOW_EARLY_DATA;
+    }
+#endif /* MBEDTLS_SSL_EARLY_DATA */
+
     /*
      *    ticket_lifetime   4 bytes
      *    ticket_age_add    4 bytes
@@ -3295,7 +3284,7 @@ int mbedtls_ssl_tls13_handshake_server_step( mbedtls_ssl_context *ssl )
             break;
 
 #if defined(MBEDTLS_SSL_EARLY_DATA)
-        case MBEDTLS_SSL_WAIT_EOED:
+        case MBEDTLS_SSL_END_OF_EARLY_DATA:
             ret = ssl_tls13_process_wait_eoed( ssl );
             break;
 #endif /* MBEDTLS_SSL_EARLY_DATA */

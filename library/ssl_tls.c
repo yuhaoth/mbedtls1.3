@@ -1774,23 +1774,13 @@ static int ssl_tls13_early_data_common_static_check( mbedtls_ssl_context *ssl )
         return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
     }
 
-        if( ( session->ticket_flags &
+    if( ( session->ticket_flags &
               MBEDTLS_SSL_TLS1_3_TICKET_ALLOW_EARLY_DATA ) == 0 )
     {
         MBEDTLS_SSL_DEBUG_MSG(
             1, ( "early data is not supported for the ticket." ) );
         return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
     }
-
-#if defined(MBEDTLS_HAVE_TIME)
-    if( (uint32_t)( mbedtls_time( NULL ) - session->ticket_received ) >
-        session->ticket_lifetime )
-    {
-        MBEDTLS_SSL_DEBUG_MSG(
-            1, ( "ticket expired." ) );
-        return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
-    }
-#endif
 
     return( 0 );
 }
@@ -1843,6 +1833,18 @@ static int ssl_tls13_early_data_cli_status_check( mbedtls_ssl_context *ssl )
     ret = ssl_tls13_early_data_common_static_check( ssl );
     if( ret != 0 )
         return( ret );
+
+#if defined(MBEDTLS_HAVE_TIME)
+    if( (uint32_t)( mbedtls_time( NULL ) -
+            ssl->session_negotiate->ticket_received ) >
+        ssl->session_negotiate->ticket_lifetime )
+    {
+        MBEDTLS_SSL_DEBUG_MSG(
+            1, ( "ticket expired." ) );
+        return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
+    }
+#endif
+
     /* Add client special check here. */
 
     return( ret );

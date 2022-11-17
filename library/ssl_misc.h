@@ -1903,20 +1903,6 @@ static inline int mbedtls_ssl_conf_tls13_some_psk_enabled( mbedtls_ssl_context *
 }
 
 #if defined(MBEDTLS_SSL_SRV_C)
-/* TODO: If #6486 merged, re-consider about bellow definition */
-/* early data is disabled. */
-#define MBEDTLS_SSL_EARLY_DATA_STATUS_UNKNOWN   0
-/* early_data extension of client hello is not sent/recv */
-#define MBEDTLS_SSL_EARLY_DATA_STATUS_NOT_SENT  1
-/* early_data extension exist in ClientHello and
- * - Server will not reply in EE.
- * - Client hasn't received the early_data.
- */
-#define MBEDTLS_SSL_EARLY_DATA_STATUS_REJECTED  2
-/* early_data extension exist in client hello and encrypted extension */
-#define MBEDTLS_SSL_EARLY_DATA_STATUS_ACCEPTED  3
-MBEDTLS_CHECK_RETURN_CRITICAL
-int mbedtls_ssl_tls13_get_early_data_status( mbedtls_ssl_context *ssl );
 
 #if defined(MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_SOME_PSK_ENABLED)
 /**
