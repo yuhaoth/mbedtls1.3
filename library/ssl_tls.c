@@ -1722,6 +1722,15 @@ static int ssl_tls13_early_data_common_static_check( mbedtls_ssl_context *ssl )
         return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
     }
 
+#if defined(MBEDTLS_SSL_PROTO_TLS1_2)
+    if( mbedtls_ssl_conf_is_tls12_only( ssl->conf ) )
+    {
+        MBEDTLS_SSL_DEBUG_MSG(
+            1, ( "early data is not avaliable for TLS 1.2 only." ) );
+        return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
+    }
+#endif
+
     if( ssl->conf->max_early_data_size == 0 )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ("early data is disabled." ) );
@@ -1763,6 +1772,24 @@ static int ssl_tls13_early_data_common_static_check( mbedtls_ssl_context *ssl )
         return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
     }
 
+        if( ( session->ticket_flags &
+              MBEDTLS_SSL_TLS1_3_TICKET_ALLOW_EARLY_DATA ) == 0 )
+    {
+        MBEDTLS_SSL_DEBUG_MSG(
+            1, ( "early data is not supported for the ticket." ) );
+        return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
+    }
+
+#if defined(MBEDTLS_HAVE_TIME)
+    if( (uint32_t)( mbedtls_time( NULL ) - session->ticket_received ) >
+        session->ticket_lifetime )
+    {
+        MBEDTLS_SSL_DEBUG_MSG(
+            1, ( "ticket expired." ) );
+        return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
+    }
+#endif
+
     return( 0 );
 }
 
@@ -1783,6 +1810,7 @@ static int ssl_tls13_early_data_srv_status_check( mbedtls_ssl_context *ssl )
         }
         return( ssl->early_data_status );
     }
+
     ret = ssl_tls13_early_data_common_static_check( ssl );
     if( ret != 0 )
         return( ret );
@@ -3766,12 +3794,13 @@ int mbedtls_ssl_handshake_step( mbedtls_ssl_context *ssl )
         switch( ssl->state )
         {
             case MBEDTLS_SSL_HELLO_REQUEST:
-                ssl->state = MBEDTLS_SSL_CLIENT_HELLO;
-                ret = 0;
 #if defined(MBEDTLS_SSL_EARLY_DATA)
                 ssl->early_data_status =
                     mbedtls_ssl_get_early_data_status( ssl );
+                MBEDTLS_SSL_DEBUG_MSG( 2,("ssl->early_data_status=%d",ssl->early_data_status));
 #endif /* MBEDTLS_SSL_EARLY_DATA */
+                ssl->state = MBEDTLS_SSL_CLIENT_HELLO;
+                ret = 0;
                 break;
 
             case MBEDTLS_SSL_CLIENT_HELLO:
