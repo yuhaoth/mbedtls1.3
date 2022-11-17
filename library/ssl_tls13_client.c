@@ -963,6 +963,14 @@ int mbedtls_ssl_tls13_write_identities_of_pre_shared_key_ext(
 
         p += output_len;
         l_binders_len += 1 + PSA_HASH_LENGTH( hash_alg );
+#if defined(MBEDTLS_SSL_EARLY_DATA)
+        if( ssl->handshake->ciphersuite_info == NULL &&
+            mbedtls_ssl_get_early_data_status( ssl ) ==
+                MBEDTLS_SSL_EARLY_DATA_STATUS_UNKNOWN )
+        {
+            /* TODO: update handshake->ciphersuite_info to match */
+        }
+#endif /* MBEDTLS_SSL_EARLY_DATA */
     }
 #endif /* MBEDTLS_SSL_SESSION_TICKETS */
 
@@ -1212,6 +1220,15 @@ int mbedtls_ssl_tls13_write_client_hello_exts( mbedtls_ssl_context *ssl,
     p += ext_len;
 #endif
 
+#if defined(MBEDTLS_SSL_EARLY_DATA)
+    if( mbedtls_ssl_get_early_data_status( ssl ) ==
+            MBEDTLS_SSL_EARLY_DATA_STATUS_UNKNOWN        &&
+        ssl->handshake->hello_retry_request_count == 0 )
+    {
+        /* TODO: Write early data extension */
+    }
+#endif /* MBEDTLS_SSL_EARLY_DATA */
+
     *out_len = p - buf;
 
     return( 0 );
@@ -1425,6 +1442,32 @@ static int ssl_tls13_preprocess_server_hello( mbedtls_ssl_context *ssl,
 
         return( SSL_SERVER_HELLO_TLS1_2 );
     }
+
+#if defined(MBEDTLS_SSL_EARLY_DATA) && defined(MBEDTLS_SSL_PROTO_TLS1_2)
+    /* RFC 8446 section A.1
+     *                        START <----+
+     *         Send ClientHello |        | Recv HelloRetryRequest
+     *    [K_send = early data] |        |
+     *                          v        |
+     *     /                 WAIT_SH ----+
+     *
+     * For hybrid mode, we can only caculate and switch transform here
+     *
+     * NOTICE: Above points should be discuss when code review.
+     */
+    if( mbedtls_ssl_conf_is_hybrid_tls12_tls13( ssl->conf ) &&
+        mbedtls_ssl_get_early_data_status( ssl ) ==
+            MBEDTLS_SSL_EARLY_DATA_STATUS_UNKNOWN )
+    {
+        /* TODO:  Add early transform caculate here. */
+
+        /* Switch transform. */
+        MBEDTLS_SSL_DEBUG_MSG(
+            1, ( "Switch to early keys for outbound traffic" ) );
+        mbedtls_ssl_set_outbound_transform(
+            ssl, ssl->handshake->transform_earlydata );
+    }
+#endif /* MBEDTLS_SSL_EARLY_DATA && MBEDTLS_SSL_PROTO_TLS1_2 */
 
 #if defined(MBEDTLS_SSL_SESSION_TICKETS)
     ssl->session_negotiate->endpoint = ssl->conf->endpoint;
@@ -1866,17 +1909,20 @@ static int ssl_tls13_postprocess_server_hello( mbedtls_ssl_context *ssl )
             ( "Selected key exchange mode: %s",
               ssl_tls13_get_kex_mode_str( handshake->key_exchange_mode ) ) );
 
-    /* Start the TLS 1.3 key schedule: Set the PSK and derive early secret.
-     *
-     * TODO: We don't have to do this in case we offered 0-RTT and the
-     *       server accepted it. In this case, we could skip generating
-     *       the early secret. */
-    ret = mbedtls_ssl_tls13_key_schedule_stage_early( ssl );
-    if( ret != 0 )
+    if( mbedtls_ssl_get_early_data_status( ssl ) !=
+            MBEDTLS_SSL_EARLY_DATA_STATUS_CAN_SENT )
     {
-        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_tls13_key_schedule_stage_early",
-                               ret );
-        goto cleanup;
+        /* Start the TLS 1.3 key schedule: Set the PSK and derive early secret.
+         *
+         * Early data is not enabled, early secrets hasn't been generated.
+         */
+        ret = mbedtls_ssl_tls13_key_schedule_stage_early( ssl );
+        if( ret != 0 )
+        {
+            MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_tls13_key_schedule_stage_early",
+                                ret );
+            goto cleanup;
+        }
     }
 
     ret = mbedtls_ssl_tls13_compute_handshake_transform( ssl );
@@ -2390,14 +2436,52 @@ static int ssl_tls13_process_server_finished( mbedtls_ssl_context *ssl )
         return( ret );
     }
 
+#if defined(MBEDTLS_SSL_EARLY_DATA)
+    /* RFC 8446 section A.1
+     *
+     *  |                 | Recv CertificateVerify
+     *  +> WAIT_FINISHED <+
+     *         | Recv Finished
+     *         | [Send EndOfEarlyData]
+     *         | K_send = handshake
+     */
+    if( mbedtls_ssl_get_early_data_status( ssl ) ==
+            MBEDTLS_SSL_EARLY_DATA_STATUS_CAN_SENT )
+    {
+        /* RFC 8446 section D.4
+         *
+         * -  If not offering early data, the client sends a dummy
+         *    change_cipher_spec record (see the third paragraph of Section 5)
+         *    immediately before its second flight.
+         *
+         * The code is only executed when early_data is offered. For this state,
+         * outbound transform is protected, change_cipher_spec is not allowed.
+         */
+        if( ssl->handshake->received_extensions &
+                MBEDTLS_SSL_EXT_MASK( EARLY_DATA ) )
+        {
+            ssl->early_data_status = MBEDTLS_SSL_EARLY_DATA_STATUS_ACCEPTED;
+            mbedtls_ssl_handshake_set_state(
+                ssl, MBEDTLS_SSL_END_OF_EARLY_DATA );
+        }
+        else
+        {
+            ssl->early_data_status = MBEDTLS_SSL_EARLY_DATA_STATUS_REJECTED;
+            mbedtls_ssl_handshake_set_state(
+                ssl, MBEDTLS_SSL_CLIENT_CERTIFICATE );
+        }
+    }
+    else
+#endif /* MBEDTLS_SSL_EARLY_DATA */
+    {
 #if defined(MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE)
-    mbedtls_ssl_handshake_set_state(
-        ssl,
-        MBEDTLS_SSL_CLIENT_CCS_AFTER_SERVER_FINISHED );
+        mbedtls_ssl_handshake_set_state(
+            ssl,
+            MBEDTLS_SSL_CLIENT_CCS_AFTER_SERVER_FINISHED );
 #else
-    mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_CLIENT_CERTIFICATE );
+        mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_CLIENT_CERTIFICATE );
 #endif /* MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE */
-
+    }
     return( 0 );
 }
 
@@ -2782,11 +2866,14 @@ int mbedtls_ssl_tls13_handshake_client_step( mbedtls_ssl_context *ssl )
 
     switch( ssl->state )
     {
-        /*
-         * ssl->state is initialized as HELLO_REQUEST. It is the same
-         * as CLIENT_HELLO state.
-         */
         case MBEDTLS_SSL_HELLO_REQUEST:
+            mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_CLIENT_HELLO );
+            ret = 0;
+#if defined(MBEDTLS_SSL_EARLY_DATA)
+            ssl->early_data_status = mbedtls_ssl_get_early_data_status( ssl );
+#endif /* MBEDTLS_SSL_EARLY_DATA */
+            break;
+
         case MBEDTLS_SSL_CLIENT_HELLO:
             ret = mbedtls_ssl_write_client_hello( ssl );
             break;

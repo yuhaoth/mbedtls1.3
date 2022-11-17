@@ -1701,8 +1701,23 @@ static int ssl_tls13_postprocess_client_hello( mbedtls_ssl_context* ssl )
         return( ret );
     }
 
-    return( 0 );
+    /* There is enough information, update early data status. */
+    int early_data_status = mbedtls_ssl_get_early_data_status( ssl );
 
+    if( ssl->handshake->received_extensions & MBEDTLS_SSL_EXT_MASK( EARLY_DATA ) )
+    {
+        if( early_data_status != MBEDTLS_SSL_EARLY_DATA_STATUS_UNKNOWN )
+            /* discarding records which fail deprotection. */
+            early_data_status = MBEDTLS_SSL_EARLY_DATA_STATUS_REJECTED;
+        else
+        {
+            early_data_status = MBEDTLS_SSL_EARLY_DATA_STATUS_ACCEPTED;
+            /* TODO: compute early transform here? */
+        }
+    }
+    ssl->early_data_status = early_data_status;
+
+    return( 0 );
 }
 
 /*
@@ -2328,6 +2343,14 @@ static int ssl_tls13_write_encrypted_extensions_body( mbedtls_ssl_context *ssl,
     p += output_len;
 #endif /* MBEDTLS_SSL_ALPN */
 
+#if defined(MBEDTLS_SSL_EARLY_DATA)
+    if( mbedtls_ssl_get_early_data_status( ssl ) ==
+            MBEDTLS_SSL_EARLY_DATA_STATUS_ACCEPTED )
+    {
+        /* TODO: Write early data extension here. */
+    }
+#endif /* MBEDTLS_SSL_EARLY_DATA */
+
     extensions_len = ( p - p_extensions_len ) - 2;
     MBEDTLS_PUT_UINT16_BE( extensions_len, p_extensions_len, 0 );
 
@@ -2578,6 +2601,38 @@ static int ssl_tls13_write_server_finished( mbedtls_ssl_context *ssl )
                 MBEDTLS_ERR_SSL_HANDSHAKE_FAILURE );
         return( ret );
     }
+
+#if defined(MBEDTLS_SSL_EARLY_DATA)
+    /*
+     * RFC 8446 section A.2
+     *
+     *                                 | Send Finished
+     *                                 | K_send = application
+     *                        +--------+--------+
+     *               No 0-RTT |                 | 0-RTT
+     *                        |                 |
+     *    K_recv = handshake  |                 | K_recv = early data
+     *  [Skip decrypt errors] |             WAIT_EOED
+     *                        |
+     *                        |
+     *                        |
+     *                        |
+     *                        +> WAIT_FLIGHT2
+     *                                 |
+     */
+    if( mbedtls_ssl_get_early_data_status( ssl ) ==
+            MBEDTLS_SSL_EARLY_DATA_STATUS_ACCEPTED )
+    {
+        /* TODO: compute early transform here? */
+        MBEDTLS_SSL_DEBUG_MSG(
+            1, ( "Switch to early keys for inbound traffic. "
+                     "( K_recv = early data )" ) );
+        mbedtls_ssl_set_inbound_transform(
+            ssl, ssl->handshake->transform_earlydata );
+        mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_END_OF_EARLY_DATA );
+        return( 0 );
+    }
+#endif /* MBEDTLS_SSL_EARLY_DATA */
 
     MBEDTLS_SSL_DEBUG_MSG( 1, ( "Switch to handshake keys for inbound traffic" ) );
     mbedtls_ssl_set_inbound_transform( ssl, ssl->handshake->transform_handshake );

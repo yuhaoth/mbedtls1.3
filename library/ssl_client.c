@@ -987,6 +987,35 @@ int mbedtls_ssl_write_client_hello( mbedtls_ssl_context *ssl )
         MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_finish_handshake_msg( ssl,
                                                                 buf_len,
                                                                 msg_len ) );
+
+#if defined(MBEDTLS_SSL_EARLY_DATA)
+        /* RFC 8446 section A.1
+        *                        START <----+
+        *         Send ClientHello |        | Recv HelloRetryRequest
+        *    [K_send = early data] |        |
+        *                          v        |
+        *     /                 WAIT_SH ----+
+        *
+        * Consider about hybrid mode, early tranform MUST be set only in TLS 1.3.
+        * And 2nd ClientHello should be encrypted with early traffic.
+        *
+        * NOTICE: Above points should be discuss when code review.
+        */
+        if( mbedtls_ssl_conf_is_tls13_only( ssl->conf ) &&
+            mbedtls_ssl_get_early_data_status( ssl ) ==
+                MBEDTLS_SSL_EARLY_DATA_STATUS_UNKNOWN )
+        {
+            /* TODO: Add early transform here */
+
+            /* Switch outbound traffic to early */
+            MBEDTLS_SSL_DEBUG_MSG(
+                1, ( "Switch to early keys for outbound traffic."
+                         " [K_send = early data]" ) );
+            mbedtls_ssl_set_outbound_transform(
+                ssl, ssl->handshake->transform_earlydata );
+        }
+#endif /* MBEDTLS_SSL_EARLY_DATA */
+
         mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_SERVER_HELLO );
     }
 

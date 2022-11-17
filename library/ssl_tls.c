@@ -1710,6 +1710,131 @@ void mbedtls_ssl_tls13_conf_early_data_cb(
     conf->early_data_conext = context;
 }
 #endif /* MBEDTLS_SSL_SRV_C */
+
+MBEDTLS_CHECK_RETURN_CRITICAL
+static int ssl_tls13_early_data_common_static_check( mbedtls_ssl_context *ssl )
+{
+    mbedtls_ssl_session *session = ssl->session_negotiate;
+
+    if( ssl == NULL || ssl->conf == NULL )
+    {
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "SSL context is not available." ) );
+        return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
+    }
+
+    if( ssl->conf->max_early_data_size == 0 )
+    {
+        MBEDTLS_SSL_DEBUG_MSG( 1, ("early data is disabled." ) );
+        return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
+    }
+
+    if( ssl->conf->transport != MBEDTLS_SSL_TRANSPORT_STREAM )
+    {
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "DTLS not supported yet." ) );
+        return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
+    }
+
+    if( ! mbedtls_ssl_conf_tls13_some_psk_enabled( ssl ) )
+    {
+        MBEDTLS_SSL_DEBUG_MSG(
+            1, ( "psk or psk_ephemeral is not available." ) );
+        return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
+    }
+
+    if( ssl->handshake && ( ssl->handshake->resume != 1 || session == NULL ) )
+    {
+        MBEDTLS_SSL_DEBUG_MSG(
+            1, ( "early data is only available for resumption session." ) );
+        return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
+    }
+
+    if(session->tls_version != MBEDTLS_SSL_VERSION_TLS1_3 )
+    {
+        MBEDTLS_SSL_DEBUG_MSG(
+            1, ( "early data is only available for TLS 1.3 ticket." ) );
+        return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
+    }
+
+    if( ! mbedtls_ssl_tls13_cipher_suite_is_offered(
+              ssl, session->ciphersuite ) )
+    {
+        MBEDTLS_SSL_DEBUG_MSG(
+            1, ( "ciphersuite is not valid." ) );
+        return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
+    }
+
+    return( 0 );
+}
+
+#if defined(MBEDTLS_SSL_SRV_C)
+MBEDTLS_CHECK_RETURN_CRITICAL
+static int ssl_tls13_early_data_srv_status_check( mbedtls_ssl_context *ssl )
+{
+    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
+
+    if( ! ( ssl->state == MBEDTLS_SSL_HELLO_REQUEST ||
+            ssl->state == MBEDTLS_SSL_CLIENT_HELLO ) )
+    {
+        if( ssl->early_data_status == MBEDTLS_SSL_EARLY_DATA_STATUS_UNKNOWN &&
+            ssl->transform_in != NULL                                       &&
+            ssl->transform_in == ssl->handshake->transform_earlydata )
+        {
+            return( MBEDTLS_SSL_EARLY_DATA_STATUS_CAN_SENT );
+        }
+        return( ssl->early_data_status );
+    }
+    ret = ssl_tls13_early_data_common_static_check( ssl );
+    if( ret != 0 )
+        return( ret );
+    /* Add server special check here. */
+
+    return( ret );
+}
+#endif /* MBEDTLS_SSL_SRV_C */
+
+#if defined(MBEDTLS_SSL_CLI_C)
+MBEDTLS_CHECK_RETURN_CRITICAL
+static int ssl_tls13_early_data_cli_status_check( mbedtls_ssl_context *ssl )
+{
+    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
+
+    if( ssl->state != MBEDTLS_SSL_HELLO_REQUEST )
+    {
+        if( ssl->early_data_status == MBEDTLS_SSL_EARLY_DATA_STATUS_UNKNOWN &&
+            ssl->transform_out != NULL                                      &&
+            ssl->transform_out == ssl->handshake->transform_earlydata )
+        {
+            return( MBEDTLS_SSL_EARLY_DATA_STATUS_CAN_SENT );
+        }
+
+        return( ssl->early_data_status );
+    }
+
+    ret = ssl_tls13_early_data_common_static_check( ssl );
+    if( ret != 0 )
+        return( ret );
+    /* Add client special check here. */
+
+    return( ret );
+}
+#endif /* MBEDTLS_SSL_CLI_C */
+
+int mbedtls_ssl_get_early_data_status( mbedtls_ssl_context *ssl )
+{
+    if( mbedtls_ssl_is_handshake_over( ssl ) )
+        return( ssl->early_data_status );
+
+#if defined(MBEDTLS_SSL_SRV_C)
+    if( ssl->conf->endpoint == MBEDTLS_SSL_IS_SERVER )
+        return( ssl_tls13_early_data_srv_status_check( ssl ) );
+#endif
+#if defined(MBEDTLS_SSL_CLI_C)
+    if( ssl->conf->endpoint == MBEDTLS_SSL_IS_CLIENT )
+        return( ssl_tls13_early_data_cli_status_check( ssl ) );
+#endif
+    return( 0 );
+}
+
 #endif /* MBEDTLS_SSL_EARLY_DATA */
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
 
@@ -3643,6 +3768,10 @@ int mbedtls_ssl_handshake_step( mbedtls_ssl_context *ssl )
             case MBEDTLS_SSL_HELLO_REQUEST:
                 ssl->state = MBEDTLS_SSL_CLIENT_HELLO;
                 ret = 0;
+#if defined(MBEDTLS_SSL_EARLY_DATA)
+                ssl->early_data_status =
+                    mbedtls_ssl_get_early_data_status( ssl );
+#endif /* MBEDTLS_SSL_EARLY_DATA */
                 break;
 
             case MBEDTLS_SSL_CLIENT_HELLO:

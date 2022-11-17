@@ -662,6 +662,7 @@ typedef enum
     MBEDTLS_SSL_FLUSH_BUFFERS,
     MBEDTLS_SSL_HANDSHAKE_WRAPUP,
     MBEDTLS_SSL_HANDSHAKE_OVER,
+    MBEDTLS_SSL_END_OF_EARLY_DATA,
     MBEDTLS_SSL_NEW_SESSION_TICKET,
     MBEDTLS_SSL_SERVER_HELLO_VERIFY_REQUEST_SENT,
     MBEDTLS_SSL_HELLO_RETRY_REQUEST,
@@ -1825,9 +1826,11 @@ struct mbedtls_ssl_context
                             *   and #MBEDTLS_SSL_CID_DISABLED. */
 #endif /* MBEDTLS_SSL_DTLS_CONNECTION_ID */
 
-#if defined(MBEDTLS_SSL_EARLY_DATA) && defined(MBEDTLS_SSL_CLI_C)
+#if defined(MBEDTLS_SSL_EARLY_DATA) || \
+    ( defined(MBEDTLS_SSL_PROTO_TLS1_3) && \
+      defined(MBEDTLS_SSL_SRV_C) )
     int MBEDTLS_PRIVATE(early_data_status);
-#endif /* MBEDTLS_SSL_EARLY_DATA && MBEDTLS_SSL_CLI_C */
+#endif /* MBEDTLS_SSL_EARLY_DATA */
 
     /** Callback to export key block and master secret                      */
     mbedtls_ssl_export_keys_t *MBEDTLS_PRIVATE(f_export_keys);
@@ -4929,6 +4932,84 @@ int mbedtls_ssl_send_alert_message( mbedtls_ssl_context *ssl,
  *                 for a new connection; the current connection must be closed.
  */
 int mbedtls_ssl_close_notify( mbedtls_ssl_context *ssl );
+
+/* Initial status
+ * Client: The SSL context has passed basic check like resumption, vaild ticket,
+ *         kex modes and so on.
+ * Server: Same with client side.
+ *
+ * TODO: Is it right name? How about MBEDTLS_SSL_EARLY_DATA_STATUS_CAN_DO //no-check-names
+ */
+#define MBEDTLS_SSL_EARLY_DATA_STATUS_UNKNOWN   0
+/* Client: Allow early data transfter.
+ * Server: non-exist, server receive early data in fixed states between
+ *         SERVER_FINISHED and EndOfEarlyData for 0-RTT. If no 0-RTT supported,
+ *         ealy data will be skiped. See RFC 8446 A.2 and 4.2.10.
+ */
+#define MBEDTLS_SSL_EARLY_DATA_STATUS_CAN_SENT  1
+/* Client: early data indaction of EE IS NOT received.
+ *         Update in MBEDTLS_SSL_ENCRYPTED_EXTENSIONS.
+ * Sever:  early data indaction of EE WON'T be sent. Ignore decrypt errors
+ *         while perform handshake and next state is wait_eoed.
+ *         Update in MBEDTLS_SSL_CLIENT_HELLO.
+ *
+ * How about change it to negative value?
+ */
+#define MBEDTLS_SSL_EARLY_DATA_STATUS_REJECTED  2
+/* Client: early data indaction of EE IS received.
+ *         Update in MBEDTLS_SSL_ENCRYPTED_EXTENSIONS.
+ * Sever:  early data indaction of EE WILL be sent. Next state is wait_eoed.
+ *         Update in MBEDTLS_SSL_CLIENT_HELLO.
+ */
+#define MBEDTLS_SSL_EARLY_DATA_STATUS_ACCEPTED  3
+
+/**
+ * \brief Get information about the use of 0-RTT in a TLS 1.3 handshake
+ *
+ * \param ssl      The SSL context to query
+ *
+ * \return         #MBEDTLS_ERR_SSL_BAD_INPUT_DATA
+ *                 - If this function is called from the server-side. Or,
+ *                 - If the session is not resumption session.
+ *                 - If the ticket is not valid.
+ *                 - If the ticket is not allowed for early data.
+ *                 - If early_data is disabled.
+ * \return        other negative value that reported in negotiation
+ *
+ * \return         #MBEDTLS_SSL_EARLY_DATA_STATUS_UNKNOWN the SSL context \p ssl
+ *                 is allowed to send early data, but not ready for sending
+ *                 early data.
+ *
+ * \return         #MBEDTLS_SSL_EARLY_DATA_STATUS_CAN_SENT it is possible to
+ *                 send early data for the SSL context \p ssl.
+ *
+ * \return         #MBEDTLS_SSL_EARLY_DATA_STATUS_REJECTED if the client has
+ *                 indicated the use of early data but the server has rejected
+ *                 it. In this situation, the client may want to re-send the
+ *                 early data, it may have sent early data as ordinary
+ *                 post-handshake application data via mbedtls_ssl_write().
+ *
+ * \return         #MBEDTLS_SSL_EARLY_DATA_STATUS_ACCEPTED if the client has
+ *                 indicated the use of early data and the server has accepted
+ *                 it.
+ */
+#if defined(MBEDTLS_SSL_EARLY_DATA)
+int mbedtls_ssl_get_early_data_status( mbedtls_ssl_context *ssl );
+#endif /* MBEDTLS_SSL_EARLY_DATA */
+
+#if !defined(MBEDTLS_SSL_EARLY_DATA) && \
+    defined(MBEDTLS_SSL_SRV_C) && \
+    defined(MBEDTLS_SSL_PROTO_TLS1_3)
+/* TODO: move it to ssl_misc.h if design review finished.
+ *
+ * This is prepare for ignore decrypt error. When !defined(MBEDTLS_SSL_EARLY_DATA)
+ * That is described in section A.2 and 4.2.10.
+ */
+static inline int mbedtls_ssl_get_early_data_status( mbedtls_ssl_context *ssl )
+{
+    return( ssl->MBEDTLS_PRIVATE(early_data_status) );
+}
+#endif /* !MBEDTLS_SSL_EARLY_DATA */
 
 /**
  * \brief          Free referenced items in an SSL context and clear memory
