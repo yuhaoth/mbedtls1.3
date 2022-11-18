@@ -1398,7 +1398,13 @@ void mbedtls_ssl_session_reset_msg_layer( mbedtls_ssl_context *ssl,
     ssl->in_msglen  = 0;
     ssl->in_hslen   = 0;
     ssl->keep_current_message = 0;
-    ssl->transform_in  = NULL;
+#if defined(MBEDTLS_SSL_EARLY_DATA)
+    if( ssl->transform_in &&
+        ssl->transform_in != ssl->handshake->transform_earlydata )
+#endif
+    {
+        ssl->transform_in  = NULL;
+    }
 
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
     ssl->next_record_offset = 0;
@@ -1442,7 +1448,7 @@ void mbedtls_ssl_session_reset_msg_layer( mbedtls_ssl_context *ssl,
 
     if( ssl->handshake != NULL )
     {
-#if defined(MBEDTLS_SSL_EARLY_DATA)
+#if defined(MBEDTLS_SSL_EARLY_DATA) && 0 //DO NOT free transform early
         mbedtls_ssl_transform_free( ssl->handshake->transform_earlydata );
         mbedtls_free( ssl->handshake->transform_earlydata );
         ssl->handshake->transform_earlydata = NULL;

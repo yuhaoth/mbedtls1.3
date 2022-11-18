@@ -4867,21 +4867,45 @@ int mbedtls_ssl_handle_message_type( mbedtls_ssl_context *ssl )
 #endif /* MBEDTLS_SSL_PROTO_DTLS */
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3) && defined(MBEDTLS_SSL_SRV_C)
-    /* Ignore application data message before 2nd ClientHello when early_data
-     * was received in 1st ClientHello
-     *
-     * all below condition should be matched:
-     *  - Is application message.
-     *  - Expect 2nd ClientHello.
-     *  - Expect plaintext.
-     *  - Is rejected.
-     */
+    if( ssl->in_msgtype == MBEDTLS_SSL_MSG_APPLICATION_DATA &&
+        ssl->tls_version == MBEDTLS_SSL_VERSION_TLS1_3 &&
+        ssl->conf->endpoint == MBEDTLS_SSL_IS_SERVER )
+    {
+        /* Ignore application data message before 2nd ClientHello when early_data
+         * was received in 1st ClientHello
+         *
+         * all below condition should be matched:
+         *  - Is application message.
+         *  - Expect 2nd ClientHello.
+         *  - Expect plaintext.
+         *  - Is rejected.
+         */
+        if( ssl->handshake->hello_retry_request_count > 0   &&
+            ssl->state == MBEDTLS_SSL_CLIENT_HELLO          &&
+            ( ssl->handshake->received_extensions &
+                  MBEDTLS_SSL_EXT_MASK( EARLY_DATA ) ) != 0 )
+            {
+                MBEDTLS_SSL_DEBUG_MSG(
+                    3, ( "Ignore application message before 2nd ClientHello" ) );
+                return( MBEDTLS_ERR_SSL_CONTINUE_PROCESSING );
+            }
+
+    }
+// #endif /* MBEDTLS_SSL_PROTO_TLS1_3 && MBEDTLS_SSL_SRV_C */
+    if( ssl->handshake->hello_retry_request_count > 0 )
+    {
+        MBEDTLS_SSL_DEBUG_RET(1,"ssl->in_msgtype == MBEDTLS_SSL_MSG_APPLICATION_DATA", ssl->in_msgtype == MBEDTLS_SSL_MSG_APPLICATION_DATA );
+        MBEDTLS_SSL_DEBUG_RET(1,"ssl->transform_in == NULL", ssl->transform_in == NULL );
+        MBEDTLS_SSL_DEBUG_RET(1,"mbedtls_ssl_get_early_data_status( ssl )", mbedtls_ssl_get_early_data_status( ssl ) );
+        MBEDTLS_SSL_DEBUG_RET(1,"ssl->early_data_status", ssl->early_data_status );
+        MBEDTLS_SSL_DEBUG_RET(1,"has early data ", ( ssl->handshake->received_extensions & MBEDTLS_SSL_EXT_MASK( EARLY_DATA ) ) != 0);
+    }
     if( ssl->in_msgtype == MBEDTLS_SSL_MSG_APPLICATION_DATA &&
         ssl->handshake != NULL &&
         ssl->handshake->hello_retry_request_count > 0 &&
         ssl->transform_in == NULL &&
-        mbedtls_ssl_get_early_data_status( ssl ) ==
-            MBEDTLS_SSL_EARLY_DATA_STATUS_REJECTED )
+        mbedtls_ssl_get_early_data_status( ssl ) !=
+            MBEDTLS_SSL_EARLY_DATA_STATUS_ACCEPTED )
     {
         MBEDTLS_SSL_DEBUG_MSG(
             3, ( "Ignore application message before 2nd ClientHello" ) );

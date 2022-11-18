@@ -1730,6 +1730,12 @@ static int ssl_tls13_postprocess_client_hello( mbedtls_ssl_context* ssl )
                     1, "mbedtls_ssl_tls13_compute_early_transform", ret );
                 return( ret );
             }
+
+            MBEDTLS_SSL_DEBUG_MSG(
+                1, ( "Switch to early keys for inbound traffic. "
+                        "( K_recv = early data )" ) );
+            mbedtls_ssl_set_inbound_transform(
+                ssl, ssl->handshake->transform_earlydata );
         }
 #endif /* MBEDTLS_SSL_EARLY_DATA */
         ssl->early_data_status = early_data_status;
@@ -1752,6 +1758,7 @@ static int ssl_tls13_process_client_hello( mbedtls_ssl_context *ssl )
     size_t buflen = 0;
     int parse_client_hello_ret;
 
+    MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_get_early_data_status", mbedtls_ssl_get_early_data_status( ssl ) );
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> parse client hello" ) );
 
     MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_tls13_fetch_handshake_msg(
@@ -2665,12 +2672,8 @@ static int ssl_tls13_write_server_finished( mbedtls_ssl_context *ssl )
     if( mbedtls_ssl_get_early_data_status( ssl ) ==
             MBEDTLS_SSL_EARLY_DATA_STATUS_ACCEPTED )
     {
-        /* TODO: compute early transform here? */
-        MBEDTLS_SSL_DEBUG_MSG(
-            1, ( "Switch to early keys for inbound traffic. "
-                     "( K_recv = early data )" ) );
-        mbedtls_ssl_set_inbound_transform(
-            ssl, ssl->handshake->transform_earlydata );
+        /* TODO: compute and switch early transform here? */
+
         mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_END_OF_EARLY_DATA );
         return( 0 );
     }

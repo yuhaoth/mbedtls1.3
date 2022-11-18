@@ -58,9 +58,18 @@ int mbedtls_ssl_tls13_fetch_handshake_msg( mbedtls_ssl_context *ssl,
         goto cleanup;
     }
 
+    MBEDTLS_SSL_DEBUG_RET( 1, "ssl->early_data_status", ssl->early_data_status );
     if( ssl->in_msgtype != MBEDTLS_SSL_MSG_HANDSHAKE ||
         ssl->in_msg[0]  != hs_type )
     {
+        if( ssl->handshake->hello_retry_request_count > 0 &&
+            ( ssl->handshake->received_extensions & MBEDTLS_SSL_EXT_MASK( EARLY_DATA ) ) != 0 )
+        {
+            MBEDTLS_SSL_DEBUG_MSG(
+            3, ( "Ignore application message before 2nd ClientHello" ) );
+            ret = MBEDTLS_ERR_SSL_CONTINUE_PROCESSING;
+            goto cleanup;
+        }
         MBEDTLS_SSL_DEBUG_MSG(
             1, ( "Receive unexpected handshake message: "
                     "expected=%u, received=%u",
