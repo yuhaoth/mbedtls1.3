@@ -5635,99 +5635,7 @@ static int ssl_tls13_handle_hs_message_post_handshake( mbedtls_ssl_context *ssl 
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_2)
-/* This function is called from mbedtls_ssl_read() when a handshake message is
- * received  after the initial handshake. In TLS 1.2, such messages usually
- * trigger renegotiations. In (D)TLS 1.3, renegotiation has been replaced
- * by a number of specific post-handshake messages.
- */
-static int ssl_handle_hs_message_post_handshake_tls12( mbedtls_ssl_context *ssl );
-#endif
-
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3)
-static int ssl_handle_hs_message_post_handshake_tls13( mbedtls_ssl_context *ssl );
-#endif
-
-MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_tls12_handle_hs_message_post_handshake( mbedtls_ssl_context *ssl )
-{
-    /* Check protocol version and dispatch accordingly. */
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3)
-    if( ssl->tls_version == MBEDTLS_SSL_VERSION_TLS1_3 )
-    {
-        return( ssl_handle_hs_message_post_handshake_tls13( ssl ) );
-    }
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
-
-#if defined(MBEDTLS_SSL_PROTO_TLS1_2)
-    if( ssl->tls_version <= MBEDTLS_SSL_VERSION_TLS1_2 )
-    {
-        return( ssl_handle_hs_message_post_handshake_tls12( ssl ) );
-    }
-#endif /* MBEDTLS_SSL_PROTO_TLS1_2 */
-
-    /* Should never happen */
-    return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
-}
-
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3)
-
-#if defined(MBEDTLS_SSL_NEW_SESSION_TICKET_REMOVED) && defined(MBEDTLS_SSL_CLI_C)
-static int ssl_tls13_check_new_session_ticket( mbedtls_ssl_context *ssl )
-{
-#if defined(MBEDTLS_SSL_USE_MPS)
-    int ret;
-    mbedtls_mps_handshake_in msg;
-    ret = mbedtls_mps_read_handshake( &ssl->mps->l4, &msg );
-    if( ret != 0 )
-        return( ret );
-
-    if( msg.type != MBEDTLS_SSL_HS_NEW_SESSION_TICKET )
-        return( 0 );
-#else /* MBEDTLS_SSL_USE_MPS */
-    if( ( ssl->in_hslen == mbedtls_ssl_hs_hdr_len( ssl ) ) ||
-        ( ssl->in_msg[0] != MBEDTLS_SSL_HS_NEW_SESSION_TICKET ) )
-    {
-        return( 0 );
-    }
-
-    ssl->keep_current_message = 1;
-#endif /* MBEDTLS_SSL_USE_MPS */
-
-    MBEDTLS_SSL_DEBUG_MSG( 3, ( "NewSessionTicket received" ) );
-    mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_CLIENT_NEW_SESSION_TICKET );
-
-    return( MBEDTLS_ERR_SSL_WANT_READ );
-}
-#endif /* MBEDTLS_SSL_NEW_SESSION_TICKET_REMOVED && MBEDTLS_SSL_CLI_C */
-
-static int ssl_handle_hs_message_post_handshake_tls13( mbedtls_ssl_context *ssl )
-{
-#if defined(MBEDTLS_SSL_NEW_SESSION_TICKET_REMOVED)
-#if defined(MBEDTLS_SSL_CLI_C)
-    int ret;
-#endif /* MBEDTLS_SSL_CLI_C */
-#endif /* MBEDTLS_SSL_NEW_SESSION_TICKET_REMOVED */
-
-    MBEDTLS_SSL_DEBUG_MSG( 3, ( "received post-handshake message" ) );
-
-#if defined(MBEDTLS_SSL_NEW_SESSION_TICKET_REMOVED)
-#if defined(MBEDTLS_SSL_CLI_C)
-    if( ssl->conf->endpoint == MBEDTLS_SSL_IS_CLIENT )
-    {
-        ret = ssl_tls13_check_new_session_ticket( ssl );
-        if( ret != 0 )
-            return( ret );
-    }
-#endif /* MBEDTLS_SSL_CLI_C */
-#endif /* MBEDTLS_SSL_NEW_SESSION_TICKET_REMOVED */
-
-    /* Fail in all other cases. */
-    return( MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE );
-}
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
-
-#if defined(MBEDTLS_SSL_PROTO_TLS1_2)
-static int ssl_handle_hs_message_post_handshake_tls12( mbedtls_ssl_context *ssl )
 {
     /*
      * - For client-side, expect SERVER_HELLO_REQUEST.
@@ -5854,6 +5762,28 @@ void mbedtls_ssl_transform_free( mbedtls_ssl_transform *transform )
     mbedtls_platform_zeroize( transform, sizeof( mbedtls_ssl_transform ) );
 }
 
+MBEDTLS_CHECK_RETURN_CRITICAL
+static int ssl_handle_hs_message_post_handshake( mbedtls_ssl_context *ssl )
+{
+    /* Check protocol version and dispatch accordingly. */
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3)
+    if( ssl->tls_version == MBEDTLS_SSL_VERSION_TLS1_3 )
+    {
+        return( ssl_tls13_handle_hs_message_post_handshake( ssl ) );
+    }
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
+
+#if defined(MBEDTLS_SSL_PROTO_TLS1_2)
+    if( ssl->tls_version <= MBEDTLS_SSL_VERSION_TLS1_2 )
+    {
+        return( ssl_tls12_handle_hs_message_post_handshake( ssl ) );
+    }
+#endif /* MBEDTLS_SSL_PROTO_TLS1_2 */
+
+    /* Should never happen */
+    return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
+}
+
 #if defined(MBEDTLS_SSL_USE_MPS)
 int mbedtls_ssl_read( mbedtls_ssl_context *ssl, unsigned char *buf, size_t len )
 {
@@ -5883,7 +5813,11 @@ int mbedtls_ssl_read( mbedtls_ssl_context *ssl, unsigned char *buf, size_t len )
     {
         ret = ssl_handle_hs_message_post_handshake( ssl );
         if( ret != 0 )
+        {
+            MBEDTLS_SSL_DEBUG_RET(
+                1, "ssl_handle_hs_message_post_handshake", ret );
             goto cleanup;
+        }
 
         return( MBEDTLS_ERR_SSL_WANT_READ );
     }
@@ -5988,31 +5922,7 @@ int mbedtls_ssl_close_notify( mbedtls_ssl_context *ssl )
 
     return( 0 );
 }
-
-
 #else /* MBEDTLS_SSL_USE_MPS */
-MBEDTLS_CHECK_RETURN_CRITICAL
-static int ssl_handle_hs_message_post_handshake( mbedtls_ssl_context *ssl )
-{
-    /* Check protocol version and dispatch accordingly. */
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3)
-    if( ssl->tls_version == MBEDTLS_SSL_VERSION_TLS1_3 )
-    {
-        return( ssl_tls13_handle_hs_message_post_handshake( ssl ) );
-    }
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
-
-#if defined(MBEDTLS_SSL_PROTO_TLS1_2)
-    if( ssl->tls_version <= MBEDTLS_SSL_VERSION_TLS1_2 )
-    {
-        return( ssl_tls12_handle_hs_message_post_handshake( ssl ) );
-    }
-#endif /* MBEDTLS_SSL_PROTO_TLS1_2 */
-
-    /* Should never happen */
-    return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
-}
-
 /*
  * Receive application data decrypted from the SSL layer
  */
