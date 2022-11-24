@@ -304,7 +304,7 @@ int mbedtls_ssl_session_copy( mbedtls_ssl_session *dst,
 #if defined(MBEDTLS_SSL_NEW_SESSION_TICKET_REMOVED)
 
     /* Resumption Key */
-    memcpy( dst->key, src->key, src->key_len );
+    memcpy( dst->resumption_key, src->resumption_key, src->resumption_key_len );
 
 #endif /* MBEDTLS_SSL_NEW_SESSION_TICKET_REMOVED */
 
@@ -3179,14 +3179,14 @@ static size_t ssl_session_save_tls13( const mbedtls_ssl_session *session,
 
         *p++ = (unsigned char)( ( session->ticket_flags      ) & 0xFF );
 
-        *p++ = (unsigned char)( ( session->key_len      ) & 0xFF );
+        *p++ = (unsigned char)( ( session->resumption_key_len      ) & 0xFF );
     }
 
-    used += session->key_len;
+    used += session->resumption_key_len;
     if( used <= buf_len )
     {
-        memcpy( p, session->key, session->key_len );
-        p += session->key_len;
+        memcpy( p, session->resumption_key, session->resumption_key_len );
+        p += session->resumption_key_len;
     }
 
 #if defined(MBEDTLS_SSL_CLI_C)
@@ -3377,16 +3377,16 @@ static size_t ssl_session_load_tls13( mbedtls_ssl_session *session,
 
     session->ticket_flags = *p++;
 
-    session->key_len = *p++;
+    session->resumption_key_len = *p++;
 
-    if( session->key_len > (size_t)( end - p ) )
+    if( session->resumption_key_len > (size_t)( end - p ) )
         return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
 
-    if( session->key_len > sizeof( session->key ) )
+    if( session->resumption_key_len > sizeof( session->resumption_key ) )
         return( MBEDTLS_ERR_SSL_BUFFER_TOO_SMALL );
 
-    memcpy( session->key, p, session->key_len );
-    p += session->key_len;
+    memcpy( session->resumption_key, p, session->resumption_key_len );
+    p += session->resumption_key_len;
 
 #if defined(MBEDTLS_SSL_CLI_C)
     if( session->endpoint == MBEDTLS_SSL_IS_CLIENT )

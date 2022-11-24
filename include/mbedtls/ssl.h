@@ -1264,18 +1264,6 @@ struct mbedtls_ssl_session
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3) && defined(MBEDTLS_SSL_NEW_SESSION_TICKET_REMOVED)
     unsigned int MBEDTLS_PRIVATE(endpoint) : 1;             /*!< 0: client, 1: server */
     mbedtls_ssl_ticket_flags MBEDTLS_PRIVATE(ticket_flags); /*!< Ticket flags */
-    uint32_t MBEDTLS_PRIVATE(ticket_age_add);               /*!< Randomly generated value used to obscure the age of the ticket */
-    uint8_t MBEDTLS_PRIVATE(key_len);                       /*!< PSK key length */
-
-#if defined(MBEDTLS_SHA256_C) && !defined(MBEDTLS_SHA512_C)
-    unsigned char MBEDTLS_PRIVATE(key)[32];                 /*!< key (32 byte) */
-#else /* MBEDTLS_SHA512_C */
-    unsigned char MBEDTLS_PRIVATE(key)[48];                 /*!< key (48 byte) */
-#endif /* MBEDTLS_SHA256_C && !MBEDTLS_SHA512_C */
-
-#if defined(MBEDTLS_HAVE_TIME) && defined(MBEDTLS_SSL_CLI_C)
-    time_t MBEDTLS_PRIVATE(ticket_received);         /*!< time ticket was received */
-#endif /* MBEDTLS_HAVE_TIME && MBEDTLS_SSL_CLI_C */
     uint32_t MBEDTLS_PRIVATE(max_early_data_size);   /*!< max data allowed */
 #endif /*  MBEDTLS_SSL_PROTO_TLS1_3 && MBEDTLS_SSL_NEW_SESSION_TICKET_REMOVED */
 

@@ -3250,7 +3250,7 @@ static int ssl_tls13_new_session_ticket_parse( mbedtls_ssl_context *ssl,
                     MBEDTLS_SSL_TLS1_3_LBL_WITH_LEN( resumption ),
                     ticket_nonce,
                     ticket_nonce_len,
-                    ssl->session->key,
+                    ssl->session->resumption_key,
                     hash_length );
 
     if( ret != 0 )
@@ -3259,10 +3259,10 @@ static int ssl_tls13_new_session_ticket_parse( mbedtls_ssl_context *ssl,
         return( ret );
     }
 
-    ssl->session->key_len = hash_length;
+    ssl->session->resumption_key_len = hash_length;
 
-    MBEDTLS_SSL_DEBUG_BUF( 3, "Ticket-resumed PSK", ssl->session->key,
-                           ssl->session->key_len );
+    MBEDTLS_SSL_DEBUG_BUF( 3, "Ticket-resumed PSK", ssl->session->resumption_key,
+                           ssl->session->resumption_key_len );
 
 #if defined(MBEDTLS_HAVE_TIME)
     /* Store ticket creation time */
