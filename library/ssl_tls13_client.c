@@ -658,13 +658,6 @@ static int ssl_tls13_write_psk_key_exchange_modes_ext( mbedtls_ssl_context *ssl,
     /* Skip extension length (2 byte) and PSK mode list length (1 byte) for now. */
     p = buf + 5;
 
-    if( mbedtls_ssl_conf_tls13_psk_enabled( ssl ) )
-    {
-        *p++ = MBEDTLS_SSL_TLS1_3_PSK_MODE_PURE;
-        num_modes++;
-
-        MBEDTLS_SSL_DEBUG_MSG( 4, ( "Adding pure PSK key exchange mode" ) );
-    }
 
     if( mbedtls_ssl_conf_tls13_psk_ephemeral_enabled( ssl ) )
     {
@@ -672,6 +665,14 @@ static int ssl_tls13_write_psk_key_exchange_modes_ext( mbedtls_ssl_context *ssl,
         num_modes++;
 
         MBEDTLS_SSL_DEBUG_MSG( 4, ( "Adding PSK-ECDHE key exchange mode" ) );
+    }
+
+    if( mbedtls_ssl_conf_tls13_psk_enabled( ssl ) )
+    {
+        *p++ = MBEDTLS_SSL_TLS1_3_PSK_MODE_PURE;
+        num_modes++;
+
+        MBEDTLS_SSL_DEBUG_MSG( 4, ( "Adding pure PSK key exchange mode" ) );
     }
 
     /* Add extension length: PSK mode list length byte + actual PSK mode list length */
