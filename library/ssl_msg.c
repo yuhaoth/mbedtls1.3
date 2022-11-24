@@ -5604,8 +5604,6 @@ static int ssl_tls13_check_new_session_ticket( mbedtls_ssl_context *ssl )
     ssl->keep_current_message = 1;
 #endif /* MBEDTLS_SSL_USE_MPS */
 
-    ssl->keep_current_message = 1;
-
     MBEDTLS_SSL_DEBUG_MSG( 3, ( "NewSessionTicket received" ) );
     mbedtls_ssl_handshake_set_state( ssl,
                                      MBEDTLS_SSL_NEW_SESSION_TICKET );
