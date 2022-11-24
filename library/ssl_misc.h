@@ -571,10 +571,10 @@ struct mbedtls_ssl_handshake_params
 #endif /* MBEDTLS_SSL_SRV_C */
 
 #if defined(MBEDTLS_SSL_SESSION_TICKETS) || \
-    ( defined(MBEDTLS_SSL_NEW_SESSION_TICKET) && defined(MBEDTLS_SSL_PROTO_TLS1_3) )
+    ( defined(MBEDTLS_SSL_NEW_SESSION_TICKET_REMOVED) && defined(MBEDTLS_SSL_PROTO_TLS1_3) )
     uint8_t new_session_ticket;         /*!< use NewSessionTicket?    */
 #endif /* MBEDTLS_SSL_SESSION_TICKETS ||
-          ( MBEDTLS_SSL_NEW_SESSION_TICKET && MBEDTLS_SSL_PROTO_TLS1_3 ) */
+          ( MBEDTLS_SSL_NEW_SESSION_TICKET_REMOVED && MBEDTLS_SSL_PROTO_TLS1_3 ) */
 
 #if defined(MBEDTLS_SSL_CLI_C)
     /** Minimum TLS version to be negotiated.
@@ -1553,10 +1553,10 @@ int mbedtls_ssl_tls13_parse_supported_groups_ext(
     mbedtls_ssl_context* ssl,
     const unsigned char* buf, size_t len);
 #endif /* MBEDTLS_ECDH_C ||  MBEDTLS_ECDSA_C */
-#if defined(MBEDTLS_SSL_NEW_SESSION_TICKET)
+#if defined(MBEDTLS_SSL_NEW_SESSION_TICKET_REMOVED)
 int mbedtls_ssl_tls13_parse_new_session_ticket_server(
     mbedtls_ssl_context *ssl, unsigned char *buf, size_t len);
-#endif /* MBEDTLS_SSL_NEW_SESSION_TICKET */
+#endif /* MBEDTLS_SSL_NEW_SESSION_TICKET_REMOVED */
 #if defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
 int mbedtls_ssl_tls13_parse_client_psk_identity_ext(
     mbedtls_ssl_context *ssl,
@@ -1667,7 +1667,7 @@ static inline int mbedtls_ssl_get_psk_to_offer( const mbedtls_ssl_context *ssl,
         ptrs_present = 1;
     }
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3) && defined(MBEDTLS_SSL_NEW_SESSION_TICKET)
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3) && defined(MBEDTLS_SSL_NEW_SESSION_TICKET_REMOVED)
     /* Check if a ticket has been configured. */
     if( ssl->session_negotiate != NULL         &&
         ssl->session_negotiate->ticket != NULL )

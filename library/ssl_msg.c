@@ -5659,7 +5659,7 @@ static int ssl_tls12_handle_hs_message_post_handshake( mbedtls_ssl_context *ssl 
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3)
 
-#if defined(MBEDTLS_SSL_NEW_SESSION_TICKET) && defined(MBEDTLS_SSL_CLI_C)
+#if defined(MBEDTLS_SSL_NEW_SESSION_TICKET_REMOVED) && defined(MBEDTLS_SSL_CLI_C)
 static int ssl_check_new_session_ticket( mbedtls_ssl_context *ssl )
 {
 #if defined(MBEDTLS_SSL_USE_MPS)
@@ -5686,19 +5686,19 @@ static int ssl_check_new_session_ticket( mbedtls_ssl_context *ssl )
 
     return( MBEDTLS_ERR_SSL_WANT_READ );
 }
-#endif /* MBEDTLS_SSL_NEW_SESSION_TICKET && MBEDTLS_SSL_CLI_C */
+#endif /* MBEDTLS_SSL_NEW_SESSION_TICKET_REMOVED && MBEDTLS_SSL_CLI_C */
 
 static int ssl_handle_hs_message_post_handshake_tls13( mbedtls_ssl_context *ssl )
 {
-#if defined(MBEDTLS_SSL_NEW_SESSION_TICKET)
+#if defined(MBEDTLS_SSL_NEW_SESSION_TICKET_REMOVED)
 #if defined(MBEDTLS_SSL_CLI_C)
     int ret;
 #endif /* MBEDTLS_SSL_CLI_C */
-#endif /* MBEDTLS_SSL_NEW_SESSION_TICKET */
+#endif /* MBEDTLS_SSL_NEW_SESSION_TICKET_REMOVED */
 
     MBEDTLS_SSL_DEBUG_MSG( 3, ( "received post-handshake message" ) );
 
-#if defined(MBEDTLS_SSL_NEW_SESSION_TICKET)
+#if defined(MBEDTLS_SSL_NEW_SESSION_TICKET_REMOVED)
 #if defined(MBEDTLS_SSL_CLI_C)
     if( ssl->conf->endpoint == MBEDTLS_SSL_IS_CLIENT )
     {
@@ -5707,7 +5707,7 @@ static int ssl_handle_hs_message_post_handshake_tls13( mbedtls_ssl_context *ssl 
             return( ret );
     }
 #endif /* MBEDTLS_SSL_CLI_C */
-#endif /* MBEDTLS_SSL_NEW_SESSION_TICKET */
+#endif /* MBEDTLS_SSL_NEW_SESSION_TICKET_REMOVED */
 
     /* Fail in all other cases. */
     return( MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE );

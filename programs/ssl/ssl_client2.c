@@ -2875,7 +2875,7 @@ send_request:
         ret = 0;
     }
 
-#if defined(MBEDTLS_SSL_NEW_SESSION_TICKET)
+#if defined(MBEDTLS_SSL_NEW_SESSION_TICKET_REMOVED)
     if( opt.reconnect != 0 )
     {
         mbedtls_printf("  . Saving session for reuse..." );
@@ -2945,7 +2945,7 @@ send_request:
                             (unsigned) session_data_len );
         }
     }
-#endif /* MBEDTLS_SSL_NEW_SESSION_TICKET */
+#endif /* MBEDTLS_SSL_NEW_SESSION_TICKET_REMOVED */
 
     /*
      * 7b. Simulate hard reset and reconnect from same port?
@@ -3180,7 +3180,7 @@ close_notify:
      * 9. Reconnect?
      */
 reconnect:
-#if defined(MBEDTLS_SSL_NEW_SESSION_TICKET)
+#if defined(MBEDTLS_SSL_NEW_SESSION_TICKET_REMOVED)
     if( opt.reconnect != 0 )
     {
         --opt.reconnect;
@@ -3279,7 +3279,7 @@ reconnect:
 
         goto send_request;
     }
-#endif /* MBEDTLS_SSL_NEW_SESSION_TICKET */
+#endif /* MBEDTLS_SSL_NEW_SESSION_TICKET_REMOVED */
 
     /*
      * Cleanup and exit

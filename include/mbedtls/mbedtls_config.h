@@ -1575,7 +1575,7 @@
 #define MBEDTLS_SSL_TICKET_NONCE_LENGTH 32
 
 /*
-* \def MBEDTLS_SSL_NEW_SESSION_TICKET
+* \def MBEDTLS_SSL_NEW_SESSION_TICKET_REMOVED
 *
 * Enable support for TLS 1.3 session tickets.
 * Client-side, provides full support for session tickets (maintainance of a
@@ -1588,7 +1588,7 @@
 *  - be able to issue tickets by TLS 1.3 servers, and
 *  - use them in TLS 1.3 clients.
 */
-//#define MBEDTLS_SSL_NEW_SESSION_TICKET
+//#define MBEDTLS_SSL_NEW_SESSION_TICKET_REMOVED
 
 /**
  * \def MBEDTLS_SSL_TLS1_3_TICKET_NONCE_LENGTH

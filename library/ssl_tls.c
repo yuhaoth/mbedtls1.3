@@ -289,7 +289,7 @@ int mbedtls_ssl_session_copy( mbedtls_ssl_session *dst,
 #endif /* MBEDTLS_X509_CRT_PARSE_C */
 
 #if ( defined(MBEDTLS_SSL_SESSION_TICKETS) || \
-      defined(MBEDTLS_SSL_NEW_SESSION_TICKET) ) && defined(MBEDTLS_SSL_CLI_C)
+      defined(MBEDTLS_SSL_NEW_SESSION_TICKET_REMOVED) ) && defined(MBEDTLS_SSL_CLI_C)
     if( src->ticket != NULL )
     {
         dst->ticket = mbedtls_calloc( 1, src->ticket_len );
@@ -298,15 +298,15 @@ int mbedtls_ssl_session_copy( mbedtls_ssl_session *dst,
 
         memcpy( dst->ticket, src->ticket, src->ticket_len );
     }
-#endif /* (MBEDTLS_SSL_SESSION_TICKETS || MBEDTLS_SSL_NEW_SESSION_TICKET)
+#endif /* (MBEDTLS_SSL_SESSION_TICKETS || MBEDTLS_SSL_NEW_SESSION_TICKET_REMOVED)
           && MBEDTLS_SSL_CLI_C */
 
-#if defined(MBEDTLS_SSL_NEW_SESSION_TICKET)
+#if defined(MBEDTLS_SSL_NEW_SESSION_TICKET_REMOVED)
 
     /* Resumption Key */
     memcpy( dst->key, src->key, src->key_len );
 
-#endif /* MBEDTLS_SSL_NEW_SESSION_TICKET */
+#endif /* MBEDTLS_SSL_NEW_SESSION_TICKET_REMOVED */
 
     return( 0 );
 }
@@ -1222,7 +1222,7 @@ int mbedtls_ssl_setup( mbedtls_ssl_context *ssl,
         goto error;
 
     /* Initialize ticket structure */
-#if defined(MBEDTLS_SSL_NEW_SESSION_TICKET) && defined(MBEDTLS_SSL_CLI_C) && \
+#if defined(MBEDTLS_SSL_NEW_SESSION_TICKET_REMOVED) && defined(MBEDTLS_SSL_CLI_C) && \
     defined(MBEDTLS_SSL_PROTO_TLS1_3)
     ssl->session_negotiate->ticket = NULL;
 #endif
@@ -1587,7 +1587,7 @@ void mbedtls_ssl_conf_session_cache( mbedtls_ssl_config *conf,
 }
 #endif /* MBEDTLS_SSL_SRV_C */
 
-#if defined(MBEDTLS_SSL_CLI_C) && defined(MBEDTLS_SSL_NEW_SESSION_TICKET)
+#if defined(MBEDTLS_SSL_CLI_C) && defined(MBEDTLS_SSL_NEW_SESSION_TICKET_REMOVED)
 int mbedtls_ssl_set_session( mbedtls_ssl_context *ssl, const mbedtls_ssl_session *session )
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
@@ -1611,7 +1611,7 @@ int mbedtls_ssl_set_session( mbedtls_ssl_context *ssl, const mbedtls_ssl_session
 
     return( 0 );
 }
-#endif /* MBEDTLS_SSL_CLI_C && MBEDTLS_SSL_NEW_SESSION_TICKET */
+#endif /* MBEDTLS_SSL_CLI_C && MBEDTLS_SSL_NEW_SESSION_TICKET_REMOVED */
 
 void mbedtls_ssl_conf_ciphersuites( mbedtls_ssl_config *conf,
                                     const int *ciphersuites )
@@ -1953,7 +1953,7 @@ int mbedtls_ssl_set_hs_psk( mbedtls_ssl_context *ssl,
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
 #if defined(MBEDTLS_SSL_PROTO_TLS1_2)
     if( ssl->tls_version == MBEDTLS_SSL_VERSION_TLS1_2 )
-    { 
+    {
         if( ssl->handshake->ciphersuite_info->mac == MBEDTLS_MD_SHA384)
             alg = PSA_ALG_TLS12_PSK_TO_MS(PSA_ALG_SHA_384);
         else
@@ -2662,14 +2662,14 @@ void mbedtls_ssl_conf_renegotiation_period( mbedtls_ssl_config *conf,
 #endif /* MBEDTLS_SSL_RENEGOTIATION */
 
 #if ( ( defined(MBEDTLS_SSL_SESSION_TICKETS) && defined(MBEDTLS_SSL_CLI_C) ) || \
-      ( defined(MBEDTLS_SSL_NEW_SESSION_TICKET) ) )
+      ( defined(MBEDTLS_SSL_NEW_SESSION_TICKET_REMOVED) ) )
 void mbedtls_ssl_conf_session_tickets( mbedtls_ssl_config *conf, int use_tickets )
 {
     conf->session_tickets = use_tickets;
 }
-#endif /* (MBEDTLS_SSL_SESSION_TICKETS && MBEDTLS_SSL_CLI_C) || MBEDTLS_SSL_NEW_SESSION_TICKET */
+#endif /* (MBEDTLS_SSL_SESSION_TICKETS && MBEDTLS_SSL_CLI_C) || MBEDTLS_SSL_NEW_SESSION_TICKET_REMOVED */
 
-#if ( ( defined(MBEDTLS_SSL_SESSION_TICKETS) || defined(MBEDTLS_SSL_NEW_SESSION_TICKET) ) && \
+#if ( ( defined(MBEDTLS_SSL_SESSION_TICKETS) || defined(MBEDTLS_SSL_NEW_SESSION_TICKET_REMOVED) ) && \
       defined(MBEDTLS_SSL_SRV_C) )
 void mbedtls_ssl_conf_session_tickets_cb( mbedtls_ssl_config* conf,
     mbedtls_ssl_ticket_write_t* f_ticket_write,
@@ -2680,7 +2680,7 @@ void mbedtls_ssl_conf_session_tickets_cb( mbedtls_ssl_config* conf,
     conf->f_ticket_parse = f_ticket_parse;
     conf->p_ticket = p_ticket;
 }
-#endif /* (MBEDTLS_SSL_SESSION_TICKETS || MBEDTLS_SSL_NEW_SESSION_TICKET) && MBEDTLS_SSL_SRV_C */
+#endif /* (MBEDTLS_SSL_SESSION_TICKETS || MBEDTLS_SSL_NEW_SESSION_TICKET_REMOVED) && MBEDTLS_SSL_SRV_C */
 
 
 void mbedtls_ssl_set_export_keys_cb( mbedtls_ssl_context *ssl,
@@ -3061,7 +3061,7 @@ int mbedtls_ssl_get_session( const mbedtls_ssl_context *ssl,
         ( SSL_SERIALIZED_SESSION_CONFIG_TICKET        << SSL_SERIALIZED_SESSION_CONFIG_TICKET_BIT        ) ) )
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_2) || defined(MBEDTLS_SSL_PROTO_TLS1_1) || \
-    defined(MBEDTLS_SSL_PROTO_TLS1) || defined(MBEDTLS_SSL_NEW_SESSION_TICKET)
+    defined(MBEDTLS_SSL_PROTO_TLS1) || defined(MBEDTLS_SSL_NEW_SESSION_TICKET_REMOVED)
 static unsigned char ssl_serialized_session_header[] = {
     MBEDTLS_VERSION_MAJOR,
     MBEDTLS_VERSION_MINOR,
@@ -3117,7 +3117,7 @@ static unsigned char ssl_serialized_session_header[] = {
  * } serialized_session_tls13;
  *
  */
-#if !defined(MBEDTLS_SSL_NEW_SESSION_TICKET)
+#if !defined(MBEDTLS_SSL_NEW_SESSION_TICKET_REMOVED)
 static size_t ssl_session_save_tls13( const mbedtls_ssl_session *session,
                                       unsigned char *buf,
                                       size_t buf_len )
@@ -3127,7 +3127,7 @@ static size_t ssl_session_save_tls13( const mbedtls_ssl_session *session,
     (void) buf_len;
     return( MBEDTLS_ERR_SSL_FEATURE_UNAVAILABLE );
 }
-#else /* MBEDTLS_SSL_NEW_SESSION_TICKET */
+#else /* MBEDTLS_SSL_NEW_SESSION_TICKET_REMOVED */
 static size_t ssl_session_save_tls13( const mbedtls_ssl_session *session,
                                       unsigned char *buf,
                                       size_t buf_len )
@@ -3226,7 +3226,7 @@ static size_t ssl_session_save_tls13( const mbedtls_ssl_session *session,
 
     return( used );
 }
-#endif /* MBEDTLS_SSL_NEW_SESSION_TICKET */
+#endif /* MBEDTLS_SSL_NEW_SESSION_TICKET_REMOVED */
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
 
 MBEDTLS_CHECK_RETURN_CRITICAL
@@ -3314,7 +3314,7 @@ int mbedtls_ssl_session_save( const mbedtls_ssl_session *session,
  * case of error, and has an extra option omit_header.
  */
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3)
-#if !defined(MBEDTLS_SSL_NEW_SESSION_TICKET)
+#if !defined(MBEDTLS_SSL_NEW_SESSION_TICKET_REMOVED)
 static size_t ssl_session_load_tls13( mbedtls_ssl_session *session,
                                       const unsigned char *buf,
                                       size_t len )
@@ -3324,7 +3324,7 @@ static size_t ssl_session_load_tls13( mbedtls_ssl_session *session,
     (void) len;
     return( MBEDTLS_ERR_SSL_FEATURE_UNAVAILABLE );
 }
-#else /* MBEDTLS_SSL_NEW_SESSION_TICKET */
+#else /* MBEDTLS_SSL_NEW_SESSION_TICKET_REMOVED */
 static size_t ssl_session_load_tls13( mbedtls_ssl_session *session,
                                       const unsigned char *buf,
                                       size_t len )
@@ -3435,7 +3435,7 @@ static size_t ssl_session_load_tls13( mbedtls_ssl_session *session,
 
     return( 0 );
 }
-#endif /* MBEDTLS_SSL_NEW_SESSION_TICKET */
+#endif /* MBEDTLS_SSL_NEW_SESSION_TICKET_REMOVED */
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
 
 MBEDTLS_CHECK_RETURN_CRITICAL
@@ -3509,7 +3509,7 @@ int mbedtls_ssl_session_load( mbedtls_ssl_session *session,
 
     return( ret );
 }
-#endif /* MBEDTLS_SSL_PROTO_TLS1_2 || MBEDTLS_SSL_NEW_SESSION_TICKET */
+#endif /* MBEDTLS_SSL_PROTO_TLS1_2 || MBEDTLS_SSL_NEW_SESSION_TICKET_REMOVED */
 
 #if defined(MBEDTLS_SSL_USE_MPS)
 int mbedtls_ssl_mps_remap_error( int ret )
@@ -4012,7 +4012,7 @@ void mbedtls_ssl_session_free( mbedtls_ssl_session *session )
     ssl_clear_peer_cert( session );
 #endif
 
-#if( defined(MBEDTLS_SSL_SESSION_TICKETS) || ( defined(MBEDTLS_SSL_NEW_SESSION_TICKET) && defined(MBEDTLS_SSL_CLI_C) ) )
+#if( defined(MBEDTLS_SSL_SESSION_TICKETS) || ( defined(MBEDTLS_SSL_NEW_SESSION_TICKET_REMOVED) && defined(MBEDTLS_SSL_CLI_C) ) )
     mbedtls_free( session->ticket );
 #endif
 

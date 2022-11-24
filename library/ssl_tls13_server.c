@@ -50,9 +50,9 @@
 
 #include "mbedtls/hkdf.h"
 
-#if defined(MBEDTLS_SSL_NEW_SESSION_TICKET)
+#if defined(MBEDTLS_SSL_NEW_SESSION_TICKET_REMOVED)
 #include "mbedtls/ssl_ticket.h"
-#endif /* MBEDTLS_SSL_NEW_SESSION_TICKET */
+#endif /* MBEDTLS_SSL_NEW_SESSION_TICKET_REMOVED */
 
 #if defined(MBEDTLS_PLATFORM_C)
 #include "mbedtls/platform.h"
@@ -589,7 +589,7 @@ static int ssl_tls13_parse_early_data_ext( mbedtls_ssl_context *ssl,
 }
 #endif /* MBEDTLS_ZERO_RTT */
 
-#if defined(MBEDTLS_SSL_NEW_SESSION_TICKET)
+#if defined(MBEDTLS_SSL_NEW_SESSION_TICKET_REMOVED)
 int mbedtls_ssl_tls13_parse_new_session_ticket_server(
     mbedtls_ssl_context *ssl,
     unsigned char *buf,
@@ -646,7 +646,7 @@ int mbedtls_ssl_tls13_parse_new_session_ticket_server(
 
     return( 0 );
 }
-#endif /* MBEDTLS_SSL_NEW_SESSION_TICKET */
+#endif /* MBEDTLS_SSL_NEW_SESSION_TICKET_REMOVED */
 
 #if defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
 int mbedtls_ssl_tls13_parse_client_psk_identity_ext(
@@ -665,13 +665,13 @@ int mbedtls_ssl_tls13_parse_client_psk_identity_ext(
     unsigned char transcript[MBEDTLS_MD_MAX_SIZE];
     size_t transcript_len;
 
-#if defined(MBEDTLS_SSL_NEW_SESSION_TICKET)
+#if defined(MBEDTLS_SSL_NEW_SESSION_TICKET_REMOVED)
     uint32_t obfuscated_ticket_age;
 #if defined(MBEDTLS_HAVE_TIME)
     time_t now;
     int64_t diff;
 #endif /* MBEDTLS_HAVE_TIME */
-#endif /* MBEDTLS_SSL_NEW_SESSION_TICKET */
+#endif /* MBEDTLS_SSL_NEW_SESSION_TICKET_REMOVED */
 
     /* Read length of array of identities */
     item_array_length = MBEDTLS_GET_UINT16_BE( buf, 0 );
@@ -732,7 +732,7 @@ int mbedtls_ssl_tls13_parse_client_psk_identity_ext(
                 goto psk_parsing_successful;
 
             }
-#if defined(MBEDTLS_SSL_NEW_SESSION_TICKET)
+#if defined(MBEDTLS_SSL_NEW_SESSION_TICKET_REMOVED)
             /* Check the ticket cache if previous lookup was unsuccessful */
             if( ret == MBEDTLS_ERR_SSL_UNKNOWN_IDENTITY )
             {
@@ -877,7 +877,7 @@ int mbedtls_ssl_tls13_parse_client_psk_identity_ext(
                     }
                 }
             }
-#endif /* MBEDTLS_SSL_NEW_SESSION_TICKET */
+#endif /* MBEDTLS_SSL_NEW_SESSION_TICKET_REMOVED */
         }
         /* skip the processed identity field and obfuscated ticket age field */
         buf += item_length;
@@ -1167,7 +1167,7 @@ static int ssl_tls13_parse_max_fragment_length_ext( mbedtls_ssl_context *ssl,
  * STATE HANDLING: NewSessionTicket message
  *
  */
-#if defined(MBEDTLS_SSL_NEW_SESSION_TICKET)
+#if defined(MBEDTLS_SSL_NEW_SESSION_TICKET_REMOVED)
 
 /* Main state-handling entry point; orchestrates the other functions. */
 static int ssl_tls13_write_new_session_ticket_process( mbedtls_ssl_context *ssl );
@@ -1415,7 +1415,7 @@ static int ssl_tls13_write_new_session_ticket_write( mbedtls_ssl_context *ssl,
 
     return( ret );
 }
-#endif /* MBEDTLS_SSL_NEW_SESSION_TICKET */
+#endif /* MBEDTLS_SSL_NEW_SESSION_TICKET_REMOVED */
 
 /*
  *
@@ -2039,10 +2039,10 @@ static int ssl_tls13_parse_client_hello( mbedtls_ssl_context *ssl,
      * Only support TLS 1.3 currently, temporarily set the version.
      */
     ssl->tls_version = MBEDTLS_SSL_VERSION_TLS1_3;
-#if defined(MBEDTLS_SSL_NEW_SESSION_TICKET)
+#if defined(MBEDTLS_SSL_NEW_SESSION_TICKET_REMOVED)
     /* Store minor version for later use with ticket serialization. */
     ssl->session_negotiate->tls_version = MBEDTLS_SSL_VERSION_TLS1_3;
-#endif /* MBEDTLS_SSL_NEW_SESSION_TICKET */
+#endif /* MBEDTLS_SSL_NEW_SESSION_TICKET_REMOVED */
 
     /* ...
      * Random random;
@@ -3643,10 +3643,10 @@ int mbedtls_ssl_tls13_handshake_server_step( mbedtls_ssl_context *ssl )
 
         case MBEDTLS_SSL_CLIENT_HELLO:
 
-#if defined(MBEDTLS_SSL_NEW_SESSION_TICKET)
+#if defined(MBEDTLS_SSL_NEW_SESSION_TICKET_REMOVED)
             ssl->session_negotiate->tls_version = ssl->tls_version;
             ssl->session_negotiate->endpoint = ssl->conf->endpoint;
-#endif /* MBEDTLS_SSL_NEW_SESSION_TICKET */
+#endif /* MBEDTLS_SSL_NEW_SESSION_TICKET_REMOVED */
 
             ret = ssl_tls13_process_client_hello( ssl );
             if( ret != 0 )
@@ -3801,7 +3801,7 @@ int mbedtls_ssl_tls13_handshake_server_step( mbedtls_ssl_context *ssl )
 
         case MBEDTLS_SSL_SERVER_NEW_SESSION_TICKET:
 
-#if defined(MBEDTLS_SSL_NEW_SESSION_TICKET)
+#if defined(MBEDTLS_SSL_NEW_SESSION_TICKET_REMOVED)
 
             ret = ssl_tls13_write_new_session_ticket_process( ssl );
             if( ret != 0 )
@@ -3809,7 +3809,7 @@ int mbedtls_ssl_tls13_handshake_server_step( mbedtls_ssl_context *ssl )
                 MBEDTLS_SSL_DEBUG_RET( 1, "ssl_tls13_write_new_session_ticket ", ret );
                 return( ret );
             }
-#endif /* MBEDTLS_SSL_NEW_SESSION_TICKET */
+#endif /* MBEDTLS_SSL_NEW_SESSION_TICKET_REMOVED */
 
             break;
 
