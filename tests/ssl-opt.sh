@@ -2052,7 +2052,7 @@ run_test    "TLS 1.3, TLS1-3-AES-128-CCM-SHA256, ECDHE-ECDSA, CLI+SRV auth, with
             -c "Protocol is TLSv1.3"                                             \
             -c "Ciphersuite is TLS1-3-AES-128-CCM-SHA256"                        \
 	    -c "Verifying peer X.509 certificate... ok"                          \
-	    -c "got ticket"                                                      \
+	    -c "got new session ticket"                                                      \
 	    -c "client hello, adding psk_key_exchange_modes extension"           \
 	    -c "client hello, adding pre_shared_key extension"                   \
 	    -c "found pre_shared_key extension"                                  \
@@ -2074,7 +2074,7 @@ run_test    "TLS 1.3, TLS1-3-AES-128-GCM-SHA256, ECDHE-ECDSA, CLI+SRV auth, with
             -c "Protocol is TLSv1.3"                                             \
             -c "Ciphersuite is TLS1-3-AES-128-GCM-SHA256"                        \
 	    -c "Verifying peer X.509 certificate... ok"                          \
-	    -c "got ticket"                                                      \
+	    -c "got new session ticket"                                                      \
 	    -c "client hello, adding psk_key_exchange_modes extension"           \
 	    -c "client hello, adding pre_shared_key extension"                   \
 	    -c "found pre_shared_key extension"                                  \
@@ -2096,7 +2096,7 @@ run_test    "TLS 1.3, TLS1-3-AES-128-CCM-8-SHA256, ECDHE-ECDSA, CLI+SRV auth, wi
             -c "Protocol is TLSv1.3"                                             \
             -c "Ciphersuite is TLS1-3-AES-128-CCM-8-SHA256"                      \
 	    -c "Verifying peer X.509 certificate... ok"                          \
-	    -c "got ticket"                                                      \
+	    -c "got new session ticket"                                                      \
 	    -c "client hello, adding psk_key_exchange_modes extension"           \
 	    -c "client hello, adding pre_shared_key extension"                   \
 	    -c "found pre_shared_key extension"                                  \
@@ -2118,7 +2118,7 @@ run_test    "TLS 1.3, TLS1-3-AES-256-GCM-SHA384, ECDHE-ECDSA, CLI+SRV auth, with
             -c "Protocol is TLSv1.3"                                             \
             -c "Ciphersuite is TLS1-3-AES-256-GCM-SHA384"                        \
 	    -c "Verifying peer X.509 certificate... ok"                          \
-	    -c "got ticket"                                                      \
+	    -c "got new session ticket"                                                      \
 	    -c "client hello, adding psk_key_exchange_modes extension"           \
 	    -c "client hello, adding pre_shared_key extension"                   \
 	    -c "found pre_shared_key extension"                                  \
@@ -2139,7 +2139,7 @@ run_test    "TLS 1.3, TLS1-3-AES-256-GCM-SHA384 with ECDHE-ECDSA (server auth on
             -c "Ciphersuite is TLS1-3-AES-256-GCM-SHA384"               \
 	    -c "Verifying peer X.509 certificate... ok"                 \
 	    -c "subject name      : C=NL, O=PolarSSL, CN=localhost"     \
-	    -c "got ticket"                                             \
+	    -c "got new session ticket"                                             \
 	    -c "client hello, adding psk_key_exchange_modes extension"  \
 	    -c "client hello, adding pre_shared_key extension"          \
 	    -c "found pre_shared_key extension"                         \
