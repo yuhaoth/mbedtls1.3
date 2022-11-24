@@ -5585,12 +5585,24 @@ static int ssl_check_ctr_renegotiate( mbedtls_ssl_context *ssl )
 MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_tls13_check_new_session_ticket( mbedtls_ssl_context *ssl )
 {
+#if defined(MBEDTLS_SSL_USE_MPS)
+    int ret;
+    mbedtls_mps_handshake_in msg;
+    ret = mbedtls_mps_read_handshake( &ssl->mps->l4, &msg );
+    if( ret != 0 )
+        return( ret );
 
+    if( msg.type != MBEDTLS_SSL_HS_NEW_SESSION_TICKET )
+        return( 0 );
+#else /* MBEDTLS_SSL_USE_MPS */
     if( ( ssl->in_hslen == mbedtls_ssl_hs_hdr_len( ssl ) ) ||
         ( ssl->in_msg[0] != MBEDTLS_SSL_HS_NEW_SESSION_TICKET ) )
     {
         return( 0 );
     }
+
+    ssl->keep_current_message = 1;
+#endif /* MBEDTLS_SSL_USE_MPS */
 
     ssl->keep_current_message = 1;
 
@@ -5660,7 +5672,7 @@ static int ssl_tls12_handle_hs_message_post_handshake( mbedtls_ssl_context *ssl 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3)
 
 #if defined(MBEDTLS_SSL_NEW_SESSION_TICKET_REMOVED) && defined(MBEDTLS_SSL_CLI_C)
-static int ssl_check_new_session_ticket( mbedtls_ssl_context *ssl )
+static int ssl_tls13_check_new_session_ticket( mbedtls_ssl_context *ssl )
 {
 #if defined(MBEDTLS_SSL_USE_MPS)
     int ret;
@@ -5702,7 +5714,7 @@ static int ssl_handle_hs_message_post_handshake_tls13( mbedtls_ssl_context *ssl 
 #if defined(MBEDTLS_SSL_CLI_C)
     if( ssl->conf->endpoint == MBEDTLS_SSL_IS_CLIENT )
     {
-        ret = ssl_check_new_session_ticket( ssl );
+        ret = ssl_tls13_check_new_session_ticket( ssl );
         if( ret != 0 )
             return( ret );
     }
