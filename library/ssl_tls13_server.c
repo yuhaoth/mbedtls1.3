@@ -3608,7 +3608,7 @@ static int ssl_tls13_handshake_wrapup( mbedtls_ssl_context *ssl )
     if( ret != 0 )
         return( ret );
 
-    mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_SERVER_NEW_SESSION_TICKET );
+    mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_NEW_SESSION_TICKET );
 
     return( 0 );
 }
@@ -3799,7 +3799,7 @@ int mbedtls_ssl_tls13_handshake_server_step( mbedtls_ssl_context *ssl )
             ret = ssl_tls13_handshake_wrapup( ssl );
             break;
 
-        case MBEDTLS_SSL_SERVER_NEW_SESSION_TICKET:
+        case MBEDTLS_SSL_NEW_SESSION_TICKET:
 
 #if defined(MBEDTLS_SSL_NEW_SESSION_TICKET_REMOVED)
 
