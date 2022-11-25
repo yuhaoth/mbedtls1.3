@@ -1661,52 +1661,6 @@ static inline int mbedtls_ssl_get_psk( const mbedtls_ssl_context *ssl,
 }
 #endif /* MBEDTLS_USE_PSA_CRYPTO */
 
-/* Check if we have any PSK to offer, returns 0 if PSK is available. Assign the
-   psk and ticket if pointers are present.  */
-static inline int mbedtls_ssl_get_psk_to_offer( const mbedtls_ssl_context *ssl,
-    const unsigned char **psk, size_t *psk_len,
-    const unsigned char **psk_identity, size_t *psk_identity_len )
-{
-    int ptrs_present = 0;
-
-    if( psk != NULL && psk_len != NULL &&
-        psk_identity != NULL && psk_identity_len != NULL )
-    {
-        ptrs_present = 1;
-    }
-
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3) && defined(MBEDTLS_SSL_NEW_SESSION_TICKET_REMOVED)
-    /* Check if a ticket has been configured. */
-    if( ssl->session_negotiate != NULL         &&
-        ssl->session_negotiate->ticket != NULL )
-    {
-        if( ptrs_present )
-        {
-            *psk = ssl->session_negotiate->resumption_key;
-            *psk_len = ssl->session_negotiate->resumption_key_len;
-            *psk_identity = ssl->session_negotiate->ticket;
-            *psk_identity_len = ssl->session_negotiate->ticket_len;
-        }
-        return( 0 );
-    }
-#endif
-
-    /* Check if an external PSK has been configured. */
-    if( ssl->conf->psk != NULL )
-    {
-        if( ptrs_present )
-        {
-            *psk = ssl->conf->psk;
-            *psk_len = ssl->conf->psk_len;
-            *psk_identity = ssl->conf->psk_identity;
-            *psk_identity_len = ssl->conf->psk_identity_len;
-        }
-        return( 0 );
-    }
-
-    return( 1 );
-}
-
 #endif /* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED */
 
 #if defined(MBEDTLS_PK_C)

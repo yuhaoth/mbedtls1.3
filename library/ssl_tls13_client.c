@@ -2314,7 +2314,7 @@ static int ssl_tls13_write_early_data_prepare( mbedtls_ssl_context *ssl )
      *  'pre_shared_key' extension."
      */
 
-    if( mbedtls_ssl_get_psk_to_offer( ssl, &psk, &psk_len,
+    if( mbedtls_ssl_get_psk_to_offer( ssl, NULL, &psk, &psk_len,
                                       &psk_identity, &psk_identity_len ) != 0 )
     {
         /* This should never happen: We can only have gone past

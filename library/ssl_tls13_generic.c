@@ -1680,7 +1680,7 @@ int mbedtls_ssl_tls13_write_early_data_ext( mbedtls_ssl_context *ssl,
     if( ssl->conf->endpoint == MBEDTLS_SSL_IS_CLIENT )
     {
         if( !mbedtls_ssl_conf_tls13_some_psk_enabled( ssl ) ||
-            mbedtls_ssl_get_psk_to_offer( ssl, NULL, NULL, NULL, NULL ) != 0 ||
+            mbedtls_ssl_get_psk_to_offer( ssl, NULL, NULL, NULL, NULL, NULL ) != 0 ||
             ssl->conf->early_data_enabled == MBEDTLS_SSL_EARLY_DATA_DISABLED )
         {
             MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= skip write early_data extension" ) );
@@ -1919,6 +1919,21 @@ int mbedtls_ssl_get_psk_to_offer(
         ptrs_present = 1;
     }
 
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3) && defined(MBEDTLS_SSL_NEW_SESSION_TICKET_REMOVED)
+    /* Check if a ticket has been configured. */
+    if( ssl->session_negotiate != NULL         &&
+        ssl->session_negotiate->ticket != NULL )
+    {
+        if( ptrs_present )
+        {
+            *psk = ssl->session_negotiate->resumption_key;
+            *psk_len = ssl->session_negotiate->resumption_key_len;
+            *psk_identity = ssl->session_negotiate->ticket;
+            *psk_identity_len = ssl->session_negotiate->ticket_len;
+        }
+        return( 0 );
+    }
+#endif
     /* Check if an external PSK has been configured. */
     if( ssl->conf->psk != NULL )
     {
