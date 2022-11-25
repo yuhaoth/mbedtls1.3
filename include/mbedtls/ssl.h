@@ -231,8 +231,6 @@
  * Mbed TLS internal identifiers for use with the SSL configuration API
  * mbedtls_ssl_conf_tls13_key_exchange_modes().
  */
-
-#define MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_NONE                   0
 #define MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK            ( 1u << 0 ) /*!< Pure-PSK TLS 1.3 key exchange,
                                                                          *   encompassing both externally agreed PSKs
                                                                          *   as well as resumption PSKs. */

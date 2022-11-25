@@ -488,45 +488,6 @@ static int ssl_tls13_parse_supported_versions_ext( mbedtls_ssl_context *ssl,
     return( 0 );
 }
 
-MBEDTLS_CHECK_RETURN_CRITICAL
-static int ssl_tls13_get_psk( mbedtls_ssl_context *ssl,
-                              unsigned char **psk,
-                              size_t *psk_len )
-{
-#if defined(MBEDTLS_USE_PSA_CRYPTO)
-    psa_key_attributes_t key_attributes = PSA_KEY_ATTRIBUTES_INIT;
-    psa_status_t status;
-
-    *psk_len = 0;
-    *psk = NULL;
-
-    status = psa_get_key_attributes( ssl->handshake->psk_opaque, &key_attributes );
-    if( status != PSA_SUCCESS)
-    {
-        return( psa_ssl_status_to_mbedtls( status ) );
-    }
-
-    *psk_len = PSA_BITS_TO_BYTES( psa_get_key_bits( &key_attributes ) );
-    *psk = mbedtls_calloc( 1, *psk_len );
-    if( *psk == NULL )
-    {
-        return( MBEDTLS_ERR_SSL_ALLOC_FAILED );
-    }
-
-    status = psa_export_key( ssl->handshake->psk_opaque,
-                             (uint8_t *)*psk, *psk_len, psk_len );
-    if( status != PSA_SUCCESS)
-    {
-        mbedtls_free( (void *)*psk );
-        return( psa_ssl_status_to_mbedtls( status ) );
-    }
-#else
-    *psk = ssl->handshake->psk;
-    *psk_len = ssl->handshake->psk_len;
-#endif /* !MBEDTLS_USE_PSA_CRYPTO */
-    return( 0 );
-}
-
 #if defined(MBEDTLS_ECDH_C)
 /*
  *
@@ -813,22 +774,6 @@ static int ssl_tls13_client_hello_has_exts_for_psk_ephemeral_key_exchange(
 #endif /* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED */
 
 MBEDTLS_CHECK_RETURN_CRITICAL
-static int ssl_tls13_client_hello_has_psk_extensions( mbedtls_ssl_context *ssl )
-{
-    return( ssl_tls13_client_hello_has_exts( ssl,
-                MBEDTLS_SSL_EXT_PRE_SHARED_KEY |
-                MBEDTLS_SSL_EXT_PSK_KEY_EXCHANGE_MODES ) );
-}
-
-MBEDTLS_CHECK_RETURN_CRITICAL
-static int ssl_tls13_client_hello_has_key_share_extensions( mbedtls_ssl_context *ssl )
-{
-    return( ssl_tls13_client_hello_has_exts( ssl,
-                          MBEDTLS_SSL_EXT_SUPPORTED_GROUPS |
-                          MBEDTLS_SSL_EXT_KEY_SHARE ) );
-}
-
-MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_tls13_check_ephemeral_key_exchange( mbedtls_ssl_context *ssl )
 {
     return( mbedtls_ssl_conf_tls13_ephemeral_enabled( ssl ) &&
@@ -912,35 +857,6 @@ static int ssl_tls13_determine_key_exchange_mode( mbedtls_ssl_context *ssl )
 
     return( 0 );
 
-}
-
-MBEDTLS_CHECK_RETURN_CRITICAL
-static int ssl_tls13_check_psk_key_exchange( mbedtls_ssl_context *ssl )
-{
-    if( !ssl_tls13_client_hello_has_psk_extensions( ssl ) )
-        return( 0 );
-
-    /* Test whether pure PSK is offered by client and supported by us. */
-    if( mbedtls_ssl_conf_tls13_psk_enabled( ssl ) &&
-        mbedtls_ssl_tls13_psk_enabled( ssl ) )
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 3, ( "Using a PSK key exchange" ) );
-        ssl->handshake->key_exchange_mode = MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK;
-        return( 1 );
-    }
-
-    /* Test whether PSK-ephemeral is offered by client and supported by us. */
-    if( mbedtls_ssl_conf_tls13_psk_ephemeral_enabled( ssl ) &&
-        mbedtls_ssl_tls13_psk_ephemeral_enabled( ssl ) &&
-        ssl_tls13_client_hello_has_key_share_extensions( ssl ) )
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 3, ( "Using a ECDHE-PSK key exchange" ) );
-        ssl->handshake->key_exchange_mode = MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_EPHEMERAL;
-        return( 1 );
-    }
-
-    /* Can't use PSK */
-    return( 0 );
 }
 
 #if defined(MBEDTLS_SSL_SERVER_NAME_INDICATION)
@@ -1425,59 +1341,6 @@ done:
     return( ret );
 }
 #endif /* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED*/
-
-#if defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
-/*
- * struct {
- *   select ( Handshake.msg_type ) {
- *      case client_hello:
- *          PskIdentity identities<6..2^16-1>;
- *
- *      case server_hello:
- *          uint16 selected_identity;
- *   }
- * } PreSharedKeyExtension;
- */
-
-MBEDTLS_CHECK_RETURN_CRITICAL
-static int ssl_tls13_write_server_pre_shared_key_ext( mbedtls_ssl_context *ssl,
-                                                      unsigned char *buf,
-                                                      unsigned char *end,
-                                                      size_t *olen )
-{
-    unsigned char *p = (unsigned char*)buf;
-    size_t selected_identity;
-
-    *olen = 0;
-
-    MBEDTLS_SSL_DEBUG_MSG( 3, ( "server hello, adding pre_shared_key extension" ) );
-
-    if( end < p || ( end - p ) < 6 )
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "buffer too small" ) );
-        return( MBEDTLS_ERR_SSL_BUFFER_TOO_SMALL );
-    }
-
-    /* Extension Type */
-    MBEDTLS_PUT_UINT16_BE( MBEDTLS_TLS_EXT_PRE_SHARED_KEY, p, 0 );
-
-    /* Extension Length */
-    MBEDTLS_PUT_UINT16_BE( 2, p, 2 );
-
-    /* NOTE: This will need to be adjusted once we support multiple PSKs
-     *       being offered by the client. */
-    selected_identity = 0;
-
-    /* Write selected_identity */
-    MBEDTLS_PUT_UINT16_BE( selected_identity, p, 4 );
-
-    *olen = 6;
-
-    MBEDTLS_SSL_DEBUG_MSG( 4, ( "sent selected_identity: %" MBEDTLS_PRINTF_SIZET , selected_identity ) );
-
-    return( 0 );
-}
-#endif	/* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED  */
 
 #if defined(MBEDTLS_SSL_COOKIE_C)
 void mbedtls_ssl_conf_cookies( mbedtls_ssl_config *conf,
@@ -2122,7 +1985,7 @@ static int ssl_tls13_check_use_0rtt_handshake( mbedtls_ssl_context *ssl )
     /* If the client has indicated the use of 0-RTT but not sent
      * the PSK extensions, that's not conformant (and there's no
      * way to continue from here). */
-    if( !ssl_tls13_client_hello_has_psk_extensions( ssl ) )
+    if( !ssl_tls13_client_hello_has_exts_for_psk_key_exchange( ssl ) )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1,
             ( "Client indicated 0-RTT without offering PSK extensions" ) );
@@ -2537,20 +2400,6 @@ static int ssl_tls13_parse_client_hello( mbedtls_ssl_context *ssl,
                 break;
 #endif /* MBEDTLS_SSL_COOKIE_C  */
 
-#if defined(MBEDTLS_KEY_EXCHANGE_PSK_ENABLED)
-            case MBEDTLS_TLS_EXT_PRE_SHARED_KEY:
-                MBEDTLS_SSL_DEBUG_MSG( 3, ( "found pre_shared_key extension" ) );
-                /* Delay processing of the PSK identity once we have
-                 * found out which algorithms to use. We keep a pointer
-                 * to the buffer and the size for later processing.
-                 */
-                pre_shared_key_ext_len = extension_data_len;
-                pre_shared_key_ext = p;
-
-                ssl->handshake->extensions_present |= MBEDTLS_SSL_EXT_PRE_SHARED_KEY;
-                break;
-#endif /* MBEDTLS_KEY_EXCHANGE_PSK_ENABLED */
-
 #if defined(MBEDTLS_ZERO_RTT)
             case MBEDTLS_TLS_EXT_EARLY_DATA:
                 MBEDTLS_SSL_DEBUG_MSG( 3, ( "found early_data extension" ) );
@@ -2656,6 +2505,10 @@ static int ssl_tls13_postprocess_client_hello( mbedtls_ssl_context* ssl )
     }
 
 #if defined(MBEDTLS_ZERO_RTT)
+    ret = ssl_tls13_check_use_0rtt_handshake( ssl );
+    if( ret != 0 )
+        return( ret );
+
     if( ssl->handshake->early_data == MBEDTLS_SSL_EARLY_DATA_ON )
     {
         mbedtls_ssl_transform *transform_earlydata;
