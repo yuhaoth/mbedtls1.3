@@ -252,7 +252,7 @@ static void ssl_tls13_create_verify_structure( const unsigned char *transcript_h
 MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_tls13_read_certificate_verify_coordinate( mbedtls_ssl_context *ssl )
 {
-    if( mbedtls_ssl_tls13_kex_with_psk( ssl ) )
+    if( mbedtls_ssl_tls13_key_exchange_mode_with_psk( ssl ) )
         return( SSL_CERTIFICATE_VERIFY_SKIP );
 
 #if !defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)

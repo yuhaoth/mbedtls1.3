@@ -511,7 +511,7 @@ static int ssl_tls13_check_psk_key_exchange( mbedtls_ssl_context *ssl )
         mbedtls_ssl_tls13_psk_enabled( ssl ) )
     {
         MBEDTLS_SSL_DEBUG_MSG( 3, ( "Using a PSK key exchange" ) );
-        ssl->handshake->key_exchange = MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK;
+        ssl->handshake->key_exchange_mode = MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK;
         return( 1 );
     }
 
@@ -521,7 +521,7 @@ static int ssl_tls13_check_psk_key_exchange( mbedtls_ssl_context *ssl )
         ssl_tls13_client_hello_has_key_share_extensions( ssl ) )
     {
         MBEDTLS_SSL_DEBUG_MSG( 3, ( "Using a ECDHE-PSK key exchange" ) );
-        ssl->handshake->key_exchange = MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_EPHEMERAL;
+        ssl->handshake->key_exchange_mode = MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_EPHEMERAL;
         return( 1 );
     }
 
@@ -2422,7 +2422,7 @@ static int ssl_tls13_parse_client_hello( mbedtls_ssl_context *ssl,
      *  3 ) Certificate Mode
      */
 
-    ssl->handshake->key_exchange = MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_NONE;
+    ssl->handshake->key_exchange_mode = MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_NONE;
 
     if( !ssl_tls13_check_psk_key_exchange( ssl ) &&
         !ssl_tls13_check_ephemeral_key_exchange( ssl ) )
@@ -2441,7 +2441,7 @@ static int ssl_tls13_parse_client_hello( mbedtls_ssl_context *ssl,
 
 #if defined(MBEDTLS_KEY_EXCHANGE_PSK_ENABLED)
     /* If we've settled on a PSK-based exchange, parse PSK identity ext */
-    if( mbedtls_ssl_tls13_kex_with_psk( ssl ) )
+    if( mbedtls_ssl_tls13_key_exchange_mode_with_psk( ssl ) )
     {
         ret = mbedtls_ssl_tls13_parse_client_psk_identity_ext(
                   ssl, pre_shared_key_ext, pre_shared_key_ext_len );
@@ -3044,7 +3044,7 @@ static int ssl_tls13_write_server_hello_body( mbedtls_ssl_context *ssl,
     }
     p += output_len;
 
-    if( mbedtls_ssl_tls13_kex_with_ephemeral( ssl ) )
+    if( mbedtls_ssl_tls13_key_exchange_mode_with_ephemeral( ssl ) )
     {
         if( is_hrr )
             ret = ssl_tls13_write_hrr_key_share_ext( ssl, p, end, &output_len );
@@ -3056,7 +3056,7 @@ static int ssl_tls13_write_server_hello_body( mbedtls_ssl_context *ssl,
     }
 
 #if defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
-    if( mbedtls_ssl_tls13_kex_with_psk( ssl ) )
+    if( mbedtls_ssl_tls13_key_exchange_mode_with_psk( ssl ) )
     {
         ret = ssl_tls13_write_server_pre_shared_key_ext( ssl, p, end,
                                                          &output_len );

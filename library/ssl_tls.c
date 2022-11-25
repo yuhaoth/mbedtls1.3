@@ -2764,7 +2764,7 @@ mbedtls_key_exchange_type_t mbedtls_ssl_get_key_exchange( const mbedtls_ssl_cont
     if( ssl == NULL || ssl->session == NULL )
         return( MBEDTLS_KEY_EXCHANGE_NONE );
 
-    return ( ssl->handshake->key_exchange );
+    return ( ssl->handshake->key_exchange_mode );
 }
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
 

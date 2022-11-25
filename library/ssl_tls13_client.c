@@ -2585,7 +2585,7 @@ static int ssl_tls13_certificate_request_coordinate( mbedtls_ssl_context *ssl )
     int ret;
     mbedtls_mps_handshake_in msg;
 
-    if( mbedtls_ssl_tls13_kex_with_psk( ssl ) )
+    if( mbedtls_ssl_tls13_key_exchange_mode_with_psk( ssl ) )
     {
         MBEDTLS_SSL_DEBUG_MSG( 3, ( "<= skip parse certificate request" ) );
         return( SSL_CERTIFICATE_REQUEST_SKIP );
