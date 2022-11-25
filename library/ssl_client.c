@@ -692,16 +692,20 @@ static int ssl_write_client_hello_body( mbedtls_ssl_context *ssl,
     }
 #endif /* MBEDTLS_SSL_PROTO_TLS1_2 */
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3) && defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3) && \
+    defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
+    /* The "pre_shared_key" extension (RFC 8446 Section 4.2.11)
+     * MUST be the last extension in the ClientHello.
+     */
     if( propose_tls13 && mbedtls_ssl_conf_tls13_some_psk_enabled( ssl ) )
     {
-        ret = mbedtls_ssl_tls13_write_pre_shared_key_ext_without_binders(
+        ret = mbedtls_ssl_tls13_write_identities_of_pre_shared_key_ext(
                   ssl, p, end, &output_len, binders_len );
         if( ret != 0 )
             return( ret );
         p += output_len;
     }
-#endif
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3 && MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED */
 
     /* Write the length of the list of extensions. */
     extensions_len = p - p_extensions_len - 2;
@@ -909,8 +913,10 @@ int mbedtls_ssl_write_client_hello( mbedtls_ssl_context *ssl )
                                 ssl, MBEDTLS_SSL_HS_CLIENT_HELLO,
                                 &buf, &buf_len ) );
 
-    MBEDTLS_SSL_PROC_CHK( ssl_write_client_hello_body( ssl, buf, buf + buf_len,
-                                                       &msg_len, &binders_len ) );
+    MBEDTLS_SSL_PROC_CHK( ssl_write_client_hello_body( ssl, buf,
+                                                       buf + buf_len,
+                                                       &msg_len,
+                                                       &binders_len ) );
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_2) && defined(MBEDTLS_SSL_PROTO_DTLS)
     if( ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_DATAGRAM )
@@ -944,18 +950,17 @@ int mbedtls_ssl_write_client_hello( mbedtls_ssl_context *ssl )
     else
 #endif /* MBEDTLS_SSL_PROTO_TLS1_2 && MBEDTLS_SSL_PROTO_DTLS */
     {
+
         mbedtls_ssl_add_hs_hdr_to_checksum( ssl, MBEDTLS_SSL_HS_CLIENT_HELLO,
                                             msg_len );
         ssl->handshake->update_checksum( ssl, buf, msg_len - binders_len );
-
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3) && \
     defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
         if( binders_len > 0 )
         {
             MBEDTLS_SSL_PROC_CHK(
-                mbedtls_ssl_tls13_write_pre_shared_key_ext_binders(
+                mbedtls_ssl_tls13_write_binders_of_pre_shared_key_ext(
                       ssl, buf + msg_len - binders_len, buf + msg_len ) );
-
             ssl->handshake->update_checksum( ssl, buf + msg_len - binders_len,
                                              binders_len );
         }

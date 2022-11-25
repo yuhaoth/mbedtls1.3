@@ -626,61 +626,60 @@ static int ssl_tls13_write_cookie_ext( mbedtls_ssl_context *ssl,
  *     PskKeyExchangeMode ke_modes<1..255>;
  * } PskKeyExchangeModes;
  */
-
 MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_tls13_write_psk_key_exchange_modes_ext( mbedtls_ssl_context *ssl,
                                                        unsigned char *buf,
                                                        unsigned char *end,
                                                        size_t *out_len )
 {
-    unsigned char *p;
-    int num_modes = 0;
+    unsigned char *p = buf;
+    int ke_modes_len = 0;
+
+    ((void) ke_modes_len );
+    *out_len = 0;
 
     /* Skip writing extension if no PSK key exchange mode
-     * is enabled in the config. */
+     * is enabled in the config.
+     */
     if( !mbedtls_ssl_conf_tls13_some_psk_enabled( ssl ) )
     {
-        *out_len = 0;
+        MBEDTLS_SSL_DEBUG_MSG( 3, ( "skip psk_key_exchange_modes extension" ) );
         return( 0 );
     }
 
-    /* Require 7 bytes of data, otherwise fail, even if extension might be shorter. */
-    if( (size_t)( end - buf ) < 7 )
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "Not enough buffer" ) );
-        return( MBEDTLS_ERR_SSL_BUFFER_TOO_SMALL );
-    }
+    /* Require 7 bytes of data, otherwise fail,
+     * even if extension might be shorter.
+     */
+    MBEDTLS_SSL_CHK_BUF_PTR( p, end, 7 );
+    MBEDTLS_SSL_DEBUG_MSG(
+            3, ( "client hello, adding psk_key_exchange_modes extension" ) );
 
-    MBEDTLS_SSL_DEBUG_MSG( 3, ( "client hello, adding psk_key_exchange_modes extension" ) );
+    MBEDTLS_PUT_UINT16_BE( MBEDTLS_TLS_EXT_PSK_KEY_EXCHANGE_MODES, p, 0 );
 
-    /* Extension Type */
-    MBEDTLS_PUT_UINT16_BE( MBEDTLS_TLS_EXT_PSK_KEY_EXCHANGE_MODES, buf, 0 );
-
-    /* Skip extension length (2 byte) and PSK mode list length (1 byte) for now. */
-    p = buf + 5;
-
-
-    if( mbedtls_ssl_conf_tls13_psk_ephemeral_enabled( ssl ) )
-    {
-        *p++ = MBEDTLS_SSL_TLS1_3_PSK_MODE_ECDHE;
-        num_modes++;
-
-        MBEDTLS_SSL_DEBUG_MSG( 4, ( "Adding PSK-ECDHE key exchange mode" ) );
-    }
+    /* Skip extension length (2 bytes) and
+     * ke_modes length (1 byte) for now.
+     */
+    p += 5;
 
     if( mbedtls_ssl_conf_tls13_psk_enabled( ssl ) )
     {
         *p++ = MBEDTLS_SSL_TLS1_3_PSK_MODE_PURE;
-        num_modes++;
+        ke_modes_len++;
 
         MBEDTLS_SSL_DEBUG_MSG( 4, ( "Adding pure PSK key exchange mode" ) );
     }
 
-    /* Add extension length: PSK mode list length byte + actual PSK mode list length */
-    buf[2] = 0;
-    buf[3] = num_modes + 1;
-    /* Add PSK mode list length */
-    buf[4] = num_modes;
+    if( mbedtls_ssl_conf_tls13_psk_ephemeral_enabled( ssl ) )
+    {
+        *p++ = MBEDTLS_SSL_TLS1_3_PSK_MODE_ECDHE;
+        ke_modes_len++;
+
+        MBEDTLS_SSL_DEBUG_MSG( 4, ( "Adding PSK-ECDHE key exchange mode" ) );
+    }
+
+    /* Now write the extension and ke_modes length */
+    MBEDTLS_PUT_UINT16_BE( ke_modes_len + 1, buf, 2 );
+    buf[4] = ke_modes_len;
 
     *out_len = p - buf;
     ssl->handshake->extensions_present |= MBEDTLS_SSL_EXT_PSK_KEY_EXCHANGE_MODES;
@@ -699,27 +698,22 @@ static int ssl_tls13_write_psk_key_exchange_modes_ext( mbedtls_ssl_context *ssl,
  * opaque PskBinderEntry<32..255>;
  *
  * struct {
- *   select ( Handshake.msg_type ) {
+ *   PskIdentity identities<7..2^16-1>;
+ *   PskBinderEntry binders<33..2^16-1>;
+ * } OfferedPsks;
  *
- *     case client_hello:
- *       PskIdentity identities<7..2^16-1>;
- *       PskBinderEntry binders<33..2^16-1>;
- *
- *     case server_hello:
- *       uint16 selected_identity;
+ * struct {
+ *   select (Handshake.msg_type) {
+ *      case client_hello: OfferedPsks;
+ *      ...
  *   };
- *
  * } PreSharedKeyExtension;
  *
- *
- * part = 0 ==> everything up to the PSK binder list,
- *              returning the binder list length in `binder_list_length`.
- * part = 1 ==> the PSK binder list
  */
 
 #if defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
 
-int mbedtls_ssl_tls13_write_pre_shared_key_ext_without_binders(
+int mbedtls_ssl_tls13_write_identities_of_pre_shared_key_ext(
     mbedtls_ssl_context *ssl,
     unsigned char *buf, unsigned char *end,
     size_t *out_len, size_t *binders_len )
@@ -729,9 +723,11 @@ int mbedtls_ssl_tls13_write_pre_shared_key_ext_without_binders(
     size_t psk_len;
     const unsigned char *psk_identity;
     size_t psk_identity_len;
-    const mbedtls_ssl_ciphersuite_t *suite_info;
+    int psk_type;
+    const mbedtls_ssl_ciphersuite_t *ciphersuite_info = NULL;
     const int *ciphersuites;
-    int hash_len;
+    psa_algorithm_t psa_hash_alg;
+    int hash_len = 0;
     size_t identities_len, l_binders_len;
     uint32_t obfuscated_ticket_age = 0;
 
@@ -751,31 +747,46 @@ int mbedtls_ssl_tls13_write_pre_shared_key_ext_without_binders(
      * - Otherwise, skip the PSK extension.
      */
 
-    if( mbedtls_ssl_get_psk_to_offer( ssl, &psk, &psk_len,
+    if( mbedtls_ssl_get_psk_to_offer( ssl, &psk_type, &psk, &psk_len,
                                       &psk_identity, &psk_identity_len ) != 0 )
     {
         MBEDTLS_SSL_DEBUG_MSG( 3, ( "skip pre_shared_key extensions" ) );
         return( 0 );
     }
 
-    /*
-     * Ciphersuite list
-     */
-    ciphersuites = ssl->conf->ciphersuite_list;
-    for ( int i = 0; ciphersuites[i] != 0; i++ )
+    if( psk_type == MBEDTLS_SSL_TLS1_3_PSK_EXTERNAL )
     {
-        suite_info = mbedtls_ssl_ciphersuite_from_id( ciphersuites[i] );
+        /*
+         * Ciphersuite list
+         */
+        ciphersuites = ssl->conf->ciphersuite_list;
+        for( int i = 0; ciphersuites[i] != 0; i++ )
+        {
+            ciphersuite_info = mbedtls_ssl_ciphersuite_from_id(
+                                    ciphersuites[i] );
 
-        if( suite_info == NULL )
-            continue;
+            if( mbedtls_ssl_validate_ciphersuite(
+                                ssl, ciphersuite_info,
+                                MBEDTLS_SSL_VERSION_TLS1_3,
+                                MBEDTLS_SSL_VERSION_TLS1_3 ) != 0 )
+                continue;
 
-        /* In this implementation we only add one pre-shared-key extension. */
-        ssl->session_negotiate->ciphersuite = ciphersuites[i];
-        ssl->handshake->ciphersuite_info = suite_info;
-        break;
+            /* In this implementation we only add one pre-shared-key
+             * extension.
+             */
+            ssl->session_negotiate->ciphersuite = ciphersuites[i];
+            break;
+        }
     }
 
-    hash_len = mbedtls_hash_size_for_ciphersuite( suite_info );
+    ciphersuite_info = mbedtls_ssl_ciphersuite_from_id(
+            ssl->session_negotiate->ciphersuite );
+    /* No suitable ciphersuite for the PSK */
+    if( ciphersuite_info  == NULL )
+        return( 0 );
+
+    psa_hash_alg = mbedtls_psa_translate_md( ciphersuite_info->mac );
+    hash_len = PSA_HASH_LENGTH( psa_hash_alg );
     if( hash_len == -1 )
         return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
 
@@ -793,54 +804,29 @@ int mbedtls_ssl_tls13_write_pre_shared_key_ext_without_binders(
 
     identities_len = 6 + psk_identity_len;
     l_binders_len = 1 + hash_len;
-    MBEDTLS_SSL_CHK_BUF_PTR( p, end, 4 + 2 + identities_len + 2 + l_binders_len );
 
     MBEDTLS_SSL_DEBUG_MSG( 3,
                  ( "client hello, adding pre_shared_key extension, "
                    "omitting PSK binder list" ) );
 
     /* Extension header */
+    MBEDTLS_SSL_CHK_BUF_PTR( p, end, 8 );
     MBEDTLS_PUT_UINT16_BE( MBEDTLS_TLS_EXT_PRE_SHARED_KEY, p, 0 );
     MBEDTLS_PUT_UINT16_BE( 2 + identities_len + 2 + l_binders_len , p, 2 );
 
     MBEDTLS_PUT_UINT16_BE( identities_len, p, 4 );
     MBEDTLS_PUT_UINT16_BE( psk_identity_len, p, 6 );
     p += 8;
+    MBEDTLS_SSL_CHK_BUF_PTR( p, end, psk_identity_len );
     memcpy( p, psk_identity, psk_identity_len );
     p += psk_identity_len;
 
-#if defined(MBEDTLS_SSL_NEW_SESSION_TICKET_REMOVED)
-
-    /* Calculate obfuscated_ticket_age (omitted for external PSKs). */
-    if( ssl->session_negotiate->ticket_age_add > 0 )
-    {
-        /* TODO: Should we somehow fail if TIME is disabled here?
-         * TODO: Use Mbed TLS' time abstraction? */
-#if defined(MBEDTLS_HAVE_TIME)
-        time_t now = time( NULL );
-
-        if( !( ssl->session_negotiate->ticket_received <= now &&
-               now - ssl->session_negotiate->ticket_received < 7 * 86400 * 1000 ) )
-        {
-            MBEDTLS_SSL_DEBUG_MSG( 3, ( "ticket expired" ) );
-            /* TBD: We would have to fall back to another PSK */
-            return( MBEDTLS_ERR_SSL_SESSION_TICKET_EXPIRED );
-        }
-
-        obfuscated_ticket_age =
-            (uint32_t)( now - ssl->session_negotiate->ticket_received ) +
-            ssl->session_negotiate->ticket_age_add;
-
-        MBEDTLS_SSL_DEBUG_MSG( 4, ( "obfuscated_ticket_age: %u",
-                                        obfuscated_ticket_age ) );
-#endif /* MBEDTLS_HAVE_TIME */
-    }
-#endif /* MBEDTLS_SSL_NEW_SESSION_TICKET_REMOVED */
-
     /* add obfuscated ticket age */
+    MBEDTLS_SSL_CHK_BUF_PTR( p, end, 4 );
     MBEDTLS_PUT_UINT32_BE( obfuscated_ticket_age, p, 0 );
     p += 4;
 
+    MBEDTLS_SSL_CHK_BUF_PTR( p, end, 2 + l_binders_len );
     *out_len = ( p - buf ) + l_binders_len + 2;
     *binders_len = l_binders_len + 2;
 
@@ -849,65 +835,42 @@ int mbedtls_ssl_tls13_write_pre_shared_key_ext_without_binders(
     return( 0 );
 }
 
-int mbedtls_ssl_tls13_write_pre_shared_key_ext_binders(
+int mbedtls_ssl_tls13_write_binders_of_pre_shared_key_ext(
     mbedtls_ssl_context *ssl,
     unsigned char *buf, unsigned char *end )
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
     unsigned char *p = buf;
-    const mbedtls_ssl_ciphersuite_t *suite_info;
-    const int *ciphersuites;
-    int hash_len;
-    const unsigned char *psk;
-    size_t psk_len;
     const unsigned char *psk_identity;
     size_t psk_identity_len;
+    const mbedtls_ssl_ciphersuite_t *ciphersuite_info = NULL;
+    psa_algorithm_t psa_hash_alg;
+    int hash_len = 0;
+    const unsigned char *psk = NULL;
+    size_t psk_len = 0;
     int psk_type;
     unsigned char transcript[MBEDTLS_MD_MAX_SIZE];
     size_t transcript_len;
 
-    /* Check if we have any PSKs to offer. If so, return the first.
-     *
-     * NOTE: Ultimately, we want to be able to offer multiple PSKs,
-     *       in which case we want to iterate over them here.
-     *
-     * As it stands, however, we only ever offer one, chosen
-     * by the following heuristic:
-     * - If a ticket has been configured, offer the corresponding PSK.
-     * - If no ticket has been configured by an external PSK has been
-     *   configured, offer that.
-     * - Otherwise, skip the PSK extension.
-     */
-
-    if( mbedtls_ssl_get_psk_to_offer( ssl, &psk, &psk_len,
+    if( mbedtls_ssl_get_psk_to_offer( ssl, &psk_type, &psk, &psk_len,
                                       &psk_identity, &psk_identity_len ) != 0 )
     {
         return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
     }
 
-    /*
-     * Ciphersuite list
-     */
-    ciphersuites = ssl->conf->ciphersuite_list;
-    for ( int i = 0; ciphersuites[i] != 0; i++ )
-    {
-        suite_info = mbedtls_ssl_ciphersuite_from_id( ciphersuites[i] );
+    ciphersuite_info = mbedtls_ssl_ciphersuite_from_id(
+            ssl->session_negotiate->ciphersuite );
+    if( ciphersuite_info  == NULL )
+        return( 0 );
 
-        if( suite_info == NULL )
-            continue;
-
-        /* In this implementation we only add one pre-shared-key extension. */
-        ssl->session_negotiate->ciphersuite = ciphersuites[i];
-        ssl->handshake->ciphersuite_info = suite_info;
-        break;
-    }
-
-    hash_len = mbedtls_hash_size_for_ciphersuite( suite_info );
+    psa_hash_alg = mbedtls_psa_translate_md( ciphersuite_info->mac );
+    hash_len = PSA_HASH_LENGTH( psa_hash_alg );
     if( ( hash_len == -1 ) || ( ( end - buf ) != 3 + hash_len ) )
         return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
 
     MBEDTLS_SSL_DEBUG_MSG( 3, ( "client hello, adding PSK binder list" ) );
 
+    MBEDTLS_SSL_CHK_BUF_PTR( p, end, 3 + hash_len );
     /* 2 bytes length field for array of psk binders */
     MBEDTLS_PUT_UINT16_BE( hash_len + 1, p, 0 );
     p += 2;
@@ -915,20 +878,15 @@ int mbedtls_ssl_tls13_write_pre_shared_key_ext_binders(
     /* 1 bytes length field for next psk binder */
     *p++ = MBEDTLS_BYTE_0( hash_len );
 
-    if( ssl->handshake->resume == 1 )
-        psk_type = MBEDTLS_SSL_TLS1_3_PSK_RESUMPTION;
-    else
-        psk_type = MBEDTLS_SSL_TLS1_3_PSK_EXTERNAL;
-
     /* Get current state of handshake transcript. */
-    ret = mbedtls_ssl_get_handshake_transcript( ssl, suite_info->mac,
+    ret = mbedtls_ssl_get_handshake_transcript( ssl, ciphersuite_info->mac,
                                                 transcript, sizeof( transcript ),
                                                 &transcript_len );
     if( ret != 0 )
         return( ret );
 
     ret = mbedtls_ssl_tls13_create_psk_binder( ssl,
-              mbedtls_psa_translate_md( suite_info->mac ),
+              mbedtls_psa_translate_md( ciphersuite_info->mac ),
               psk, psk_len, psk_type,
               transcript, p );
     if( ret != 0 )
@@ -939,7 +897,7 @@ int mbedtls_ssl_tls13_write_pre_shared_key_ext_binders(
 
     return( 0 );
 }
-#endif	/* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED  */
+#endif /* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED */
 
 int mbedtls_ssl_tls13_write_client_hello_exts( mbedtls_ssl_context *ssl,
                                                unsigned char *buf,
@@ -985,6 +943,22 @@ int mbedtls_ssl_tls13_write_client_hello_exts( mbedtls_ssl_context *ssl,
         return( ret );
     p += ext_len;
 #endif /* MBEDTLS_ZERO_RTT */
+
+#if defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
+    /* For PSK-based key exchange we need the pre_shared_key extension
+     * and the psk_key_exchange_modes extension.
+     *
+     * The pre_shared_key extension MUST be the last extension in the
+     * ClientHello. Servers MUST check that it is the last extension and
+     * otherwise fail the handshake with an "illegal_parameter" alert.
+     *
+     * Add the psk_key_exchange_modes extension.
+     */
+    ret = ssl_tls13_write_psk_key_exchange_modes_ext( ssl, p, end, &ext_len );
+    if( ret != 0 )
+        return( ret );
+    p += ext_len;
+#endif /* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED */
 
 #if defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
     /* For PSK-based key exchange we need the pre_shared_key extension
@@ -1425,12 +1399,10 @@ static int ssl_tls13_parse_max_fragment_length_ext( mbedtls_ssl_context *ssl,
  * opaque PskBinderEntry<32..255>;
  *
  * struct {
- *   select ( Handshake.msg_type ) {
- *     case client_hello:
- *          PskIdentity identities<7..2^16-1>;
- *          PskBinderEntry binders<33..2^16-1>;
- *     case server_hello:
- *          uint16 selected_identity;
+ *
+ *   select (Handshake.msg_type) {
+ *         ...
+ *         case server_hello: uint16 selected_identity;
  *   };
  *
  * } PreSharedKeyExtension;
@@ -1438,9 +1410,9 @@ static int ssl_tls13_parse_max_fragment_length_ext( mbedtls_ssl_context *ssl,
  */
 
 MBEDTLS_CHECK_RETURN_CRITICAL
-static int ssl_tls13_parse_server_psk_identity_ext( mbedtls_ssl_context *ssl,
-                                                    const unsigned char *buf,
-                                                    size_t len )
+static int ssl_tls13_parse_server_pre_shared_key_ext( mbedtls_ssl_context *ssl,
+                                                      const unsigned char *buf,
+                                                      const unsigned char *end )
 {
     int ret = 0;
     size_t selected_identity;
@@ -1456,7 +1428,7 @@ static int ssl_tls13_parse_server_psk_identity_ext( mbedtls_ssl_context *ssl,
      * NOTE: Ultimately, we want to offer multiple PSKs, and in this
      *       case, we need to iterate over them here.
      */
-    if( mbedtls_ssl_get_psk_to_offer( ssl, &psk, &psk_len,
+    if( mbedtls_ssl_get_psk_to_offer( ssl, NULL, &psk, &psk_len,
                                       &psk_identity, &psk_identity_len ) != 0 )
     {
         /* If we haven't offered a PSK, the server must not send
@@ -1464,12 +1436,7 @@ static int ssl_tls13_parse_server_psk_identity_ext( mbedtls_ssl_context *ssl,
         return( MBEDTLS_ERR_SSL_HANDSHAKE_FAILURE );
     }
 
-    if( len != (size_t) 2 )
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad psk_identity extension in server hello message" ) );
-        return( MBEDTLS_ERR_SSL_DECODE_ERROR );
-    }
-
+    MBEDTLS_SSL_CHK_BUF_PTR( buf, end, 2 );
     selected_identity = MBEDTLS_GET_UINT16_BE( buf, 0 );
 
     /* We have offered only one PSK, so the only valid choice
@@ -1782,7 +1749,7 @@ static int ssl_tls13_parse_server_hello( mbedtls_ssl_context *ssl,
                     goto cleanup;
                 break;
 
-#if defined(MBEDTLS_KEY_EXCHANGE_PSK_ENABLED)
+#if defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
             case MBEDTLS_TLS_EXT_PRE_SHARED_KEY:
                 MBEDTLS_SSL_DEBUG_MSG( 3, ( "found pre_shared_key extension" ) );
                 if( is_hrr )
@@ -1791,15 +1758,15 @@ static int ssl_tls13_parse_server_hello( mbedtls_ssl_context *ssl,
                     goto cleanup;
                 }
 
-                if( ( ret = ssl_tls13_parse_server_psk_identity_ext(
-                                ssl, p, extension_data_len ) ) != 0 )
+                if( ( ret = ssl_tls13_parse_server_pre_shared_key_ext(
+                                ssl, p, extension_data_end ) ) != 0 )
                 {
                     MBEDTLS_SSL_DEBUG_RET(
-                        1, ( "ssl_tls13_parse_server_psk_identity_ext" ), ret );
+                        1, ( "ssl_tls13_parse_server_pre_shared_key_ext" ), ret );
                     return( ret );
                 }
                 break;
-#endif /* MBEDTLS_KEY_EXCHANGE_PSK_ENABLED */
+#endif /* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED */
 
             case MBEDTLS_TLS_EXT_KEY_SHARE:
                 MBEDTLS_SSL_DEBUG_MSG( 3, ( "found key_shares extension" ) );
