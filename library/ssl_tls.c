@@ -1972,6 +1972,12 @@ int mbedtls_ssl_set_hs_psk( mbedtls_ssl_context *ssl,
     }
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
 
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3)
+    psa_set_key_usage_flags( &key_attributes,
+                             PSA_KEY_USAGE_DERIVE | PSA_KEY_USAGE_EXPORT );
+#else
+    psa_set_key_usage_flags( &key_attributes, PSA_KEY_USAGE_DERIVE );
+#endif
     psa_set_key_algorithm( &key_attributes, alg );
     psa_set_key_type( &key_attributes, PSA_KEY_TYPE_DERIVE );
 
