@@ -1566,15 +1566,6 @@
 //#define MBEDTLS_ZERO_RTT
 
 /*
-* \def MBEDTLS_SSL_TICKET_NONCE_LENGTH
-*
-* Allows adjusting the length of the nonce field in the ticket.
-*
-* The default value is 32 bytes.
-*/
-#define MBEDTLS_SSL_TICKET_NONCE_LENGTH 32
-
-/*
 * \def MBEDTLS_SSL_NEW_SESSION_TICKET_REMOVED
 *
 * Enable support for TLS 1.3 session tickets.

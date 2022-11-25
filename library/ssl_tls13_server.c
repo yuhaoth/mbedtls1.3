@@ -1285,7 +1285,7 @@ static int ssl_tls13_write_new_session_ticket_write( mbedtls_ssl_context *ssl,
     int hash_length;
     unsigned char *ticket_lifetime_ptr;
 
-    size_t const total_length = 12 + MBEDTLS_SSL_TICKET_NONCE_LENGTH;
+    size_t const total_length = 12 + MBEDTLS_SSL_TLS1_3_TICKET_NONCE_LENGTH;
     p = buf;
 
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> write NewSessionTicket msg" ) );
@@ -1329,15 +1329,15 @@ static int ssl_tls13_write_new_session_ticket_write( mbedtls_ssl_context *ssl,
     MBEDTLS_SSL_DEBUG_MSG( 3, ( "ticket->ticket_age_add: %u", ssl->session->ticket_age_add ) );
 
     /* Ticket Nonce */
-    *(p++) = MBEDTLS_SSL_TICKET_NONCE_LENGTH;
+    *(p++) = MBEDTLS_SSL_TLS1_3_TICKET_NONCE_LENGTH;
 
     ret = ssl->conf->f_rng( ssl->conf->p_rng, p,
-                            MBEDTLS_SSL_TICKET_NONCE_LENGTH );
+                            MBEDTLS_SSL_TLS1_3_TICKET_NONCE_LENGTH );
     if( ret != 0 )
         return( ret );
 
     MBEDTLS_SSL_DEBUG_BUF( 3, "ticket_nonce:",
-                           p, MBEDTLS_SSL_TICKET_NONCE_LENGTH );
+                           p, MBEDTLS_SSL_TLS1_3_TICKET_NONCE_LENGTH );
 
     MBEDTLS_SSL_DEBUG_BUF( 3, "resumption_master_secret",
                            ssl->session->app_secrets.resumption_master_secret,
@@ -1354,7 +1354,7 @@ static int ssl_tls13_write_new_session_ticket_write( mbedtls_ssl_context *ssl,
                hash_length,
                MBEDTLS_SSL_TLS1_3_LBL_WITH_LEN( resumption ),
                (const unsigned char *) p,
-               MBEDTLS_SSL_TICKET_NONCE_LENGTH,
+               MBEDTLS_SSL_TLS1_3_TICKET_NONCE_LENGTH,
                ssl->session->resumption_key,
                hash_length );
 
@@ -1364,7 +1364,7 @@ static int ssl_tls13_write_new_session_ticket_write( mbedtls_ssl_context *ssl,
         return ( ret );
     }
 
-    p += MBEDTLS_SSL_TICKET_NONCE_LENGTH;
+    p += MBEDTLS_SSL_TLS1_3_TICKET_NONCE_LENGTH;
 
     ssl->session->resumption_key_len = hash_length;
 

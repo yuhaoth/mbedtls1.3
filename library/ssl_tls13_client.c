@@ -386,6 +386,7 @@ cleanup:
     return( ret );
 }
 
+
 /*
  * ssl_tls13_parse_hrr_key_share_ext()
  *      Parse key_share extension in Hello Retry Request
@@ -3322,6 +3323,14 @@ int mbedtls_ssl_tls13_handshake_client_step( mbedtls_ssl_context *ssl )
             ret = ssl_tls13_write_client_finished( ssl );
             break;
 
+        case MBEDTLS_SSL_FLUSH_BUFFERS:
+            ret = ssl_tls13_flush_buffers( ssl );
+            break;
+
+        case MBEDTLS_SSL_HANDSHAKE_WRAPUP:
+            ret = ssl_tls13_handshake_wrapup( ssl );
+            break;
+
         /*
          * Injection of dummy-CCS's for middlebox compatibility
          */
@@ -3353,18 +3362,6 @@ int mbedtls_ssl_tls13_handshake_client_step( mbedtls_ssl_context *ssl )
             ret = MBEDTLS_ERR_SSL_RECEIVED_NEW_SESSION_TICKET;
             break;
 #endif /* MBEDTLS_SSL_SESSION_TICKETS */
-
-        /*
-         * Internal intermediate states
-         */
-
-        case MBEDTLS_SSL_FLUSH_BUFFERS:
-            ret = ssl_tls13_flush_buffers( ssl );
-            break;
-
-        case MBEDTLS_SSL_HANDSHAKE_WRAPUP:
-            ret = ssl_tls13_handshake_wrapup( ssl );
-            break;
 
         default:
             MBEDTLS_SSL_DEBUG_MSG( 1, ( "invalid state %d", ssl->state ) );
