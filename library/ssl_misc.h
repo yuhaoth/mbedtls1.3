@@ -30,6 +30,7 @@
 #if defined(MBEDTLS_USE_PSA_CRYPTO) || defined(MBEDTLS_SSL_PROTO_TLS1_3)
 #include "psa/crypto.h"
 #include "mbedtls/psa_util.h"
+#include "hash_info.h"
 #endif
 
 #if defined(MBEDTLS_MD5_C)
@@ -2394,7 +2395,7 @@ static inline int mbedtls_ssl_sig_alg_is_offered( const mbedtls_ssl_context *ssl
     return( 0 );
 }
 
-static inline int mbedtls_ssl_tls13_get_pk_type_and_md_alg_from_sig_alg(
+static inline int mbedtls_ssl_get_pk_type_and_md_alg_from_sig_alg(
     uint16_t sig_alg, mbedtls_pk_type_t *pk_type, mbedtls_md_type_t *md_alg )
 {
     *pk_type = mbedtls_ssl_pk_alg_from_sig( sig_alg & 0xff );

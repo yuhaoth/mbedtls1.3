@@ -85,12 +85,6 @@
 
 #if !defined(MBEDTLS_ECP_ALT)
 
-/* Parameter validation macros based on platform_util.h */
-#define ECP_VALIDATE_RET( cond )    \
-    MBEDTLS_INTERNAL_VALIDATE_RET( cond, MBEDTLS_ERR_ECP_BAD_INPUT_DATA )
-#define ECP_VALIDATE( cond )        \
-    MBEDTLS_INTERNAL_VALIDATE( cond )
-
 #if defined(MBEDTLS_PLATFORM_C)
 #include "mbedtls/platform.h"
 #else
@@ -243,7 +237,6 @@ static void ecp_restart_ma_free( mbedtls_ecp_restart_muladd_ctx *ctx )
  */
 void mbedtls_ecp_restart_init( mbedtls_ecp_restart_ctx *ctx )
 {
-    ECP_VALIDATE( ctx != NULL );
     ctx->ops_done = 0;
     ctx->depth = 0;
     ctx->rsm = NULL;
@@ -274,8 +267,6 @@ int mbedtls_ecp_check_budget( const mbedtls_ecp_group *grp,
                               mbedtls_ecp_restart_ctx *rs_ctx,
                               unsigned ops )
 {
-    ECP_VALIDATE_RET( grp != NULL );
-
     if( rs_ctx != NULL && ecp_max_ops != 0 )
     {
         /* scale depending on curve size: the chosen reference is 256-bit,
@@ -526,8 +517,6 @@ mbedtls_ecp_curve_type mbedtls_ecp_get_type( const mbedtls_ecp_group *grp )
  */
 void mbedtls_ecp_point_init( mbedtls_ecp_point *pt )
 {
-    ECP_VALIDATE( pt != NULL );
-
     mbedtls_mpi_init( &pt->X );
     mbedtls_mpi_init( &pt->Y );
     mbedtls_mpi_init( &pt->Z );
@@ -538,8 +527,6 @@ void mbedtls_ecp_point_init( mbedtls_ecp_point *pt )
  */
 void mbedtls_ecp_group_init( mbedtls_ecp_group *grp )
 {
-    ECP_VALIDATE( grp != NULL );
-
     grp->id = MBEDTLS_ECP_DP_NONE;
     mbedtls_mpi_init( &grp->P );
     mbedtls_mpi_init( &grp->A );
@@ -562,8 +549,6 @@ void mbedtls_ecp_group_init( mbedtls_ecp_group *grp )
  */
 void mbedtls_ecp_keypair_init( mbedtls_ecp_keypair *key )
 {
-    ECP_VALIDATE( key != NULL );
-
     mbedtls_ecp_group_init( &key->grp );
     mbedtls_mpi_init( &key->d );
     mbedtls_ecp_point_init( &key->Q );
@@ -642,9 +627,6 @@ void mbedtls_ecp_keypair_free( mbedtls_ecp_keypair *key )
 int mbedtls_ecp_copy( mbedtls_ecp_point *P, const mbedtls_ecp_point *Q )
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
-    ECP_VALIDATE_RET( P != NULL );
-    ECP_VALIDATE_RET( Q != NULL );
-
     MBEDTLS_MPI_CHK( mbedtls_mpi_copy( &P->X, &Q->X ) );
     MBEDTLS_MPI_CHK( mbedtls_mpi_copy( &P->Y, &Q->Y ) );
     MBEDTLS_MPI_CHK( mbedtls_mpi_copy( &P->Z, &Q->Z ) );
@@ -658,9 +640,6 @@ cleanup:
  */
 int mbedtls_ecp_group_copy( mbedtls_ecp_group *dst, const mbedtls_ecp_group *src )
 {
-    ECP_VALIDATE_RET( dst != NULL );
-    ECP_VALIDATE_RET( src != NULL );
-
     return( mbedtls_ecp_group_load( dst, src->id ) );
 }
 
@@ -670,8 +649,6 @@ int mbedtls_ecp_group_copy( mbedtls_ecp_group *dst, const mbedtls_ecp_group *src
 int mbedtls_ecp_set_zero( mbedtls_ecp_point *pt )
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
-    ECP_VALIDATE_RET( pt != NULL );
-
     MBEDTLS_MPI_CHK( mbedtls_mpi_lset( &pt->X , 1 ) );
     MBEDTLS_MPI_CHK( mbedtls_mpi_lset( &pt->Y , 1 ) );
     MBEDTLS_MPI_CHK( mbedtls_mpi_lset( &pt->Z , 0 ) );
@@ -685,8 +662,6 @@ cleanup:
  */
 int mbedtls_ecp_is_zero( mbedtls_ecp_point *pt )
 {
-    ECP_VALIDATE_RET( pt != NULL );
-
     return( mbedtls_mpi_cmp_int( &pt->Z, 0 ) == 0 );
 }
 
@@ -696,9 +671,6 @@ int mbedtls_ecp_is_zero( mbedtls_ecp_point *pt )
 int mbedtls_ecp_point_cmp( const mbedtls_ecp_point *P,
                            const mbedtls_ecp_point *Q )
 {
-    ECP_VALIDATE_RET( P != NULL );
-    ECP_VALIDATE_RET( Q != NULL );
-
     if( mbedtls_mpi_cmp_mpi( &P->X, &Q->X ) == 0 &&
         mbedtls_mpi_cmp_mpi( &P->Y, &Q->Y ) == 0 &&
         mbedtls_mpi_cmp_mpi( &P->Z, &Q->Z ) == 0 )
@@ -716,10 +688,6 @@ int mbedtls_ecp_point_read_string( mbedtls_ecp_point *P, int radix,
                            const char *x, const char *y )
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
-    ECP_VALIDATE_RET( P != NULL );
-    ECP_VALIDATE_RET( x != NULL );
-    ECP_VALIDATE_RET( y != NULL );
-
     MBEDTLS_MPI_CHK( mbedtls_mpi_read_string( &P->X, radix, x ) );
     MBEDTLS_MPI_CHK( mbedtls_mpi_read_string( &P->Y, radix, y ) );
     MBEDTLS_MPI_CHK( mbedtls_mpi_lset( &P->Z, 1 ) );
@@ -738,12 +706,9 @@ int mbedtls_ecp_point_write_binary( const mbedtls_ecp_group *grp,
 {
     int ret = MBEDTLS_ERR_ECP_FEATURE_UNAVAILABLE;
     size_t plen;
-    ECP_VALIDATE_RET( grp  != NULL );
-    ECP_VALIDATE_RET( P    != NULL );
-    ECP_VALIDATE_RET( olen != NULL );
-    ECP_VALIDATE_RET( buf  != NULL );
-    ECP_VALIDATE_RET( format == MBEDTLS_ECP_PF_UNCOMPRESSED ||
-                      format == MBEDTLS_ECP_PF_COMPRESSED );
+    if( format != MBEDTLS_ECP_PF_UNCOMPRESSED &&
+        format != MBEDTLS_ECP_PF_COMPRESSED )
+        return( MBEDTLS_ERR_ECP_BAD_INPUT_DATA );
 
     plen = mbedtls_mpi_size( &grp->P );
 
@@ -812,10 +777,6 @@ int mbedtls_ecp_point_read_binary( const mbedtls_ecp_group *grp,
 {
     int ret = MBEDTLS_ERR_ECP_FEATURE_UNAVAILABLE;
     size_t plen;
-    ECP_VALIDATE_RET( grp != NULL );
-    ECP_VALIDATE_RET( pt  != NULL );
-    ECP_VALIDATE_RET( buf != NULL );
-
     if( ilen < 1 )
         return( MBEDTLS_ERR_ECP_BAD_INPUT_DATA );
 
@@ -877,11 +838,6 @@ int mbedtls_ecp_tls_read_point( const mbedtls_ecp_group *grp,
 {
     unsigned char data_len;
     const unsigned char *buf_start;
-    ECP_VALIDATE_RET( grp != NULL );
-    ECP_VALIDATE_RET( pt  != NULL );
-    ECP_VALIDATE_RET( buf != NULL );
-    ECP_VALIDATE_RET( *buf != NULL );
-
     /*
      * We must have at least two bytes (1 for length, at least one for data)
      */
@@ -912,12 +868,9 @@ int mbedtls_ecp_tls_write_point( const mbedtls_ecp_group *grp, const mbedtls_ecp
                          unsigned char *buf, size_t blen )
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
-    ECP_VALIDATE_RET( grp  != NULL );
-    ECP_VALIDATE_RET( pt   != NULL );
-    ECP_VALIDATE_RET( olen != NULL );
-    ECP_VALIDATE_RET( buf  != NULL );
-    ECP_VALIDATE_RET( format == MBEDTLS_ECP_PF_UNCOMPRESSED ||
-                      format == MBEDTLS_ECP_PF_COMPRESSED );
+    if( format != MBEDTLS_ECP_PF_UNCOMPRESSED &&
+        format != MBEDTLS_ECP_PF_COMPRESSED )
+        return( MBEDTLS_ERR_ECP_BAD_INPUT_DATA );
 
     /*
      * buffer length must be at least one, for our length byte
@@ -946,10 +899,6 @@ int mbedtls_ecp_tls_read_group( mbedtls_ecp_group *grp,
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
     mbedtls_ecp_group_id grp_id;
-    ECP_VALIDATE_RET( grp  != NULL );
-    ECP_VALIDATE_RET( buf  != NULL );
-    ECP_VALIDATE_RET( *buf != NULL );
-
     if( ( ret = mbedtls_ecp_tls_read_group_id( &grp_id, buf, len ) ) != 0 )
         return( ret );
 
@@ -985,12 +934,12 @@ int mbedtls_ecp_tls_read_named_curve( mbedtls_ecp_group_id *grp,
 int mbedtls_ecp_tls_read_group_id( mbedtls_ecp_group_id *grp,
                                    const unsigned char **buf, size_t len )
 {
-    int ret;
-    ECP_VALIDATE_RET( grp  != NULL );
-    ECP_VALIDATE_RET( buf  != NULL );
-    ECP_VALIDATE_RET( *buf != NULL );
-
-    if( len < 1 )
+    uint16_t tls_id;
+    const mbedtls_ecp_curve_info *curve_info;
+    /*
+     * We expect at least three bytes (see below)
+     */
+    if( len < 3 )
         return( MBEDTLS_ERR_ECP_BAD_INPUT_DATA );
 
     /* Only named_curve is handled */
@@ -1014,10 +963,6 @@ int mbedtls_ecp_tls_write_group( const mbedtls_ecp_group *grp, size_t *olen,
                          unsigned char *buf, size_t blen )
 {
     const mbedtls_ecp_curve_info *curve_info;
-    ECP_VALIDATE_RET( grp  != NULL );
-    ECP_VALIDATE_RET( buf  != NULL );
-    ECP_VALIDATE_RET( olen != NULL );
-
     if( ( curve_info = mbedtls_ecp_curve_info_from_grp_id( grp->id ) ) == NULL )
         return( MBEDTLS_ERR_ECP_BAD_INPUT_DATA );
 
@@ -2654,11 +2599,6 @@ int mbedtls_ecp_mul_restartable( mbedtls_ecp_group *grp, mbedtls_ecp_point *R,
              int (*f_rng)(void *, unsigned char *, size_t), void *p_rng,
              mbedtls_ecp_restart_ctx *rs_ctx )
 {
-    ECP_VALIDATE_RET( grp != NULL );
-    ECP_VALIDATE_RET( R   != NULL );
-    ECP_VALIDATE_RET( m   != NULL );
-    ECP_VALIDATE_RET( P   != NULL );
-
     if( f_rng == NULL )
         return( MBEDTLS_ERR_ECP_BAD_INPUT_DATA );
 
@@ -2672,10 +2612,6 @@ int mbedtls_ecp_mul( mbedtls_ecp_group *grp, mbedtls_ecp_point *R,
              const mbedtls_mpi *m, const mbedtls_ecp_point *P,
              int (*f_rng)(void *, unsigned char *, size_t), void *p_rng )
 {
-    ECP_VALIDATE_RET( grp != NULL );
-    ECP_VALIDATE_RET( R   != NULL );
-    ECP_VALIDATE_RET( m   != NULL );
-    ECP_VALIDATE_RET( P   != NULL );
     return( mbedtls_ecp_mul_restartable( grp, R, m, P, f_rng, p_rng, NULL ) );
 }
 
@@ -2787,13 +2723,6 @@ int mbedtls_ecp_muladd_restartable(
 #if defined(MBEDTLS_ECP_INTERNAL_ALT)
     char is_grp_capable = 0;
 #endif
-    ECP_VALIDATE_RET( grp != NULL );
-    ECP_VALIDATE_RET( R   != NULL );
-    ECP_VALIDATE_RET( m   != NULL );
-    ECP_VALIDATE_RET( P   != NULL );
-    ECP_VALIDATE_RET( n   != NULL );
-    ECP_VALIDATE_RET( Q   != NULL );
-
     if( mbedtls_ecp_get_type( grp ) != MBEDTLS_ECP_TYPE_SHORT_WEIERSTRASS )
         return( MBEDTLS_ERR_ECP_FEATURE_UNAVAILABLE );
 
@@ -2879,12 +2808,6 @@ int mbedtls_ecp_muladd( mbedtls_ecp_group *grp, mbedtls_ecp_point *R,
              const mbedtls_mpi *m, const mbedtls_ecp_point *P,
              const mbedtls_mpi *n, const mbedtls_ecp_point *Q )
 {
-    ECP_VALIDATE_RET( grp != NULL );
-    ECP_VALIDATE_RET( R   != NULL );
-    ECP_VALIDATE_RET( m   != NULL );
-    ECP_VALIDATE_RET( P   != NULL );
-    ECP_VALIDATE_RET( n   != NULL );
-    ECP_VALIDATE_RET( Q   != NULL );
     return( mbedtls_ecp_muladd_restartable( grp, R, m, P, n, Q, NULL ) );
 }
 #endif /* MBEDTLS_ECP_SHORT_WEIERSTRASS_ENABLED */
@@ -3008,9 +2931,6 @@ static int ecp_check_pubkey_mx( const mbedtls_ecp_group *grp, const mbedtls_ecp_
 int mbedtls_ecp_check_pubkey( const mbedtls_ecp_group *grp,
                               const mbedtls_ecp_point *pt )
 {
-    ECP_VALIDATE_RET( grp != NULL );
-    ECP_VALIDATE_RET( pt  != NULL );
-
     /* Must use affine coordinates */
     if( mbedtls_mpi_cmp_int( &pt->Z, 1 ) != 0 )
         return( MBEDTLS_ERR_ECP_INVALID_KEY );
@@ -3032,9 +2952,6 @@ int mbedtls_ecp_check_pubkey( const mbedtls_ecp_group *grp,
 int mbedtls_ecp_check_privkey( const mbedtls_ecp_group *grp,
                                const mbedtls_mpi *d )
 {
-    ECP_VALIDATE_RET( grp != NULL );
-    ECP_VALIDATE_RET( d   != NULL );
-
 #if defined(MBEDTLS_ECP_MONTGOMERY_ENABLED)
     if( mbedtls_ecp_get_type( grp ) == MBEDTLS_ECP_TYPE_MONTGOMERY )
     {
@@ -3124,10 +3041,6 @@ int mbedtls_ecp_gen_privkey( const mbedtls_ecp_group *grp,
                      int (*f_rng)(void *, unsigned char *, size_t),
                      void *p_rng )
 {
-    ECP_VALIDATE_RET( grp   != NULL );
-    ECP_VALIDATE_RET( d     != NULL );
-    ECP_VALIDATE_RET( f_rng != NULL );
-
 #if defined(MBEDTLS_ECP_MONTGOMERY_ENABLED)
     if( mbedtls_ecp_get_type( grp ) == MBEDTLS_ECP_TYPE_MONTGOMERY )
         return( mbedtls_ecp_gen_privkey_mx( grp->nbits, d, f_rng, p_rng ) );
@@ -3151,12 +3064,6 @@ int mbedtls_ecp_gen_keypair_base( mbedtls_ecp_group *grp,
                      void *p_rng )
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
-    ECP_VALIDATE_RET( grp   != NULL );
-    ECP_VALIDATE_RET( d     != NULL );
-    ECP_VALIDATE_RET( G     != NULL );
-    ECP_VALIDATE_RET( Q     != NULL );
-    ECP_VALIDATE_RET( f_rng != NULL );
-
     MBEDTLS_MPI_CHK( mbedtls_ecp_gen_privkey( grp, d, f_rng, p_rng ) );
     MBEDTLS_MPI_CHK( mbedtls_ecp_mul( grp, Q, d, G, f_rng, p_rng ) );
 
@@ -3172,11 +3079,6 @@ int mbedtls_ecp_gen_keypair( mbedtls_ecp_group *grp,
                              int (*f_rng)(void *, unsigned char *, size_t),
                              void *p_rng )
 {
-    ECP_VALIDATE_RET( grp   != NULL );
-    ECP_VALIDATE_RET( d     != NULL );
-    ECP_VALIDATE_RET( Q     != NULL );
-    ECP_VALIDATE_RET( f_rng != NULL );
-
     return( mbedtls_ecp_gen_keypair_base( grp, &grp->G, d, Q, f_rng, p_rng ) );
 }
 
@@ -3187,9 +3089,6 @@ int mbedtls_ecp_gen_key( mbedtls_ecp_group_id grp_id, mbedtls_ecp_keypair *key,
                 int (*f_rng)(void *, unsigned char *, size_t), void *p_rng )
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
-    ECP_VALIDATE_RET( key   != NULL );
-    ECP_VALIDATE_RET( f_rng != NULL );
-
     if( ( ret = mbedtls_ecp_group_load( &key->grp, grp_id ) ) != 0 )
         return( ret );
 
@@ -3205,9 +3104,6 @@ int mbedtls_ecp_read_key( mbedtls_ecp_group_id grp_id, mbedtls_ecp_keypair *key,
                           const unsigned char *buf, size_t buflen )
 {
     int ret = 0;
-
-    ECP_VALIDATE_RET( key  != NULL );
-    ECP_VALIDATE_RET( buf  != NULL );
 
     if( ( ret = mbedtls_ecp_group_load( &key->grp, grp_id ) ) != 0 )
         return( ret );
@@ -3289,9 +3185,6 @@ int mbedtls_ecp_write_key( mbedtls_ecp_keypair *key,
 {
     int ret = MBEDTLS_ERR_ECP_FEATURE_UNAVAILABLE;
 
-    ECP_VALIDATE_RET( key != NULL );
-    ECP_VALIDATE_RET( buf != NULL );
-
 #if defined(MBEDTLS_ECP_MONTGOMERY_ENABLED)
     if( mbedtls_ecp_get_type( &key->grp ) == MBEDTLS_ECP_TYPE_MONTGOMERY )
     {
@@ -3332,9 +3225,6 @@ int mbedtls_ecp_check_pub_priv(
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
     mbedtls_ecp_point Q;
     mbedtls_ecp_group grp;
-    ECP_VALIDATE_RET( pub != NULL );
-    ECP_VALIDATE_RET( prv != NULL );
-
     if( pub->grp.id == MBEDTLS_ECP_DP_NONE ||
         pub->grp.id != prv->grp.id ||
         mbedtls_mpi_cmp_mpi( &pub->Q.X, &prv->Q.X ) ||

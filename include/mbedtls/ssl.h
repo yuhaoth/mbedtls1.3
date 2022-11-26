@@ -260,7 +260,7 @@
  */
 
 #if !defined(MBEDTLS_DEPRECATED_REMOVED)
-/* These are the high an low bytes of ProtocolVersion as defined by:
+/* These are the high and low bytes of ProtocolVersion as defined by:
  * - RFC 5246: ProtocolVersion version = { 3, 3 };     // TLS v1.2
  * - RFC 8446: see section 4.2.1
  */
@@ -800,7 +800,7 @@ typedef int mbedtls_ssl_recv_timeout_t( void *ctx,
  *                 for the associated \c mbedtls_ssl_get_timer_t callback to
  *                 return correct information.
  *
- * \note           If using a event-driven style of programming, an event must
+ * \note           If using an event-driven style of programming, an event must
  *                 be generated when the final delay is passed. The event must
  *                 cause a call to \c mbedtls_ssl_handshake() with the proper
  *                 SSL context to be scheduled. Care must be taken to ensure
@@ -1237,7 +1237,6 @@ struct mbedtls_ssl_session
     mbedtls_time_t MBEDTLS_PRIVATE(start);       /*!< starting time      */
 #endif /* MBEDTLS_HAVE_TIME */
     int MBEDTLS_PRIVATE(ciphersuite);            /*!< chosen ciphersuite */
-    int MBEDTLS_PRIVATE(compression);            /*!< chosen compression */
     size_t MBEDTLS_PRIVATE(id_len);              /*!< session id length  */
     unsigned char MBEDTLS_PRIVATE(id)[32];       /*!< session identifier */
     unsigned char MBEDTLS_PRIVATE(master)[48];   /*!< the master secret  */

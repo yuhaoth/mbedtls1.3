@@ -4721,15 +4721,8 @@ static int ssl_preset_suiteb_ciphersuites[] = {
  *   rules SHOULD be upheld.
  *   - No duplicate entries.
  *   - But if there is a good reason, do not change the order of the algorithms.
- *   - ssl_tls12_present* is for TLS 1.2 use only.
+ *   - ssl_tls12_preset* is for TLS 1.2 use only.
  *   - ssl_preset_* is for TLS 1.3 only or hybrid TLS 1.3/1.2 handshakes.
- *
- *   When GnuTLS/Openssl server is configured in TLS 1.2 mode with a certificate
- *   declaring an RSA public key and Mbed TLS is configured in hybrid mode, if
- *   `rsa_pss_rsae_*` algorithms are before `rsa_pkcs1_*` ones in this list then
- *   the GnuTLS/Openssl server chooses an `rsa_pss_rsae_*` signature algorithm
- *   for its signature in the key exchange message. As Mbed TLS 1.2 does not
- *   support them, the handshake fails.
  */
 static uint16_t ssl_preset_default_sig_algs[] = {
 
@@ -4751,18 +4744,6 @@ static uint16_t ssl_preset_default_sig_algs[] = {
 #endif /* MBEDTLS_ECDSA_C && MBEDTLS_SHA384_C &&
           MBEDTLS_ECP_DP_SECP521R1_ENABLED */
 
-#if defined(MBEDTLS_RSA_C) &&  defined(MBEDTLS_SHA512_C)
-    MBEDTLS_TLS1_3_SIG_RSA_PKCS1_SHA512,
-#endif /* MBEDTLS_RSA_C && MBEDTLS_SHA512_C */
-
-#if defined(MBEDTLS_RSA_C) &&  defined(MBEDTLS_SHA384_C)
-    MBEDTLS_TLS1_3_SIG_RSA_PKCS1_SHA384,
-#endif /* MBEDTLS_RSA_C && MBEDTLS_SHA384_C */
-
-#if defined(MBEDTLS_RSA_C) &&  defined(MBEDTLS_SHA256_C)
-    MBEDTLS_TLS1_3_SIG_RSA_PKCS1_SHA256,
-#endif /* MBEDTLS_RSA_C && MBEDTLS_SHA256_C */
-
 #if defined(MBEDTLS_X509_RSASSA_PSS_SUPPORT) && defined(MBEDTLS_SHA512_C)
     MBEDTLS_TLS1_3_SIG_RSA_PSS_RSAE_SHA512,
 #endif /* MBEDTLS_X509_RSASSA_PSS_SUPPORT && MBEDTLS_SHA512_C */
@@ -4775,6 +4756,18 @@ static uint16_t ssl_preset_default_sig_algs[] = {
     MBEDTLS_TLS1_3_SIG_RSA_PSS_RSAE_SHA256,
 #endif /* MBEDTLS_X509_RSASSA_PSS_SUPPORT && MBEDTLS_SHA256_C */
 
+#if defined(MBEDTLS_RSA_C) &&  defined(MBEDTLS_SHA512_C)
+    MBEDTLS_TLS1_3_SIG_RSA_PKCS1_SHA512,
+#endif /* MBEDTLS_RSA_C && MBEDTLS_SHA512_C */
+
+#if defined(MBEDTLS_RSA_C) &&  defined(MBEDTLS_SHA384_C)
+    MBEDTLS_TLS1_3_SIG_RSA_PKCS1_SHA384,
+#endif /* MBEDTLS_RSA_C && MBEDTLS_SHA384_C */
+
+#if defined(MBEDTLS_RSA_C) &&  defined(MBEDTLS_SHA256_C)
+    MBEDTLS_TLS1_3_SIG_RSA_PKCS1_SHA256,
+#endif /* MBEDTLS_RSA_C && MBEDTLS_SHA256_C */
+
     MBEDTLS_TLS_SIG_NONE
 };
 
@@ -4785,6 +4778,9 @@ static uint16_t ssl_tls12_preset_default_sig_algs[] = {
 #if defined(MBEDTLS_ECDSA_C)
     MBEDTLS_SSL_TLS12_SIG_AND_HASH_ALG( MBEDTLS_SSL_SIG_ECDSA, MBEDTLS_SSL_HASH_SHA512 ),
 #endif
+#if defined(MBEDTLS_X509_RSASSA_PSS_SUPPORT)
+    MBEDTLS_TLS1_3_SIG_RSA_PSS_RSAE_SHA512,
+#endif /* MBEDTLS_X509_RSASSA_PSS_SUPPORT */
 #if defined(MBEDTLS_RSA_C)
     MBEDTLS_SSL_TLS12_SIG_AND_HASH_ALG( MBEDTLS_SSL_SIG_RSA, MBEDTLS_SSL_HASH_SHA512 ),
 #endif
@@ -4793,6 +4789,9 @@ static uint16_t ssl_tls12_preset_default_sig_algs[] = {
 #if defined(MBEDTLS_ECDSA_C)
     MBEDTLS_SSL_TLS12_SIG_AND_HASH_ALG( MBEDTLS_SSL_SIG_ECDSA, MBEDTLS_SSL_HASH_SHA384 ),
 #endif
+#if defined(MBEDTLS_X509_RSASSA_PSS_SUPPORT)
+    MBEDTLS_TLS1_3_SIG_RSA_PSS_RSAE_SHA384,
+#endif /* MBEDTLS_X509_RSASSA_PSS_SUPPORT */
 #if defined(MBEDTLS_RSA_C)
     MBEDTLS_SSL_TLS12_SIG_AND_HASH_ALG( MBEDTLS_SSL_SIG_RSA, MBEDTLS_SSL_HASH_SHA384 ),
 #endif
@@ -4801,6 +4800,9 @@ static uint16_t ssl_tls12_preset_default_sig_algs[] = {
 #if defined(MBEDTLS_ECDSA_C)
     MBEDTLS_SSL_TLS12_SIG_AND_HASH_ALG( MBEDTLS_SSL_SIG_ECDSA, MBEDTLS_SSL_HASH_SHA256 ),
 #endif
+#if defined(MBEDTLS_X509_RSASSA_PSS_SUPPORT)
+    MBEDTLS_TLS1_3_SIG_RSA_PSS_RSAE_SHA256,
+#endif /* MBEDTLS_X509_RSASSA_PSS_SUPPORT */
 #if defined(MBEDTLS_RSA_C)
     MBEDTLS_SSL_TLS12_SIG_AND_HASH_ALG( MBEDTLS_SSL_SIG_RSA, MBEDTLS_SSL_HASH_SHA256 ),
 #endif
@@ -7716,7 +7718,6 @@ static mbedtls_tls_prf_types tls_prf_get_type( mbedtls_ssl_tls_prf_cb *tls_prf )
  * - [in] ciphersuite
  * - [in] master
  * - [in] encrypt_then_mac
- * - [in] compression
  * - [in] tls_prf: pointer to PRF to use for key derivation
  * - [in] randbytes: buffer holding ServerHello.random + ClientHello.random
  * - [in] tls_version: TLS version
@@ -7837,10 +7838,10 @@ static int ssl_tls12_populate_transform( mbedtls_ssl_transform *transform,
 #endif /* MBEDTLS_USE_PSA_CRYPTO */
 
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
-    mac_alg = mbedtls_psa_translate_md( ciphersuite_info->mac );
+    mac_alg = mbedtls_hash_info_psa_from_md( ciphersuite_info->mac );
     if( mac_alg == 0 )
     {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "mbedtls_psa_translate_md for %u not found",
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "mbedtls_hash_info_psa_from_md for %u not found",
                             (unsigned) ciphersuite_info->mac ) );
         return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
     }
@@ -8220,7 +8221,7 @@ int mbedtls_ssl_get_key_exchange_md_tls1_2( mbedtls_ssl_context *ssl,
 {
     psa_status_t status;
     psa_hash_operation_t hash_operation = PSA_HASH_OPERATION_INIT;
-    psa_algorithm_t hash_alg = mbedtls_psa_translate_md( md_alg );
+    psa_algorithm_t hash_alg = mbedtls_hash_info_psa_from_md( md_alg );
 
     MBEDTLS_SSL_DEBUG_MSG( 3, ( "Perform PSA-based computation of digest of ServerKeyExchange" ) );
 
@@ -8361,7 +8362,7 @@ unsigned int mbedtls_ssl_tls12_get_preferred_hash_for_sig_alg(
             if( ssl->handshake->key_cert && ssl->handshake->key_cert->key )
             {
                 psa_algorithm_t psa_hash_alg =
-                                mbedtls_psa_translate_md( hash_alg_received );
+                                mbedtls_hash_info_psa_from_md( hash_alg_received );
 
                 if( sig_alg_received == MBEDTLS_SSL_SIG_ECDSA &&
                     ! mbedtls_pk_can_do_ext( ssl->handshake->key_cert->key,
@@ -8392,7 +8393,6 @@ unsigned int mbedtls_ssl_tls12_get_preferred_hash_for_sig_alg(
  * struct {
  *    uint64 start_time;
  *    uint8 ciphersuite[2];           // defined by the standard
- *    uint8 compression;              // 0 or 1
  *    uint8 session_id_len;           // at most 32
  *    opaque session_id[32];
  *    opaque master[48];              // fixed length in the standard
@@ -8440,7 +8440,6 @@ static size_t ssl_tls12_session_save( const mbedtls_ssl_session *session,
      * Basic mandatory fields
      */
     used += 2   /* ciphersuite */
-          + 1   /* compression */
           + 1   /* id_len */
           + sizeof( session->id )
           + sizeof( session->master )
@@ -8450,8 +8449,6 @@ static size_t ssl_tls12_session_save( const mbedtls_ssl_session *session,
     {
         MBEDTLS_PUT_UINT16_BE( session->ciphersuite, p, 0 );
         p += 2;
-
-        *p++ = MBEDTLS_BYTE_0( session->compression );
 
         *p++ = MBEDTLS_BYTE_0( session->id_len );
         memcpy( p, session->id, 32 );
@@ -8596,13 +8593,11 @@ static int ssl_tls12_session_load( mbedtls_ssl_session *session,
     /*
      * Basic mandatory fields
      */
-    if( 2 + 1 + 1 + 32 + 48 + 4 > (size_t)( end - p ) )
+    if( 2 + 1 + 32 + 48 + 4 > (size_t)( end - p ) )
         return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
 
     session->ciphersuite = ( p[0] << 8 ) | p[1];
     p += 2;
-
-    session->compression = *p++;
 
     session->id_len = *p++;
     memcpy( session->id, p, 32 );
