@@ -2132,7 +2132,9 @@ static int ssl_tls13_parse_encrypted_extensions( mbedtls_ssl_context *ssl,
         {
             case MBEDTLS_TLS_EXT_SERVERNAME:
                 MBEDTLS_SSL_DEBUG_MSG( 3, ( "found server_name extension" ) );
+
                 /* The server_name extension should be an empty extension */
+
                 break;
 
 #if defined(MBEDTLS_SSL_MAX_FRAGMENT_LENGTH)
@@ -2165,15 +2167,6 @@ static int ssl_tls13_parse_encrypted_extensions( mbedtls_ssl_context *ssl,
 
                 break;
 #endif /* MBEDTLS_SSL_ALPN */
-
-#if defined(MBEDTLS_SSL_SERVER_NAME_INDICATION)
-            case MBEDTLS_TLS_EXT_SERVERNAME:
-                MBEDTLS_SSL_DEBUG_MSG( 3, ( "found server_name extension" ) );
-
-                /* The server_name extension should be an empty extension */
-
-                break;
-#endif /* MBEDTLS_SSL_SERVER_NAME_INDICATION */
 
 #if defined(MBEDTLS_ZERO_RTT)
             case MBEDTLS_TLS_EXT_EARLY_DATA:
@@ -2392,7 +2385,7 @@ static int ssl_tls13_write_early_data_prepare( mbedtls_ssl_context *ssl )
      *  'pre_shared_key' extension."
      */
 
-    if( mbedtls_ssl_get_psk_to_offer( ssl, NULL, &psk, &psk_len,
+    if( ssl_tls13_get_psk_to_offer( ssl, NULL, &psk, &psk_len,
                                       &psk_identity, &psk_identity_len ) != 0 )
     {
         /* This should never happen: We can only have gone past
