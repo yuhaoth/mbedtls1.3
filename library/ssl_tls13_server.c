@@ -2354,6 +2354,25 @@ static int ssl_tls13_parse_client_hello( mbedtls_ssl_context *ssl,
 
     mbedtls_ssl_optimize_checksum( ssl, ssl->handshake->ciphersuite_info );
 
+    if( ssl->conf->rr_config == MBEDTLS_SSL_FORCE_RR_CHECK_ON )
+    {
+#if defined(MBEDTLS_SSL_COOKIE_C)
+        /* If we failed to see a cookie extension, and we required it through the
+         * configuration settings ( rr_config ), then we need to send a HRR msg.
+         * Conceptually, this is similiar to having received a cookie that failed
+         * the verification check.
+         */
+        if( !( ssl->handshake->extensions_present & MBEDTLS_SSL_EXT_COOKIE ) )
+        {
+            MBEDTLS_SSL_DEBUG_MSG( 2,
+                ( "Cookie extension missing. Need to send a HRR." ) );
+            hrr_required = 1;
+        }
+#endif /* MBEDTLS_SSL_COOKIE_C */
+        if( ssl->handshake->hello_retry_request_count == 0 )
+            hrr_required = 1;
+    }
+
     return( hrr_required ? SSL_CLIENT_HELLO_HRR_REQUIRED : SSL_CLIENT_HELLO_OK );
 }
 
