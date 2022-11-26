@@ -422,6 +422,73 @@ case " $CONFIGS_ENABLED " in
     *) PSK_ONLY="NO";;
 esac
 
+HAS_ALG_SHA_1="NO"
+HAS_ALG_SHA_224="NO"
+HAS_ALG_SHA_256="NO"
+HAS_ALG_SHA_384="NO"
+HAS_ALG_SHA_512="NO"
+
+check_for_hash_alg()
+{
+    CURR_ALG="INVALID";
+    USE_PSA="NO"
+    case $CONFIGS_ENABLED in
+        *" MBEDTLS_USE_PSA_CRYPTO"[\ =]*)
+            USE_PSA="YES";
+        ;;
+        *) :;;
+    esac
+    if [ $USE_PSA = "YES" ]; then
+        CURR_ALG=PSA_WANT_ALG_${1}
+    else
+        CURR_ALG=MBEDTLS_${1}_C
+        # Remove the second underscore to match MBEDTLS_* naming convention
+        CURR_ALG=$(echo "$CURR_ALG" | sed 's/_//2')
+    fi
+
+    case $CONFIGS_ENABLED in
+        *" $CURR_ALG"[\ =]*)
+            return 0
+        ;;
+        *) :;;
+    esac
+    return 1
+}
+
+populate_enabled_hash_algs()
+{
+    for hash_alg in SHA_1 SHA_224 SHA_256 SHA_384 SHA_512; do
+        if check_for_hash_alg "$hash_alg"; then
+            hash_alg_variable=HAS_ALG_${hash_alg}
+            eval ${hash_alg_variable}=YES
+        fi
+    done
+}
+
+# skip next test if the given hash alg is not supported
+requires_hash_alg() {
+    HASH_DEFINE="Invalid"
+    HAS_HASH_ALG="NO"
+    case $1 in
+        SHA_1):;;
+        SHA_224):;;
+        SHA_256):;;
+        SHA_384):;;
+        SHA_512):;;
+      *)
+            echo "Unsupported hash alg - $1"
+            exit 1
+        ;;
+    esac
+
+    HASH_DEFINE=HAS_ALG_${1}
+    eval "HAS_HASH_ALG=\${${HASH_DEFINE}}"
+    if [ "$HAS_HASH_ALG" = "NO" ]
+    then
+        SKIP_NEXT="YES"
+    fi
+}
+
 # skip next test if OpenSSL doesn't support FALLBACK_SCSV
 requires_openssl_with_fallback_scsv() {
     if [ -z "${OPENSSL_HAS_FBSCSV:-}" ]; then
@@ -1481,6 +1548,8 @@ cleanup() {
 
 get_options "$@"
 
+populate_enabled_hash_algs
+
 # Optimize filters: if $FILTER and $EXCLUDE can be expressed as shell
 # patterns rather than regular expressions, use a case statement instead
 # of calling grep. To keep the optimizer simple, it is incomplete and only
@@ -2452,7 +2521,7 @@ run_test    "TLS 1.3, TLS1-3-AES-128-CCM-SHA256, ECDHE-ECDSA, mismatched sig_alg
 # - the expected parameters are selected
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
 requires_ciphersuite_enabled TLS-ECDHE-RSA-WITH-CHACHA20-POLY1305-SHA256
-requires_config_enabled MBEDTLS_SHA512_C # "signature_algorithm ext: 6"
+requires_hash_alg SHA_512 # "signature_algorithm ext: 6"
 requires_config_enabled MBEDTLS_ECP_DP_CURVE25519_ENABLED
 run_test    "Default" \
             "$P_SRV debug_level=3" \
@@ -2500,7 +2569,7 @@ run_test    "key size: TLS-ECDHE-ECDSA-WITH-AES-128-CCM-8" \
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
 requires_config_enabled MBEDTLS_X509_CRT_PARSE_C
 requires_config_enabled MBEDTLS_ECDSA_C
-requires_config_enabled MBEDTLS_SHA256_C
+requires_hash_alg SHA_256
 run_test    "TLS: password protected client key" \
             "$P_SRV auth_mode=required" \
             "$P_CLI crt_file=data_files/server5.crt key_file=data_files/server5.key.enc key_pwd=PolarSSLTest" \
@@ -2509,7 +2578,7 @@ run_test    "TLS: password protected client key" \
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
 requires_config_enabled MBEDTLS_X509_CRT_PARSE_C
 requires_config_enabled MBEDTLS_ECDSA_C
-requires_config_enabled MBEDTLS_SHA256_C
+requires_hash_alg SHA_256
 run_test    "TLS: password protected server key" \
             "$P_SRV crt_file=data_files/server5.crt key_file=data_files/server5.key.enc key_pwd=PolarSSLTest" \
             "$P_CLI" \
@@ -2519,7 +2588,7 @@ requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
 requires_config_enabled MBEDTLS_X509_CRT_PARSE_C
 requires_config_enabled MBEDTLS_ECDSA_C
 requires_config_enabled MBEDTLS_RSA_C
-requires_config_enabled MBEDTLS_SHA256_C
+requires_hash_alg SHA_256
 run_test    "TLS: password protected server key, two certificates" \
             "$P_SRV \
               key_file=data_files/server5.key.enc key_pwd=PolarSSLTest crt_file=data_files/server5.crt \
@@ -2541,7 +2610,7 @@ requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
 requires_config_enabled MBEDTLS_X509_TRUSTED_CERTIFICATE_CALLBACK
 requires_config_enabled MBEDTLS_X509_CRT_PARSE_C
 requires_config_enabled MBEDTLS_ECDSA_C
-requires_config_enabled MBEDTLS_SHA256_C
+requires_hash_alg SHA_256
 run_test    "CA callback on server" \
             "$P_SRV auth_mode=required" \
             "$P_CLI ca_callback=1 debug_level=3 crt_file=data_files/server5.crt \
@@ -2557,7 +2626,7 @@ requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
 requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
 requires_config_enabled MBEDTLS_X509_CRT_PARSE_C
 requires_config_enabled MBEDTLS_ECDSA_C
-requires_config_enabled MBEDTLS_SHA256_C
+requires_hash_alg SHA_256
 run_test    "Opaque key for client authentication: ECDHE-ECDSA" \
             "$P_SRV auth_mode=required crt_file=data_files/server5.crt \
              key_file=data_files/server5.key" \
@@ -2577,7 +2646,7 @@ requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
 requires_config_enabled MBEDTLS_X509_CRT_PARSE_C
 requires_config_enabled MBEDTLS_ECDSA_C
 requires_config_enabled MBEDTLS_RSA_C
-requires_config_enabled MBEDTLS_SHA256_C
+requires_hash_alg SHA_256
 run_test    "Opaque key for client authentication: ECDHE-RSA" \
             "$P_SRV auth_mode=required crt_file=data_files/server2-sha256.crt \
              key_file=data_files/server2.key" \
@@ -2595,7 +2664,7 @@ requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
 requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
 requires_config_enabled MBEDTLS_X509_CRT_PARSE_C
 requires_config_enabled MBEDTLS_RSA_C
-requires_config_enabled MBEDTLS_SHA256_C
+requires_hash_alg SHA_256
 run_test    "Opaque key for client authentication: DHE-RSA" \
             "$P_SRV auth_mode=required crt_file=data_files/server2-sha256.crt \
              key_file=data_files/server2.key" \
@@ -2615,7 +2684,7 @@ requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
 requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
 requires_config_enabled MBEDTLS_X509_CRT_PARSE_C
 requires_config_enabled MBEDTLS_ECDSA_C
-requires_config_enabled MBEDTLS_SHA256_C
+requires_hash_alg SHA_256
 run_test    "Opaque key for server authentication: ECDHE-ECDSA" \
             "$P_SRV key_opaque=1 crt_file=data_files/server5.crt \
              key_file=data_files/server5.key  key_opaque_algs=ecdsa-sign,none" \
@@ -2632,7 +2701,7 @@ requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
 requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
 requires_config_enabled MBEDTLS_X509_CRT_PARSE_C
 requires_config_enabled MBEDTLS_ECDSA_C
-requires_config_enabled MBEDTLS_SHA256_C
+requires_hash_alg SHA_256
 run_test    "Opaque key for server authentication: ECDH-" \
             "$P_SRV force_version=tls12 auth_mode=required key_opaque=1\
              crt_file=data_files/server5.ku-ka.crt\
@@ -2650,8 +2719,44 @@ requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
 requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
 requires_config_enabled MBEDTLS_X509_CRT_PARSE_C
 requires_config_enabled MBEDTLS_ECDSA_C
-requires_config_enabled MBEDTLS_SHA256_C
-run_test    "Opaque key for server authentication: invalid alg: decrypt with ECC key" \
+requires_config_disabled MBEDTLS_SSL_ASYNC_PRIVATE
+requires_hash_alg SHA_256
+run_test    "Opaque key for server authentication: invalid key: decrypt with ECC key, no async" \
+            "$P_SRV key_opaque=1 crt_file=data_files/server5.crt \
+             key_file=data_files/server5.key key_opaque_algs=rsa-decrypt,none \
+             debug_level=1" \
+            "$P_CLI" \
+            1 \
+            -s "key types: Opaque, none" \
+            -s "error" \
+            -c "error" \
+            -c "Public key type mismatch"
+
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
+requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
+requires_config_enabled MBEDTLS_X509_CRT_PARSE_C
+requires_config_enabled MBEDTLS_ECDSA_C
+requires_config_enabled MBEDTLS_RSA_C
+requires_config_disabled MBEDTLS_SSL_ASYNC_PRIVATE
+requires_hash_alg SHA_256
+run_test    "Opaque key for server authentication: invalid key: ecdh with RSA key, no async" \
+            "$P_SRV key_opaque=1 crt_file=data_files/server2-sha256.crt \
+             key_file=data_files/server2.key key_opaque_algs=ecdh,none \
+             debug_level=1" \
+            "$P_CLI" \
+            1 \
+            -s "key types: Opaque, none" \
+            -s "error" \
+            -c "error" \
+            -c "Public key type mismatch"
+
+requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
+requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
+requires_config_enabled MBEDTLS_X509_CRT_PARSE_C
+requires_config_enabled MBEDTLS_ECDSA_C
+requires_config_enabled MBEDTLS_SSL_ASYNC_PRIVATE
+requires_hash_alg SHA_256
+run_test    "Opaque key for server authentication: invalid alg: decrypt with ECC key, async" \
             "$P_SRV key_opaque=1 crt_file=data_files/server5.crt \
              key_file=data_files/server5.key key_opaque_algs=rsa-decrypt,none \
              debug_level=1" \
@@ -2667,8 +2772,9 @@ requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
 requires_config_enabled MBEDTLS_X509_CRT_PARSE_C
 requires_config_enabled MBEDTLS_ECDSA_C
 requires_config_enabled MBEDTLS_RSA_C
-requires_config_enabled MBEDTLS_SHA256_C
-run_test    "Opaque key for server authentication: invalid alg: ecdh with RSA key" \
+requires_config_enabled MBEDTLS_SSL_ASYNC_PRIVATE
+requires_hash_alg SHA_256
+run_test    "Opaque key for server authentication: invalid alg: ecdh with RSA key, async" \
             "$P_SRV key_opaque=1 crt_file=data_files/server2-sha256.crt \
              key_file=data_files/server2.key key_opaque_algs=ecdh,none \
              debug_level=1" \
@@ -2683,7 +2789,7 @@ requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
 requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
 requires_config_enabled MBEDTLS_X509_CRT_PARSE_C
 requires_config_enabled MBEDTLS_ECDSA_C
-requires_config_enabled MBEDTLS_SHA256_C
+requires_hash_alg SHA_256
 requires_config_enabled MBEDTLS_CCM_C
 run_test    "Opaque key for server authentication: invalid alg: ECDHE-ECDSA with ecdh" \
             "$P_SRV key_opaque=1 crt_file=data_files/server5.crt \
@@ -2700,7 +2806,7 @@ requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
 requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
 requires_config_enabled MBEDTLS_X509_CRT_PARSE_C
 requires_config_enabled MBEDTLS_ECDSA_C
-requires_config_enabled MBEDTLS_SHA256_C
+requires_hash_alg SHA_256
 requires_config_disabled MBEDTLS_X509_REMOVE_INFO
 run_test    "Opaque keys for server authentication: EC keys with different algs, force ECDHE-ECDSA" \
             "$P_SRV key_opaque=1 crt_file=data_files/server7.crt \
@@ -2721,7 +2827,7 @@ requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
 requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
 requires_config_enabled MBEDTLS_X509_CRT_PARSE_C
 requires_config_enabled MBEDTLS_ECDSA_C
-requires_config_enabled MBEDTLS_SHA384_C
+requires_hash_alg SHA_384
 requires_config_disabled MBEDTLS_X509_REMOVE_INFO
 run_test    "Opaque keys for server authentication: EC keys with different algs, force ECDH-ECDSA" \
             "$P_SRV key_opaque=1 crt_file=data_files/server7.crt \
@@ -2742,7 +2848,7 @@ requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
 requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
 requires_config_enabled MBEDTLS_X509_CRT_PARSE_C
 requires_config_enabled MBEDTLS_ECDSA_C
-requires_config_enabled MBEDTLS_SHA384_C
+requires_hash_alg SHA_384
 requires_config_enabled MBEDTLS_CCM_C
 requires_config_disabled MBEDTLS_X509_REMOVE_INFO
 run_test    "Opaque keys for server authentication: EC + RSA, force ECDHE-ECDSA" \
@@ -2766,7 +2872,7 @@ requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
 requires_config_enabled MBEDTLS_X509_CRT_PARSE_C
 requires_config_enabled MBEDTLS_ECDSA_C
 requires_config_enabled MBEDTLS_RSA_C
-requires_config_enabled MBEDTLS_SHA256_C
+requires_hash_alg SHA_256
 run_test    "Opaque key for server authentication: ECDHE-RSA" \
             "$P_SRV key_opaque=1 crt_file=data_files/server2-sha256.crt \
              key_file=data_files/server2.key key_opaque_algs=rsa-sign-pkcs1,none" \
@@ -2784,7 +2890,7 @@ requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
 requires_config_enabled MBEDTLS_X509_CRT_PARSE_C
 requires_config_enabled MBEDTLS_ECDSA_C
 requires_config_enabled MBEDTLS_RSA_C
-requires_config_enabled MBEDTLS_SHA256_C
+requires_hash_alg SHA_256
 run_test    "Opaque key for server authentication: DHE-RSA" \
             "$P_SRV key_opaque=1 crt_file=data_files/server2-sha256.crt \
              key_file=data_files/server2.key key_opaque_algs=rsa-sign-pkcs1,none" \
@@ -2801,7 +2907,7 @@ requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
 requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
 requires_config_enabled MBEDTLS_X509_CRT_PARSE_C
 requires_config_enabled MBEDTLS_RSA_C
-requires_config_enabled MBEDTLS_SHA256_C
+requires_hash_alg SHA_256
 run_test    "Opaque key for server authentication: RSA-PSK" \
             "$P_SRV debug_level=1 key_opaque=1 key_opaque_algs=rsa-decrypt,none \
              psk=abc123 psk_identity=foo" \
@@ -2819,7 +2925,7 @@ requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
 requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
 requires_config_enabled MBEDTLS_X509_CRT_PARSE_C
 requires_config_enabled MBEDTLS_RSA_C
-requires_config_enabled MBEDTLS_SHA256_C
+requires_hash_alg SHA_256
 run_test    "Opaque key for server authentication: RSA-" \
             "$P_SRV debug_level=3 key_opaque=1 key_opaque_algs=rsa-decrypt,none " \
             "$P_CLI force_ciphersuite=TLS-RSA-WITH-AES-256-CBC-SHA256" \
@@ -2836,7 +2942,7 @@ requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
 requires_config_enabled MBEDTLS_X509_CRT_PARSE_C
 requires_config_enabled MBEDTLS_ECDSA_C
 requires_config_enabled MBEDTLS_RSA_C
-requires_config_enabled MBEDTLS_SHA256_C
+requires_hash_alg SHA_256
 run_test    "Opaque key for server authentication: DHE-RSA, PSS instead of PKCS1" \
             "$P_SRV auth_mode=required key_opaque=1 crt_file=data_files/server2-sha256.crt \
              key_file=data_files/server2.key key_opaque_algs=rsa-sign-pss,none debug_level=1" \
@@ -2853,7 +2959,7 @@ requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
 requires_config_enabled MBEDTLS_X509_CRT_PARSE_C
 requires_config_enabled MBEDTLS_ECDSA_C
 requires_config_enabled MBEDTLS_RSA_C
-requires_config_enabled MBEDTLS_SHA256_C
+requires_hash_alg SHA_256
 requires_config_disabled MBEDTLS_X509_REMOVE_INFO
 run_test    "Opaque keys for server authentication: RSA keys with different algs" \
             "$P_SRV auth_mode=required key_opaque=1 crt_file=data_files/server2-sha256.crt \
@@ -2875,7 +2981,7 @@ requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
 requires_config_enabled MBEDTLS_X509_CRT_PARSE_C
 requires_config_enabled MBEDTLS_ECDSA_C
 requires_config_enabled MBEDTLS_RSA_C
-requires_config_enabled MBEDTLS_SHA384_C
+requires_hash_alg SHA_384
 requires_config_enabled MBEDTLS_GCM_C
 requires_config_disabled MBEDTLS_X509_REMOVE_INFO
 run_test    "Opaque keys for server authentication: EC + RSA, force DHE-RSA" \
@@ -2898,7 +3004,7 @@ requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
 requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
 requires_config_enabled MBEDTLS_X509_CRT_PARSE_C
 requires_config_enabled MBEDTLS_ECDSA_C
-requires_config_enabled MBEDTLS_SHA256_C
+requires_hash_alg SHA_256
 run_test    "Opaque key for client/server authentication: ECDHE-ECDSA" \
             "$P_SRV auth_mode=required key_opaque=1 crt_file=data_files/server5.crt \
              key_file=data_files/server5.key key_opaque_algs=ecdsa-sign,none" \
@@ -2920,7 +3026,7 @@ requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
 requires_config_enabled MBEDTLS_X509_CRT_PARSE_C
 requires_config_enabled MBEDTLS_ECDSA_C
 requires_config_enabled MBEDTLS_RSA_C
-requires_config_enabled MBEDTLS_SHA256_C
+requires_hash_alg SHA_256
 run_test    "Opaque key for client/server authentication: ECDHE-RSA" \
             "$P_SRV auth_mode=required key_opaque=1 crt_file=data_files/server2-sha256.crt \
              key_file=data_files/server2.key  key_opaque_algs=rsa-sign-pkcs1,none" \
@@ -2941,7 +3047,7 @@ requires_config_enabled MBEDTLS_USE_PSA_CRYPTO
 requires_config_enabled MBEDTLS_X509_CRT_PARSE_C
 requires_config_enabled MBEDTLS_ECDSA_C
 requires_config_enabled MBEDTLS_RSA_C
-requires_config_enabled MBEDTLS_SHA256_C
+requires_hash_alg SHA_256
 run_test    "Opaque key for client/server authentication: DHE-RSA" \
             "$P_SRV auth_mode=required key_opaque=1 crt_file=data_files/server2-sha256.crt \
              key_file=data_files/server2.key  key_opaque_algs=rsa-sign-pkcs1,none" \
@@ -9402,7 +9508,7 @@ run_test    "SSL async private: renegotiation: server-initiated, decrypt" \
 
 requires_config_enabled MBEDTLS_AES_C
 requires_config_enabled MBEDTLS_CIPHER_MODE_CBC
-requires_config_enabled MBEDTLS_SHA256_C
+requires_hash_alg SHA_256
 requires_config_enabled MBEDTLS_KEY_EXCHANGE_RSA_ENABLED
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
 run_test    "Force a non ECC ciphersuite in the client side" \
@@ -9416,7 +9522,7 @@ run_test    "Force a non ECC ciphersuite in the client side" \
 
 requires_config_enabled MBEDTLS_AES_C
 requires_config_enabled MBEDTLS_CIPHER_MODE_CBC
-requires_config_enabled MBEDTLS_SHA256_C
+requires_hash_alg SHA_256
 requires_config_enabled MBEDTLS_KEY_EXCHANGE_RSA_ENABLED
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
 run_test    "Force a non ECC ciphersuite in the server side" \
@@ -9428,7 +9534,7 @@ run_test    "Force a non ECC ciphersuite in the server side" \
 
 requires_config_enabled MBEDTLS_AES_C
 requires_config_enabled MBEDTLS_CIPHER_MODE_CBC
-requires_config_enabled MBEDTLS_SHA256_C
+requires_hash_alg SHA_256
 requires_config_enabled MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
 run_test    "Force an ECC ciphersuite in the client side" \
@@ -9442,7 +9548,7 @@ run_test    "Force an ECC ciphersuite in the client side" \
 
 requires_config_enabled MBEDTLS_AES_C
 requires_config_enabled MBEDTLS_CIPHER_MODE_CBC
-requires_config_enabled MBEDTLS_SHA256_C
+requires_hash_alg SHA_256
 requires_config_enabled MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_2
 run_test    "Force an ECC ciphersuite in the server side" \
@@ -9980,7 +10086,7 @@ run_test    "DTLS fragmenting: both (MTU=1024)" \
 requires_config_enabled MBEDTLS_SSL_PROTO_DTLS
 requires_config_enabled MBEDTLS_RSA_C
 requires_config_enabled MBEDTLS_ECDSA_C
-requires_config_enabled MBEDTLS_SHA256_C
+requires_hash_alg SHA_256
 requires_config_enabled MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED
 requires_config_enabled MBEDTLS_AES_C
 requires_config_enabled MBEDTLS_GCM_C
@@ -10217,7 +10323,7 @@ not_with_valgrind # spurious autoreduction due to timeout
 requires_config_enabled MBEDTLS_SSL_PROTO_DTLS
 requires_config_enabled MBEDTLS_RSA_C
 requires_config_enabled MBEDTLS_ECDSA_C
-requires_config_enabled MBEDTLS_SHA256_C
+requires_hash_alg SHA_256
 requires_config_enabled MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED
 requires_config_enabled MBEDTLS_SSL_RENEGOTIATION
 requires_config_enabled MBEDTLS_CHACHAPOLY_C
@@ -10250,7 +10356,7 @@ not_with_valgrind # spurious autoreduction due to timeout
 requires_config_enabled MBEDTLS_SSL_PROTO_DTLS
 requires_config_enabled MBEDTLS_RSA_C
 requires_config_enabled MBEDTLS_ECDSA_C
-requires_config_enabled MBEDTLS_SHA256_C
+requires_hash_alg SHA_256
 requires_config_enabled MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED
 requires_config_enabled MBEDTLS_SSL_RENEGOTIATION
 requires_config_enabled MBEDTLS_AES_C
@@ -10284,7 +10390,7 @@ not_with_valgrind # spurious autoreduction due to timeout
 requires_config_enabled MBEDTLS_SSL_PROTO_DTLS
 requires_config_enabled MBEDTLS_RSA_C
 requires_config_enabled MBEDTLS_ECDSA_C
-requires_config_enabled MBEDTLS_SHA256_C
+requires_hash_alg SHA_256
 requires_config_enabled MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED
 requires_config_enabled MBEDTLS_SSL_RENEGOTIATION
 requires_config_enabled MBEDTLS_AES_C
@@ -10318,7 +10424,7 @@ not_with_valgrind # spurious autoreduction due to timeout
 requires_config_enabled MBEDTLS_SSL_PROTO_DTLS
 requires_config_enabled MBEDTLS_RSA_C
 requires_config_enabled MBEDTLS_ECDSA_C
-requires_config_enabled MBEDTLS_SHA256_C
+requires_hash_alg SHA_256
 requires_config_enabled MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED
 requires_config_enabled MBEDTLS_SSL_RENEGOTIATION
 requires_config_enabled MBEDTLS_AES_C
@@ -10353,7 +10459,7 @@ not_with_valgrind # spurious autoreduction due to timeout
 requires_config_enabled MBEDTLS_SSL_PROTO_DTLS
 requires_config_enabled MBEDTLS_RSA_C
 requires_config_enabled MBEDTLS_ECDSA_C
-requires_config_enabled MBEDTLS_SHA256_C
+requires_hash_alg SHA_256
 requires_config_enabled MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED
 requires_config_enabled MBEDTLS_SSL_RENEGOTIATION
 requires_config_enabled MBEDTLS_AES_C
