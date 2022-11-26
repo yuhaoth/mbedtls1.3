@@ -1025,22 +1025,6 @@ int mbedtls_ssl_tls13_write_client_hello_exts( mbedtls_ssl_context *ssl,
     p += ext_len;
 #endif /* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED */
 
-#if defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
-    /* For PSK-based key exchange we need the pre_shared_key extension
-     * and the psk_key_exchange_modes extension.
-     *
-     * The pre_shared_key extension MUST be the last extension in the
-     * ClientHello. Servers MUST check that it is the last extension and
-     * otherwise fail the handshake with an "illegal_parameter" alert.
-     *
-     * Add the psk_key_exchange_modes extension.
-     */
-    ret = ssl_tls13_write_psk_key_exchange_modes_ext( ssl, p, end, &ext_len );
-    if( ret != 0 )
-        return( ret );
-    p += ext_len;
-#endif /* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED */
-
     *out_len = p - buf;
 
     return( 0 );
