@@ -1932,6 +1932,8 @@ run_test    "TLS 1.3, TLS1-3-AES-128-CCM-8-SHA256, PSK" \
             -s "Protocol is TLSv1.3" \
             -s "Ciphersuite is TLS1-3-AES-128-CCM-8-SHA256"
 
+# https://github.com/tlswg/tls13-spec/issues/1227, the test is not reasonable
+skip_next_test
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_SSL_CLI_C
@@ -1973,6 +1975,8 @@ run_test    "TLS 1.3, TLS1-3-AES-128-CCM-8-SHA256, PSK-ECDHE" \
             -s "Protocol is TLSv1.3" \
             -s "Ciphersuite is TLS1-3-AES-128-CCM-8-SHA256"
 
+# https://github.com/tlswg/tls13-spec/issues/1227, the test is not reasonable
+skip_next_test
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_SSL_CLI_C
@@ -2244,6 +2248,8 @@ run_test    "TLS 1.3, TLS1-3-AES-256-GCM-SHA384 with ECDHE-ECDSA (server auth on
 	    -c "found pre_shared_key extension"                         \
 	    -s "<= write new session ticket"
 
+# https://github.com/tlswg/tls13-spec/issues/1227, the test is not reasonable
+skip_next_test
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_DEBUG_C
 requires_config_enabled MBEDTLS_SSL_SRV_C
@@ -2325,15 +2331,15 @@ requires_config_enabled MBEDTLS_DEBUG_C
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_ZERO_RTT
-run_test    "TLS 1.3, TLS1-3-AES-256-GCM-SHA384, ECDHE-ECDSA, client tries early data without PSK, and falls back to 1-RTT" \
+run_test    "TLS 1.3, TLS1-3-AES-128-GCM-SHA256, ECDHE-ECDSA, client tries early data without PSK, and falls back to 1-RTT" \
             "$P_SRV_ crt_file=data_files/server5.crt key_file=data_files/server5.key \
                      nbio=2 debug_level=4 force_version=tls13" \
-            "$P_CLI_ nbio=2 debug_level=4 force_version=tls13 force_ciphersuite=TLS1-3-AES-256-GCM-SHA384 early_data=1" \
+            "$P_CLI_ nbio=2 debug_level=4 force_version=tls13 force_ciphersuite=TLS1-3-AES-128-GCM-SHA256 early_data=1" \
             0 \
       -s "Protocol is TLSv1.3"                                        \
       -c "<= skip write early_data extension"                         \
       -c "Protocol is TLSv1.3"                                        \
-      -c "Ciphersuite is TLS1-3-AES-256-GCM-SHA384"                   \
+      -c "Ciphersuite is TLS1-3-AES-128-GCM-SHA256"                   \
       -c "early data status = 0"
 
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
@@ -2414,9 +2420,9 @@ requires_config_enabled MBEDTLS_DEBUG_C
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_ZERO_RTT
-run_test    "TLS 1.3, TLS1-3-AES-256-GCM-SHA384, ext PSK, early data status - not sent" \
+run_test    "TLS 1.3, TLS1-3-AES-128-GCM-SHA256, ext PSK, early data status - not sent" \
             "$P_SRV nbio=2 debug_level=5 force_version=tls13 psk=010203 psk_identity=0a0b0c" \
-            "$P_CLI_ nbio=2 debug_level=5 force_version=tls13 force_ciphersuite=TLS1-3-AES-256-GCM-SHA384 psk=010203 psk_identity=0a0b0c" \
+            "$P_CLI_ nbio=2 debug_level=5 force_version=tls13 force_ciphersuite=TLS1-3-AES-128-GCM-SHA256 psk=010203 psk_identity=0a0b0c" \
             0 \
 	    -c "early data status = 0"  \
 
@@ -2426,9 +2432,9 @@ requires_config_enabled MBEDTLS_DEBUG_C
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_ZERO_RTT
-run_test    "TLS 1.3, TLS1-3-AES-256-GCM-SHA384, ext PSK, early data status - accepted" \
+run_test    "TLS 1.3, TLS1-3-AES-128-GCM-SHA256, ext PSK, early data status - accepted" \
             "$P_SRV_ nbio=2 debug_level=5 force_version=tls13 early_data=-1 tls13_kex_modes=psk psk=010203 psk_identity=0a0b0c" \
-            "$P_CLI_ nbio=2 debug_level=5 force_version=tls13 force_ciphersuite=TLS1-3-AES-256-GCM-SHA384 tls13_kex_modes=psk early_data=1 psk=010203 psk_identity=0a0b0c" \
+            "$P_CLI_ nbio=2 debug_level=5 force_version=tls13 force_ciphersuite=TLS1-3-AES-128-GCM-SHA256 tls13_kex_modes=psk early_data=1 psk=010203 psk_identity=0a0b0c" \
             0 \
 	    -c "early data status = 2"  \
 
@@ -13553,7 +13559,7 @@ requires_config_enabled MBEDTLS_DEBUG_C
 requires_config_enabled MBEDTLS_SSL_CLI_C
 run_test    "TLS 1.3: NewSessionTicket: Basic check, m->G" \
             "$G_NEXT_SRV -d 10 --priority=NORMAL:-VERS-ALL:+VERS-TLS1.3:+CIPHER-ALL:+PSK --disable-client-cert" \
-            "$P_CLI debug_level=1 reco_mode=1 reconnect=1" \
+            "$P_CLI debug_level=5 reco_mode=1 reconnect=1" \
             0 \
             -c "Protocol is TLSv1.3" \
             -c "got new session ticket." \
