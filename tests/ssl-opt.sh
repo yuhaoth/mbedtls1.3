@@ -1718,7 +1718,7 @@ run_test    "TLS 1.3 O->m AES_128_GCM_SHA256      , ECDSA_SECP256R1_SHA256" \
                          -cert data_files/cli2.crt -key data_files/cli2.key" \
             0 \
             -s "ECDH group: x25519" \
-            -s "selected ciphersuite: TLS1-3-AES-128-GCM-SHA256" \
+            -s "selected ciphersuite: [0-9]\+ - TLS1-3-AES-128-GCM-SHA256" \
             -s "Certificate Verify: Signature algorithm ( 0403 )" \
             -s "Verifying peer X.509 certificate... ok"
 
@@ -1735,7 +1735,7 @@ run_test    "TLS 1.3 O->m AES_256_GCM_SHA384      , ECDSA_SECP256R1_SHA256" \
                          -cert data_files/cli2.crt -key data_files/cli2.key" \
             0 \
             -s "ECDH group: x25519" \
-            -s "selected ciphersuite: TLS1-3-AES-256-GCM-SHA384" \
+            -s "selected ciphersuite: [0-9]\+ - TLS1-3-AES-256-GCM-SHA384" \
             -s "Certificate Verify: Signature algorithm ( 0403 )" \
             -s "Verifying peer X.509 certificate... ok"
 
@@ -1752,7 +1752,7 @@ run_test    "TLS 1.3 O->m CHACHA20_POLY1305_SHA256, ECDSA_SECP256R1_SHA256" \
                          -cert data_files/cli2.crt -key data_files/cli2.key" \
             0 \
             -s "ECDH group: x25519" \
-            -s "selected ciphersuite: TLS1-3-CHACHA20-POLY1305-SHA256" \
+            -s "selected ciphersuite: [0-9]\+ - TLS1-3-CHACHA20-POLY1305-SHA256" \
             -s "Certificate Verify: Signature algorithm ( 0403 )" \
             -s "Verifying peer X.509 certificate... ok"
 
@@ -1769,7 +1769,7 @@ run_test    "TLS 1.3 O->m AES_128_CCM_SHA256      , ECDSA_SECP256R1_SHA256" \
                          -cert data_files/cli2.crt -key data_files/cli2.key" \
             0 \
             -s "ECDH group: x25519" \
-            -s "selected ciphersuite: TLS1-3-AES-128-CCM-SHA256" \
+            -s "selected ciphersuite: [0-9]\+ - TLS1-3-AES-128-CCM-SHA256" \
             -s "Certificate Verify: Signature algorithm ( 0403 )" \
             -s "Verifying peer X.509 certificate... ok"
 
@@ -1786,7 +1786,7 @@ run_test    "TLS 1.3 O->m AES_128_CCM_8_SHA256    , ECDSA_SECP256R1_SHA256" \
                          -cert data_files/cli2.crt -key data_files/cli2.key" \
             0 \
             -s "ECDH group: x25519" \
-            -s "selected ciphersuite: TLS1-3-AES-128-CCM-8-SHA256" \
+            -s "selected ciphersuite: [0-9]\+ - TLS1-3-AES-128-CCM-8-SHA256" \
             -s "Certificate Verify: Signature algorithm ( 0403 )" \
             -s "Verifying peer X.509 certificate... ok"
 
@@ -1806,7 +1806,7 @@ run_test    "TLS 1.3 G->m AES_128_GCM_SHA256      , ECDSA_SECP256R1_SHA256" \
             "$G_NEXT_CLI --x509certfile data_files/cli2.crt --x509keyfile data_files/cli2.key --priority NONE:+AES-128-GCM:+SHA256:+GROUP-SECP256R1:+ECDHE-ECDSA:+AEAD:+SIGN-ECDSA-SECP256R1-SHA256:+VERS-TLS1.3 localhost" \
             0 \
             -s "ECDH group: secp256r1" \
-            -s "selected ciphersuite: TLS1-3-AES-128-GCM-SHA256" \
+            -s "selected ciphersuite: [0-9]\+ - TLS1-3-AES-128-GCM-SHA256" \
             -s "Certificate Verify: Signature algorithm ( 0403 )" \
             -s "Verifying peer X.509 certificate... ok"
 
@@ -1820,7 +1820,7 @@ run_test    "TLS 1.3 G->m AES_256_GCM_SHA384      , ECDSA_SECP256R1_SHA256" \
             "$G_NEXT_CLI --x509certfile data_files/cli2.crt --x509keyfile data_files/cli2.key --priority NONE:+AES-256-GCM:+SHA384:+GROUP-SECP256R1:+ECDHE-ECDSA:+AEAD:+SIGN-ECDSA-SECP256R1-SHA256:+VERS-TLS1.3 localhost" \
             0 \
             -s "ECDH group: secp256r1" \
-            -s "selected ciphersuite: TLS1-3-AES-256-GCM-SHA384" \
+            -s "selected ciphersuite: [0-9]\+ - TLS1-3-AES-256-GCM-SHA384" \
             -s "Certificate Verify: Signature algorithm ( 0403 )" \
             -s "Verifying peer X.509 certificate... ok"
 
@@ -1834,7 +1834,7 @@ run_test    "TLS 1.3 G->m CHACHA20_POLY1305_SHA256, ECDSA_SECP256R1_SHA256" \
             "$G_NEXT_CLI --x509certfile data_files/cli2.crt --x509keyfile data_files/cli2.key --priority NONE:+CHACHA20-POLY1305:+SHA256:+GROUP-SECP256R1:+ECDHE-ECDSA:+AEAD:+SIGN-ECDSA-SECP256R1-SHA256:+VERS-TLS1.3 localhost" \
             0 \
             -s "ECDH group: secp256r1" \
-            -s "selected ciphersuite: TLS1-3-CHACHA20-POLY1305-SHA256" \
+            -s "selected ciphersuite: [0-9]\+ - TLS1-3-CHACHA20-POLY1305-SHA256" \
             -s "Certificate Verify: Signature algorithm ( 0403 )" \
             -s "Verifying peer X.509 certificate... ok"
 
@@ -1848,7 +1848,7 @@ run_test    "TLS 1.3 G->m AES_128_CCM_SHA256      , ECDSA_SECP256R1_SHA256" \
             "$G_NEXT_CLI --x509certfile data_files/cli2.crt --x509keyfile data_files/cli2.key --priority NONE:+AES-128-CCM:+SHA256:+GROUP-SECP256R1:+ECDHE-ECDSA:+AEAD:+SIGN-ECDSA-SECP256R1-SHA256:+VERS-TLS1.3 localhost" \
             0 \
             -s "ECDH group: secp256r1" \
-            -s "selected ciphersuite: TLS1-3-AES-128-CCM-SHA256" \
+            -s "selected ciphersuite: [0-9]\+ - TLS1-3-AES-128-CCM-SHA256" \
             -s "Certificate Verify: Signature algorithm ( 0403 )" \
             -s "Verifying peer X.509 certificate... ok"
 
@@ -1862,7 +1862,7 @@ run_test    "TLS 1.3 G->m AES_128_CCM_8_SHA256    , ECDSA_SECP256R1_SHA256" \
             "$G_NEXT_CLI --x509certfile data_files/cli2.crt --x509keyfile data_files/cli2.key --priority NONE:+AES-128-CCM-8:+SHA256:+GROUP-SECP256R1:+ECDHE-ECDSA:+AEAD:+SIGN-ECDSA-SECP256R1-SHA256:+VERS-TLS1.3 localhost" \
             0 \
             -s "ECDH group: secp256r1" \
-            -s "selected ciphersuite: TLS1-3-AES-128-CCM-8-SHA256" \
+            -s "selected ciphersuite: [0-9]\+ - TLS1-3-AES-128-CCM-8-SHA256" \
             -s "Certificate Verify: Signature algorithm ( 0403 )" \
             -s "Verifying peer X.509 certificate... ok"
 
