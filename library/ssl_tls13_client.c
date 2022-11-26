@@ -698,7 +698,8 @@ static int ssl_tls13_get_psk_to_offer(
     *psk_len = 0;
     *psk_identity = NULL;
     *psk_identity_len = 0;
-    *psk_type = MBEDTLS_SSL_TLS1_3_PSK_EXTERNAL;
+    if( psk_type )
+        *psk_type = MBEDTLS_SSL_TLS1_3_PSK_EXTERNAL;
 
 #if defined(MBEDTLS_SSL_SESSION_TICKETS)
     /* Check if a ticket has been configured. */
@@ -711,7 +712,8 @@ static int ssl_tls13_get_psk_to_offer(
             (uint64_t)( now - ssl->session_negotiate->ticket_received )
                     <= ssl->session_negotiate->ticket_lifetime )
         {
-            *psk_type = MBEDTLS_SSL_TLS1_3_PSK_RESUMPTION;
+            if(psk_type)
+                *psk_type = MBEDTLS_SSL_TLS1_3_PSK_RESUMPTION;
             *psk = ssl->session_negotiate->resumption_key;
             *psk_len = ssl->session_negotiate->resumption_key_len;
             *psk_identity = ssl->session_negotiate->ticket;
@@ -2283,7 +2285,6 @@ int ssl_tls13_write_early_data_process( mbedtls_ssl_context *ssl )
 #if defined(MBEDTLS_ZERO_RTT)
 
         MBEDTLS_SSL_PROC_CHK( ssl_tls13_write_early_data_prepare( ssl ) );
-
 #if defined(MBEDTLS_SSL_USE_MPS)
         MBEDTLS_SSL_PROC_CHK( mbedtls_mps_write_application( &ssl->mps->l4,
                                                              &msg ) );
@@ -2305,7 +2306,6 @@ int ssl_tls13_write_early_data_process( mbedtls_ssl_context *ssl )
         MBEDTLS_SSL_PROC_CHK( ssl_tls13_write_early_data_postprocess( ssl ) );
 
 #else  /* MBEDTLS_SSL_USE_MPS */
-
         /* Write early-data to message buffer. */
         MBEDTLS_SSL_PROC_CHK( ssl_tls13_write_early_data_write( ssl, ssl->out_msg,
                                                                 MBEDTLS_SSL_OUT_CONTENT_LEN,
