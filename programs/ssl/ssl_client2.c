@@ -3273,8 +3273,11 @@ reconnect:
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3)
         // Configure key exchange mode to use PSK-ephemeral
-        mbedtls_ssl_conf_tls13_key_exchange_modes(
-            &conf, MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_EPHEMERAL );
+        /* When connection with GnuTLS, if not sent signature algorithm, it reports
+           FAIL. Disable it to workaround it.
+           TODO: figure out the rootcause*/
+        // mbedtls_ssl_conf_tls13_key_exchange_modes(
+        //     &conf, MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_EPHEMERAL );
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3) && defined(MBEDTLS_ZERO_RTT)
