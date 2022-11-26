@@ -1143,7 +1143,7 @@ int mbedtls_ssl_tls13_key_schedule_stage_early( mbedtls_ssl_context *ssl )
 #if defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
     if( mbedtls_ssl_tls13_key_exchange_mode_with_psk( ssl )             ||
 #if defined(MBEDTLS_ZERO_RTT)
-        ssl->conf->early_data_enabled == MBEDTLS_SSL_EARLY_DATA_ENABLED ||
+        ssl->handshake->early_data == MBEDTLS_SSL_EARLY_DATA_ON ||
 #endif
         0 )
     {
