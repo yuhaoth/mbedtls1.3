@@ -1262,8 +1262,6 @@ struct mbedtls_ssl_session
 #endif /* ( MBEDTLS_SSL_SESSION_TICKETS && MBEDTLS_SSL_CLI_C ) || MBEDTLS_SSL_NEW_SESSION_TICKET_REMOVED */
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3) && defined(MBEDTLS_SSL_NEW_SESSION_TICKET_REMOVED)
-    unsigned int MBEDTLS_PRIVATE(endpoint) : 1;             /*!< 0: client, 1: server */
-    mbedtls_ssl_ticket_flags MBEDTLS_PRIVATE(ticket_flags); /*!< Ticket flags */
     uint32_t MBEDTLS_PRIVATE(max_early_data_size);   /*!< max data allowed */
 #endif /*  MBEDTLS_SSL_PROTO_TLS1_3 && MBEDTLS_SSL_NEW_SESSION_TICKET_REMOVED */
 
