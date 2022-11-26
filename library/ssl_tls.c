@@ -2786,6 +2786,7 @@ int mbedtls_ssl_set_client_transport_id( mbedtls_ssl_context *ssl,
 }
 #endif
 
+#if !defined(MBEDTLS_DEPRECATED_REMOVED)
 void mbedtls_ssl_conf_max_version( mbedtls_ssl_config *conf, int major, int minor )
 {
     conf->max_tls_version = (major << 8) | minor;
@@ -2795,6 +2796,7 @@ void mbedtls_ssl_conf_min_version( mbedtls_ssl_config *conf, int major, int mino
 {
     conf->min_tls_version = (major << 8) | minor;
 }
+#endif /* MBEDTLS_DEPRECATED_REMOVED */
 
 #if defined(MBEDTLS_SSL_SRV_C)
 void mbedtls_ssl_conf_cert_req_ca_list( mbedtls_ssl_config *conf,
