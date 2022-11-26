@@ -1141,7 +1141,11 @@ int mbedtls_ssl_tls13_key_schedule_stage_early( mbedtls_ssl_context *ssl )
 
     hash_alg = mbedtls_hash_info_psa_from_md( handshake->ciphersuite_info->mac );
 #if defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
-    if( mbedtls_ssl_tls13_key_exchange_mode_with_psk( ssl ) )
+    if( mbedtls_ssl_tls13_key_exchange_mode_with_psk( ssl )             ||
+#if defined(MBEDTLS_ZERO_RTT)
+        ssl->conf->early_data_enabled == MBEDTLS_SSL_EARLY_DATA_ENABLED ||
+#endif
+        0 )
     {
         ret = mbedtls_ssl_tls13_export_handshake_psk( ssl, &psk, &psk_len );
         if( ret != 0 )
