@@ -1497,7 +1497,7 @@ static int ssl_tls13_write_certificate_verify_body( mbedtls_ssl_context *ssl,
     psa_algorithm_t psa_algorithm = PSA_ALG_NONE;
     uint16_t algorithm = MBEDTLS_TLS1_3_SIG_NONE;
     size_t signature_len = 0;
-    unsigned char verify_hash[ MBEDTLS_MD_MAX_SIZE ];
+    unsigned char verify_hash[PSA_HASH_MAX_SIZE];
     size_t verify_hash_len;
     psa_status_t status = PSA_ERROR_CORRUPTION_DETECTED;
 
@@ -1757,7 +1757,7 @@ int mbedtls_ssl_tls13_write_early_data_ext( mbedtls_ssl_context *ssl,
 int mbedtls_ssl_reset_transcript_for_hrr( mbedtls_ssl_context *ssl )
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
-    unsigned char hash_transcript[ MBEDTLS_MD_MAX_SIZE + 4 ];
+    unsigned char hash_transcript[PSA_HASH_MAX_SIZE + 4];
     size_t hash_len;
     const mbedtls_ssl_ciphersuite_t *ciphersuite_info;
     uint16_t cipher_suite = ssl->session_negotiate->ciphersuite;
@@ -1767,7 +1767,7 @@ int mbedtls_ssl_reset_transcript_for_hrr( mbedtls_ssl_context *ssl )
 
     ret = mbedtls_ssl_get_handshake_transcript( ssl, ciphersuite_info->mac,
                                                 hash_transcript + 4,
-                                                MBEDTLS_MD_MAX_SIZE,
+                                                PSA_HASH_MAX_SIZE,
                                                 &hash_len );
     if( ret != 0 )
     {
@@ -1782,9 +1782,9 @@ int mbedtls_ssl_reset_transcript_for_hrr( mbedtls_ssl_context *ssl )
 
     hash_len += 4;
 
+#if defined(MBEDTLS_HAS_ALG_SHA_256_VIA_MD_OR_PSA_BASED_ON_USE_PSA)
     if( ciphersuite_info->mac == MBEDTLS_MD_SHA256 )
     {
-#if defined(MBEDTLS_SHA256_C)
         MBEDTLS_SSL_DEBUG_BUF( 4, "Truncated SHA-256 handshake transcript",
                                hash_transcript, hash_len );
 
@@ -1794,11 +1794,11 @@ int mbedtls_ssl_reset_transcript_for_hrr( mbedtls_ssl_context *ssl )
 #else
         mbedtls_sha256_starts( &ssl->handshake->fin_sha256, 0 );
 #endif
-#endif /* MBEDTLS_SHA256_C */
     }
-    else if( ciphersuite_info->mac == MBEDTLS_MD_SHA384 )
+#endif /* MBEDTLS_HAS_ALG_SHA_256_VIA_MD_OR_PSA_BASED_ON_USE_PSA */
+#if defined(MBEDTLS_HAS_ALG_SHA_384_VIA_MD_OR_PSA_BASED_ON_USE_PSA)
+    if( ciphersuite_info->mac == MBEDTLS_MD_SHA384 )
     {
-#if defined(MBEDTLS_SHA384_C)
         MBEDTLS_SSL_DEBUG_BUF( 4, "Truncated SHA-384 handshake transcript",
                                hash_transcript, hash_len );
 
@@ -1808,12 +1808,11 @@ int mbedtls_ssl_reset_transcript_for_hrr( mbedtls_ssl_context *ssl )
 #else
         mbedtls_sha512_starts( &ssl->handshake->fin_sha384, 1 );
 #endif
-#endif /* MBEDTLS_SHA384_C */
     }
-
-#if defined(MBEDTLS_SHA256_C) || defined(MBEDTLS_SHA384_C)
+#endif /* MBEDTLS_HAS_ALG_SHA_384_VIA_MD_OR_PSA_BASED_ON_USE_PSA */
+#if defined(MBEDTLS_HAS_ALG_SHA_256_VIA_MD_OR_PSA_BASED_ON_USE_PSA) || defined(MBEDTLS_HAS_ALG_SHA_384_VIA_MD_OR_PSA_BASED_ON_USE_PSA)
     ssl->handshake->update_checksum( ssl, hash_transcript, hash_len );
-#endif /* MBEDTLS_SHA256_C || MBEDTLS_SHA384_C */
+#endif /* MBEDTLS_HAS_ALG_SHA_256_VIA_MD_OR_PSA_BASED_ON_USE_PSA || MBEDTLS_HAS_ALG_SHA_384_VIA_MD_OR_PSA_BASED_ON_USE_PSA */
 
     return( ret );
 }
@@ -1900,57 +1899,5 @@ int mbedtls_ssl_tls13_generate_and_write_ecdh_key_exchange(
     return( 0 );
 }
 #endif /* MBEDTLS_ECDH_C */
-
-#if defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
-/* Check if we have any PSK to offer, returns 0 if PSK is available.
- * Assign the psk and ticket if pointers are present.
- */
-int mbedtls_ssl_get_psk_to_offer(
-        const mbedtls_ssl_context *ssl,
-        int *psk_type,
-        const unsigned char **psk, size_t *psk_len,
-        const unsigned char **psk_identity, size_t *psk_identity_len )
-{
-    int ptrs_present = 0;
-
-    if( psk_type != NULL && psk != NULL && psk_len != NULL &&
-        psk_identity != NULL && psk_identity_len != NULL )
-    {
-        ptrs_present = 1;
-    }
-
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3) && defined(MBEDTLS_SSL_NEW_SESSION_TICKET_REMOVED)
-    /* Check if a ticket has been configured. */
-    if( ssl->session_negotiate != NULL         &&
-        ssl->session_negotiate->ticket != NULL )
-    {
-        if( ptrs_present )
-        {
-            *psk = ssl->session_negotiate->resumption_key;
-            *psk_len = ssl->session_negotiate->resumption_key_len;
-            *psk_identity = ssl->session_negotiate->ticket;
-            *psk_identity_len = ssl->session_negotiate->ticket_len;
-        }
-        return( 0 );
-    }
-#endif
-    /* Check if an external PSK has been configured. */
-    if( ssl->conf->psk != NULL )
-    {
-        if( ptrs_present )
-        {
-            *psk_type = MBEDTLS_SSL_TLS1_3_PSK_EXTERNAL;
-            *psk = ssl->conf->psk;
-            *psk_len = ssl->conf->psk_len;
-            *psk_identity = ssl->conf->psk_identity;
-            *psk_identity_len = ssl->conf->psk_identity_len;
-        }
-
-        return( 0 );
-    }
-
-    return( 1 );
-}
-#endif /* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED */
 
 #endif /* MBEDTLS_SSL_TLS_C && MBEDTLS_SSL_PROTO_TLS1_3 */
