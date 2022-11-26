@@ -227,44 +227,6 @@ cleanup:
     return( psa_ssl_status_to_mbedtls ( status ) );
 }
 
-static int ssl_tls13_get_psk( mbedtls_ssl_context *ssl,
-                              unsigned char **psk,
-                              size_t *psk_len )
-{
-#if defined(MBEDTLS_USE_PSA_CRYPTO)
-    psa_key_attributes_t key_attributes = PSA_KEY_ATTRIBUTES_INIT;
-    psa_status_t status;
-
-    *psk_len = 0;
-    *psk = NULL;
-
-    status = psa_get_key_attributes( ssl->handshake->psk_opaque, &key_attributes );
-    if( status != PSA_SUCCESS)
-    {
-        return( psa_ssl_status_to_mbedtls( status ) );
-    }
-
-    *psk_len = PSA_BITS_TO_BYTES( psa_get_key_bits( &key_attributes ) );
-    *psk = mbedtls_calloc( 1, *psk_len );
-    if( *psk == NULL )
-    {
-        return( MBEDTLS_ERR_SSL_ALLOC_FAILED );
-    }
-
-    status = psa_export_key( ssl->handshake->psk_opaque,
-                             (uint8_t *)*psk, *psk_len, psk_len );
-    if( status != PSA_SUCCESS)
-    {
-        mbedtls_free( (void *)*psk );
-        return( psa_ssl_status_to_mbedtls( status ) );
-    }
-#else
-    *psk = ssl->handshake->psk;
-    *psk_len = ssl->handshake->psk_len;
-#endif /* !MBEDTLS_USE_PSA_CRYPTO */
-    return( 0 );
-}
-
 /*
  * The traffic keying material is generated from the following inputs:
  *
