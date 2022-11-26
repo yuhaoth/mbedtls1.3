@@ -79,7 +79,6 @@
 
 #include "bn_mul.h"
 #include "ecp_invasive.h"
-#include "ecp_internal.h"
 
 #include <string.h>
 
@@ -905,28 +904,6 @@ int mbedtls_ecp_tls_read_group( mbedtls_ecp_group *grp,
     return( mbedtls_ecp_group_load( grp, grp_id ) );
 }
 
-/* Convert NamedCurve structure to Mbed TLS internal ECC group id */
-int mbedtls_ecp_tls_read_named_curve( mbedtls_ecp_group_id *grp,
-                                      const unsigned char *buf,
-                                      size_t len )
-{
-    uint16_t tls_id;
-    ECP_VALIDATE_RET( grp  != NULL );
-    ECP_VALIDATE_RET( buf  != NULL );
-
-    /* enum {
-     * ...  (0xFFFF)
-     *} NamedCurve; */
-    if( len < 2 )
-        return( MBEDTLS_ERR_ECP_BAD_INPUT_DATA );
-    tls_id = (uint16_t) buf[0] << 8 | (uint16_t) buf[1];
-
-    *grp = mbedtls_ecp_named_group_to_id( tls_id );
-    if( *grp == MBEDTLS_ECP_DP_NONE )
-        return( MBEDTLS_ERR_ECP_FEATURE_UNAVAILABLE );
-    return( 0 );
-}
-
 /*
  * Read a group id from an ECParameters record (RFC 4492) and convert it to
  * mbedtls_ecp_group_id.
@@ -942,17 +919,24 @@ int mbedtls_ecp_tls_read_group_id( mbedtls_ecp_group_id *grp,
     if( len < 3 )
         return( MBEDTLS_ERR_ECP_BAD_INPUT_DATA );
 
-    /* Only named_curve is handled */
+    /*
+     * First byte is curve_type; only named_curve is handled
+     */
     if( *(*buf)++ != MBEDTLS_ECP_TLS_NAMED_CURVE )
         return( MBEDTLS_ERR_ECP_BAD_INPUT_DATA );
 
-    len--;
+    /*
+     * Next two bytes are the namedcurve value
+     */
+    tls_id = *(*buf)++;
+    tls_id <<= 8;
+    tls_id |= *(*buf)++;
 
-    ret = mbedtls_ecp_tls_read_named_curve( grp, *buf, len );
-    if( ret != 0 )
-        return( ret );
+    if( ( curve_info = mbedtls_ecp_curve_info_from_tls_id( tls_id ) ) == NULL )
+        return( MBEDTLS_ERR_ECP_FEATURE_UNAVAILABLE );
 
-    *buf += 2;
+    *grp = curve_info->grp_id;
+
     return( 0 );
 }
 
