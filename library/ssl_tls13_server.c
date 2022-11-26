@@ -2587,8 +2587,6 @@ static int ssl_tls13_process_client_hello( mbedtls_ssl_context *ssl )
                               ssl, MBEDTLS_SSL_HS_CLIENT_HELLO,
                               &buf, &buflen ) );
 
-    mbedtls_ssl_add_hs_hdr_to_checksum( ssl, MBEDTLS_SSL_HS_CLIENT_HELLO, buflen );
-
     MBEDTLS_SSL_PROC_CHK_NEG( ssl_tls13_parse_client_hello( ssl, buf,
                                                             buf + buflen ) );
     hrr_required = ( ret == SSL_CLIENT_HELLO_HRR_REQUIRED );
