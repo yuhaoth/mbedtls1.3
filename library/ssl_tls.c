@@ -2160,7 +2160,7 @@ mbedtls_ssl_mode_t mbedtls_ssl_get_mode_from_ciphersuite(
  *     struct {
  *       uint64 ticket_received;
  *       uint32 ticket_lifetime;
- *       opaque ticket<0..2^16>;
+ *       opaque ticket<1..2^16-1>;
  *     } ClientOnlyData;
  *
  *     struct {
@@ -2177,16 +2177,23 @@ mbedtls_ssl_mode_t mbedtls_ssl_get_mode_from_ciphersuite(
  *
  */
 #if defined(MBEDTLS_SSL_SESSION_TICKETS)
-static size_t ssl_tls13_session_save( const mbedtls_ssl_session *session,
-                                      unsigned char *buf,
-                                      size_t buf_len )
+MBEDTLS_CHECK_RETURN_CRITICAL
+static int ssl_tls13_session_save( const mbedtls_ssl_session *session,
+                                   unsigned char *buf,
+                                   size_t buf_len,
+                                   size_t *olen )
 {
     unsigned char *p = buf;
     size_t needed =   1                             /* endpoint */
                     + 2                             /* ciphersuite */
                     + 4                             /* ticket_age_add */
-                    + 2                             /* resumption_key length */
-                    + session->resumption_key_len;  /* resumption_key */
+                    + 1                             /* ticket_flags */
+                    + 1;                            /* resumption_key length */
+    *olen = 0;
+
+    if( session->resumption_key_len > MBEDTLS_SSL_TLS1_3_TICKET_RESUMPTION_KEY_LEN )
+        return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
+    needed += session->resumption_key_len;  /* resumption_key */
 
 #if defined(MBEDTLS_HAVE_TIME)
     needed += 8; /* start_time or ticket_received */
@@ -2196,13 +2203,19 @@ static size_t ssl_tls13_session_save( const mbedtls_ssl_session *session,
     if( session->endpoint == MBEDTLS_SSL_IS_CLIENT )
     {
         needed +=   4                       /* ticket_lifetime */
-                  + 2                       /* ticket_len */
-                  + session->ticket_len;    /* ticket */
+                  + 2;                      /* ticket_len */
+
+        /* Check size_t overflow */
+        if( session->ticket_len > SIZE_MAX - needed )
+            return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
+
+        needed += session->ticket_len;      /* ticket */
     }
 #endif /* MBEDTLS_SSL_CLI_C */
 
+    *olen = needed;
     if( needed > buf_len )
-        return( needed );
+        return( MBEDTLS_ERR_SSL_BUFFER_TOO_SMALL );
 
     p[0] = session->endpoint;
     MBEDTLS_PUT_UINT16_BE( session->ciphersuite, p, 1 );
@@ -2235,14 +2248,15 @@ static size_t ssl_tls13_session_save( const mbedtls_ssl_session *session,
 
         MBEDTLS_PUT_UINT16_BE( session->ticket_len, p, 0 );
         p += 2;
-        if( session->ticket_len > 0 )
+
+        if( session->ticket != NULL && session->ticket_len > 0 )
         {
             memcpy( p, session->ticket, session->ticket_len );
             p += session->ticket_len;
         }
     }
 #endif /* MBEDTLS_SSL_CLI_C */
-    return( needed );
+    return( 0 );
 }
 
 MBEDTLS_CHECK_RETURN_CRITICAL
@@ -2318,13 +2332,16 @@ static int ssl_tls13_session_load( mbedtls_ssl_session *session,
 
 }
 #else /* MBEDTLS_SSL_SESSION_TICKETS */
-static size_t ssl_tls13_session_save( const mbedtls_ssl_session *session,
-                                      unsigned char *buf,
-                                      size_t buf_len )
+MBEDTLS_CHECK_RETURN_CRITICAL
+static int ssl_tls13_session_save( const mbedtls_ssl_session *session,
+                                   unsigned char *buf,
+                                   size_t buf_len,
+                                   size_t *olen )
 {
-    (void) session;
-    (void) buf;
-    (void) buf_len;
+    ((void) session);
+    ((void) buf);
+    ((void) buf_len);
+    *olen = 0;
     return( MBEDTLS_ERR_SSL_FEATURE_UNAVAILABLE );
 }
 
@@ -3309,7 +3326,10 @@ static int ssl_session_save( const mbedtls_ssl_session *session,
     unsigned char *p = buf;
     size_t used = 0;
     size_t remaining_len;
-
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3)
+    size_t out_len;
+    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
+#endif
     if( session == NULL )
         return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
 
@@ -3349,7 +3369,10 @@ static int ssl_session_save( const mbedtls_ssl_session *session,
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3)
     case MBEDTLS_SSL_VERSION_TLS1_3:
-        used += ssl_tls13_session_save( session, p, remaining_len );
+        ret = ssl_tls13_session_save( session, p, remaining_len, &out_len );
+        if( ret != 0 && ret != MBEDTLS_ERR_SSL_BUFFER_TOO_SMALL )
+            return( ret );
+        used += out_len;
         break;
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
 
@@ -7681,7 +7704,7 @@ static tls_prf_fn ssl_tls12prf_from_cs( int ciphersuite_id )
     const mbedtls_ssl_ciphersuite_t * const ciphersuite_info =
          mbedtls_ssl_ciphersuite_from_id( ciphersuite_id );
 
-    if( ciphersuite_info->mac == MBEDTLS_MD_SHA384 )
+    if( ciphersuite_info != NULL && ciphersuite_info->mac == MBEDTLS_MD_SHA384 )
         return( tls_prf_sha384 );
 #else
     (void) ciphersuite_id;
