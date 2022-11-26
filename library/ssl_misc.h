@@ -1558,15 +1558,6 @@ int mbedtls_ssl_tls13_parse_supported_groups_ext(
     mbedtls_ssl_context* ssl,
     const unsigned char* buf, size_t len);
 #endif /* MBEDTLS_ECDH_C ||  MBEDTLS_ECDSA_C */
-#if defined(MBEDTLS_SSL_NEW_SESSION_TICKET_REMOVED)
-int mbedtls_ssl_tls13_parse_new_session_ticket_server(
-    mbedtls_ssl_context *ssl, unsigned char *buf, size_t len);
-#endif /* MBEDTLS_SSL_NEW_SESSION_TICKET_REMOVED */
-#if defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
-int mbedtls_ssl_tls13_parse_client_psk_identity_ext(
-    mbedtls_ssl_context *ssl,
-    const unsigned char *buf, size_t len);
-#endif /* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED */
 
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
 
