@@ -1654,12 +1654,6 @@ void mbedtls_ssl_conf_early_data(
 }
 #endif /* MBEDTLS_ZERO_RTT */
 
-MBEDTLS_CHECK_RETURN_CRITICAL
-
-static int ssl_tls13_has_configured_psk( const mbedtls_ssl_context *ssl )
-{
-    return( ssl->conf->psk || ssl->session_negotiate->resumption_key );
-}
 /* Early Data Extension
  *
  * struct {} Empty;
