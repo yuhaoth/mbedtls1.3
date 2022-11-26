@@ -857,6 +857,12 @@ int mbedtls_ssl_tls13_write_identities_of_pre_shared_key_ext(
     if( hash_len == -1 )
         return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
 
+#if defined(MBEDTLS_ZERO_RTT)
+    /* It is needed for generate early keys */
+    if( ssl->handshake->ciphersuite_info == NULL )
+        ssl->handshake->ciphersuite_info = ciphersuite_info;
+#endif
+
     /* Check if we have space to write the extension, binder included.
      * - extension_type         (2 bytes)
      * - extension_data_len     (2 bytes)
