@@ -2871,8 +2871,7 @@ void mbedtls_ssl_conf_renegotiation_period( mbedtls_ssl_config *conf,
 
 #if defined(MBEDTLS_SSL_SESSION_TICKETS)
 
-#if defined(MBEDTLS_SSL_CLI_C)  || \
-      ( defined(MBEDTLS_SSL_NEW_SESSION_TICKET_REMOVED) )
+#if defined(MBEDTLS_SSL_CLI_C)
 void mbedtls_ssl_conf_session_tickets( mbedtls_ssl_config *conf, int use_tickets )
 {
     conf->session_tickets = use_tickets;
