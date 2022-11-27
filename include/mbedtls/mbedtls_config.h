@@ -3602,8 +3602,6 @@
 
 //#define MBEDTLS_SSL_COOKIE_TIMEOUT        60 /**< Default expiration delay of DTLS cookies, in seconds if HAVE_TIME, or in number of cookies issued */
 
-#define MBEDTLS_SSL_TICKET_AGE_TOLERANCE 6000 /**< Tolerance window for ticket lifetime */
-
 /** \def MBEDTLS_TLS_EXT_CID
  *
  * At the time of writing, the CID extension has not been assigned its

@@ -298,7 +298,6 @@ int main( void )
 
 #define USAGE_EAP_TLS                                       \
     "    eap_tls=%%d          default: 0 (disabled)\n"
-
 #define USAGE_NSS_KEYLOG                                    \
     "    nss_keylog=%%d          default: 0 (disabled)\n"   \
     "                             This cannot be used with eap_tls=1\n"
@@ -1490,7 +1489,6 @@ int main( int argc, char *argv[] )
 #if defined(MBEDTLS_MEMORY_BUFFER_ALLOC_C)
     unsigned char alloc_buf[MEMORY_HEAP_SIZE];
 #endif
-
 #if defined(MBEDTLS_SSL_DTLS_CONNECTION_ID)
     unsigned char cid[MBEDTLS_SSL_CID_IN_LEN_MAX];
     unsigned char cid_renego[MBEDTLS_SSL_CID_IN_LEN_MAX];
@@ -2402,7 +2400,7 @@ int main( int argc, char *argv[] )
 
 #if defined(MBEDTLS_SSL_DTLS_CONNECTION_ID)
     if( mbedtls_test_unhexify( cid, sizeof( cid ),
-                       opt.cid_val, &cid_len ) != 0 )
+                               opt.cid_val, &cid_len ) != 0 )
     {
         mbedtls_printf( "CID not valid hex\n" );
         goto exit;
@@ -2416,7 +2414,7 @@ int main( int argc, char *argv[] )
         opt.cid_val_renego = opt.cid_val;
 
     if( mbedtls_test_unhexify( cid_renego, sizeof( cid_renego ),
-                       opt.cid_val_renego, &cid_renego_len ) != 0 )
+                               opt.cid_val_renego, &cid_renego_len ) != 0 )
     {
         mbedtls_printf( "CID not valid hex\n" );
         goto exit;
@@ -2428,7 +2426,7 @@ int main( int argc, char *argv[] )
      * Unhexify the pre-shared key and parse the list if any given
      */
     if( mbedtls_test_unhexify( psk, sizeof( psk ),
-                       opt.psk, &psk_len ) != 0 )
+                               opt.psk, &psk_len ) != 0 )
     {
         mbedtls_printf( "pre-shared key not valid hex\n" );
         goto exit;
@@ -3744,7 +3742,6 @@ handshake:
             mbedtls_ssl_ciphersuite_get_cipher_key_bitlen( ciphersuite_info ) );
     }
 
-
     if( ( ret = mbedtls_ssl_get_record_expansion( &ssl ) ) >= 0 )
         mbedtls_printf( "    [ Record expansion is %d ]\n", ret );
     else
@@ -3855,8 +3852,7 @@ handshake:
         }
         mbedtls_printf("\n");
     }
-#endif /* MBEDTLS_SSL_PROTO_TLS1 || MBEDTLS_SSL_PROTO_TLS1_1 || \
-          MBEDTLS_SSL_PROTO_TLS1_2 */
+#endif /* MBEDTLS_SSL_PROTO_TLS1_2 */
 
 #if defined( MBEDTLS_SSL_DTLS_SRTP )
     else if( opt.use_srtp != 0  )

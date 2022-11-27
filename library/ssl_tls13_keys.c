@@ -39,14 +39,6 @@
 #include "mps_all.h"
 #endif /* MBEDTLS_SSL_USE_MPS */
 
-#if defined(MBEDTLS_PLATFORM_C)
-#include "mbedtls/platform.h"
-#else
-#include <stdlib.h>
-#define mbedtls_calloc    calloc
-#define mbedtls_free       free
-#endif /* MBEDTLS_PLATFORM_C */
-
 #define MBEDTLS_SSL_TLS1_3_LABEL( name, string )       \
     .name = string,
 
@@ -676,8 +668,7 @@ int mbedtls_ssl_tls13_generate_resumption_master_secret(
     return( 0 );
 }
 
-int mbedtls_ssl_tls13_key_schedule_stage_application(
-    mbedtls_ssl_context *ssl )
+int mbedtls_ssl_tls13_key_schedule_stage_application( mbedtls_ssl_context *ssl )
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
     mbedtls_ssl_handshake_params *handshake = ssl->handshake;
@@ -775,8 +766,8 @@ exit:
     return( ret );
 }
 
-int mbedtls_ssl_tls13_calculate_verify_data( mbedtls_ssl_context *ssl,
-                                             unsigned char *dst,
+int mbedtls_ssl_tls13_calculate_verify_data( mbedtls_ssl_context* ssl,
+                                             unsigned char* dst,
                                              size_t dst_len,
                                              size_t *actual_len,
                                              int from )

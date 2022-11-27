@@ -27,6 +27,7 @@
 
 #include "mbedtls/debug.h"
 #include "mbedtls/error.h"
+#include "mbedtls/platform.h"
 
 #include "ssl_misc.h"
 #include "ssl_client.h"
@@ -37,13 +38,6 @@
 #include "mps_all.h"
 #endif /* MBEDTLS_SSL_USE_MPS */
 
-#if defined(MBEDTLS_PLATFORM_C)
-#include "mbedtls/platform.h"
-#else
-#include <stdlib.h>
-#define mbedtls_calloc    calloc
-#define mbedtls_free       free
-#endif
 
 /* Write extensions */
 
@@ -129,15 +123,6 @@ static int ssl_tls13_parse_supported_versions_ext( mbedtls_ssl_context *ssl,
                                       MBEDTLS_ERR_SSL_DECODE_ERROR );
         return( MBEDTLS_ERR_SSL_DECODE_ERROR );
     }
-
-#if defined(MBEDTLS_SSL_NEW_SESSION_TICKET_REMOVED)
-    /* For ticket handling, we need to populate the version
-     * and the endpoint information into the session structure
-     * since only session information is available in that API.
-     */
-    ssl->session_negotiate->tls_version = ssl->tls_version;
-    ssl->session_negotiate->endpoint = ssl->conf->endpoint;
-#endif /* MBEDTLS_SSL_NEW_SESSION_TICKET_REMOVED */
 
     return( 0 );
 }
@@ -1203,8 +1188,6 @@ static int ssl_server_hello_is_hrr( mbedtls_ssl_context *ssl,
  * - SSL_SERVER_HELLO_TLS1_2
  */
 #define SSL_SERVER_HELLO_TLS1_2 2
-
-#if defined(MBEDTLS_SSL_USE_MPS)
 MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_tls13_preprocess_server_hello( mbedtls_ssl_context *ssl,
                                               const unsigned char *buf,
@@ -1301,98 +1284,6 @@ cleanup:
 
     return( ret );
 }
-#else /* MBEDTLS_SSL_USE_MPS */
-MBEDTLS_CHECK_RETURN_CRITICAL
-static int ssl_tls13_preprocess_server_hello( mbedtls_ssl_context *ssl,
-                                              const unsigned char *buf,
-                                              const unsigned char *end )
-{
-    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
-    mbedtls_ssl_handshake_params *handshake = ssl->handshake;
-
-    MBEDTLS_SSL_PROC_CHK_NEG( ssl_tls13_is_supported_versions_ext_present(
-                                  ssl, buf, end ) );
-    if( ret == 0 )
-    {
-        MBEDTLS_SSL_PROC_CHK_NEG(
-            ssl_tls13_is_downgrade_negotiation( ssl, buf, end ) );
-
-        /* If the server is negotiating TLS 1.2 or below and:
-         * . we did not propose TLS 1.2 or
-         * . the server responded it is TLS 1.3 capable but negotiating a lower
-         *   version of the protocol and thus we are under downgrade attack
-         * abort the handshake with an "illegal parameter" alert.
-         */
-        if( handshake->min_tls_version > MBEDTLS_SSL_VERSION_TLS1_2 || ret )
-        {
-            MBEDTLS_SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_ILLEGAL_PARAMETER,
-                                          MBEDTLS_ERR_SSL_ILLEGAL_PARAMETER );
-            return( MBEDTLS_ERR_SSL_ILLEGAL_PARAMETER );
-        }
-
-        ssl->keep_current_message = 1;
-        ssl->tls_version = MBEDTLS_SSL_VERSION_TLS1_2;
-        mbedtls_ssl_add_hs_msg_to_checksum( ssl, MBEDTLS_SSL_HS_SERVER_HELLO,
-                                            buf, (size_t)(end - buf) );
-
-        if( mbedtls_ssl_conf_tls13_some_ephemeral_enabled( ssl ) )
-        {
-            ret = ssl_tls13_reset_key_share( ssl );
-            if( ret != 0 )
-                return( ret );
-        }
-
-        return( SSL_SERVER_HELLO_TLS1_2 );
-    }
-
-    handshake->extensions_present = MBEDTLS_SSL_EXT_NONE;
-
-    ret = ssl_server_hello_is_hrr( ssl, buf, end );
-    switch( ret )
-    {
-        case SSL_SERVER_HELLO:
-            MBEDTLS_SSL_DEBUG_MSG( 2, ( "received ServerHello message" ) );
-            break;
-        case SSL_SERVER_HELLO_HRR:
-            MBEDTLS_SSL_DEBUG_MSG( 2, ( "received HelloRetryRequest message" ) );
-             /* If a client receives a second
-              * HelloRetryRequest in the same connection (i.e., where the ClientHello
-              * was itself in response to a HelloRetryRequest), it MUST abort the
-              * handshake with an "unexpected_message" alert.
-              */
-            if( handshake->hello_retry_request_count > 0 )
-            {
-                MBEDTLS_SSL_DEBUG_MSG( 1, ( "Multiple HRRs received" ) );
-                MBEDTLS_SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_UNEXPECTED_MESSAGE,
-                                    MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE );
-                return( MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE );
-            }
-            /*
-             * Clients must abort the handshake with an "illegal_parameter"
-             * alert if the HelloRetryRequest would not result in any change
-             * in the ClientHello.
-             * In a PSK only key exchange that what we expect.
-             */
-            if( ! mbedtls_ssl_conf_tls13_some_ephemeral_enabled( ssl ) )
-            {
-                MBEDTLS_SSL_DEBUG_MSG( 1,
-                            ( "Unexpected HRR in pure PSK key exchange." ) );
-                MBEDTLS_SSL_PEND_FATAL_ALERT(
-                            MBEDTLS_SSL_ALERT_MSG_ILLEGAL_PARAMETER,
-                            MBEDTLS_ERR_SSL_ILLEGAL_PARAMETER);
-                return( MBEDTLS_ERR_SSL_ILLEGAL_PARAMETER );
-            }
-
-            handshake->hello_retry_request_count++;
-
-            break;
-    }
-
-cleanup:
-
-    return( ret );
-}
-#endif /* MBEDTLS_SSL_USE_MPS */
 
 MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_tls13_check_server_hello_session_id_echo( mbedtls_ssl_context *ssl,
@@ -2178,10 +2069,9 @@ static int ssl_tls13_parse_encrypted_extensions( mbedtls_ssl_context *ssl,
                 MBEDTLS_SSL_DEBUG_MSG(
                     3, ( "unsupported extension found: %u ", extension_type) );
                 MBEDTLS_SSL_PEND_FATAL_ALERT(
-                    MBEDTLS_SSL_ALERT_MSG_UNSUPPORTED_EXT,   \
+                    MBEDTLS_SSL_ALERT_MSG_UNSUPPORTED_EXT,
                     MBEDTLS_ERR_SSL_UNSUPPORTED_EXTENSION );
                 return ( MBEDTLS_ERR_SSL_UNSUPPORTED_EXTENSION );
-                break;
         }
 
         p += extension_data_len;
@@ -2191,7 +2081,7 @@ static int ssl_tls13_parse_encrypted_extensions( mbedtls_ssl_context *ssl,
     if( p != end )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "EncryptedExtension lengths misaligned" ) );
-        MBEDTLS_SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_DECODE_ERROR,   \
+        MBEDTLS_SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_DECODE_ERROR,
                                       MBEDTLS_ERR_SSL_DECODE_ERROR );
         return( MBEDTLS_ERR_SSL_DECODE_ERROR );
     }
@@ -2740,7 +2630,7 @@ static int ssl_tls13_parse_certificate_request( mbedtls_ssl_context *ssl,
                 MBEDTLS_SSL_DEBUG_MSG( 3,
                         ( "found signature algorithms extension" ) );
                 ret = mbedtls_ssl_parse_sig_alg_ext( ssl, p,
-                              p + extension_data_len );
+                                                     p + extension_data_len );
                 if( ret != 0 )
                     return( ret );
                 if( ! sig_alg_ext_found )
@@ -2849,7 +2739,6 @@ static int ssl_tls13_process_server_certificate( mbedtls_ssl_context *ssl )
         return( ret );
 
     mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_CERTIFICATE_VERIFY );
-
     return( 0 );
 }
 
@@ -2999,7 +2888,6 @@ static int ssl_tls13_flush_buffers( mbedtls_ssl_context *ssl )
 {
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "handshake: done" ) );
     mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_HANDSHAKE_WRAPUP );
-
     return( 0 );
 }
 
@@ -3016,7 +2904,6 @@ static int ssl_tls13_handshake_wrapup( mbedtls_ssl_context *ssl )
         return( ret );
 
     mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_HANDSHAKE_OVER );
-
     return( 0 );
 }
 
@@ -3397,3 +3284,5 @@ int mbedtls_ssl_tls13_handshake_client_step( mbedtls_ssl_context *ssl )
 }
 
 #endif /* MBEDTLS_SSL_CLI_C && MBEDTLS_SSL_PROTO_TLS1_3 */
+
+

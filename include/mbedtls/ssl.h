@@ -231,6 +231,7 @@
  * Mbed TLS internal identifiers for use with the SSL configuration API
  * mbedtls_ssl_conf_tls13_key_exchange_modes().
  */
+
 #define MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK            ( 1u << 0 ) /*!< Pure-PSK TLS 1.3 key exchange,
                                                                          *   encompassing both externally agreed PSKs
                                                                          *   as well as resumption PSKs. */
@@ -353,10 +354,6 @@
 #define MBEDTLS_SSL_UNIFIED_HDR_EPOCH_1     64
 #define MBEDTLS_SSL_UNIFIED_HDR_EPOCH_2    128
 
-/* These two constants are used with the mbedtls_ssl_hdr_len() function. */
-
-#define  MBEDTLS_SSL_DIRECTION_IN 0
-#define  MBEDTLS_SSL_DIRECTION_OUT 1
 #define MBEDTLS_SSL_DTLS_SRTP_MKI_UNSUPPORTED    0
 #define MBEDTLS_SSL_DTLS_SRTP_MKI_SUPPORTED      1
 
@@ -704,14 +701,11 @@ typedef enum
     MBEDTLS_SSL_NEW_SESSION_TICKET,
     MBEDTLS_SSL_SERVER_HELLO_VERIFY_REQUEST_SENT,
     MBEDTLS_SSL_HELLO_RETRY_REQUEST,
+    MBEDTLS_SSL_ENCRYPTED_EXTENSIONS,
     MBEDTLS_SSL_SECOND_CLIENT_HELLO,
-    MBEDTLS_SSL_SECOND_SERVER_HELLO,
-    MBEDTLS_SSL_EARLY_DATA,
     MBEDTLS_SSL_END_OF_EARLY_DATA,
     MBEDTLS_SSL_CLIENT_CERTIFICATE_VERIFY,
-    MBEDTLS_SSL_ENCRYPTED_EXTENSIONS,
     MBEDTLS_SSL_HANDSHAKE_FINISH_ACK,
-    MBEDTLS_SSL_CLIENT_NEW_SESSION_TICKET,
     MBEDTLS_SSL_CLIENT_CCS_BEFORE_2ND_CLIENT_HELLO,
     MBEDTLS_SSL_CLIENT_CCS_AFTER_SERVER_FINISHED,
     MBEDTLS_SSL_CLIENT_CCS_AFTER_CLIENT_HELLO,
@@ -1240,7 +1234,7 @@ struct mbedtls_ssl_session
 
 #if defined(MBEDTLS_HAVE_TIME)
     mbedtls_time_t MBEDTLS_PRIVATE(start);       /*!< starting time      */
-#endif /* MBEDTLS_HAVE_TIME */
+#endif
     int MBEDTLS_PRIVATE(ciphersuite);            /*!< chosen ciphersuite */
     size_t MBEDTLS_PRIVATE(id_len);              /*!< session id length  */
     unsigned char MBEDTLS_PRIVATE(id)[32];       /*!< session identifier */
@@ -1284,7 +1278,7 @@ struct mbedtls_ssl_session
 
 #if defined(MBEDTLS_SSL_ENCRYPT_THEN_MAC)
     int MBEDTLS_PRIVATE(encrypt_then_mac);       /*!< flag for EtM activation                */
-#endif /* MBEDTLS_SSL_ENCRYPT_THEN_MAC */
+#endif
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3)
 #if defined(MBEDTLS_ZERO_RTT) && defined(MBEDTLS_SSL_SRV_C)
@@ -1391,7 +1385,6 @@ typedef union
  */
 struct mbedtls_ssl_config
 {
-
     /* Group items mostly by size. This helps to reduce memory wasted to
      * padding. It also helps to keep smaller fields early in the structure,
      * so that elements tend to be in the 128-element direct access window
@@ -3531,70 +3524,6 @@ int mbedtls_ssl_conf_own_cert( mbedtls_ssl_config *conf,
                               mbedtls_x509_crt *own_cert,
                               mbedtls_pk_context *pk_key );
 #endif /* MBEDTLS_X509_CRT_PARSE_C */
-
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3)
-/**
- * \brief Set the supported key exchange modes for TLS 1.3 connections.
- *
- * In (D)TLS 1.2 and earlier, there is a single concept of 'ciphersuite'
- * which specifies two separate things simultaneously:
- * - The method of key establishment, defining how both parties
- *   in the communication arrive at a shared secret during the
- *   initial handshake phase of the protocol.
- * - The method of symmetric encryption, defining the set of algorithms
- *   which, using the keying material established in the handshake,
- *   provide traffic protection.
- *
- * Users can specify which ciphersuites to support in (D)TLS versions 1.2
- * and earlier via mbedtls_ssl_conf_ciphersuites(), and should refer to the
- * corresponding documentation for more information.
- *
- * In (D)TLS 1.3, the former ciphersuite concept has been modified to allow
- * separate negotiation of key establishment mode and symmetric encryption mode.
- *
- * In the lingo of (D)TLS 1.3, it is only the latter that is called
- * 'ciphersuite', and its configuration continues to be done through
- * mbedtls_ssl_conf_ciphersuites().
- * To configure the supported key exchange modes in (D)TLS 1.3, in turn,
- * this function should be used.
- *
- * \param conf
- *      The SSL configuration the change should apply to.
- * \param key_exchange_mode
- *      A bitwise combination of one or more of the following:
- *      - MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK
- *        This flag enables pure-PSK key exchanges.
- *      - MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_EPHEMERAL
- *        This flag enables combined PSK-ephemeral key exchanges.
- *      - MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL
- *        This flag enables pure-ephemeral key exchanges.
- *
- * \note For convenience, the following pre-defined macros are available
- *       for all combinations of the above:
- *       - MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_ALL
- *         Includes all of pure-PSK, PSK-ephemeral and pure-ephemeral.
- *       - MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_ALL
- *         Includes both pure-PSK and combined PSK-ephemeral key exchanges,
- *         but excludes pure-ephemeral key exchanges.
- *       - MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ALL
- *         Includes both pure-ephemeral and combined PSK-ephemeral key exchanges,
- *
- * \note If a PSK-based key exchange mode shall be supported, applications
- *       must also use the APIs mbedtls_ssl_conf_psk() or
- *       mbedtls_ssl_conf_psk_cb() or mbedtls_ssl_conf_psk_opaque()
- *       to configure the PSKs to be used.
- *
- * \note If an ECDHE-based key exchange mode shall be supported, server-side
- *       applications must also provide a certificate via
- *       mbedtls_ssl_conf_own_cert().
- *
- * \returns \c 0 on success.
- * \returns A negative error code on failure.
- */
-
-int mbedtls_ssl_conf_tls13_key_exchange( mbedtls_ssl_config* conf,
-                         const int key_exchange_mode );
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3)
 

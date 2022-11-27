@@ -48,9 +48,6 @@
 #include "mbedtls/version.h"
 #include "mbedtls/constant_time.h"
 
-#include "ssl_client.h"
-#include "ssl_debug_helpers.h"
-#include "ssl_misc.h"
 #if defined(MBEDTLS_SSL_USE_MPS)
 #include "mps_all.h"
 #endif /* MEDTLS_SSL_USE_MPS */
@@ -293,8 +290,7 @@ int mbedtls_ssl_session_copy( mbedtls_ssl_session *dst,
 
 #endif /* MBEDTLS_X509_CRT_PARSE_C */
 
-#if ( defined(MBEDTLS_SSL_SESSION_TICKETS) || \
-      defined(MBEDTLS_SSL_NEW_SESSION_TICKET_REMOVED) ) && defined(MBEDTLS_SSL_CLI_C)
+#if defined(MBEDTLS_SSL_SESSION_TICKETS) && defined(MBEDTLS_SSL_CLI_C)
     if( src->ticket != NULL )
     {
         dst->ticket = mbedtls_calloc( 1, src->ticket_len );
@@ -303,15 +299,7 @@ int mbedtls_ssl_session_copy( mbedtls_ssl_session *dst,
 
         memcpy( dst->ticket, src->ticket, src->ticket_len );
     }
-#endif /* (MBEDTLS_SSL_SESSION_TICKETS || MBEDTLS_SSL_NEW_SESSION_TICKET_REMOVED)
-          && MBEDTLS_SSL_CLI_C */
-
-#if defined(MBEDTLS_SSL_NEW_SESSION_TICKET_REMOVED)
-
-    /* Resumption Key */
-    memcpy( dst->resumption_key, src->resumption_key, src->resumption_key_len );
-
-#endif /* MBEDTLS_SSL_NEW_SESSION_TICKET_REMOVED */
+#endif /* MBEDTLS_SSL_SESSION_TICKETS && MBEDTLS_SSL_CLI_C */
 
     return( 0 );
 }
@@ -415,6 +403,7 @@ typedef int (*tls_prf_fn)( const unsigned char *secret, size_t slen,
                            unsigned char *dstbuf, size_t dlen );
 
 static tls_prf_fn ssl_tls12prf_from_cs( int ciphersuite_id );
+
 #endif /* MBEDTLS_SSL_CONTEXT_SERIALIZATION */
 
 /* Type for the TLS PRF */
@@ -595,8 +584,8 @@ void mbedtls_ssl_reset_checksum( mbedtls_ssl_context *ssl )
 #endif
 }
 
-static void ssl_update_checksum_start( mbedtls_ssl_context* ssl,
-                                       const unsigned char* buf, size_t len )
+static void ssl_update_checksum_start( mbedtls_ssl_context *ssl,
+                                       const unsigned char *buf, size_t len )
 {
 #if defined(MBEDTLS_HAS_ALG_SHA_256_VIA_MD_OR_PSA_BASED_ON_USE_PSA)
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
@@ -2152,7 +2141,6 @@ mbedtls_ssl_mode_t mbedtls_ssl_get_mode_from_ciphersuite(
 
 #if defined(MBEDTLS_USE_PSA_CRYPTO) || defined(MBEDTLS_SSL_PROTO_TLS1_3)
 
-
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3)
 /* Serialization of TLS 1.3 sessions:
  *
@@ -2874,27 +2862,28 @@ void mbedtls_ssl_conf_renegotiation_period( mbedtls_ssl_config *conf,
 }
 #endif /* MBEDTLS_SSL_RENEGOTIATION */
 
-#if ( ( defined(MBEDTLS_SSL_SESSION_TICKETS) && defined(MBEDTLS_SSL_CLI_C) ) || \
-      ( defined(MBEDTLS_SSL_NEW_SESSION_TICKET_REMOVED) ) )
+#if defined(MBEDTLS_SSL_SESSION_TICKETS)
+
+#if defined(MBEDTLS_SSL_CLI_C)  || \
+      ( defined(MBEDTLS_SSL_NEW_SESSION_TICKET_REMOVED) )
 void mbedtls_ssl_conf_session_tickets( mbedtls_ssl_config *conf, int use_tickets )
 {
     conf->session_tickets = use_tickets;
 }
-#endif /* (MBEDTLS_SSL_SESSION_TICKETS && MBEDTLS_SSL_CLI_C) || MBEDTLS_SSL_NEW_SESSION_TICKET_REMOVED */
+#endif
 
-#if ( ( defined(MBEDTLS_SSL_SESSION_TICKETS) || defined(MBEDTLS_SSL_NEW_SESSION_TICKET_REMOVED) ) && \
-      defined(MBEDTLS_SSL_SRV_C) )
-void mbedtls_ssl_conf_session_tickets_cb( mbedtls_ssl_config* conf,
-    mbedtls_ssl_ticket_write_t* f_ticket_write,
-    mbedtls_ssl_ticket_parse_t* f_ticket_parse,
-    void* p_ticket )
+#if defined(MBEDTLS_SSL_SRV_C)
+void mbedtls_ssl_conf_session_tickets_cb( mbedtls_ssl_config *conf,
+        mbedtls_ssl_ticket_write_t *f_ticket_write,
+        mbedtls_ssl_ticket_parse_t *f_ticket_parse,
+        void *p_ticket )
 {
     conf->f_ticket_write = f_ticket_write;
     conf->f_ticket_parse = f_ticket_parse;
-    conf->p_ticket = p_ticket;
+    conf->p_ticket       = p_ticket;
 }
-#endif /* (MBEDTLS_SSL_SESSION_TICKETS || MBEDTLS_SSL_NEW_SESSION_TICKET_REMOVED) && MBEDTLS_SSL_SRV_C */
-
+#endif
+#endif /* MBEDTLS_SSL_SESSION_TICKETS */
 
 void mbedtls_ssl_set_export_keys_cb( mbedtls_ssl_context *ssl,
                                      mbedtls_ssl_export_keys_t *f_export_keys,
@@ -3273,8 +3262,6 @@ int mbedtls_ssl_get_session( const mbedtls_ssl_context *ssl,
         ( SSL_SERIALIZED_SESSION_CONFIG_ETM           << SSL_SERIALIZED_SESSION_CONFIG_ETM_BIT           ) | \
         ( SSL_SERIALIZED_SESSION_CONFIG_TICKET        << SSL_SERIALIZED_SESSION_CONFIG_TICKET_BIT        ) ) )
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_2) || defined(MBEDTLS_SSL_PROTO_TLS1_1) || \
-    defined(MBEDTLS_SSL_PROTO_TLS1) || defined(MBEDTLS_SSL_NEW_SESSION_TICKET_REMOVED)
 static unsigned char ssl_serialized_session_header[] = {
     MBEDTLS_VERSION_MAJOR,
     MBEDTLS_VERSION_MINOR,
@@ -3313,6 +3300,9 @@ static unsigned char ssl_serialized_session_header[] = {
  *        serialized_session_tls13 data;
  *
  *   };
+ *
+ * } serialized_session;
+ *
  */
 
 MBEDTLS_CHECK_RETURN_CRITICAL
@@ -3474,7 +3464,6 @@ int mbedtls_ssl_session_load( mbedtls_ssl_session *session,
 
     return( ret );
 }
-#endif /* MBEDTLS_SSL_PROTO_TLS1_2 || MBEDTLS_SSL_NEW_SESSION_TICKET_REMOVED */
 
 #if defined(MBEDTLS_SSL_USE_MPS)
 int mbedtls_ssl_mps_remap_error( int ret )
@@ -3977,7 +3966,7 @@ void mbedtls_ssl_session_free( mbedtls_ssl_session *session )
     ssl_clear_peer_cert( session );
 #endif
 
-#if( defined(MBEDTLS_SSL_SESSION_TICKETS) || ( defined(MBEDTLS_SSL_NEW_SESSION_TICKET_REMOVED) && defined(MBEDTLS_SSL_CLI_C) ) )
+#if defined(MBEDTLS_SSL_SESSION_TICKETS) && defined(MBEDTLS_SSL_CLI_C)
     mbedtls_free( session->ticket );
 #endif
 
@@ -4381,7 +4370,7 @@ static int ssl_context_load( mbedtls_ssl_context *ssl,
     /* Read random bytes and populate structure */
     if( (size_t)( end - p ) < sizeof( ssl->transform->randbytes ) )
         return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
-
+#if defined(MBEDTLS_SSL_PROTO_TLS1_2)
     ret = ssl_tls12_populate_transform( ssl->transform,
                   ssl->session->ciphersuite,
                   ssl->session->master,
@@ -4395,7 +4384,7 @@ static int ssl_context_load( mbedtls_ssl_context *ssl,
                   ssl );
     if( ret != 0 )
         return( ret );
-
+#endif /* MBEDTLS_SSL_PROTO_TLS1_2 */
     p += sizeof( ssl->transform->randbytes );
 
 #if defined(MBEDTLS_SSL_DTLS_CONNECTION_ID)
@@ -5103,6 +5092,7 @@ int mbedtls_ssl_config_defaults( mbedtls_ssl_config *conf,
          * Default
          */
         default:
+
             conf->ciphersuite_list = mbedtls_ssl_list_ciphersuites();
 
 #if defined(MBEDTLS_X509_CRT_PARSE_C)
@@ -8797,7 +8787,6 @@ static int ssl_tls12_session_load( mbedtls_ssl_session *session,
 
     return( 0 );
 }
-
 #endif /* MBEDTLS_SSL_PROTO_TLS1_2 */
 
 int mbedtls_ssl_validate_ciphersuite(

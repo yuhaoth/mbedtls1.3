@@ -1379,6 +1379,17 @@ int mbedtls_ssl_decrypt_buf( mbedtls_ssl_context const *ssl,
             dynamic_iv = rec->ctr;
         }
 
+        /* Check that there's space for the authentication tag. */
+        if( rec->data_len < transform->taglen )
+        {
+            MBEDTLS_SSL_DEBUG_MSG( 1, ( "msglen (%" MBEDTLS_PRINTF_SIZET
+                                        ") < taglen (%" MBEDTLS_PRINTF_SIZET ") ",
+                                        rec->data_len,
+                                        transform->taglen ) );
+            return( MBEDTLS_ERR_SSL_INVALID_MAC );
+        }
+        rec->data_len -= transform->taglen;
+
         /*
          * Prepare nonce from dynamic and static parts.
          */
@@ -1392,17 +1403,6 @@ int mbedtls_ssl_decrypt_buf( mbedtls_ssl_context const *ssl,
          * Build additional data for AEAD encryption.
          * This depends on the TLS version.
          */
-
-        /* Check that there's space for the authentication tag. */
-        if( rec->data_len < transform->taglen )
-        {
-            MBEDTLS_SSL_DEBUG_MSG( 1, ( "msglen (%" MBEDTLS_PRINTF_SIZET
-                                        ") < taglen (%" MBEDTLS_PRINTF_SIZET ") ",
-                                        rec->data_len,
-                                        transform->taglen ) );
-            return( MBEDTLS_ERR_SSL_INVALID_MAC );
-        }
-        rec->data_len -= transform->taglen;
         ssl_extract_add_data_from_record( add_data, &add_data_len, rec,
                                           transform->tls_version,
                                           transform->taglen );
@@ -5633,22 +5633,25 @@ static int ssl_tls13_handle_hs_message_post_handshake( mbedtls_ssl_context *ssl 
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_2)
+/* This function is called from mbedtls_ssl_read() when a handshake message is
+ * received after the initial handshake. In this context, handshake messages
+ * may only be sent for the purpose of initiating renegotiations.
+ *
+ * This function is introduced as a separate helper since the handling
+ * of post-handshake handshake messages changes significantly in TLS 1.3,
+ * and having a helper function allows to distinguish between TLS <= 1.2 and
+ * TLS 1.3 in the future without bloating the logic of mbedtls_ssl_read().
+ */
+MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_tls12_handle_hs_message_post_handshake( mbedtls_ssl_context *ssl )
 {
+    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
+
     /*
      * - For client-side, expect SERVER_HELLO_REQUEST.
      * - For server-side, expect CLIENT_HELLO.
      * - Fail (TLS) or silently drop record (DTLS) in other cases.
      */
-#if defined(MBEDTLS_SSL_RENEGOTIATION)      \
-    || defined(MBEDTLS_SSL_PROTO_TLS1)      \
-    || defined(MBEDTLS_SSL_PROTO_TLS1_1)    \
-    || defined(MBEDTLS_SSL_PROTO_TLS1_2)
-    int ret;
-#endif /* defined(MBEDTLS_SSL_RENEGOTIATION)    \
-          || defined(MBEDTLS_SSL_PROTO_TLS1)    \
-          || defined(MBEDTLS_SSL_PROTO_TLS1_1)  \
-          || defined(MBEDTLS_SSL_PROTO_TLS1_2) */
 
 #if defined(MBEDTLS_SSL_CLI_C)
     if( ssl->conf->endpoint == MBEDTLS_SSL_IS_CLIENT &&

@@ -21,18 +21,16 @@
 
 #if defined(MBEDTLS_SSL_TLS_C) && defined(MBEDTLS_SSL_PROTO_TLS1_3)
 
-#define SSL_DONT_FORCE_FLUSH 0
-#define SSL_FORCE_FLUSH      1
+#include <string.h>
 
-#include "mbedtls/ssl_ticket.h"
-#include "mbedtls/debug.h"
 #include "mbedtls/error.h"
+#include "mbedtls/debug.h"
 #include "mbedtls/oid.h"
 #include "mbedtls/platform.h"
 #include "mbedtls/constant_time.h"
 #include "mbedtls/ssl.h"
 #include "mbedtls/hkdf.h"
-#include <string.h>
+#include "mbedtls/ssl_ticket.h"
 
 #include "ssl_misc.h"
 #include "ssl_tls13_invasive.h"
@@ -435,6 +433,10 @@ int mbedtls_ssl_tls13_process_certificate_verify( mbedtls_ssl_context *ssl )
         mbedtls_ssl_tls13_fetch_handshake_msg( ssl,
                 MBEDTLS_SSL_HS_CERTIFICATE_VERIFY, &buf, &buf_len ) );
 
+    /* Need to calculate the hash of the transcript first
+     * before reading the message since otherwise it gets
+     * included in the transcript
+     */
     ret = mbedtls_ssl_get_handshake_transcript( ssl,
                             ssl->handshake->ciphersuite_info->mac,
                             transcript, sizeof( transcript ),
@@ -573,7 +575,7 @@ int mbedtls_ssl_tls13_parse_certificate( mbedtls_ssl_context *ssl,
     }
 
     if( ( ssl->session_negotiate->peer_cert =
-              mbedtls_calloc( 1, sizeof( mbedtls_x509_crt ) ) ) == NULL )
+          mbedtls_calloc( 1, sizeof( mbedtls_x509_crt ) ) ) == NULL )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "alloc( %" MBEDTLS_PRINTF_SIZET " bytes ) failed",
                                     sizeof( mbedtls_x509_crt ) ) );
@@ -703,7 +705,7 @@ static int ssl_tls13_validate_certificate( mbedtls_ssl_context *ssl )
 #endif
             authmode = ssl->conf->authmode;
     }
-#endif /* MBEDTLS_SSL_SRV_C */
+#endif
 
     /*
      * If the peer hasn't sent a certificate ( i.e. it sent
@@ -849,8 +851,8 @@ static int ssl_tls13_validate_certificate( mbedtls_ssl_context *ssl )
 #if defined(MBEDTLS_DEBUG_C)
     if( verify_result != 0 )
     {
-        MBEDTLS_SSL_DEBUG_MSG( 3, ( "! Certificate verification flags %x",
-                                    ssl->session_negotiate->verify_result ) );
+        MBEDTLS_SSL_DEBUG_MSG( 3, ( "! Certificate verification flags %08x",
+                                    (unsigned int) verify_result ) );
     }
     else
     {
@@ -1386,7 +1388,6 @@ int mbedtls_ssl_tls13_write_certificate( mbedtls_ssl_context *ssl )
 
     MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_finish_handshake_msg(
                               ssl, buf_len, msg_len ) );
-
 cleanup:
 
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= write certificate" ) );
@@ -1396,7 +1397,6 @@ cleanup:
 /*
  * STATE HANDLING: Output Certificate Verify
  */
-
 int mbedtls_ssl_tls13_check_sig_alg_cert_key_match( uint16_t sig_alg,
                                                     mbedtls_pk_context *key )
 {
@@ -1600,24 +1600,24 @@ int mbedtls_ssl_tls13_write_certificate_verify( mbedtls_ssl_context *ssl )
 
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> write certificate verify" ) );
 
-
     MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_start_handshake_msg( ssl,
                 MBEDTLS_SSL_HS_CERTIFICATE_VERIFY, &buf, &buf_len ) );
 
     MBEDTLS_SSL_PROC_CHK( ssl_tls13_write_certificate_verify_body(
                                 ssl, buf, buf + buf_len, &msg_len ) );
 
-    mbedtls_ssl_add_hs_msg_to_checksum(
-        ssl, MBEDTLS_SSL_HS_CERTIFICATE_VERIFY, buf, msg_len );
+    mbedtls_ssl_add_hs_msg_to_checksum( ssl, MBEDTLS_SSL_HS_CERTIFICATE_VERIFY,
+                                        buf, msg_len );
 
     MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_finish_handshake_msg(
-                              ssl, buf_len, msg_len ) );
+                                ssl, buf_len, msg_len ) );
 
 cleanup:
 
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= write certificate verify" ) );
     return( ret );
 }
+
 #endif /* MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED */
 
 #if defined(MBEDTLS_ZERO_RTT)

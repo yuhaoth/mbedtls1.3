@@ -3649,4 +3649,5 @@ int mbedtls_ssl_handshake_client_step( mbedtls_ssl_context *ssl )
 
     return( ret );
 }
+
 #endif /* MBEDTLS_SSL_CLI_C && MBEDTLS_SSL_PROTO_TLS1_2 */
