@@ -722,19 +722,6 @@ int mbedtls_ssl_tls13_generate_application_keys(
  * \returns    \c 0 on success.
  * \returns    A negative error code on failure.
  */
-int mbedtls_ssl_tls13_generate_resumption_master_secret(
-    mbedtls_ssl_context* ssl );
-
-/**
- * \brief Compute TLS 1.3 resumption master secret.
- *
- * \param ssl  The SSL context to operate on. This must be in
- *             key schedule stage \c Application, see
- *             mbedtls_ssl_tls13_key_schedule_stage_application().
- *
- * \returns    \c 0 on success.
- * \returns    A negative error code on failure.
- */
 MBEDTLS_CHECK_RETURN_CRITICAL
 int mbedtls_ssl_tls13_compute_resumption_master_secret( mbedtls_ssl_context *ssl );
 
@@ -766,28 +753,6 @@ int mbedtls_ssl_tls13_calculate_verify_data( mbedtls_ssl_context *ssl,
                                              size_t dst_len,
                                              size_t *actual_len,
                                              int which );
-
-/*
- * TLS 1.3 key schedule evolutions
- *
- *   Early -> Handshake -> Application
- *
- * Small wrappers around mbedtls_ssl_tls13_evolve_secret().
- */
-
-/**
- * \brief Begin TLS 1.3 key schedule by calculating early secret.
- *
- *        The TLS 1.3 key schedule can be viewed as a simple state machine
- *        with states Initial -> Early -> Handshake -> Application, and
- *        this function represents the Initial -> Early transition.
- *
- * \param ssl  The SSL context to operate on.
- *
- * \returns    \c 0 on success.
- * \returns    A negative error code on failure.
- */
-int mbedtls_ssl_tls13_key_schedule_stage_early( mbedtls_ssl_context *ssl );
 
 /**
  * \brief Compute TLS 1.3 handshake transform
