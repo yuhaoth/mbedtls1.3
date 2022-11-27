@@ -908,223 +908,6 @@ cleanup:
 
 /*
  *
- * STATE HANDLING: Incoming Finished message.
- */
-/*
- * Implementation
- */
-
-MBEDTLS_CHECK_RETURN_CRITICAL
-static int ssl_tls13_preprocess_finished_message( mbedtls_ssl_context *ssl )
-{
-    int ret;
-
-    ret = mbedtls_ssl_tls13_calculate_verify_data( ssl,
-                    ssl->handshake->state_local.finished_in.digest,
-                    sizeof( ssl->handshake->state_local.finished_in.digest ),
-                    &ssl->handshake->state_local.finished_in.digest_len,
-                    ssl->conf->endpoint == MBEDTLS_SSL_IS_CLIENT ?
-                        MBEDTLS_SSL_IS_SERVER : MBEDTLS_SSL_IS_CLIENT );
-    if( ret != 0 )
-    {
-        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_tls13_calculate_verify_data", ret );
-        return( ret );
-    }
-
-    return( 0 );
-}
-
-MBEDTLS_CHECK_RETURN_CRITICAL
-static int ssl_tls13_parse_finished_message( mbedtls_ssl_context *ssl,
-                                             const unsigned char *buf,
-                                             const unsigned char *end )
-{
-    /*
-     * struct {
-     *     opaque verify_data[Hash.length];
-     * } Finished;
-     */
-    const unsigned char *expected_verify_data =
-        ssl->handshake->state_local.finished_in.digest;
-    size_t expected_verify_data_len =
-        ssl->handshake->state_local.finished_in.digest_len;
-    /* Structural validation */
-    if( (size_t)( end - buf ) != expected_verify_data_len )
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad finished message" ) );
-
-        MBEDTLS_SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_DECODE_ERROR,
-                                      MBEDTLS_ERR_SSL_DECODE_ERROR );
-        return( MBEDTLS_ERR_SSL_DECODE_ERROR );
-    }
-
-    MBEDTLS_SSL_DEBUG_BUF( 4, "verify_data (self-computed):",
-                           expected_verify_data,
-                           expected_verify_data_len );
-    MBEDTLS_SSL_DEBUG_BUF( 4, "verify_data (received message):", buf,
-                           expected_verify_data_len );
-
-    /* Semantic validation */
-    if( mbedtls_ct_memcmp( buf,
-                           expected_verify_data,
-                           expected_verify_data_len ) != 0 )
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad finished message" ) );
-
-        MBEDTLS_SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_DECRYPT_ERROR,
-                                      MBEDTLS_ERR_SSL_HANDSHAKE_FAILURE );
-        return( MBEDTLS_ERR_SSL_HANDSHAKE_FAILURE );
-    }
-    return( 0 );
-}
-
-int mbedtls_ssl_tls13_process_finished_message( mbedtls_ssl_context *ssl )
-{
-    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
-    unsigned char *buf;
-    size_t buf_len;
-
-    MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> parse finished message" ) );
-
-    MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_tls13_fetch_handshake_msg( ssl,
-                                              MBEDTLS_SSL_HS_FINISHED,
-                                              &buf, &buf_len ) );
-
-    /* Preprocessing step: Compute handshake digest */
-    MBEDTLS_SSL_PROC_CHK( ssl_tls13_preprocess_finished_message( ssl ) );
-
-    MBEDTLS_SSL_PROC_CHK( ssl_tls13_parse_finished_message( ssl, buf, buf + buf_len ) );
-    mbedtls_ssl_add_hs_msg_to_checksum( ssl, MBEDTLS_SSL_HS_FINISHED,
-                                        buf, buf_len );
-
-#if defined(MBEDTLS_SSL_USE_MPS)
-    MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_mps_hs_consume_full_hs_msg( ssl ) );
-#endif /* MBEDTLS_SSL_USE_MPS */
-
-cleanup:
-
-    MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= parse finished message" ) );
-    return( ret );
-}
-
-/*
- *
- * STATE HANDLING: Write and send Finished message.
- *
- */
-/*
- * Implement
- */
-
-MBEDTLS_CHECK_RETURN_CRITICAL
-static int ssl_tls13_prepare_finished_message( mbedtls_ssl_context *ssl )
-{
-    int ret;
-
-    /* Compute transcript of handshake up to now. */
-    ret = mbedtls_ssl_tls13_calculate_verify_data( ssl,
-                    ssl->handshake->state_local.finished_out.digest,
-                    sizeof( ssl->handshake->state_local.finished_out.digest ),
-                    &ssl->handshake->state_local.finished_out.digest_len,
-                    ssl->conf->endpoint );
-
-    if( ret != 0 )
-    {
-        MBEDTLS_SSL_DEBUG_RET( 1, "calculate_verify_data failed", ret );
-        return( ret );
-    }
-
-    return( 0 );
-}
-
-MBEDTLS_CHECK_RETURN_CRITICAL
-static int ssl_tls13_write_finished_message_body( mbedtls_ssl_context *ssl,
-                                                  unsigned char *buf,
-                                                  unsigned char *end,
-                                                  size_t *out_len )
-{
-    size_t verify_data_len = ssl->handshake->state_local.finished_out.digest_len;
-    /*
-     * struct {
-     *     opaque verify_data[Hash.length];
-     * } Finished;
-     */
-    MBEDTLS_SSL_CHK_BUF_PTR( buf, end, verify_data_len );
-
-    memcpy( buf, ssl->handshake->state_local.finished_out.digest,
-            verify_data_len );
-
-    *out_len = verify_data_len;
-    return( 0 );
-}
-
-/* Main entry point: orchestrates the other functions */
-int mbedtls_ssl_tls13_write_finished_message( mbedtls_ssl_context *ssl )
-{
-    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
-    unsigned char *buf;
-    size_t buf_len, msg_len;
-
-    MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> write finished message" ) );
-
-    MBEDTLS_SSL_PROC_CHK( ssl_tls13_prepare_finished_message( ssl ) );
-
-    MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_start_handshake_msg( ssl,
-                              MBEDTLS_SSL_HS_FINISHED, &buf, &buf_len ) );
-
-    MBEDTLS_SSL_PROC_CHK( ssl_tls13_write_finished_message_body(
-                              ssl, buf, buf + buf_len, &msg_len ) );
-
-    mbedtls_ssl_add_hs_msg_to_checksum( ssl, MBEDTLS_SSL_HS_FINISHED,
-                                        buf, msg_len );
-
-    MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_finish_handshake_msg( ssl,
-                                              buf_len, msg_len ) );
-cleanup:
-
-    MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= write finished message" ) );
-    return( ret );
-}
-
-int mbedtls_ssl_tls13_handshake_wrapup( mbedtls_ssl_context *ssl )
-{
-    MBEDTLS_SSL_DEBUG_MSG( 3, ( "=> handshake wrapup" ) );
-
-#if defined(MBEDTLS_SSL_USE_MPS)
-    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
-
-    ret = mbedtls_mps_set_incoming_keys( &ssl->mps->l4,
-                                                 ssl->epoch_application );
-    if( ret != 0 )
-        return( ret );
-
-    ret = mbedtls_mps_set_outgoing_keys( &ssl->mps->l4,
-                                         ssl->epoch_application );
-    if( ret != 0 )
-        return( ret );
-#else
-    mbedtls_ssl_set_inbound_transform ( ssl, ssl->transform_application );
-    mbedtls_ssl_set_outbound_transform( ssl, ssl->transform_application );
-#endif /* MBEDTLS_SSL_USE_MPS */
-
-    /*
-     * Free the previous session and switch to the current one.
-     */
-    if( ssl->session )
-    {
-        mbedtls_ssl_session_free( ssl->session );
-        mbedtls_free( ssl->session );
-    }
-    ssl->session = ssl->session_negotiate;
-    ssl->session_negotiate = NULL;
-
-    MBEDTLS_SSL_DEBUG_MSG( 3, ( "<= handshake wrapup" ) );
-
-    return( 0 );
-}
-
-/*
- *
  * STATE HANDLING: Write ChangeCipherSpec
  *
  */
@@ -1619,6 +1402,230 @@ cleanup:
 }
 
 #endif /* MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED */
+
+/*
+ *
+ * STATE HANDLING: Incoming Finished message.
+ */
+/*
+ * Implementation
+ */
+
+MBEDTLS_CHECK_RETURN_CRITICAL
+static int ssl_tls13_preprocess_finished_message( mbedtls_ssl_context *ssl )
+{
+    int ret;
+
+    ret = mbedtls_ssl_tls13_calculate_verify_data( ssl,
+                    ssl->handshake->state_local.finished_in.digest,
+                    sizeof( ssl->handshake->state_local.finished_in.digest ),
+                    &ssl->handshake->state_local.finished_in.digest_len,
+                    ssl->conf->endpoint == MBEDTLS_SSL_IS_CLIENT ?
+                        MBEDTLS_SSL_IS_SERVER : MBEDTLS_SSL_IS_CLIENT );
+    if( ret != 0 )
+    {
+        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_tls13_calculate_verify_data", ret );
+        return( ret );
+    }
+
+    return( 0 );
+}
+
+MBEDTLS_CHECK_RETURN_CRITICAL
+static int ssl_tls13_parse_finished_message( mbedtls_ssl_context *ssl,
+                                             const unsigned char *buf,
+                                             const unsigned char *end )
+{
+    /*
+     * struct {
+     *     opaque verify_data[Hash.length];
+     * } Finished;
+     */
+    const unsigned char *expected_verify_data =
+        ssl->handshake->state_local.finished_in.digest;
+    size_t expected_verify_data_len =
+        ssl->handshake->state_local.finished_in.digest_len;
+    /* Structural validation */
+    if( (size_t)( end - buf ) != expected_verify_data_len )
+    {
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad finished message" ) );
+
+        MBEDTLS_SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_DECODE_ERROR,
+                                      MBEDTLS_ERR_SSL_DECODE_ERROR );
+        return( MBEDTLS_ERR_SSL_DECODE_ERROR );
+    }
+
+    MBEDTLS_SSL_DEBUG_BUF( 4, "verify_data (self-computed):",
+                           expected_verify_data,
+                           expected_verify_data_len );
+    MBEDTLS_SSL_DEBUG_BUF( 4, "verify_data (received message):", buf,
+                           expected_verify_data_len );
+
+    /* Semantic validation */
+    if( mbedtls_ct_memcmp( buf,
+                           expected_verify_data,
+                           expected_verify_data_len ) != 0 )
+    {
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad finished message" ) );
+
+        MBEDTLS_SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_DECRYPT_ERROR,
+                                      MBEDTLS_ERR_SSL_HANDSHAKE_FAILURE );
+        return( MBEDTLS_ERR_SSL_HANDSHAKE_FAILURE );
+    }
+    return( 0 );
+}
+
+int mbedtls_ssl_tls13_process_finished_message( mbedtls_ssl_context *ssl )
+{
+    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
+    unsigned char *buf;
+    size_t buf_len;
+
+    MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> parse finished message" ) );
+
+    MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_tls13_fetch_handshake_msg( ssl,
+                                              MBEDTLS_SSL_HS_FINISHED,
+                                              &buf, &buf_len ) );
+
+    /* Preprocessing step: Compute handshake digest */
+    MBEDTLS_SSL_PROC_CHK( ssl_tls13_preprocess_finished_message( ssl ) );
+
+    MBEDTLS_SSL_PROC_CHK( ssl_tls13_parse_finished_message( ssl, buf, buf + buf_len ) );
+
+    mbedtls_ssl_add_hs_msg_to_checksum( ssl, MBEDTLS_SSL_HS_FINISHED,
+                                        buf, buf_len );
+
+#if defined(MBEDTLS_SSL_USE_MPS)
+    MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_mps_hs_consume_full_hs_msg( ssl ) );
+#endif /* MBEDTLS_SSL_USE_MPS */
+
+cleanup:
+
+    MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= parse finished message" ) );
+    return( ret );
+}
+
+/*
+ *
+ * STATE HANDLING: Write and send Finished message.
+ *
+ */
+/*
+ * Implement
+ */
+
+MBEDTLS_CHECK_RETURN_CRITICAL
+static int ssl_tls13_prepare_finished_message( mbedtls_ssl_context *ssl )
+{
+    int ret;
+
+    /* Compute transcript of handshake up to now. */
+    ret = mbedtls_ssl_tls13_calculate_verify_data( ssl,
+                    ssl->handshake->state_local.finished_out.digest,
+                    sizeof( ssl->handshake->state_local.finished_out.digest ),
+                    &ssl->handshake->state_local.finished_out.digest_len,
+                    ssl->conf->endpoint );
+
+    if( ret != 0 )
+    {
+        MBEDTLS_SSL_DEBUG_RET( 1, "calculate_verify_data failed", ret );
+        return( ret );
+    }
+
+    return( 0 );
+}
+
+MBEDTLS_CHECK_RETURN_CRITICAL
+static int ssl_tls13_write_finished_message_body( mbedtls_ssl_context *ssl,
+                                                  unsigned char *buf,
+                                                  unsigned char *end,
+                                                  size_t *out_len )
+{
+    size_t verify_data_len = ssl->handshake->state_local.finished_out.digest_len;
+    /*
+     * struct {
+     *     opaque verify_data[Hash.length];
+     * } Finished;
+     */
+    MBEDTLS_SSL_CHK_BUF_PTR( buf, end, verify_data_len );
+
+    memcpy( buf, ssl->handshake->state_local.finished_out.digest,
+            verify_data_len );
+
+    *out_len = verify_data_len;
+    return( 0 );
+}
+
+/* Main entry point: orchestrates the other functions */
+int mbedtls_ssl_tls13_write_finished_message( mbedtls_ssl_context *ssl )
+{
+    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
+    unsigned char *buf;
+    size_t buf_len, msg_len;
+
+    MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> write finished message" ) );
+
+    MBEDTLS_SSL_PROC_CHK( ssl_tls13_prepare_finished_message( ssl ) );
+
+    MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_start_handshake_msg( ssl,
+                              MBEDTLS_SSL_HS_FINISHED, &buf, &buf_len ) );
+
+    MBEDTLS_SSL_PROC_CHK( ssl_tls13_write_finished_message_body(
+                              ssl, buf, buf + buf_len, &msg_len ) );
+
+    mbedtls_ssl_add_hs_msg_to_checksum( ssl, MBEDTLS_SSL_HS_FINISHED,
+                                        buf, msg_len );
+
+    MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_finish_handshake_msg(
+                              ssl, buf_len, msg_len ) );
+cleanup:
+
+    MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= write finished message" ) );
+    return( ret );
+}
+
+int mbedtls_ssl_tls13_handshake_wrapup( mbedtls_ssl_context *ssl )
+{
+
+    MBEDTLS_SSL_DEBUG_MSG( 3, ( "=> handshake wrapup" ) );
+
+#if defined(MBEDTLS_SSL_USE_MPS)
+    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
+
+    MBEDTLS_SSL_DEBUG_MSG( 1, ( "Switch to application keys for inbound traffic" ) );
+    ret = mbedtls_mps_set_incoming_keys( &ssl->mps->l4,
+                                                 ssl->epoch_application );
+    if( ret != 0 )
+        return( ret );
+
+    MBEDTLS_SSL_DEBUG_MSG( 1, ( "Switch to application keys for outbound traffic" ) );
+    ret = mbedtls_mps_set_outgoing_keys( &ssl->mps->l4,
+                                         ssl->epoch_application );
+    if( ret != 0 )
+        return( ret );
+#else
+    MBEDTLS_SSL_DEBUG_MSG( 1, ( "Switch to application keys for inbound traffic" ) );
+    mbedtls_ssl_set_inbound_transform ( ssl, ssl->transform_application );
+
+    MBEDTLS_SSL_DEBUG_MSG( 1, ( "Switch to application keys for outbound traffic" ) );
+    mbedtls_ssl_set_outbound_transform( ssl, ssl->transform_application );
+#endif /* MBEDTLS_SSL_USE_MPS */
+
+    /*
+     * Free the previous session and switch to the current one.
+     */
+    if( ssl->session )
+    {
+        mbedtls_ssl_session_free( ssl->session );
+        mbedtls_free( ssl->session );
+    }
+    ssl->session = ssl->session_negotiate;
+    ssl->session_negotiate = NULL;
+
+    MBEDTLS_SSL_DEBUG_MSG( 3, ( "<= handshake wrapup" ) );
+
+    return( 0 );
+}
 
 #if defined(MBEDTLS_ZERO_RTT)
 void mbedtls_ssl_conf_early_data(
