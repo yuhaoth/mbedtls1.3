@@ -67,9 +67,6 @@ static const int ciphersuite_preference[] =
     MBEDTLS_TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256,
     MBEDTLS_TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256,
     MBEDTLS_TLS_DHE_RSA_WITH_CHACHA20_POLY1305_SHA256,
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3)
-    MBEDTLS_TLS1_3_CHACHA20_POLY1305_SHA256,
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
 
     /* All AES-256 ephemeral suites */
     MBEDTLS_TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
@@ -85,9 +82,6 @@ static const int ciphersuite_preference[] =
     MBEDTLS_TLS_DHE_RSA_WITH_AES_256_CBC_SHA,
     MBEDTLS_TLS_ECDHE_ECDSA_WITH_AES_256_CCM_8,
     MBEDTLS_TLS_DHE_RSA_WITH_AES_256_CCM_8,
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3)
-    MBEDTLS_TLS1_3_AES_256_GCM_SHA384,
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
 
     /* All CAMELLIA-256 ephemeral suites */
     MBEDTLS_TLS_ECDHE_ECDSA_WITH_CAMELLIA_256_GCM_SHA384,
@@ -120,11 +114,6 @@ static const int ciphersuite_preference[] =
     MBEDTLS_TLS_DHE_RSA_WITH_AES_128_CBC_SHA,
     MBEDTLS_TLS_ECDHE_ECDSA_WITH_AES_128_CCM_8,
     MBEDTLS_TLS_DHE_RSA_WITH_AES_128_CCM_8,
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3)
-    MBEDTLS_TLS1_3_AES_128_GCM_SHA256,
-    MBEDTLS_TLS1_3_AES_128_CCM_SHA256,
-    MBEDTLS_TLS1_3_AES_128_CCM_8_SHA256,
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
 
     /* All CAMELLIA-128 ephemeral suites */
     MBEDTLS_TLS_ECDHE_ECDSA_WITH_CAMELLIA_128_GCM_SHA256,
@@ -408,8 +397,6 @@ static const mbedtls_ssl_ciphersuite_t ciphersuite_definitions[] =
 #endif /* MBEDTLS_CHACHAPOLY_C &&
           MBEDTLS_HAS_ALG_SHA_256_VIA_MD_OR_PSA_BASED_ON_USE_PSA &&
           MBEDTLS_SSL_PROTO_TLS1_2 */
-
-#if defined(MBEDTLS_SSL_PROTO_TLS1_2)
 #if defined(MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED)
 #if defined(MBEDTLS_AES_C)
 #if defined(MBEDTLS_HAS_ALG_SHA_1_VIA_MD_OR_PSA_BASED_ON_USE_PSA)
@@ -1775,7 +1762,7 @@ static const mbedtls_ssl_ciphersuite_t ciphersuite_definitions[] =
 #endif /* MBEDTLS_KEY_EXCHANGE_DHE_PSK_ENABLED */
 
 #endif /* MBEDTLS_ARIA_C */
-#endif /*  MBEDTLS_SSL_PROTO_TLS1_2 */
+
 
     { 0, "",
       MBEDTLS_CIPHER_NONE, MBEDTLS_MD_NONE, MBEDTLS_KEY_EXCHANGE_NONE,
@@ -1889,24 +1876,6 @@ int mbedtls_ssl_get_ciphersuite_id( const char *ciphersuite_name )
 
     return( cur->id );
 }
-
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3)
-unsigned int mbedtls_hash_size_for_ciphersuite(const mbedtls_ssl_ciphersuite_t* ciphersuite)
-{
-    /* We assume that the input parameter, ciphersuite, is not NULL. */
-    switch( ciphersuite->mac )
-    {
-    case MBEDTLS_MD_SHA256:
-        return( 32 );
-    case MBEDTLS_MD_SHA384:
-        return( 48 );
-    case MBEDTLS_MD_SHA512:
-        return( 64 );
-    default:
-        return( 0 );
-    }
-}
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
 
 size_t mbedtls_ssl_ciphersuite_get_cipher_key_bitlen( const mbedtls_ssl_ciphersuite_t *info )
 {
