@@ -1007,7 +1007,6 @@ int mbedtls_ssl_tls13_write_certificate( mbedtls_ssl_context *ssl )
 
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> write certificate" ) );
 
-
     MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_start_handshake_msg( ssl,
                           MBEDTLS_SSL_HS_CERTIFICATE, &buf, &buf_len ) );
 
@@ -1474,7 +1473,6 @@ int mbedtls_ssl_tls13_handshake_wrapup( mbedtls_ssl_context *ssl )
 
     return( 0 );
 }
-
 
 /*
  *
