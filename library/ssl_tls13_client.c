@@ -1981,6 +1981,9 @@ static int ssl_tls13_process_server_hello( mbedtls_ssl_context *ssl )
 cleanup:
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= %s ( %s )", __func__,
                                 is_hrr?"HelloRetryRequest":"ServerHello" ) );
+#if defined(MBEDTLS_SSL_USE_MPS)
+    ret = mbedtls_ssl_mps_remap_error( ret );
+#endif
     return( ret );
 }
 

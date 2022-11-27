@@ -3484,17 +3484,21 @@ int mbedtls_ssl_session_load( mbedtls_ssl_session *session,
 int mbedtls_ssl_mps_remap_error( int ret )
 {
     /* TODO: This should remap _all_ public MPS error codes. */
-
-    if( ret == MBEDTLS_ERR_MPS_WANT_READ )
-        ret = MBEDTLS_ERR_SSL_WANT_READ;
-    if( ret == MBEDTLS_ERR_MPS_WANT_WRITE )
-        ret = MBEDTLS_ERR_SSL_WANT_WRITE;
-    if( ret == MBEDTLS_ERR_MPS_CONN_EOF )
-        ret = MBEDTLS_ERR_SSL_CONN_EOF;
-    if( ret == MBEDTLS_ERR_MPS_RETRY )
-        ret = MBEDTLS_ERR_SSL_WANT_READ;
-    if( ret == MBEDTLS_ERR_MPS_CLOSE_NOTIFY )
-        ret = MBEDTLS_ERR_SSL_PEER_CLOSE_NOTIFY;
+    switch( ret )
+    {
+        case MBEDTLS_ERR_MPS_WANT_READ:
+            return( MBEDTLS_ERR_SSL_WANT_READ );
+        case MBEDTLS_ERR_MPS_WANT_WRITE:
+            return( MBEDTLS_ERR_SSL_WANT_WRITE );
+        case MBEDTLS_ERR_MPS_CONN_EOF:
+            return( MBEDTLS_ERR_SSL_CONN_EOF );
+        case MBEDTLS_ERR_MPS_RETRY:
+            return( MBEDTLS_ERR_SSL_WANT_READ );
+        case MBEDTLS_ERR_MPS_CLOSE_NOTIFY:
+            return( MBEDTLS_ERR_SSL_PEER_CLOSE_NOTIFY );
+        case MBEDTLS_ERR_MPS_FATAL_ALERT_RECEIVED:
+            return( MBEDTLS_ERR_SSL_FATAL_ALERT_MESSAGE );
+    }
 
     return( ret );
 }
