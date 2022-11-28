@@ -2489,7 +2489,7 @@ run_test    "TLS 1.3, TLS1-3-AES-128-GCM-SHA256, reject early data, OpenSSL serv
             "$O_NEXT_SRV" \
             "$P_CLI_ debug_level=5 force_version=tls13 server_name=localhost \
                      force_ciphersuite=TLS1-3-AES-128-GCM-SHA256 reconnect=1 tickets=1 \
-                     early_data=1" \
+                     early_data=1 reco_mode=1 " \
             0 \
             -c "=> write early data" \
             -c "=> mbedtls_ssl_tls13_generate_early_data_keys" \

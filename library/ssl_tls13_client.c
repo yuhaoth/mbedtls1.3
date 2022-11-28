@@ -1505,92 +1505,6 @@ static int ssl_tls13_parse_max_fragment_length_ext( mbedtls_ssl_context *ssl,
 }
 #endif /* MBEDTLS_SSL_MAX_FRAGMENT_LENGTH */
 
-#if defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
-/*
- * struct {
- *   opaque identity<1..2^16-1>;
- *   uint32 obfuscated_ticket_age;
- * } PskIdentity;
- *
- * opaque PskBinderEntry<32..255>;
- *
- * struct {
- *
- *   select (Handshake.msg_type) {
- *         ...
- *         case server_hello: uint16 selected_identity;
- *   };
- *
- * } PreSharedKeyExtension;
- *
- */
-
-MBEDTLS_CHECK_RETURN_CRITICAL
-static int ssl_tls13_parse_server_pre_shared_key_ext( mbedtls_ssl_context *ssl,
-                                                      const unsigned char *buf,
-                                                      const unsigned char *end )
-{
-    int ret = 0;
-    size_t selected_identity;
-
-    int psk_type;
-    const unsigned char *psk;
-    size_t psk_len;
-    const unsigned char *psk_identity;
-    size_t psk_identity_len;
-
-    /* Check which PSK we've offered.
-     *
-     * NOTE: Ultimately, we want to offer multiple PSKs, and in this
-     *       case, we need to iterate over them here.
-     */
-    if( ssl_tls13_get_psk_to_offer( ssl, &psk_type, &psk, &psk_len,
-                                    &psk_identity, &psk_identity_len ) != 0 )
-    {
-        /* If we haven't offered a PSK, the server must not send
-         * a PSK identity extension. */
-        return( MBEDTLS_ERR_SSL_HANDSHAKE_FAILURE );
-    }
-
-    MBEDTLS_SSL_CHK_BUF_PTR( buf, end, 2 );
-    selected_identity = MBEDTLS_GET_UINT16_BE( buf, 0 );
-
-    /* We have offered only one PSK, so the only valid choice
-     * for the server is PSK index 0.
-     *
-     * This will change once we support multiple PSKs. */
-    if( selected_identity > 0 )
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "Server's chosen PSK identity out of range" ) );
-
-        if( ( ret = mbedtls_ssl_send_alert_message( ssl,
-                        MBEDTLS_SSL_ALERT_LEVEL_FATAL,
-                        MBEDTLS_SSL_ALERT_MSG_ILLEGAL_PARAMETER ) ) != 0 )
-        {
-            return( ret );
-        }
-
-        return( MBEDTLS_ERR_SSL_ILLEGAL_PARAMETER );
-    }
-
-    /* Set the chosen PSK
-     *
-     * TODO: We don't have to do this in case we offered 0-RTT and the
-     *       server accepted it, because in this case we've already
-     *       set the handshake PSK. */
-    ret = mbedtls_ssl_set_hs_psk( ssl, psk, psk_len );
-    if( ret != 0 )
-    {
-        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_set_hs_psk", ret );
-        return( ret );
-    }
-
-    ssl->handshake->extensions_present |= MBEDTLS_SSL_EXT_PRE_SHARED_KEY;
-    return( 0 );
-}
-
-#endif
-
 #if defined(MBEDTLS_ZERO_RTT)
 /* Early Data Extension
 *
@@ -2439,6 +2353,36 @@ static int ssl_tls13_write_early_data_coordinate( mbedtls_ssl_context *ssl )
 }
 
 MBEDTLS_CHECK_RETURN_CRITICAL
+static int ssl_tls13_get_psk_to_offer( mbedtls_ssl_context *ssl,
+                                       const unsigned char **psk,
+                                       size_t *psk_len,
+                                       const unsigned char **identity,
+                                       size_t *identity_len )
+{
+    psa_algorithm_t hash_alg = PSA_ALG_SHA_256;
+
+    /* MBEDTLS_SSL_SESSION_TICKETS is not required by
+       MBEDTLS_SSL_ZERO_RTT in `tls13-prototype` */
+#if defined(MBEDTLS_SSL_SESSION_TICKETS)
+    if( ssl_tls13_ticket_get_identity(
+                ssl, &hash_alg, identity, identity_len) == 0        &&
+        ssl_tls13_ticket_get_psk( ssl, &hash_alg, psk, psk_len ) == 0 )
+    {
+
+        return( 0 );
+    }
+#endif /* MBEDTLS_SSL_SESSION_TICKETS */
+
+    if( ssl_tls13_psk_get_identity(
+                ssl, &hash_alg, identity, identity_len) == 0        &&
+        ssl_tls13_psk_get_psk( ssl, &hash_alg, psk, psk_len ) == 0 )
+    {
+        return( 0 );
+    }
+    return( -1 );
+}
+
+MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_tls13_write_early_data_prepare( mbedtls_ssl_context *ssl )
 {
     int ret;
@@ -2457,8 +2401,8 @@ static int ssl_tls13_write_early_data_prepare( mbedtls_ssl_context *ssl )
      *  'pre_shared_key' extension."
      */
 
-    if( ssl_tls13_get_psk_to_offer( ssl, NULL, &psk, &psk_len,
-                                      &psk_identity, &psk_identity_len ) != 0 )
+    if( ssl_tls13_get_psk_to_offer(
+            ssl, &psk, &psk_len, &psk_identity, &psk_identity_len ) != 0 )
     {
         /* This should never happen: We can only have gone past
          * ssl_tls13_write_early_data_coordinate() if we have offered a PSK. */
