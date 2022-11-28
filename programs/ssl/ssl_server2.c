@@ -49,7 +49,7 @@ int main( void )
 #include "mbedtls/ssl_cache.h"
 #endif
 
-#if defined(MBEDTLS_SSL_SESSION_TICKETS) || defined(MBEDTLS_SSL_NEW_SESSION_TICKET_REMOVED)
+#if defined(MBEDTLS_SSL_TICKET_C)
 #include "mbedtls/ssl_ticket.h"
 #endif
 
@@ -250,9 +250,13 @@ int main( void )
 
 #if defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
 #define USAGE_PSK_RAW                                               \
-    "    psk=%%s                  default: \"\" (disabled)\n"       \
-    "                             The PSK values are in hex, without 0x.\n" \
-    "    psk_identity=%%s         default: \"Client_identity\"\n"
+    "    psk=%%s              default: \"\" (disabled)\n"     \
+    "                          The PSK values are in hex, without 0x.\n" \
+    "    psk_list=%%s         default: \"\"\n"                          \
+    "                          A list of (PSK identity, PSK value) pairs.\n" \
+    "                          The PSK values are in hex, without 0x.\n" \
+    "                          id1,psk1[,id2,psk2[,...]]\n"             \
+    "    psk_identity=%%s     default: \"Client_identity\"\n"
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
 #define USAGE_PSK_SLOT                          \
     "    psk_opaque=%%d       default: 0 (don't use opaque static PSK)\n"     \
@@ -287,7 +291,7 @@ int main( void )
 #else
 #define USAGE_CA_CALLBACK ""
 #endif /* MBEDTLS_X509_TRUSTED_CERTIFICATE_CALLBACK */
-#if defined(MBEDTLS_SSL_SESSION_TICKETS) || defined(MBEDTLS_SSL_NEW_SESSION_TICKET_REMOVED)
+#if defined(MBEDTLS_SSL_SESSION_TICKETS)
 #define USAGE_TICKETS                                       \
     "    tickets=%%d          default: 1 (enabled)\n"       \
     "    ticket_rotate=%%d    default: 0 (disabled)\n"      \
@@ -295,7 +299,7 @@ int main( void )
     "    ticket_aead=%%s      default: \"AES-256-GCM\"\n"
 #else
 #define USAGE_TICKETS ""
-#endif /* MBEDTLS_SSL_SESSION_TICKETS || MBEDTLS_SSL_NEW_SESSION_TICKET_REMOVED */
+#endif /* MBEDTLS_SSL_SESSION_TICKETS */
 
 #define USAGE_EAP_TLS                                       \
     "    eap_tls=%%d          default: 0 (disabled)\n"
@@ -1546,7 +1550,7 @@ int main( int argc, char *argv[] )
 #if defined(MBEDTLS_SSL_CACHE_C)
     mbedtls_ssl_cache_context cache;
 #endif
-#if defined(MBEDTLS_SSL_SESSION_TICKETS) || defined(MBEDTLS_SSL_NEW_SESSION_TICKET_REMOVED)
+#if defined(MBEDTLS_SSL_SESSION_TICKETS)
     mbedtls_ssl_ticket_context ticket_ctx;
 #endif
 #if defined(SNI_OPTION)
@@ -1639,7 +1643,7 @@ int main( int argc, char *argv[] )
 #if defined(MBEDTLS_SSL_CACHE_C)
     mbedtls_ssl_cache_init( &cache );
 #endif
-#if defined(MBEDTLS_SSL_SESSION_TICKETS) || defined(MBEDTLS_SSL_NEW_SESSION_TICKET_REMOVED)
+#if defined(MBEDTLS_SSL_SESSION_TICKETS)
     mbedtls_ssl_ticket_init( &ticket_ctx );
 #endif
 #if defined(MBEDTLS_SSL_ALPN)
@@ -3236,8 +3240,7 @@ int main( int argc, char *argv[] )
             }
         }
     }
-
-#endif /* MBEDTLS_SSL_SESSION_TICKETS || MBEDTLS_SSL_NEW_SESSION_TICKET_REMOVED */
+#endif
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3)
 #if defined(MBEDTLS_SSL_COOKIE_C)
@@ -4577,7 +4580,7 @@ exit:
 #if defined(MBEDTLS_SSL_CACHE_C)
     mbedtls_ssl_cache_free( &cache );
 #endif
-#if defined(MBEDTLS_SSL_SESSION_TICKETS) || defined(MBEDTLS_SSL_NEW_SESSION_TICKET_REMOVED)
+#if defined(MBEDTLS_SSL_SESSION_TICKETS)
     mbedtls_ssl_ticket_free( &ticket_ctx );
 #endif
 #if defined(MBEDTLS_SSL_COOKIE_C)

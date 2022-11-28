@@ -1147,7 +1147,6 @@ int mbedtls_ssl_tls13_write_client_hello_exts( mbedtls_ssl_context *ssl,
         return( ret );
     p += ext_len;
 
-#if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
     if( mbedtls_ssl_conf_tls13_some_ephemeral_enabled( ssl ) )
     {
         ret = ssl_tls13_write_key_share_ext( ssl, p, end, &ext_len );
@@ -1155,7 +1154,6 @@ int mbedtls_ssl_tls13_write_client_hello_exts( mbedtls_ssl_context *ssl,
             return( ret );
         p += ext_len;
     }
-#endif /* MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED */
 
 #if defined(MBEDTLS_ZERO_RTT)
     ret = mbedtls_ssl_tls13_write_early_data_ext( ssl, p, end, &ext_len );
