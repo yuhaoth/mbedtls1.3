@@ -787,7 +787,7 @@ exit:
     return( ret );
 }
 
-#if defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
+#if defined(MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_SOME_PSK_ENABLED)
 /* mbedtls_ssl_tls13_create_psk_binder():
  *
  *                0
@@ -892,7 +892,7 @@ exit:
     mbedtls_platform_zeroize( binder_key,   sizeof( binder_key ) );
     return( ret );
 }
-#endif /* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED */
+#endif /* MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_SOME_PSK_ENABLED */
 
 int mbedtls_ssl_tls13_populate_transform( mbedtls_ssl_transform *transform,
                                           int endpoint,

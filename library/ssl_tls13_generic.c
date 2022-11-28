@@ -237,8 +237,6 @@ static void ssl_tls13_create_verify_structure( const unsigned char *transcript_h
     *verify_buffer_len = idx;
 }
 
-#endif /* MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED */
-
 /* Coordinate: Check whether a certificate verify message is expected.
  * Returns a negative value on failure, and otherwise
  * - SSL_CERTIFICATE_VERIFY_SKIP
@@ -253,7 +251,7 @@ static int ssl_tls13_read_certificate_verify_coordinate( mbedtls_ssl_context *ss
     if( mbedtls_ssl_tls13_key_exchange_mode_with_psk( ssl ) )
         return( SSL_CERTIFICATE_VERIFY_SKIP );
 
-#if !defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
+#if !defined(MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED)
     MBEDTLS_SSL_DEBUG_MSG( 1, ( "should never happen" ) );
     return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
 #else
@@ -261,10 +259,9 @@ static int ssl_tls13_read_certificate_verify_coordinate( mbedtls_ssl_context *ss
         return( SSL_CERTIFICATE_VERIFY_SKIP );
 
     return( SSL_CERTIFICATE_VERIFY_READ );
-#endif /* MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED */
+#endif /* MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED */
 }
 
-#if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
 /* Parse and validate CertificateVerify message
  *
  * Note: The size of the hash buffer is assumed to be large enough to

@@ -3228,7 +3228,7 @@ close_notify:
      * 9. Reconnect?
      */
 reconnect:
-#if defined(MBEDTLS_SSL_NEW_SESSION_TICKET_REMOVED)
+#if defined(MBEDTLS_SSL_SESSION_TICKETS)
     if( opt.reconnect != 0 )
     {
         --opt.reconnect;
@@ -3339,7 +3339,7 @@ reconnect:
 
         goto send_request;
     }
-#endif /* MBEDTLS_SSL_NEW_SESSION_TICKET_REMOVED */
+#endif /* MBEDTLS_SSL_SESSION_TICKETS */
 
     /*
      * Cleanup and exit

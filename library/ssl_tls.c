@@ -1602,7 +1602,7 @@ void mbedtls_ssl_conf_session_cache( mbedtls_ssl_config *conf,
 }
 #endif /* MBEDTLS_SSL_SRV_C */
 
-#if defined(MBEDTLS_SSL_CLI_C) && defined(MBEDTLS_SSL_NEW_SESSION_TICKET_REMOVED)
+#if defined(MBEDTLS_SSL_CLI_C) && defined(MBEDTLS_SSL_SESSION_TICKETS)
 int mbedtls_ssl_set_session( mbedtls_ssl_context *ssl, const mbedtls_ssl_session *session )
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
@@ -1643,7 +1643,7 @@ int mbedtls_ssl_set_session( mbedtls_ssl_context *ssl, const mbedtls_ssl_session
 
     return( 0 );
 }
-#endif /* MBEDTLS_SSL_CLI_C && MBEDTLS_SSL_NEW_SESSION_TICKET_REMOVED */
+#endif /* MBEDTLS_SSL_CLI_C && MBEDTLS_SSL_SESSION_TICKETS */
 
 void mbedtls_ssl_conf_ciphersuites( mbedtls_ssl_config *conf,
                                     const int *ciphersuites )

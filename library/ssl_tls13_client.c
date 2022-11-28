@@ -2575,9 +2575,10 @@ static int ssl_tls13_write_early_data_coordinate( mbedtls_ssl_context *ssl )
 MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_tls13_write_early_data_postprocess( mbedtls_ssl_context *ssl )
 {
+#if defined(MBEDTLS_ZERO_RTT)
     /* Clear PSK we've used for the 0-RTT. */
     mbedtls_ssl_remove_hs_psk( ssl );
-
+#endif
     mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_SERVER_HELLO );
     return ( 0 );
 }
