@@ -2368,7 +2368,31 @@ static int ssl_tls13_get_psk_to_offer( mbedtls_ssl_context *ssl,
                 ssl, &hash_alg, identity, identity_len) == 0        &&
         ssl_tls13_ticket_get_psk( ssl, &hash_alg, psk, psk_len ) == 0 )
     {
-
+        if( ssl->handshake->ciphersuite_info == NULL )
+        {
+            /* Update ciphersuite info, that is required for
+               mbedtls_ssl_tls13_key_schedule_stage_early() */
+            int ciphersuite = ssl->session_negotiate->ciphersuite;
+            const mbedtls_ssl_ciphersuite_t *ciphersuite_info;
+            if( ! mbedtls_ssl_tls13_cipher_suite_is_offered( ssl, ciphersuite ) )
+            {
+                MBEDTLS_SSL_DEBUG_MSG(
+                    1, ( "ciphersuite(%04d) for negotiation is not offered",
+                         ciphersuite ) );
+                return( -1 );
+            }
+            ciphersuite_info = mbedtls_ssl_ciphersuite_from_id( ciphersuite );
+            if( ( mbedtls_ssl_validate_ciphersuite(
+                      ssl, ciphersuite_info, MBEDTLS_SSL_VERSION_TLS1_3,
+                      MBEDTLS_SSL_VERSION_TLS1_3 ) != 0 ) )
+            {
+                MBEDTLS_SSL_DEBUG_MSG(
+                    1, ( "Selected ciphersuite(%04d) invalid",
+                         ciphersuite ) );
+                return( -1 );
+            }
+            ssl->handshake->ciphersuite_info = ciphersuite_info;
+        }
         return( 0 );
     }
 #endif /* MBEDTLS_SSL_SESSION_TICKETS */
@@ -2377,7 +2401,40 @@ static int ssl_tls13_get_psk_to_offer( mbedtls_ssl_context *ssl,
                 ssl, &hash_alg, identity, identity_len) == 0        &&
         ssl_tls13_psk_get_psk( ssl, &hash_alg, psk, psk_len ) == 0 )
     {
-        return( 0 );
+        if( ssl->handshake->ciphersuite_info == NULL )
+        {
+            /* RFC 8446 section 4.2.11
+             *
+             * For externally established PSKs, the Hash algorithm MUST be set
+             * when the PSK is established or default to SHA-256 if no such
+             * algorithm is defined.
+             */
+            psa_algorithm_t psk_hash_alg = PSA_ALG_SHA_256;
+            const int *ciphersuite_list = ssl->conf->ciphersuite_list;
+
+            /* Check whether we have offered this ciphersuite */
+            for ( size_t i = 0; ciphersuite_list[i] != 0; i++ )
+            {
+                int ciphersuite = ciphersuite_list[i];
+                const mbedtls_ssl_ciphersuite_t *ciphersuite_info;
+                ciphersuite_info = mbedtls_ssl_ciphersuite_from_id( ciphersuite );
+                if( ( mbedtls_ssl_validate_ciphersuite(
+                        ssl, ciphersuite_info, MBEDTLS_SSL_VERSION_TLS1_3,
+                        MBEDTLS_SSL_VERSION_TLS1_3 ) != 0 ) )
+                {
+                    continue;
+                }
+                if( psk_hash_alg == mbedtls_psa_translate_md( ciphersuite_info->mac ) )
+                {
+                    ssl->handshake->ciphersuite_info = ciphersuite_info;
+                    ssl->session_negotiate->ciphersuite = ciphersuite;
+                    return( 0 );
+                }
+            }
+
+            MBEDTLS_SSL_DEBUG_MSG(
+                1, ( "No ciphersuite is supported for SHA-256" ) );
+        }
     }
     return( -1 );
 }
