@@ -108,6 +108,18 @@
 #define MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_SOME_EPHEMERAL_ENABLED
 #endif
 
+/* Quick fix for prototype
+ * TODO: Remove MBEDTLS_SSL_NEW_SESSION_TICKET_REMOVED after early data integrate.
+ */
+#if defined(MBEDTLS_SSL_SESSIONT_TICKETS) && !defined(MBEDTLS_SSL_NEW_SESSION_TICKET_REMOVED)
+#define MBEDTLS_SSL_NEW_SESSION_TICKET_REMOVED
+#endif
+
+#if defined(MBEDTLS_ZERO_RTT) && !defined(MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_SOME_PSK_ENABLED)
+#undef MBEDTLS_ZERO_RTT
+#endif
+/* Quick fix END */
+
 /* Make sure all configuration symbols are set before including check_config.h,
  * even the ones that are calculated programmatically. */
 #if defined(MBEDTLS_PSA_CRYPTO_CONFIG) /* PSA_WANT_xxx influences MBEDTLS_xxx */ || \
