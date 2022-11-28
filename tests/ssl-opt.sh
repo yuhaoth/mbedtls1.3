@@ -1890,6 +1890,7 @@ run_test    "TLS 1.3 G->m AES_128_CCM_8_SHA256    , ECDSA_SECP256R1_SHA256" \
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_SSL_CLI_C
+requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 run_test    "TLS 1.3, HRR proposing secp256r1" \
             "$P_SRV_ crt_file=data_files/server5.crt key_file=data_files/server5.key \
                      debug_level=5 force_version=tls13 curves=secp256r1" \
@@ -1901,6 +1902,7 @@ run_test    "TLS 1.3, HRR proposing secp256r1" \
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_SSL_CLI_C
+requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_ENABLED
 run_test    "TLS 1.3, default suite, PSK" \
             "$P_SRV_ nbio=2 debug_level=5 force_version=tls13 psk=010203 psk_identity=0a0b0c tls13_kex_modes=psk" \
             "$P_CLI_ nbio=2 debug_level=5 force_version=tls13 psk=010203 psk_identity=0a0b0c tls13_kex_modes=psk" \
@@ -1910,6 +1912,7 @@ run_test    "TLS 1.3, default suite, PSK" \
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_SSL_CLI_C
+requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 run_test    "TLS 1.3, default suite, ECDHE-ECDSA, SRV auth" \
             "$P_SRV_ crt_file=data_files/server5.crt key_file=data_files/server5.key \
                      nbio=2 debug_level=5 force_version=tls13 tls13_kex_modes=ephemeral" \
@@ -1923,6 +1926,7 @@ run_test    "TLS 1.3, default suite, ECDHE-ECDSA, SRV auth" \
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_SSL_CLI_C
+requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_ENABLED
 run_test    "TLS 1.3, TLS1-3-AES-128-CCM-SHA256, PSK" \
             "$P_SRV_ nbio=2 debug_level=5 force_version=tls13 psk=010203 psk_identity=0a0b0c tls13_kex_modes=psk" \
             "$P_CLI_ nbio=2 debug_level=5 force_version=tls13 force_ciphersuite=TLS1-3-AES-128-CCM-SHA256 psk=010203 psk_identity=0a0b0c tls13_kex_modes=psk" \
@@ -1933,6 +1937,7 @@ run_test    "TLS 1.3, TLS1-3-AES-128-CCM-SHA256, PSK" \
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_SSL_CLI_C
+requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_ENABLED
 run_test    "TLS 1.3, TLS1-3-AES-128-GCM-SHA256, PSK" \
             "$P_SRV_ nbio=2 debug_level=5 force_version=tls13 psk=010203 psk_identity=0a0b0c tls13_kex_modes=psk" \
             "$P_CLI_ nbio=2 debug_level=5 force_version=tls13 force_ciphersuite=TLS1-3-AES-128-GCM-SHA256 psk=010203 psk_identity=0a0b0c tls13_kex_modes=psk" \
@@ -1943,6 +1948,7 @@ run_test    "TLS 1.3, TLS1-3-AES-128-GCM-SHA256, PSK" \
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_SSL_CLI_C
+requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_ENABLED
 run_test    "TLS 1.3, TLS1-3-AES-128-CCM-8-SHA256, PSK" \
             "$P_SRV_ nbio=2 debug_level=5 force_version=tls13 psk=010203 psk_identity=0a0b0c tls13_kex_modes=psk" \
             "$P_CLI_ nbio=2 debug_level=5 force_version=tls13 force_ciphersuite=TLS1-3-AES-128-CCM-8-SHA256 psk=010203 psk_identity=0a0b0c tls13_kex_modes=psk" \
@@ -1955,6 +1961,7 @@ skip_next_test
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_SSL_CLI_C
+requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_ENABLED
 run_test    "TLS 1.3, TLS1-3-AES-256-GCM-SHA384, PSK" \
             "$P_SRV_ nbio=2 debug_level=5 force_version=tls13 psk=010203 psk_identity=0a0b0c tls13_kex_modes=psk" \
             "$P_CLI_ nbio=2 debug_level=5 force_version=tls13 force_ciphersuite=TLS1-3-AES-256-GCM-SHA384 psk=010203 psk_identity=0a0b0c tls13_kex_modes=psk" \
@@ -1965,6 +1972,7 @@ run_test    "TLS 1.3, TLS1-3-AES-256-GCM-SHA384, PSK" \
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_SSL_CLI_C
+requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_EPHEMERAL_ENABLED
 run_test    "TLS 1.3, TLS1-3-AES-128-CCM-SHA256, PSK-ECDHE" \
             "$P_SRV_ nbio=2 debug_level=5 force_version=tls13 psk=010203 psk_identity=0a0b0c tls13_kex_modes=psk_ephemeral" \
             "$P_CLI_ nbio=2 debug_level=5 force_version=tls13 force_ciphersuite=TLS1-3-AES-128-CCM-SHA256 psk=010203 psk_identity=0a0b0c tls13_kex_modes=psk_ephemeral" \
@@ -1975,6 +1983,7 @@ run_test    "TLS 1.3, TLS1-3-AES-128-CCM-SHA256, PSK-ECDHE" \
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_SSL_CLI_C
+requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_EPHEMERAL_ENABLED
 run_test    "TLS 1.3, TLS1-3-AES-128-GCM-SHA256, PSK-ECDHE" \
             "$P_SRV_ crt_file=data_files/server5.crt key_file=data_files/server5.key \
                      nbio=2 debug_level=5 force_version=tls13 psk=010203 psk_identity=0a0b0c tls13_kex_modes=psk_ephemeral" \
@@ -1986,6 +1995,7 @@ run_test    "TLS 1.3, TLS1-3-AES-128-GCM-SHA256, PSK-ECDHE" \
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_SSL_CLI_C
+requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_EPHEMERAL_ENABLED
 run_test    "TLS 1.3, TLS1-3-AES-128-CCM-8-SHA256, PSK-ECDHE" \
             "$P_SRV_ nbio=2 debug_level=5 force_version=tls13 psk=010203 psk_identity=0a0b0c tls13_kex_modes=psk_ephemeral" \
             "$P_CLI_ nbio=2 debug_level=5 force_version=tls13 force_ciphersuite=TLS1-3-AES-128-CCM-8-SHA256 psk=010203 psk_identity=0a0b0c tls13_kex_modes=psk_ephemeral" \
@@ -2008,6 +2018,7 @@ run_test    "TLS 1.3, TLS1-3-AES-256-GCM-SHA384, PSK-ECDHE" \
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_SSL_CLI_C
+requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 run_test    "TLS 1.3, TLS1-3-AES-128-CCM-SHA256, ECDHE-ECDSA, SRV auth" \
             "$P_SRV_ crt_file=data_files/server5.crt key_file=data_files/server5.key \
                      nbio=2 debug_level=5 force_version=tls13 tls13_kex_modes=ephemeral" \
@@ -2022,6 +2033,7 @@ run_test    "TLS 1.3, TLS1-3-AES-128-CCM-SHA256, ECDHE-ECDSA, SRV auth" \
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_SSL_CLI_C
+requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 run_test    "TLS 1.3, TLS1-3-AES-128-GCM-SHA256, ECDHE-ECDSA, SRV auth" \
             "$P_SRV_ crt_file=data_files/server5.crt key_file=data_files/server5.key \
                      nbio=2 debug_level=5 force_version=tls13 tls13_kex_modes=ephemeral" \
@@ -2036,6 +2048,7 @@ run_test    "TLS 1.3, TLS1-3-AES-128-GCM-SHA256, ECDHE-ECDSA, SRV auth" \
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_SSL_CLI_C
+requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 run_test    "TLS 1.3, TLS1-3-AES-128-CCM-8-SHA256, ECDHE-ECDSA, SRV auth" \
             "$P_SRV_ crt_file=data_files/server5.crt key_file=data_files/server5.key \
                      nbio=2 debug_level=5 force_version=tls13 tls13_kex_modes=ephemeral" \
@@ -2050,6 +2063,7 @@ run_test    "TLS 1.3, TLS1-3-AES-128-CCM-8-SHA256, ECDHE-ECDSA, SRV auth" \
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_SSL_CLI_C
+requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 run_test    "TLS 1.3, TLS1-3-AES-256-GCM-SHA384, ECDHE-ECDSA, SRV auth" \
             "$P_SRV_ crt_file=data_files/server5.crt key_file=data_files/server5.key \
                      nbio=2 debug_level=5 force_version=tls13 tls13_kex_modes=ephemeral" \
@@ -2064,6 +2078,7 @@ run_test    "TLS 1.3, TLS1-3-AES-256-GCM-SHA384, ECDHE-ECDSA, SRV auth" \
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_SSL_CLI_C
+requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 run_test    "TLS 1.3, TLS1-3-AES-128-CCM-SHA256, ECDHE-ECDSA, CLI+SRV auth" \
             "$P_SRV_ crt_file=data_files/server5.crt key_file=data_files/server5.key \
                      nbio=2 debug_level=5 force_version=tls13 auth_mode=required tls13_kex_modes=ephemeral" \
@@ -2080,6 +2095,7 @@ run_test    "TLS 1.3, TLS1-3-AES-128-CCM-SHA256, ECDHE-ECDSA, CLI+SRV auth" \
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_SSL_CLI_C
+requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 run_test    "TLS 1.3, TLS1-3-AES-128-GCM-SHA256, ECDHE-ECDSA, CLI+SRV auth" \
             "$P_SRV_ crt_file=data_files/server5.crt key_file=data_files/server5.key \
                      nbio=2 debug_level=5 force_version=tls13 auth_mode=required tls13_kex_modes=ephemeral" \
@@ -2096,6 +2112,7 @@ run_test    "TLS 1.3, TLS1-3-AES-128-GCM-SHA256, ECDHE-ECDSA, CLI+SRV auth" \
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_SSL_CLI_C
+requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 run_test    "TLS 1.3, TLS1-3-AES-128-CCM-8-SHA256, ECDHE-ECDSA, CLI+SRV auth" \
             "$P_SRV_ crt_file=data_files/server5.crt key_file=data_files/server5.key \
                      nbio=2 debug_level=5 force_version=tls13 auth_mode=required tls13_kex_modes=ephemeral" \
@@ -2115,6 +2132,7 @@ requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_DEBUG_C
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_SSL_CLI_C
+requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 run_test    "TLS 1.3, TLS1-3-AES-128-GCM-SHA256, ECDHE-ECDSA, empty client certificate, accepted" \
             "$P_SRV_ crt_file=data_files/server5.crt key_file=data_files/server5.key \
                      nbio=2 debug_level=5 force_version=tls13 auth_mode=optional tls13_kex_modes=ephemeral" \
@@ -2133,6 +2151,7 @@ requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_DEBUG_C
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_SSL_CLI_C
+requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 run_test    "TLS 1.3, TLS1-3-AES-128-CCM-SHA256, ECDHE-ECDSA, empty client certificate, rejected" \
             "$P_SRV_ crt_file=data_files/server5.crt key_file=data_files/server5.key \
                      nbio=2 debug_level=5 force_version=tls13 auth_mode=required tls13_kex_modes=ephemeral" \
@@ -2145,6 +2164,7 @@ run_test    "TLS 1.3, TLS1-3-AES-128-CCM-SHA256, ECDHE-ECDSA, empty client certi
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_SSL_CLI_C
+requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 run_test    "TLS 1.3, TLS1-3-AES-256-GCM-SHA384, ECDHE-ECDSA, SRV auth" \
             "$P_SRV_ crt_file=data_files/server5.crt key_file=data_files/server5.key \
                      nbio=2 debug_level=5 force_version=tls13 tls13_kex_modes=ephemeral" \
@@ -2257,6 +2277,8 @@ requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_DEBUG_C
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_SSL_CLI_C
+requires_all_configs_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED \
+                             MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_EPHEMERAL_ENABLED
 run_test    "TLS 1.3, TLS1-3-AES-256-GCM-SHA384 with ECDHE-ECDSA (server auth only) with ticket" \
             "$P_SRV_ crt_file=data_files/server5.crt key_file=data_files/server5.key \
                      nbio=2 debug_level=5 force_version=tls13 tls13_kex_modes=all tickets=1" \
@@ -2357,6 +2379,7 @@ requires_config_enabled MBEDTLS_DEBUG_C
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_ZERO_RTT
+requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 run_test    "TLS 1.3, TLS1-3-AES-128-GCM-SHA256, ECDHE-ECDSA, client tries early data without PSK, and falls back to 1-RTT" \
             "$P_SRV_ crt_file=data_files/server5.crt key_file=data_files/server5.key \
                      nbio=2 debug_level=4 force_version=tls13" \
@@ -2372,6 +2395,7 @@ requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_DEBUG_C
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_SSL_CLI_C
+requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 run_test    "TLS 1.3, TLS1-3-AES-128-CCM-8-SHA256, ECDHE-ECDSA, CLI+SRV auth, HRR enforcing cookie" \
             "$P_SRV_ crt_file=data_files/server5.crt key_file=data_files/server5.key \
                      nbio=2 debug_level=5 force_version=tls13 auth_mode=required tls13_kex_modes=ephemeral tickets=0 cookies=2" \
@@ -2395,6 +2419,7 @@ requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_DEBUG_C
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_SSL_CLI_C
+requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 run_test    "TLS 1.3, TLS1-3-AES-128-CCM-SHA256 with ECDHE-ECDSA, SRV auth, HRR enforcing group" \
             "$P_SRV_ crt_file=data_files/server5.crt key_file=data_files/server5.key \
                      nbio=2 debug_level=5 force_version=tls13 tls13_kex_modes=ephemeral named_groups=secp256r1 cookies=1 tickets=0" \
@@ -2414,6 +2439,7 @@ requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_DEBUG_C
 requires_config_enabled MBEDTLS_SSL_CLI_C
+requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 run_test    "TLS 1.3 m->O, TLS1-3-AES-256-GCM-SHA384 with ECDHE-ECDSA, SRV auth, HRR enforcing group" \
             "$O_NEXT_SRV -msg -tls1_3 -ciphersuites TLS_AES_256_GCM_SHA384 -groups P-256 -num_tickets 0 -no_resume_ephemeral -no_cache -stateless" \
             "$P_CLI_ debug_level=4 force_version=tls13 server_name=localhost force_ciphersuite=TLS1-3-AES-256-GCM-SHA384 tls13_kex_modes=ephemeral named_groups=secp384r1,secp256r1" \
@@ -2430,6 +2456,7 @@ requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_DEBUG_C
 requires_config_enabled MBEDTLS_SSL_CLI_C
+requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 run_test    "TLS 1.3 m->O, TLS1-3-AES-128-GCM-SHA256 with ECDHE-ECDSA, SRV auth, HRR enforcing group" \
             "$O_NEXT_SRV -msg -tls1_3 -ciphersuites TLS_AES_128_GCM_SHA256 -groups P-256 -num_tickets 0 -no_resume_ephemeral -no_cache -stateless" \
             "$P_CLI_ debug_level=4 force_version=tls13 server_name=localhost force_ciphersuite=TLS1-3-AES-128-GCM-SHA256 tls13_kex_modes=ephemeral named_groups=secp384r1,secp256r1" \
@@ -2511,6 +2538,7 @@ requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
 requires_config_enabled MBEDTLS_DEBUG_C
 requires_config_enabled MBEDTLS_SSL_CLI_C
+requires_config_enabled MBEDTLS_ZERO_RTT
 run_test    "TLS 1.3, TLS1-3-AES-128-GCM-SHA256, reject early data, OpenSSL server" \
             "$O_NEXT_SRV" \
             "$P_CLI_ debug_level=5 force_version=tls13 server_name=localhost \
@@ -2527,6 +2555,7 @@ requires_config_enabled MBEDTLS_DEBUG_C
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_SSL_CLI_C
 requires_config_enabled MBEDTLS_SSL_ALPN
+requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_ENABLED
 run_test    "TLS 1.3, ALPN" \
             "$P_SRV_ nbio=2 debug_level=5 force_version=tls13 psk=010203 psk_identity=0a0b0c tls13_kex_modes=psk alpn=abc,1234" \
             "$P_CLI_ nbio=2 debug_level=5 force_version=tls13 psk=010203 psk_identity=0a0b0c tls13_kex_modes=psk alpn=1234" \
@@ -2540,6 +2569,7 @@ run_test    "TLS 1.3, ALPN" \
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_SSL_CLI_C
+requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 run_test    "TLS 1.3, TLS1-3-AES-128-CCM-SHA256, ECDHE-ECDSA, mismatched sig_algs" \
             "$P_SRV_ nbio=2 debug_level=4 force_version=tls13 tls13_kex_modes=ephemeral sig_algs=ecdsa_secp384r1_sha384" \
             "$P_CLI_ nbio=2 debug_level=4 force_version=tls13 server_name=localhost force_ciphersuite=TLS1-3-AES-128-CCM-SHA256 tls13_kex_modes=ephemeral sig_algs=ecdsa_secp256r1_sha256" \
