@@ -134,6 +134,7 @@
 
 #if defined(MBEDTLS_ZERO_RTT) && !defined(MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_SOME_PSK_ENABLED)
 #undef MBEDTLS_ZERO_RTT
+#undef MBEDTLS_SSL_EARLY_DATA
 #endif
 /* Quick fix END */
 
