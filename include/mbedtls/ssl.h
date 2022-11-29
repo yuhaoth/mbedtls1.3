@@ -1610,6 +1610,12 @@ struct mbedtls_ssl_config
 #endif /* MBEDTLS_ZERO_RTT */
 #endif /* MBEDTLS_SSL_HANDSHAKE_WITH_PSK_ENABLED */
 
+#if defined(MBEDTLS_SSL_EARLY_DATA)
+    int MBEDTLS_PRIVATE(early_data_enabled);     /*!< Early data enablement:
+                                                  *   - MBEDTLS_SSL_EARLY_DATA_DISABLED,
+                                                  *   - MBEDTLS_SSL_EARLY_DATA_ENABLED */
+#endif /* MBEDTLS_SSL_EARLY_DATA */
+
 #if defined(MBEDTLS_SSL_ALPN)
     const char **MBEDTLS_PRIVATE(alpn_list);         /*!< ordered list of protocols          */
 #endif
@@ -2072,16 +2078,16 @@ void mbedtls_ssl_conf_transport( mbedtls_ssl_config *conf, int transport );
  */
 void mbedtls_ssl_conf_authmode( mbedtls_ssl_config *conf, int authmode );
 
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3) && defined(MBEDTLS_SSL_EARLY_DATA)
 /**
-* \brief          Set the early_data mode
-*                 Default: disabled on server and client
+* \brief    Set the early data mode
+*           Default: disabled on server and client
 *
-* \param ssl     SSL context
-* \param early_data can be:
+* \param conf   The SSL configuration to use.
+* \param early_data_enabled can be:
 *
-*  MBEDTLS_SSL_EARLY_DATA_DISABLED:  early data functionality will not be used
-*                        (default on server)
-*                        (default on client)
+*  MBEDTLS_SSL_EARLY_DATA_DISABLED:  early data functionality is disabled
+*                                    This is the default on client and server.
 *
 *  MBEDTLS_SSL_EARLY_DATA_ENABLED:  early data functionality is enabled and
 *                        may be negotiated in the handshake. Application using
@@ -2089,22 +2095,17 @@ void mbedtls_ssl_conf_authmode( mbedtls_ssl_config *conf, int authmode );
 *                        lack of replay protection of the early data application
 *                        payloads.
 *
-* \param max_early_data  Max number of bytes allowed for early data (server only).
-* \param early_data_callback Callback function when early data is received (server
-*                            only).
+* \warning This interface is experimental and may change without notice.
+*
 */
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3) && defined(MBEDTLS_ZERO_RTT)
-void mbedtls_ssl_conf_early_data( mbedtls_ssl_config* conf, int early_data,
-                                  size_t max_early_data,
-                                  int(*early_data_callback)( mbedtls_ssl_context*,
-                                                             const unsigned char*,
-                                                             size_t ) );
+void mbedtls_ssl_tls13_conf_early_data( mbedtls_ssl_config *conf,
+                                        int early_data_enabled );
 
 #if defined(MBEDTLS_SSL_CLI_C)
 int mbedtls_ssl_set_early_data( mbedtls_ssl_context* ssl, const unsigned char* buffer,
                                 size_t len );
 #endif /* MBEDTLS_SSL_CLI_C */
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3 && MBEDTLS_ZERO_RTT */
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3 && MBEDTLS_SSL_EARLY_DATA */
 
 #if defined(MBEDTLS_X509_CRT_PARSE_C)
 /**

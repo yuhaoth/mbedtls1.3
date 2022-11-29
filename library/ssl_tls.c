@@ -1449,9 +1449,11 @@ int mbedtls_ssl_session_reset_int( mbedtls_ssl_context *ssl, int partial )
 #endif
 
 #if defined(MBEDTLS_SSL_DTLS_HELLO_VERIFY) && defined(MBEDTLS_SSL_SRV_C)
+    int free_cli_id = 1;
 #if defined(MBEDTLS_SSL_DTLS_CLIENT_PORT_REUSE)
-    if( partial == 0 )
+    free_cli_id = ( partial == 0 );
 #endif
+    if( free_cli_id )
     {
         mbedtls_free( ssl->cli_id );
         ssl->cli_id = NULL;
@@ -1657,6 +1659,14 @@ void mbedtls_ssl_conf_tls13_key_exchange_modes( mbedtls_ssl_config *conf,
 {
     conf->tls13_kex_modes = kex_modes & MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_ALL;
 }
+
+#if defined(MBEDTLS_SSL_EARLY_DATA)
+void mbedtls_ssl_tls13_conf_early_data( mbedtls_ssl_config *conf,
+                                        int early_data_enabled )
+{
+    conf->early_data_enabled = early_data_enabled;
+}
+#endif /* MBEDTLS_SSL_EARLY_DATA */
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
 
 #if defined(MBEDTLS_X509_CRT_PARSE_C)
@@ -5643,6 +5653,13 @@ int mbedtls_ssl_get_handshake_transcript( mbedtls_ssl_context *ssl,
 #endif /* MBEDTLS_HAS_ALG_SHA_256_VIA_MD_OR_PSA_BASED_ON_USE_PSA*/
 
     default:
+#if !defined(MBEDTLS_HAS_ALG_SHA_384_VIA_MD_OR_PSA_BASED_ON_USE_PSA) && \
+    !defined(MBEDTLS_HAS_ALG_SHA_256_VIA_MD_OR_PSA_BASED_ON_USE_PSA)
+    (void) ssl;
+    (void) dst;
+    (void) dst_len;
+    (void) olen;
+#endif
         break;
     }
     return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
@@ -5829,8 +5846,8 @@ static psa_status_t setup_psa_key_derivation( psa_key_derivation_operation_t* de
     return( PSA_SUCCESS );
 }
 
-#if defined(MBEDTLS_HAS_ALG_SHA_384_VIA_MD_OR_PSA_BASED_ON_USE_PSA) || \
-    defined(MBEDTLS_HAS_ALG_SHA_256_VIA_MD_OR_PSA_BASED_ON_USE_PSA)
+#if defined(PSA_WANT_ALG_SHA_384) || \
+    defined(PSA_WANT_ALG_SHA_256)
 MBEDTLS_CHECK_RETURN_CRITICAL
 static int tls_prf_generic( mbedtls_md_type_t md_type,
                             const unsigned char *secret, size_t slen,
@@ -5905,9 +5922,12 @@ static int tls_prf_generic( mbedtls_md_type_t md_type,
 
     return( 0 );
 }
-#endif
+#endif /* PSA_WANT_ALG_SHA_256 || PSA_WANT_ALG_SHA_384 */
 #else /* MBEDTLS_USE_PSA_CRYPTO */
 
+#if defined(MBEDTLS_MD_C) &&       \
+    ( defined(MBEDTLS_SHA256_C) || \
+      defined(MBEDTLS_SHA384_C) )
 MBEDTLS_CHECK_RETURN_CRITICAL
 static int tls_prf_generic( mbedtls_md_type_t md_type,
                             const unsigned char *secret, size_t slen,
@@ -5998,6 +6018,7 @@ exit:
 
     return( ret );
 }
+#endif /* MBEDTLS_MD_C && ( MBEDTLS_SHA256_C || MBEDTLS_SHA384_C ) */
 #endif /* MBEDTLS_USE_PSA_CRYPTO */
 
 #if defined(MBEDTLS_HAS_ALG_SHA_256_VIA_MD_OR_PSA_BASED_ON_USE_PSA)
@@ -8090,11 +8111,16 @@ static int ssl_tls12_populate_transform( mbedtls_ssl_transform *transform,
          *   sequence number).
          */
         transform->ivlen = 12;
+
+        int is_chachapoly = 0;
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
-        if( key_type == PSA_KEY_TYPE_CHACHA20 )
+        is_chachapoly = ( key_type == PSA_KEY_TYPE_CHACHA20 );
 #else
-        if( mbedtls_cipher_info_get_mode( cipher_info ) == MBEDTLS_MODE_CHACHAPOLY )
+        is_chachapoly = ( mbedtls_cipher_info_get_mode( cipher_info )
+                == MBEDTLS_MODE_CHACHAPOLY );
 #endif /* MBEDTLS_USE_PSA_CRYPTO */
+
+        if( is_chachapoly )
             transform->fixed_ivlen = 12;
         else
             transform->fixed_ivlen = 4;
