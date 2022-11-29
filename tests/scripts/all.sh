@@ -3382,7 +3382,20 @@ component_test_tls13_only () {
     cd tests; ./test_suite_ssl; cd ..
 
     msg "ssl-opt.sh: TLS 1.3 only, all key exchange modes enabled"
-    tests/ssl-opt.sh
+    tests/ssl-opt.sh -f 'TLS 1.3'
+}
+
+component_test_tls13_only_mps () {
+    msg "build: default config with MBEDTLS_SSL_PROTO_TLS1_3, without MBEDTLS_SSL_PROTO_TLS1_2"
+    scripts/config.py   set MBEDTLS_SSL_USE_MPS
+    make CFLAGS="'-DMBEDTLS_USER_CONFIG_FILE=\"../tests/configs/tls13-only.h\"'"
+
+    # For time being, mps fail.
+    # msg "test_suite_ssl: TLS 1.3 only, all key exchange modes enabled"
+    # cd tests; ./test_suite_ssl; cd ..
+
+    msg "ssl-opt.sh: TLS 1.3 only, all key exchange modes enabled"
+    tests/ssl-opt.sh -f 'TLS 1.3'
 }
 
 component_test_tls13_only_psk () {
@@ -3401,7 +3414,27 @@ component_test_tls13_only_psk () {
     cd tests; ./test_suite_ssl; cd ..
 
     msg "ssl-opt.sh: TLS 1.3 only, only PSK key exchange mode enabled"
-    tests/ssl-opt.sh
+    tests/ssl-opt.sh -f 'TLS 1.3'
+}
+
+component_test_tls13_only_psk_mps () {
+    msg "build: TLS 1.3 only with MPS from default, only PSK key exchange mode"
+    scripts/config.py   set MBEDTLS_SSL_USE_MPS
+    scripts/config.py unset MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
+    scripts/config.py unset MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_EPHEMERAL_ENABLED
+    scripts/config.py unset MBEDTLS_ECDH_C
+    scripts/config.py unset MBEDTLS_X509_CRT_PARSE_C
+    scripts/config.py unset MBEDTLS_X509_RSASSA_PSS_SUPPORT
+    scripts/config.py unset MBEDTLS_SSL_SERVER_NAME_INDICATION
+    scripts/config.py unset MBEDTLS_ECDSA_C
+    scripts/config.py unset MBEDTLS_PKCS1_V21
+    make CFLAGS="'-DMBEDTLS_USER_CONFIG_FILE=\"../tests/configs/tls13-only.h\"'"
+
+    msg "test_suite_ssl: TLS 1.3 only, only PSK key exchange mode enabled"
+    cd tests; ./test_suite_ssl; cd ..
+
+    msg "ssl-opt.sh: TLS 1.3 only, only PSK key exchange mode enabled"
+    tests/ssl-opt.sh -f 'TLS 1.3'
 }
 
 component_test_tls13_only_ephemeral () {
@@ -3414,7 +3447,22 @@ component_test_tls13_only_ephemeral () {
     cd tests; ./test_suite_ssl; cd ..
 
     msg "ssl-opt.sh: TLS 1.3 only, only ephemeral key exchange mode"
-    tests/ssl-opt.sh
+    tests/ssl-opt.sh -f 'TLS 1.3'
+}
+
+component_test_tls13_only_ephemeral_mps () {
+    msg "build: TLS 1.3 only with MPS from default, only ephemeral key exchange mode"
+    scripts/config.py   set MBEDTLS_SSL_USE_MPS
+    scripts/config.py unset MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_ENABLED
+    scripts/config.py unset MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_EPHEMERAL_ENABLED
+    make CFLAGS="'-DMBEDTLS_USER_CONFIG_FILE=\"../tests/configs/tls13-only.h\"'"
+
+    # For time being, mps fail.
+    # msg "test_suite_ssl: TLS 1.3 only, only ephemeral key exchange mode"
+    # cd tests; ./test_suite_ssl; cd ..
+
+    msg "ssl-opt.sh: TLS 1.3 only, only ephemeral key exchange mode"
+    tests/ssl-opt.sh -f 'TLS 1.3'
 }
 
 component_test_tls13_only_psk_ephemeral () {
@@ -3432,7 +3480,26 @@ component_test_tls13_only_psk_ephemeral () {
     cd tests; ./test_suite_ssl; cd ..
 
     msg "ssl-opt.sh: TLS 1.3 only, only PSK ephemeral key exchange mode"
-    tests/ssl-opt.sh
+    tests/ssl-opt.sh -f 'TLS 1.3'
+}
+
+component_test_tls13_only_psk_ephemeral_mps () {
+    msg "build: TLS 1.3 only with MPS from default, only PSK ephemeral key exchange mode"
+    scripts/config.py   set MBEDTLS_SSL_USE_MPS
+    scripts/config.py unset MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_ENABLED
+    scripts/config.py unset MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
+    scripts/config.py unset MBEDTLS_X509_CRT_PARSE_C
+    scripts/config.py unset MBEDTLS_X509_RSASSA_PSS_SUPPORT
+    scripts/config.py unset MBEDTLS_SSL_SERVER_NAME_INDICATION
+    scripts/config.py unset MBEDTLS_ECDSA_C
+    scripts/config.py unset MBEDTLS_PKCS1_V21
+    make CFLAGS="'-DMBEDTLS_USER_CONFIG_FILE=\"../tests/configs/tls13-only.h\"'"
+
+    msg "test_suite_ssl: TLS 1.3 only, only PSK ephemeral key exchange mode"
+    cd tests; ./test_suite_ssl; cd ..
+
+    msg "ssl-opt.sh: TLS 1.3 only, only PSK ephemeral key exchange mode"
+    tests/ssl-opt.sh -f 'TLS 1.3'
 }
 
 component_test_tls13_only_psk_all () {
@@ -3449,7 +3516,25 @@ component_test_tls13_only_psk_all () {
     cd tests; ./test_suite_ssl; cd ..
 
     msg "ssl-opt.sh: TLS 1.3 only, PSK and PSK ephemeral key exchange modes"
-    tests/ssl-opt.sh
+    tests/ssl-opt.sh -f 'TLS 1.3'
+}
+
+component_test_tls13_only_psk_all_mps () {
+    msg "build: TLS 1.3 only with MPS from default, without ephemeral key exchange mode"
+    scripts/config.py   set MBEDTLS_SSL_USE_MPS
+    scripts/config.py unset MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
+    scripts/config.py unset MBEDTLS_X509_CRT_PARSE_C
+    scripts/config.py unset MBEDTLS_X509_RSASSA_PSS_SUPPORT
+    scripts/config.py unset MBEDTLS_SSL_SERVER_NAME_INDICATION
+    scripts/config.py unset MBEDTLS_ECDSA_C
+    scripts/config.py unset MBEDTLS_PKCS1_V21
+    make CFLAGS="'-DMBEDTLS_USER_CONFIG_FILE=\"../tests/configs/tls13-only.h\"'"
+
+    msg "test_suite_ssl: TLS 1.3 only, PSK and PSK ephemeral key exchange modes"
+    cd tests; ./test_suite_ssl; cd ..
+
+    msg "ssl-opt.sh: TLS 1.3 only, PSK and PSK ephemeral key exchange modes"
+    tests/ssl-opt.sh -f 'TLS 1.3'
 }
 
 component_test_tls13_only_ephemeral_all () {
@@ -3461,85 +3546,21 @@ component_test_tls13_only_ephemeral_all () {
     cd tests; ./test_suite_ssl; cd ..
 
     msg "ssl-opt.sh: TLS 1.3 only, ephemeral and PSK ephemeral key exchange modes"
-    tests/ssl-opt.sh
+    tests/ssl-opt.sh -f 'TLS 1.3'
 }
 
-component_test_tls13_only_with_hooks () {
-    msg "build: default config with MBEDTLS_SSL_PROTO_TLS1_3 and MBEDTLS_TEST_HOOKS, without MBEDTLS_SSL_PROTO_TLS1_2"
-    scripts/config.py set MBEDTLS_TEST_HOOKS
+component_test_tls13_only_ephemeral_all_mps () {
+    msg "build: TLS 1.3 only with MPS from default, without PSK key exchange mode"
+    scripts/config.py   set MBEDTLS_SSL_USE_MPS
+    scripts/config.py unset MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_ENABLED
     make CFLAGS="'-DMBEDTLS_USER_CONFIG_FILE=\"../tests/configs/tls13-only.h\"'"
 
-    msg "test: default config with MBEDTLS_SSL_PROTO_TLS1_3 enabled, without MBEDTLS_SSL_PROTO_TLS1_2"
-    if_build_succeeded make test
+    # For time being, mps fail.
+    # msg "test_suite_ssl: TLS 1.3 only, ephemeral and PSK ephemeral key exchange modes"
+    # cd tests; ./test_suite_ssl; cd ..
 
-    msg "ssl-opt.sh (TLS 1.3)"
-    if_build_succeeded tests/ssl-opt.sh
-}
-
-component_test_tls13 () {
-    msg "build: default config with MBEDTLS_SSL_PROTO_TLS1_3 enabled, without padding"
-    scripts/config.py set MBEDTLS_SSL_PROTO_TLS1_3
-    scripts/config.py set MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
-    scripts/config.py set MBEDTLS_SSL_CID_TLS1_3_PADDING_GRANULARITY 1
-    CC=gcc cmake -D CMAKE_BUILD_TYPE:String=Asan .
-    make
-    msg "test: default config with MBEDTLS_SSL_PROTO_TLS1_3 enabled, without padding"
-    make test
-    msg "ssl-opt.sh (TLS 1.3)"
-    tests/ssl-opt.sh
-}
-
-component_test_tls13_no_compatibility_mode () {
-    msg "build: default config with MBEDTLS_SSL_PROTO_TLS1_3 enabled, without padding"
-    scripts/config.py set   MBEDTLS_SSL_PROTO_TLS1_3
-    scripts/config.py unset MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
-    scripts/config.py set   MBEDTLS_SSL_CID_TLS1_3_PADDING_GRANULARITY 1
-    CC=gcc cmake -D CMAKE_BUILD_TYPE:String=Asan .
-    make
-    msg "test: default config with MBEDTLS_SSL_PROTO_TLS1_3 enabled, without padding"
-    make test
-    msg "ssl-opt.sh (TLS 1.3 no compatibility mode)"
-    tests/ssl-opt.sh
-}
-
-component_test_tls13_with_padding () {
-    msg "build: default config with MBEDTLS_SSL_PROTO_TLS1_3 enabled, with padding"
-    scripts/config.py set MBEDTLS_SSL_PROTO_TLS1_3
-    scripts/config.py set MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
-    scripts/config.py set MBEDTLS_SSL_CID_TLS1_3_PADDING_GRANULARITY 16
-    CC=gcc cmake -D CMAKE_BUILD_TYPE:String=Asan .
-    make
-    msg "test: default config with MBEDTLS_SSL_PROTO_TLS1_3 enabled, with padding"
-    make test
-    msg "ssl-opt.sh (TLS 1.3 with padding)"
-    tests/ssl-opt.sh
-}
-
-component_test_tls13_with_ecp_restartable () {
-    msg "build: default config with MBEDTLS_SSL_PROTO_TLS1_3 enabled, with ecp_restartable"
-    scripts/config.py set MBEDTLS_SSL_PROTO_TLS1_3
-    scripts/config.py set MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
-    scripts/config.py set MBEDTLS_ECP_RESTARTABLE
-    CC=gcc cmake -D CMAKE_BUILD_TYPE:String=Asan .
-    make
-    msg "test: default config with MBEDTLS_SSL_PROTO_TLS1_3 enabled, with ecp_restartable"
-    make test
-    msg "ssl-opt.sh (TLS 1.3 with ecp_restartable)"
-    tests/ssl-opt.sh
-}
-
-component_test_tls13_with_everest () {
-    msg "build: default config with MBEDTLS_SSL_PROTO_TLS1_3 enabled, with Everest"
-    scripts/config.py set MBEDTLS_SSL_PROTO_TLS1_3
-    scripts/config.py set MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
-    scripts/config.py set MBEDTLS_ECDH_VARIANT_EVEREST_ENABLED
-    scripts/config.py unset MBEDTLS_ECP_RESTARTABLE
-    CC=gcc cmake -D CMAKE_BUILD_TYPE:String=Asan .
-    make
-    msg "test: default config with MBEDTLS_SSL_PROTO_TLS1_3 enabled, with Everest"
-    make test
-    msg "ssl-opt.sh (TLS 1.3 with everest)"
-    tests/ssl-opt.sh
+    msg "ssl-opt.sh: TLS 1.3 only, ephemeral and PSK ephemeral key exchange modes"
+    tests/ssl-opt.sh -f 'TLS 1.3'
 }
 
 component_build_mingw () {
