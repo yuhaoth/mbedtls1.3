@@ -1909,9 +1909,6 @@ int mbedtls_ssl_start_renegotiation( mbedtls_ssl_context *ssl );
 size_t mbedtls_ssl_get_current_mtu( const mbedtls_ssl_context *ssl );
 void mbedtls_ssl_buffering_free( mbedtls_ssl_context *ssl );
 void mbedtls_ssl_flight_free( mbedtls_ssl_flight_item *flight );
-
-int mbedtls_ssl_double_retransmit_timeout( mbedtls_ssl_context *ssl );
-void mbedtls_ssl_reset_retransmit_timeout( mbedtls_ssl_context *ssl );
 #endif /* MBEDTLS_SSL_PROTO_DTLS */
 
 /**
@@ -2183,6 +2180,7 @@ int mbedtls_ssl_tls13_generate_and_write_ecdh_key_exchange(
 /*
  * Write Signature Algorithm extension
  */
+MBEDTLS_CHECK_RETURN_CRITICAL
 int mbedtls_ssl_write_sig_alg_ext( mbedtls_ssl_context *ssl, unsigned char *buf,
                                    const unsigned char *end, size_t *out_len );
 /*

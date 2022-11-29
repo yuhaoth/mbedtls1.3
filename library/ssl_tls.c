@@ -1293,13 +1293,14 @@ int mbedtls_ssl_setup( mbedtls_ssl_context *ssl,
     return( 0 );
 
 error:
+#if !defined(MBEDTLS_SSL_USE_MPS)
+    mbedtls_free( ssl->in_buf );
+    mbedtls_free( ssl->out_buf );
+#endif
 
     ssl->conf = NULL;
 
 #if !defined(MBEDTLS_SSL_USE_MPS)
-    mbedtls_free( ssl->in_buf );
-    mbedtls_free( ssl->out_buf );
-
 #if defined(MBEDTLS_SSL_VARIABLE_BUFFER_LENGTH)
     ssl->in_buf_len = 0;
     ssl->out_buf_len = 0;
@@ -3428,7 +3429,7 @@ static unsigned char ssl_serialized_session_header[] = {
  *
  *      case MBEDTLS_SSL_VERSION_TLS1_2:
  *        serialized_session_tls12 data;
- *      case MBEDTLS_SSL_MINOR_VERSION_4: // TLS 1.3
+ *      case MBEDTLS_SSL_MINOR_VERSION_4:
  *        serialized_session_tls13 data;
  *
  *   };

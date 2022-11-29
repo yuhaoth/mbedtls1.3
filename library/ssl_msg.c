@@ -29,14 +29,13 @@
 #include "mbedtls/platform.h"
 
 #include "mbedtls/ssl.h"
+#include "ssl_misc.h"
 #include "mbedtls/debug.h"
 #include "mbedtls/error.h"
 #include "mbedtls/platform_util.h"
 #include "mbedtls/version.h"
 #include "constant_time_internal.h"
 #include "mbedtls/constant_time.h"
-
-#include "ssl_misc.h"
 
 #if defined(MBEDTLS_SSL_USE_MPS)
 #include "mps_all.h"
@@ -53,8 +52,9 @@
 #include "mbedtls/oid.h"
 #endif
 
-#define SSL_DONT_FORCE_FLUSH 0
-#define SSL_FORCE_FLUSH      1
+#if !defined(MBEDTLS_SSL_USE_MPS)
+static uint32_t ssl_get_hs_total_len( mbedtls_ssl_context const *ssl );
+#endif
 
 /*
  * Start a timer.
@@ -87,8 +87,6 @@ int mbedtls_ssl_check_timer( mbedtls_ssl_context *ssl )
 }
 
 #if !defined(MBEDTLS_SSL_USE_MPS)
-static uint32_t ssl_get_hs_total_len( mbedtls_ssl_context const *ssl );
-
 MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_parse_record_header( mbedtls_ssl_context const *ssl,
                                     unsigned char *buf,
@@ -151,7 +149,7 @@ exit:
     MBEDTLS_SSL_DEBUG_MSG( 1, ( "<= mbedtls_ssl_check_record" ) );
     return( ret );
 }
-#else /* MBEDTLS_SSL_USE_MPS */
+#else /* !MBEDTLS_SSL_USE_MPS */
 int mbedtls_ssl_check_record( mbedtls_ssl_context const *ssl,
                               unsigned char *buf,
                               size_t buflen )
@@ -161,7 +159,10 @@ int mbedtls_ssl_check_record( mbedtls_ssl_context const *ssl,
     ((void) buflen);
     return( MBEDTLS_ERR_SSL_FEATURE_UNAVAILABLE );
 }
-#endif /* !MBEDTLS_SSL_USE_MPS */
+#endif /* MBEDTLS_SSL_USE_MPS */
+
+#define SSL_DONT_FORCE_FLUSH 0
+#define SSL_FORCE_FLUSH      1
 
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
 
@@ -261,10 +262,6 @@ static int ssl_get_remaining_payload_in_datagram( mbedtls_ssl_context const *ssl
     return( (int) remaining );
 }
 
-#endif /* MBEDTLS_SSL_PROTO_DTLS */
-
-#if defined(MBEDTLS_SSL_PROTO_DTLS)
-
 /*
  * Double the retransmit timeout value, within the allowed range,
  * returning -1 if the maximum value has already been reached.
@@ -305,7 +302,7 @@ static int ssl_double_retransmit_timeout( mbedtls_ssl_context *ssl )
     return( 0 );
 }
 
-void mbedtls_ssl_reset_retransmit_timeout( mbedtls_ssl_context *ssl )
+static void ssl_reset_retransmit_timeout( mbedtls_ssl_context *ssl )
 {
     ssl->handshake->retransmit_timeout = ssl->conf->hs_timeout_min;
     MBEDTLS_SSL_DEBUG_MSG( 3, ( "update timeout value to %lu millisecs",
@@ -2575,7 +2572,7 @@ void mbedtls_ssl_recv_flight_completed( mbedtls_ssl_context *ssl )
  */
 void mbedtls_ssl_send_flight_completed( mbedtls_ssl_context *ssl )
 {
-    mbedtls_ssl_reset_retransmit_timeout( ssl );
+    ssl_reset_retransmit_timeout( ssl );
     mbedtls_ssl_set_timer( ssl, ssl->handshake->retransmit_timeout );
 
     if( ssl->in_msgtype == MBEDTLS_SSL_MSG_HANDSHAKE &&
@@ -2629,7 +2626,7 @@ cleanup:
     return( ret );
 }
 
-#else /* ! MBEDTLS_SSL_USE_MPS */
+#else /* MBEDTLS_SSL_USE_MPS */
 
 int mbedtls_ssl_start_handshake_msg( mbedtls_ssl_context *ssl, unsigned hs_type,
                                      unsigned char **buf, size_t *buf_len )
@@ -3267,7 +3264,6 @@ void mbedtls_ssl_update_handshake_status( mbedtls_ssl_context *ssl )
 }
 
 #endif /* !MBEDTLS_SSL_USE_MPS */
-
 
 /*
  * DTLS anti-replay: RFC 6347 4.1.2.6
@@ -5075,7 +5071,7 @@ int mbedtls_ssl_handle_message_type( mbedtls_ssl_context *ssl )
 
     return( 0 );
 }
-#endif /* MBEDTLS_SSL_USE_MPS */
+#endif /* !MBEDTLS_SSL_USE_MPS */
 
 int mbedtls_ssl_send_fatal_handshake_failure( mbedtls_ssl_context *ssl )
 {
@@ -5371,7 +5367,7 @@ size_t mbedtls_ssl_get_bytes_avail( const mbedtls_ssl_context *ssl )
 {
     return( ssl->in_offt == NULL ? 0 : ssl->in_msglen );
 }
-#endif /* MBEDTLS_SSL_USE_MPS */
+#endif /* !MBEDTLS_SSL_USE_MPS */
 
 int mbedtls_ssl_check_pending( const mbedtls_ssl_context *ssl )
 {
@@ -6330,7 +6326,7 @@ static void ssl_buffering_free_slot( mbedtls_ssl_context *ssl,
 
 #endif /* MBEDTLS_SSL_PROTO_DTLS */
 
-#endif /* MBEDTLS_SSL_USE_MPS */
+#endif /* !MBEDTLS_SSL_USE_MPS */
 
 /*
  * Convert version numbers to/from wire format
