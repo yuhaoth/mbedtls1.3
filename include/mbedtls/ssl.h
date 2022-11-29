@@ -1595,26 +1595,18 @@ struct mbedtls_ssl_config
                                      *   \c psk is not \c NULL or \c psk_opaque
                                      *   is not \c 0. */
 
-#if defined(MBEDTLS_ZERO_RTT)
-     /*!< Early data indication:
-      *   - MBEDTLS_SSL_EARLY_DATA_DISABLED,
-      *   - MBEDTLS_SSL_EARLY_DATA_ENABLED
-      */
-    int early_data_enabled;
+#if defined(MBEDTLS_SSL_EARLY_DATA)
+    int MBEDTLS_PRIVATE(early_data_enabled);     /*!< Early data enablement:
+                                                  *   - MBEDTLS_SSL_EARLY_DATA_DISABLED,
+                                                  *   - MBEDTLS_SSL_EARLY_DATA_ENABLED */
 #if defined(MBEDTLS_SSL_SRV_C)
     /* Max number of bytes of early data acceptable by the server. */
     size_t max_early_data;
     /* Callback function for early data processing (server only). */
     int(*early_data_callback)(mbedtls_ssl_context*, const unsigned char*, size_t);
 #endif /* MBEDTLS_SSL_SRV_C */
-#endif /* MBEDTLS_ZERO_RTT */
-#endif /* MBEDTLS_SSL_HANDSHAKE_WITH_PSK_ENABLED */
-
-#if defined(MBEDTLS_SSL_EARLY_DATA)
-    int MBEDTLS_PRIVATE(early_data_enabled);     /*!< Early data enablement:
-                                                  *   - MBEDTLS_SSL_EARLY_DATA_DISABLED,
-                                                  *   - MBEDTLS_SSL_EARLY_DATA_ENABLED */
 #endif /* MBEDTLS_SSL_EARLY_DATA */
+#endif /* MBEDTLS_SSL_HANDSHAKE_WITH_PSK_ENABLED */
 
 #if defined(MBEDTLS_SSL_ALPN)
     const char **MBEDTLS_PRIVATE(alpn_list);         /*!< ordered list of protocols          */
@@ -2096,11 +2088,17 @@ void mbedtls_ssl_conf_authmode( mbedtls_ssl_config *conf, int authmode );
 *                        payloads.
 *
 * \warning This interface is experimental and may change without notice.
+* \warning Reserve both interface until early data is upstreamed.
 *
 */
 void mbedtls_ssl_tls13_conf_early_data( mbedtls_ssl_config *conf,
                                         int early_data_enabled );
 
+void mbedtls_ssl_conf_early_data( mbedtls_ssl_config* conf, int early_data,
+                                  size_t max_early_data,
+                                  int(*early_data_callback)( mbedtls_ssl_context*,
+                                                             const unsigned char*,
+                                                             size_t ) );
 #if defined(MBEDTLS_SSL_CLI_C)
 int mbedtls_ssl_set_early_data( mbedtls_ssl_context* ssl, const unsigned char* buffer,
                                 size_t len );
