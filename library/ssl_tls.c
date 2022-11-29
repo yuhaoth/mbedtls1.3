@@ -1028,6 +1028,30 @@ static int ssl_conf_check(const mbedtls_ssl_context *ssl)
     if( ret != 0 )
         return( ret );
 
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3)
+    /* RFC 8446 section 4.4.3
+     *
+     * If the verification fails, the receiver MUST terminate the handshake with
+     * a "decrypt_error" alert.
+     *
+     * If the client is configured as TLS 1.3 only with optional verify, return
+     * bad config.
+     *
+     */
+    if( mbedtls_ssl_conf_tls13_ephemeral_enabled(
+            (mbedtls_ssl_context *)ssl )                            &&
+        ssl->conf->endpoint == MBEDTLS_SSL_IS_CLIENT                &&
+        ssl->conf->max_tls_version == MBEDTLS_SSL_VERSION_TLS1_3    &&
+        ssl->conf->min_tls_version == MBEDTLS_SSL_VERSION_TLS1_3    &&
+        ssl->conf->authmode == MBEDTLS_SSL_VERIFY_OPTIONAL )
+    {
+        MBEDTLS_SSL_DEBUG_MSG(
+            1, ( "Optional verify auth mode "
+                 "is not available for TLS 1.3 client" ) );
+        return( MBEDTLS_ERR_SSL_BAD_CONFIG );
+    }
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
+
     /* Space for further checks */
 
     return( 0 );
@@ -6011,7 +6035,9 @@ static int tls_prf_generic( mbedtls_md_type_t md_type,
 exit:
     mbedtls_md_free( &md_ctx );
 
-    mbedtls_platform_zeroize( tmp, tmp_len );
+    if ( tmp != NULL )
+        mbedtls_platform_zeroize( tmp, tmp_len );
+
     mbedtls_platform_zeroize( h_i, sizeof( h_i ) );
 
     mbedtls_free( tmp );
