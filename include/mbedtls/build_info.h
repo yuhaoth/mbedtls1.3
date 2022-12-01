@@ -126,11 +126,7 @@
 #endif
 
 /* Quick fix for prototype
- * TODO: Remove MBEDTLS_SSL_NEW_SESSION_TICKET_REMOVED after early data integrate.
  */
-#if defined(MBEDTLS_SSL_SESSIONT_TICKETS) && !defined(MBEDTLS_SSL_NEW_SESSION_TICKET_REMOVED)
-#define MBEDTLS_SSL_NEW_SESSION_TICKET_REMOVED
-#endif
 
 #if defined(MBEDTLS_ZERO_RTT) && !defined(MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_SOME_PSK_ENABLED)
 #undef MBEDTLS_ZERO_RTT

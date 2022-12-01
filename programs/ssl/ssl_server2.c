@@ -679,7 +679,7 @@ struct options
     int dummy_ticket;           /* enable / disable dummy ticket generator  */
     int ticket_rotate;          /* session ticket rotate (code coverage)    */
     int ticket_timeout;         /* session ticket lifetime                  */
-#if defined(MBEDTLS_SSL_NEW_SESSION_TICKET_REMOVED)
+#if defined(MBEDTLS_SSL_SESSION_TICKETS)
     mbedtls_ssl_ticket_flags ticket_flags;   /* ticket flags                */
 #endif
     int ticket_aead;            /* session ticket protection                */
@@ -1728,9 +1728,9 @@ int main( int argc, char *argv[] )
     opt.async_private_delay2 = DFL_ASYNC_PRIVATE_DELAY2;
     opt.async_private_error = DFL_ASYNC_PRIVATE_ERROR;
     opt.psk                 = DFL_PSK;
-#if defined(MBEDTLS_SSL_NEW_SESSION_TICKET_REMOVED)
+#if defined(MBEDTLS_SSL_SESSION_TICKETS)
     opt.ticket_flags        = DFL_TICKET_FLAGS;
-#endif /* MBEDTLS_SSL_NEW_SESSION_TICKET_REMOVED */
+#endif /* MBEDTLS_SSL_SESSION_TICKETS */
     opt.early_data          = DFL_EARLY_DATA;
     opt.sig_algs            = DFL_SIG_ALGS;
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
@@ -2206,7 +2206,7 @@ int main( int argc, char *argv[] )
             if( opt.ticket_timeout < 0 )
                 goto usage;
         }
-#if defined(MBEDTLS_SSL_NEW_SESSION_TICKET_REMOVED)
+#if defined(MBEDTLS_SSL_SESSION_TICKETS)
         else if( strcmp( p, "ticket_flags" ) == 0 )
         {
             mbedtls_ssl_ticket_flags temp = atoi( q );

@@ -1247,15 +1247,15 @@ struct mbedtls_ssl_session
 #endif /* MBEDTLS_X509_CRT_PARSE_C */
     uint32_t MBEDTLS_PRIVATE(verify_result);          /*!<  verification result     */
 
-#if ( defined(MBEDTLS_SSL_SESSION_TICKETS) && defined(MBEDTLS_SSL_CLI_C) ) || defined(MBEDTLS_SSL_NEW_SESSION_TICKET_REMOVED)
+#if defined(MBEDTLS_SSL_SESSION_TICKETS)
     unsigned char *MBEDTLS_PRIVATE(ticket);      /*!< RFC 5077 session ticket */
     size_t MBEDTLS_PRIVATE(ticket_len);          /*!< session ticket length   */
     uint32_t MBEDTLS_PRIVATE(ticket_lifetime);   /*!< ticket lifetime hint    */
-#endif /* ( MBEDTLS_SSL_SESSION_TICKETS && MBEDTLS_SSL_CLI_C ) || MBEDTLS_SSL_NEW_SESSION_TICKET_REMOVED */
+#endif /* MBEDTLS_SSL_SESSION_TICKETS */
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3) && defined(MBEDTLS_SSL_NEW_SESSION_TICKET_REMOVED)
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3) && defined(MBEDTLS_SSL_EARLY_DATA)
     uint32_t MBEDTLS_PRIVATE(max_early_data_size);   /*!< max data allowed */
-#endif /*  MBEDTLS_SSL_PROTO_TLS1_3 && MBEDTLS_SSL_NEW_SESSION_TICKET_REMOVED */
+#endif /*  MBEDTLS_SSL_PROTO_TLS1_3 && MBEDTLS_SSL_EARLY_DATA */
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3) && defined(MBEDTLS_SSL_SESSION_TICKETS)
     uint8_t MBEDTLS_PRIVATE(endpoint);          /*!< 0: client, 1: server */
@@ -1504,9 +1504,7 @@ struct mbedtls_ssl_config
     void *MBEDTLS_PRIVATE(p_cookie);                 /*!< context for the cookie callbacks   */
 #endif
 
-#if ((defined(MBEDTLS_SSL_SESSION_TICKETS) || \
-     (defined(MBEDTLS_SSL_NEW_SESSION_TICKET_REMOVED) && defined(MBEDTLS_SSL_PROTO_TLS1_3)) ) \
-    && defined(MBEDTLS_SSL_SRV_C))
+#if defined(MBEDTLS_SSL_SESSION_TICKETS) && defined(MBEDTLS_SSL_SRV_C)
     /** Callback to create & write a session ticket                         */
     int (*MBEDTLS_PRIVATE(f_ticket_write))( void *, const mbedtls_ssl_session *,
             unsigned char *, const unsigned char *, size_t *, uint32_t * );
@@ -2608,7 +2606,7 @@ typedef int mbedtls_ssl_ticket_parse_t( void *p_ticket,
                                         unsigned char *buf,
                                         size_t len );
 
-#if (defined(MBEDTLS_SSL_SESSION_TICKETS) || defined(MBEDTLS_SSL_NEW_SESSION_TICKET_REMOVED)) && defined(MBEDTLS_SSL_SRV_C)
+#if defined(MBEDTLS_SSL_SESSION_TICKETS) && defined(MBEDTLS_SSL_SRV_C)
 /**
  * \brief           Configure SSL session ticket callbacks (server only).
  *                  (Default: none.)
@@ -2627,7 +2625,7 @@ void mbedtls_ssl_conf_session_tickets_cb( mbedtls_ssl_config *conf,
         mbedtls_ssl_ticket_write_t *f_ticket_write,
         mbedtls_ssl_ticket_parse_t *f_ticket_parse,
         void *p_ticket );
-#endif /* ( MBEDTLS_SSL_SESSION_TICKETS || MBEDTLS_SSL_NEW_SESSION_TICKET_REMOVED ) && MBEDTLS_SSL_SRV_C */
+#endif /* MBEDTLS_SSL_SESSION_TICKETS && MBEDTLS_SSL_SRV_C */
 
 /**
  * \brief   Configure a key export callback.

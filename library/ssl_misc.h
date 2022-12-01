@@ -572,11 +572,9 @@ struct mbedtls_ssl_handshake_params
     uint8_t certificate_request_sent;
 #endif /* MBEDTLS_SSL_SRV_C */
 
-#if defined(MBEDTLS_SSL_SESSION_TICKETS) || \
-    ( defined(MBEDTLS_SSL_NEW_SESSION_TICKET_REMOVED) && defined(MBEDTLS_SSL_PROTO_TLS1_3) )
+#if defined(MBEDTLS_SSL_SESSION_TICKETS)
     uint8_t new_session_ticket;         /*!< use NewSessionTicket?    */
-#endif /* MBEDTLS_SSL_SESSION_TICKETS ||
-          ( MBEDTLS_SSL_NEW_SESSION_TICKET_REMOVED && MBEDTLS_SSL_PROTO_TLS1_3 ) */
+#endif /* MBEDTLS_SSL_SESSION_TICKETS */
 
 #if defined(MBEDTLS_SSL_CLI_C)
     /** Minimum TLS version to be negotiated.

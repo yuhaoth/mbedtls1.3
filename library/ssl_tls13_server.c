@@ -44,9 +44,9 @@
 
 #include "mbedtls/hkdf.h"
 
-#if defined(MBEDTLS_SSL_NEW_SESSION_TICKET_REMOVED)
+#if defined(MBEDTLS_SSL_SESSION_TICKETS)
 #include "mbedtls/ssl_ticket.h"
-#endif /* MBEDTLS_SSL_NEW_SESSION_TICKET_REMOVED */
+#endif /* MBEDTLS_SSL_SESSION_TICKETS */
 
 
 
@@ -3861,10 +3861,10 @@ int mbedtls_ssl_tls13_handshake_server_step( mbedtls_ssl_context *ssl )
 
         case MBEDTLS_SSL_CLIENT_HELLO:
 
-#if defined(MBEDTLS_SSL_NEW_SESSION_TICKET_REMOVED)
+#if defined(MBEDTLS_SSL_SESSION_TICKETS)
             ssl->session_negotiate->tls_version = ssl->tls_version;
             ssl->session_negotiate->endpoint = ssl->conf->endpoint;
-#endif /* MBEDTLS_SSL_NEW_SESSION_TICKET_REMOVED */
+#endif /* MBEDTLS_SSL_SESSION_TICKETS */
 
             ret = ssl_tls13_process_client_hello( ssl );
             if( ret != 0 )

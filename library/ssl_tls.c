@@ -1261,7 +1261,8 @@ int mbedtls_ssl_setup( mbedtls_ssl_context *ssl,
         goto error;
 
     /* Initialize ticket structure */
-#if defined(MBEDTLS_SSL_NEW_SESSION_TICKET_REMOVED) && defined(MBEDTLS_SSL_CLI_C) && \
+#if defined(MBEDTLS_SSL_SESSION_TICKETS) && \
+    defined(MBEDTLS_SSL_CLI_C) && \
     defined(MBEDTLS_SSL_PROTO_TLS1_3)
     ssl->session_negotiate->ticket = NULL;
 #endif

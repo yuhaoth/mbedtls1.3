@@ -1576,22 +1576,6 @@
 */
 //#define MBEDTLS_ZERO_RTT
 
-/*
-* \def MBEDTLS_SSL_NEW_SESSION_TICKET_REMOVED
-*
-* Enable support for TLS 1.3 session tickets.
-* Client-side, provides full support for session tickets (maintainance of a
-* session store remains the responsibility of the application, though).
-* Server-side, you also need to provide callbacks for writing and parsing
-* tickets, including authenticated encryption and key management. Example
-* callbacks are provided by MBEDTLS_SSL_TICKET_C.
-*
-* Comment this macro to
-*  - be able to issue tickets by TLS 1.3 servers, and
-*  - use them in TLS 1.3 clients.
-*/
-//#define MBEDTLS_SSL_NEW_SESSION_TICKET_REMOVED
-
 /**
  * \def MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_ENABLED
  *
