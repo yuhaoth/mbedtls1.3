@@ -922,7 +922,9 @@ component_check_doxygen_warnings () {
     tests/scripts/doxygen.sh
 }
 
-
+support_check_doxygen_warnings () {
+    [ `lsb_release -c -s` = bionic ]
+}
 
 ################################################################
 #### Build and test many configurations and targets
