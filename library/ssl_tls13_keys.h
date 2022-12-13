@@ -21,17 +21,6 @@
 
 #include "ssl_misc.h"
 
-/* The maximum size of the intermediate key material.
- * The IKM can be a
- * - 0-string of length corresponding to the size of the
- *   underlying hash function, and hence can be bounded
- *   in size by MBEDTLS_MD_MAX_SIZE.
- * - the PSK, which is bounded in size by MBEDTLS_PREMASTER_SIZE
- * - the (EC)DHE, which is bounded in size by MBEDTLS_PREMASTER_SIZE
- */
-#define MBEDTLS_SSL_TLS1_3_MAX_IKM_SIZE \
-    ( MBEDTLS_PREMASTER_SIZE > MBEDTLS_MD_MAX_SIZE ? \
-      MBEDTLS_PREMASTER_SIZE : MBEDTLS_MD_MAX_SIZE )
 
 /* This requires MBEDTLS_SSL_TLS1_3_LABEL( idx, name, string ) to be defined at
  * the point of use. See e.g. the definition of mbedtls_ssl_tls13_labels_union
