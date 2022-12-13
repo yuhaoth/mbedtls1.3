@@ -2276,7 +2276,7 @@ MBEDTLS_CHECK_RETURN_CRITICAL
 int ssl_tls13_write_early_data_process( mbedtls_ssl_context *ssl )
 {
     int ret;
-#if defined(MBEDTLS_SSL_USE_MPS)
+#if defined(MBEDTLS_SSL_USE_MPS) && defined(MBEDTLS_ZERO_RTT)
     mbedtls_writer *msg;
     unsigned char *buf;
     mbedtls_mps_size_t buf_len, msg_len;
