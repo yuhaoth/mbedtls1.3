@@ -1956,19 +1956,6 @@ run_test    "TLS 1.3, TLS1-3-AES-128-CCM-8-SHA256, PSK" \
             -s "Protocol is TLSv1.3" \
             -s "Ciphersuite is TLS1-3-AES-128-CCM-8-SHA256"
 
-# https://github.com/tlswg/tls13-spec/issues/1227, the test is not reasonable
-skip_next_test
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
-requires_config_enabled MBEDTLS_SSL_SRV_C
-requires_config_enabled MBEDTLS_SSL_CLI_C
-requires_config_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_ENABLED
-run_test    "TLS 1.3, TLS1-3-AES-256-GCM-SHA384, PSK" \
-            "$P_SRV_ nbio=2 debug_level=5 force_version=tls13 psk=010203 psk_identity=0a0b0c tls13_kex_modes=psk" \
-            "$P_CLI_ nbio=2 debug_level=5 force_version=tls13 force_ciphersuite=TLS1-3-AES-256-GCM-SHA384 psk=010203 psk_identity=0a0b0c tls13_kex_modes=psk" \
-            0 \
-            -s "Protocol is TLSv1.3" \
-            -s "Ciphersuite is TLS1-3-AES-256-GCM-SHA384"
-
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_SRV_C
 requires_config_enabled MBEDTLS_SSL_CLI_C
@@ -2002,18 +1989,6 @@ run_test    "TLS 1.3, TLS1-3-AES-128-CCM-8-SHA256, PSK-ECDHE" \
             0 \
             -s "Protocol is TLSv1.3" \
             -s "Ciphersuite is TLS1-3-AES-128-CCM-8-SHA256"
-
-# https://github.com/tlswg/tls13-spec/issues/1227, the test is not reasonable
-skip_next_test
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
-requires_config_enabled MBEDTLS_SSL_SRV_C
-requires_config_enabled MBEDTLS_SSL_CLI_C
-run_test    "TLS 1.3, TLS1-3-AES-256-GCM-SHA384, PSK-ECDHE" \
-            "$P_SRV_ nbio=2 debug_level=5 force_version=tls13 psk=010203 psk_identity=0a0b0c tls13_kex_modes=psk_ephemeral" \
-            "$P_CLI_ nbio=2 debug_level=5 force_version=tls13 force_ciphersuite=TLS1-3-AES-256-GCM-SHA384 psk=010203 psk_identity=0a0b0c tls13_kex_modes=psk_ephemeral" \
-            0 \
-            -s "Protocol is TLSv1.3" \
-            -s "Ciphersuite is TLS1-3-AES-256-GCM-SHA384"
 
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_SSL_SRV_C
@@ -2295,27 +2270,6 @@ run_test    "TLS 1.3, TLS1-3-AES-256-GCM-SHA384 with ECDHE-ECDSA (server auth on
 	    -c "client hello, adding pre_shared_key extension"          \
 	    -c "found pre_shared_key extension"                         \
 	    -s "<= write new session ticket"
-
-# https://github.com/tlswg/tls13-spec/issues/1227, the test is not reasonable
-skip_next_test
-requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
-requires_config_enabled MBEDTLS_DEBUG_C
-requires_config_enabled MBEDTLS_SSL_SRV_C
-requires_config_enabled MBEDTLS_SSL_CLI_C
-requires_config_enabled MBEDTLS_ZERO_RTT
-run_test    "TLS 1.3, TLS1-3-AES-256-GCM-SHA384, ext PSK, early data" \
-            "$P_SRV_ nbio=2 debug_level=5 force_version=tls13 early_data=-1 tls13_kex_modes=psk psk=010203 psk_identity=0a0b0c" \
-            "$P_CLI_ nbio=2 debug_level=5 force_version=tls13 force_ciphersuite=TLS1-3-AES-256-GCM-SHA384 tls13_kex_modes=psk early_data=1 psk=010203 psk_identity=0a0b0c" \
-            0 \
-	    -s "found early_data extension"                 \
-	    -s "Derive Early Secret with 'ext binder'"      \
-	    -c "client hello, adding early_data extension"  \
-            -c "Protocol is TLSv1.3"                        \
-            -c "Ciphersuite is TLS1-3-AES-256-GCM-SHA384"   \
-	    -c "Derive Early Secret with 'ext binder'"      \
-	    -c "<= write EndOfEarlyData"                    \
-	    -s "<= parse early data"                        \
-	    -s "<= parse end_of_early_data"
 
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3
 requires_config_enabled MBEDTLS_DEBUG_C
