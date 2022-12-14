@@ -2495,10 +2495,11 @@ static int ssl_tls13_postprocess_client_hello( mbedtls_ssl_context* ssl )
 MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_tls13_process_client_hello( mbedtls_ssl_context *ssl )
 {
+
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
-    int hrr_required = 0;
     unsigned char *buf = NULL;
     size_t buflen = 0;
+    int parse_client_hello_ret;
 
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> parse client hello" ) );
 
@@ -2508,21 +2509,21 @@ static int ssl_tls13_process_client_hello( mbedtls_ssl_context *ssl )
 
     MBEDTLS_SSL_PROC_CHK_NEG( ssl_tls13_parse_client_hello( ssl, buf,
                                                             buf + buflen ) );
-    hrr_required = ( ret == SSL_CLIENT_HELLO_HRR_REQUIRED );
+    parse_client_hello_ret = ret; /* Store return value of parse_client_hello,
+                                   * only SSL_CLIENT_HELLO_OK or
+                                   * SSL_CLIENT_HELLO_HRR_REQUIRED at this
+                                   * stage as negative error codes are handled
+                                   * by MBEDTLS_SSL_PROC_CHK_NEG. */
 
 #if defined(MBEDTLS_SSL_USE_MPS)
     MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_mps_hs_consume_full_hs_msg( ssl ) );
 #endif /* MBEDTLS_SSL_USE_MPS */
-
-    if( hrr_required )
-    {
-        mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_HELLO_RETRY_REQUEST );
-        return( 0 );
-    }
-
-    MBEDTLS_SSL_DEBUG_MSG( 1, ( "postprocess final client hello" ) );
     MBEDTLS_SSL_PROC_CHK( ssl_tls13_postprocess_client_hello( ssl ) );
-    mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_SERVER_HELLO );
+
+    if( parse_client_hello_ret == SSL_CLIENT_HELLO_OK )
+        mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_SERVER_HELLO );
+    else
+        mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_HELLO_RETRY_REQUEST );
 
 cleanup:
 
