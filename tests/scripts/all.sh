@@ -3756,9 +3756,50 @@ component_test_prototype_tls13_only_ephemeral_all_no_mps () {
     tests/ssl-opt.sh -f 'TLS 1.3'
 }
 
-component_test_prototype_full_cmake_gcc_asan () {
-    # Duplicate test_full_cmake_gcc_asan for marking it as part of prototype tests.
-    component_test_full_cmake_gcc_asan
+component_test_prototype_full_cmake_gcc_asan_unit_test () {
+    msg "build: full config, cmake, gcc, ASan"
+    scripts/config.py full
+    CC=gcc cmake -D CMAKE_BUILD_TYPE:String=Asan .
+    make -j4
+
+    msg "test: main suites (inc. selftests) (full config, ASan build)"
+    make test
+
+    msg "test: selftest (ASan build)" # ~ 10s
+    programs/test/selftest
+}
+
+component_test_prototype_full_cmake_gcc_asan_ssl_opt_tls13 () {
+    msg "build: full config, cmake, gcc, ASan"
+    scripts/config.py full
+    CC=gcc cmake -D CMAKE_BUILD_TYPE:String=Asan .
+    make -j4
+
+    msg "test: ssl-opt.sh (full config, ASan build)"
+    tests/ssl-opt.sh -f 'TLS 1.3'
+}
+
+component_test_prototype_full_cmake_gcc_asan_ssl_opt_exclude_tls13 () {
+    msg "build: full config, cmake, gcc, ASan"
+    scripts/config.py full
+    CC=gcc cmake -D CMAKE_BUILD_TYPE:String=Asan .
+    make -j4
+
+    msg "test: ssl-opt.sh (full config, ASan build)"
+    tests/ssl-opt.sh -e 'TLS 1.3'
+}
+
+component_test_prototype_full_cmake_gcc_asan_compat () {
+    msg "build: full config, cmake, gcc, ASan"
+    scripts/config.py full
+    CC=gcc cmake -D CMAKE_BUILD_TYPE:String=Asan .
+    make -j4
+
+    msg "test: compat.sh (full config, ASan build)"
+    tests/compat.sh
+
+    msg "test: context-info.sh (full config, ASan build)" # ~ 15 sec
+    tests/context-info.sh
 }
 
 component_test_prototype_default_cmake_gcc_asan_unit_tests () {
