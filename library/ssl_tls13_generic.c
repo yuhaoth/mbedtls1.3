@@ -237,37 +237,6 @@ static void ssl_tls13_create_verify_structure( const unsigned char *transcript_h
     *verify_buffer_len = idx;
 }
 
-/* Coordinate: Check whether a certificate verify message is expected.
- * Returns a negative value on failure, and otherwise
- * - SSL_CERTIFICATE_VERIFY_SKIP
- * - SSL_CERTIFICATE_VERIFY_READ
- * to indicate if the CertificateVerify message should be present or not.
- */
-#define SSL_CERTIFICATE_VERIFY_SKIP 0
-#define SSL_CERTIFICATE_VERIFY_READ 1
-MBEDTLS_CHECK_RETURN_CRITICAL
-static int ssl_tls13_read_certificate_verify_coordinate( mbedtls_ssl_context *ssl )
-{
-    if( mbedtls_ssl_tls13_key_exchange_mode_with_psk( ssl ) )
-        return( SSL_CERTIFICATE_VERIFY_SKIP );
-
-#if !defined(MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED)
-    MBEDTLS_SSL_DEBUG_MSG( 1, ( "should never happen" ) );
-    return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
-#else
-    if( ssl->session_negotiate->peer_cert == NULL )
-        return( SSL_CERTIFICATE_VERIFY_SKIP );
-
-    return( SSL_CERTIFICATE_VERIFY_READ );
-#endif /* MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED */
-}
-
-/* Parse and validate CertificateVerify message
- *
- * Note: The size of the hash buffer is assumed to be large enough to
- *       hold the transcript given the selected hash algorithm.
- *       No bounds-checking is done inside the function.
- */
 MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_tls13_parse_certificate_verify( mbedtls_ssl_context *ssl,
                                                const unsigned char *buf,
@@ -411,20 +380,6 @@ int mbedtls_ssl_tls13_process_certificate_verify( mbedtls_ssl_context *ssl )
     size_t buf_len;
 
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> parse certificate verify" ) );
-
-    MBEDTLS_SSL_PROC_CHK_NEG( ssl_tls13_read_certificate_verify_coordinate( ssl ) );
-    if( ret == SSL_CERTIFICATE_VERIFY_SKIP )
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= skip parse certificate verify" ) );
-        ret = 0;
-        goto cleanup;
-    }
-    else if( ret != SSL_CERTIFICATE_VERIFY_READ )
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "should never happen" ) );
-        ret = MBEDTLS_ERR_SSL_INTERNAL_ERROR;
-        goto cleanup;
-    }
 
     MBEDTLS_SSL_PROC_CHK(
         mbedtls_ssl_tls13_fetch_handshake_msg( ssl,
