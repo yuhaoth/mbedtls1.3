@@ -3355,7 +3355,7 @@ component_test_prototype_tls13_only () {
     # cd tests; ./test_suite_ssl; cd ..
 }
 
-component_test_prototype_tls13_only_no_mps () {
+component_test_prototype_tls13_only_no_mps_compat () {
     msg "build: TLS 1.3 only without MPS"
     scripts/config.py unset MBEDTLS_SSL_USE_MPS
     scripts/config.py   set MBEDTLS_ZERO_RTT
@@ -3366,9 +3366,27 @@ component_test_prototype_tls13_only_no_mps () {
 
     msg "test: TLS 1.3 compat.sh"
     if_build_succeeded tests/compat.sh -m tls13 -t ECDSA
+}
+
+component_test_prototype_tls13_only_no_mps_ssl_opt () {
+    msg "build: TLS 1.3 only without MPS"
+    scripts/config.py unset MBEDTLS_SSL_USE_MPS
+    scripts/config.py   set MBEDTLS_ZERO_RTT
+    scripts/config.py   set MBEDTLS_SSL_EARLY_DATA
+    CFLAGS="'-DMBEDTLS_USER_CONFIG_FILE=\"../tests/configs/tls13-only-prototype.h\"'"
+    make CFLAGS="$CFLAGS $ASAN_CFLAGS" LDFLAGS="$ASAN_CFLAGS"
 
     msg "test: TLS 1.3 ssl-opt.sh"
     if_build_succeeded tests/ssl-opt.sh -f "TLS 1.3"
+}
+
+component_test_prototype_tls13_only_no_mps_ssl_opt_test_suite_ssl () {
+    msg "build: TLS 1.3 only without MPS"
+    scripts/config.py unset MBEDTLS_SSL_USE_MPS
+    scripts/config.py   set MBEDTLS_ZERO_RTT
+    scripts/config.py   set MBEDTLS_SSL_EARLY_DATA
+    CFLAGS="'-DMBEDTLS_USER_CONFIG_FILE=\"../tests/configs/tls13-only-prototype.h\"'"
+    make CFLAGS="$CFLAGS $ASAN_CFLAGS" LDFLAGS="$ASAN_CFLAGS"
 
     msg "test_suite_ssl: TLS 1.3 only, all key exchange modes enabled"
     cd tests; ./test_suite_ssl; cd ..
