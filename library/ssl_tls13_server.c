@@ -1209,58 +1209,6 @@ void mbedtls_ssl_conf_cookies( mbedtls_ssl_config *conf,
 }
 #endif /* MBEDTLS_SSL_COOKIE_C */
 
-#if defined(MBEDTLS_SSL_COOKIE_C)
-MBEDTLS_CHECK_RETURN_CRITICAL
-static int ssl_tls13_parse_cookie_ext( mbedtls_ssl_context *ssl,
-                                       const unsigned char *buf,
-                                       size_t len )
-{
-    int ret = 0;
-    size_t cookie_len;
-
-    MBEDTLS_SSL_DEBUG_MSG( 3, ( "parse cookie extension" ) );
-
-    if( ssl->conf->f_cookie_check != NULL )
-    {
-        if( len >= 2 )
-        {
-            cookie_len = MBEDTLS_GET_UINT16_BE( buf, 0 );
-            buf += 2;
-        }
-        else
-        {
-            MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad client hello message - cookie length mismatch" ) );
-            return( MBEDTLS_ERR_SSL_DECODE_ERROR );
-        }
-
-        if( cookie_len + 2 != len )
-        {
-            MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad client hello message - cookie length mismatch" ) );
-            return( MBEDTLS_ERR_SSL_DECODE_ERROR );
-        }
-
-        MBEDTLS_SSL_DEBUG_BUF( 3, "Received cookie", buf, cookie_len );
-
-        if( ssl->conf->f_cookie_check( ssl->conf->p_cookie,
-                      buf, cookie_len, ssl->cli_id, ssl->cli_id_len ) != 0 )
-        {
-            MBEDTLS_SSL_DEBUG_MSG( 2, ( "cookie verification failed" ) );
-            ret = MBEDTLS_ERR_SSL_HRR_REQUIRED;
-        }
-        else
-        {
-            MBEDTLS_SSL_DEBUG_MSG( 2, ( "cookie verification passed" ) );
-        }
-    }
-    else {
-        /* TBD: Check under what cases this is appropriate */
-        MBEDTLS_SSL_DEBUG_MSG( 2, ( "cookie verification skipped" ) );
-    }
-
-    return( ret );
-}
-#endif /* MBEDTLS_SSL_COOKIE_C */
-
 #if defined(MBEDTLS_ZERO_RTT)
 /*
   static int ssl_tls13_parse_early_data_ext( mbedtls_ssl_context *ssl,
@@ -1873,6 +1821,58 @@ static int ssl_tls13_pick_key_cert( mbedtls_ssl_context *ssl )
 #define SSL_CLIENT_HELLO_OK           0
 #define SSL_CLIENT_HELLO_HRR_REQUIRED 1
 
+#if defined(MBEDTLS_SSL_COOKIE_C)
+MBEDTLS_CHECK_RETURN_CRITICAL
+static int ssl_tls13_parse_cookie_ext( mbedtls_ssl_context *ssl,
+                                       const unsigned char *buf,
+                                       size_t len )
+{
+    int ret = 0;
+    size_t cookie_len;
+
+    MBEDTLS_SSL_DEBUG_MSG( 3, ( "parse cookie extension" ) );
+
+    if( ssl->conf->f_cookie_check != NULL )
+    {
+        if( len >= 2 )
+        {
+            cookie_len = MBEDTLS_GET_UINT16_BE( buf, 0 );
+            buf += 2;
+        }
+        else
+        {
+            MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad client hello message - cookie length mismatch" ) );
+            return( MBEDTLS_ERR_SSL_DECODE_ERROR );
+        }
+
+        if( cookie_len + 2 != len )
+        {
+            MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad client hello message - cookie length mismatch" ) );
+            return( MBEDTLS_ERR_SSL_DECODE_ERROR );
+        }
+
+        MBEDTLS_SSL_DEBUG_BUF( 3, "Received cookie", buf, cookie_len );
+
+        if( ssl->conf->f_cookie_check( ssl->conf->p_cookie,
+                      buf, cookie_len, ssl->cli_id, ssl->cli_id_len ) != 0 )
+        {
+            MBEDTLS_SSL_DEBUG_MSG( 2, ( "cookie verification failed" ) );
+            ret = SSL_CLIENT_HELLO_HRR_REQUIRED;
+        }
+        else
+        {
+            MBEDTLS_SSL_DEBUG_MSG( 2, ( "cookie verification passed" ) );
+        }
+    }
+    else {
+        /* TBD: Check under what cases this is appropriate */
+        MBEDTLS_SSL_DEBUG_MSG( 2, ( "cookie verification skipped" ) );
+    }
+
+    return( ret );
+}
+#endif /* MBEDTLS_SSL_COOKIE_C */
+
 #if defined(MBEDTLS_ZERO_RTT)
 MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_tls13_check_use_0rtt_handshake( mbedtls_ssl_context *ssl )
@@ -2284,7 +2284,7 @@ static int ssl_tls13_parse_client_hello( mbedtls_ssl_context *ssl,
                 ret = ssl_tls13_parse_cookie_ext( ssl, p, extension_data_len );
 
                 /* if cookie verification failed then we return a hello retry message */
-                if( ret == MBEDTLS_ERR_SSL_HRR_REQUIRED )
+                if( ret == SSL_CLIENT_HELLO_HRR_REQUIRED )
                 {
                     hrr_required = 1;
                 }
