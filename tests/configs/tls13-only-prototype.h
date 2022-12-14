@@ -2,7 +2,7 @@
  * Only used for a few test configurations.
  *
  * Typical usage (note multiple levels of quoting):
- *     make CFLAGS="'-DMBEDTLS_USER_CONFIG_FILE=\"../tests/configs/tls13-only.h\"'"
+ *     make CFLAGS="'-DMBEDTLS_USER_CONFIG_FILE=\"../tests/configs/tls13-only-prototype.h\"'"
  */
 
 /*
@@ -22,18 +22,15 @@
  *  limitations under the License.
  */
 
-/* Enable TLS 1.3 and core 1.3 features */
-#define MBEDTLS_SSL_PROTO_TLS1_3
-#define MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
+#include "tls13-only.h"
 
-/* Disable TLS 1.2 and 1.2-specific features */
-#undef MBEDTLS_SSL_ENCRYPT_THEN_MAC
-#undef MBEDTLS_SSL_EXTENDED_MASTER_SECRET
-#undef MBEDTLS_SSL_PROTO_TLS1_2
-#undef MBEDTLS_SSL_PROTO_DTLS
-#undef MBEDTLS_SSL_DTLS_ANTI_REPLAY
-#undef MBEDTLS_SSL_DTLS_HELLO_VERIFY
-#undef MBEDTLS_SSL_DTLS_CLIENT_PORT_REUSE
+// /* Enable TLS 1.3 and core 1.3 features */
+// #define MBEDTLS_ZERO_RTT
+// #define MBEDTLS_SSL_EARLY_DATA
 
-/* Enable some invasive tests */
-#define MBEDTLS_TEST_HOOKS
+/* Disable invasive tests */
+/* For prototype, `TLS 1.3 srv Certificate msg - wrong vector lengths` will fail */
+#undef MBEDTLS_TEST_HOOKS
+
+#undef MBEDTLS_SSL_RENEGOTIATION
+#undef MBEDTLS_SSL_CONTEXT_SERIALIZATION

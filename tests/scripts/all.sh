@@ -2802,266 +2802,6 @@ component_test_malloc_0_null () {
     tests/ssl-opt.sh -e 'proxy'
 }
 
-component_test_tls13 () {
-    msg "build: TLS 1.3"
-    scripts/config.py   set MBEDTLS_SSL_USE_MPS
-    scripts/config.py   set MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
-    scripts/config.py   set MBEDTLS_SSL_CID_TLS1_3_PADDING_GRANULARITY 1
-    scripts/config.py unset MBEDTLS_USE_PSA_CRYPTO
-
-    CFLAGS="'-DMBEDTLS_USER_CONFIG_FILE=\"../tests/configs/tls13-only.h\"'"
-    make CFLAGS="$CFLAGS $ASAN_CFLAGS" LDFLAGS="$ASAN_CFLAGS"
-
-    msg "test: TLS 1.3 compat.sh"
-    if_build_succeeded tests/compat.sh -m tls13 -t ECDSA
-
-    msg "test: TLS 1.3 ssl-opt.sh"
-    if_build_succeeded tests/ssl-opt.sh -f "TLS 1.3"
-}
-
-component_test_tls13_no_mps () {
-    msg "build: TLS 1.3 without MPS"
-    scripts/config.py unset MBEDTLS_SSL_USE_MPS
-    scripts/config.py   set MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
-    scripts/config.py   set MBEDTLS_SSL_CID_TLS1_3_PADDING_GRANULARITY 1
-    scripts/config.py   set MBEDTLS_USE_PSA_CRYPTO
-
-    CFLAGS="'-DMBEDTLS_USER_CONFIG_FILE=\"../tests/configs/tls13-only.h\"'"
-    make CFLAGS="$CFLAGS $ASAN_CFLAGS" LDFLAGS="$ASAN_CFLAGS"
-
-    msg "test: TLS 1.3 without MPS compat.sh"
-    if_build_succeeded tests/compat.sh -m tls13 -t ECDSA
-
-    msg "test: TLS 1.3 without MPS ssl-opt.sh"
-    if_build_succeeded tests/ssl-opt.sh -f "TLS 1.3"
-}
-
-component_test_tls13_no_compatibility_mode () {
-    msg "build: TLS 1.3 (ASanDbg) without TLS 1.2 compatibility mode"
-    scripts/config.py   set MBEDTLS_SSL_USE_MPS
-    scripts/config.py unset MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
-    scripts/config.py   set MBEDTLS_SSL_CID_TLS1_3_PADDING_GRANULARITY 1
-    scripts/config.py unset MBEDTLS_USE_PSA_CRYPTO
-
-    CFLAGS="'-DMBEDTLS_USER_CONFIG_FILE=\"../tests/configs/tls13-only.h\"'"
-    make CFLAGS="$CFLAGS $ASAN_CFLAGS" LDFLAGS="$ASAN_CFLAGS"
-
-    msg "test: TLS 1.3 ssl-opt.sh"
-    if_build_succeeded tests/ssl-opt.sh -f "TLS 1.3"
-}
-
-component_test_tls13_no_mps_no_compatibility_mode () {
-    msg "build: TLS 1.3 without MPS (ASanDbg) and without TLS 1.2 compatibility mode"
-    scripts/config.py unset MBEDTLS_SSL_USE_MPS
-    scripts/config.py unset MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
-    scripts/config.py   set MBEDTLS_SSL_CID_TLS1_3_PADDING_GRANULARITY 1
-    scripts/config.py   set MBEDTLS_USE_PSA_CRYPTO
-
-    CFLAGS="'-DMBEDTLS_USER_CONFIG_FILE=\"../tests/configs/tls13-only.h\"'"
-    make CFLAGS="$CFLAGS $ASAN_CFLAGS" LDFLAGS="$ASAN_CFLAGS"
-
-    msg "test: TLS 1.3 without MPS ssl-opt.sh"
-    if_build_succeeded tests/ssl-opt.sh -f "TLS 1.3"
-}
-
-component_test_tls13_with_padding () {
-    msg "build: TLS 1.3 (ASanDbg) "
-    scripts/config.py   set MBEDTLS_SSL_USE_MPS
-    scripts/config.py   set MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
-    scripts/config.py   set MBEDTLS_SSL_CID_TLS1_3_PADDING_GRANULARITY 16
-    scripts/config.py unset MBEDTLS_USE_PSA_CRYPTO
-
-    CFLAGS="'-DMBEDTLS_USER_CONFIG_FILE=\"../tests/configs/tls13-only.h\"'"
-    make CFLAGS="$CFLAGS $ASAN_CFLAGS" LDFLAGS="$ASAN_CFLAGS"
-
-    msg "test: TLS 1.3 compat.sh"
-    if_build_succeeded tests/compat.sh -m tls13 -t ECDSA
-
-    msg "test: TLS 1.3 ssl-opt.sh"
-    if_build_succeeded tests/ssl-opt.sh -f "TLS 1.3"
-}
-
-component_test_tls13_no_mps_with_padding () {
-    msg "build: TLS 1.3 without MPS (ASanDbg) "
-    scripts/config.py unset MBEDTLS_SSL_USE_MPS
-    scripts/config.py   set MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
-    scripts/config.py   set MBEDTLS_SSL_CID_TLS1_3_PADDING_GRANULARITY 16
-    scripts/config.py   set MBEDTLS_USE_PSA_CRYPTO
-
-    CFLAGS="'-DMBEDTLS_USER_CONFIG_FILE=\"../tests/configs/tls13-only.h\"'"
-    make CFLAGS="$CFLAGS $ASAN_CFLAGS" LDFLAGS="$ASAN_CFLAGS"
-
-    msg "test: TLS 1.3 without MPS compat.sh"
-    if_build_succeeded tests/compat.sh -m tls13 -t ECDSA
-
-    msg "test: TLS 1.3 without MPS ssl-opt.sh"
-    if_build_succeeded tests/ssl-opt.sh -f "TLS 1.3"
-}
-
-component_test_tls13_client_only () {
-    msg "build: TLS 1.3 client-only (ASanDbg) "
-    scripts/config.py   set MBEDTLS_SSL_USE_MPS
-    scripts/config.py   set MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
-    scripts/config.py   set MBEDTLS_SSL_CID_TLS1_3_PADDING_GRANULARITY 1
-    scripts/config.py unset MBEDTLS_USE_PSA_CRYPTO
-
-    scripts/config.py unset MBEDTLS_SSL_SRV_C
-
-    CFLAGS="'-DMBEDTLS_USER_CONFIG_FILE=\"../tests/configs/tls13-only.h\"'"
-    make CFLAGS="$CFLAGS $ASAN_CFLAGS" LDFLAGS="$ASAN_CFLAGS"
-
-    msg "test: TLS 1.3 client-only, ssl-opt.sh"
-    if_build_succeeded tests/ssl-opt.sh -f "TLS 1.3"
-}
-
-component_test_tls13_client_only_no_mps () {
-    msg "build: TLS 1.3 client-only (ASanDbg) "
-    scripts/config.py unset MBEDTLS_SSL_USE_MPS
-    scripts/config.py   set MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
-    scripts/config.py   set MBEDTLS_SSL_CID_TLS1_3_PADDING_GRANULARITY 1
-    scripts/config.py   set MBEDTLS_USE_PSA_CRYPTO
-
-    scripts/config.py unset MBEDTLS_SSL_SRV_C
-
-    CFLAGS="'-DMBEDTLS_USER_CONFIG_FILE=\"../tests/configs/tls13-only.h\"'"
-    make CFLAGS="$CFLAGS $ASAN_CFLAGS" LDFLAGS="$ASAN_CFLAGS"
-
-    msg "test: TLS 1.3 client-only, ssl-opt.sh"
-    if_build_succeeded tests/ssl-opt.sh -f "TLS 1.3"
-}
-
-component_test_tls13_server_only () {
-    msg "build: TLS 1.3 server-only (ASanDbg) "
-    scripts/config.py   set MBEDTLS_SSL_USE_MPS
-    scripts/config.py   set MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
-    scripts/config.py   set MBEDTLS_SSL_CID_TLS1_3_PADDING_GRANULARITY 1
-    scripts/config.py unset MBEDTLS_USE_PSA_CRYPTO
-
-    scripts/config.py unset MBEDTLS_SSL_CLI_C
-
-    CFLAGS="'-DMBEDTLS_USER_CONFIG_FILE=\"../tests/configs/tls13-only.h\"'"
-    make CFLAGS="$CFLAGS $ASAN_CFLAGS" LDFLAGS="$ASAN_CFLAGS"
-
-    msg "test: TLS 1.3 server-only, ssl-opt.sh"
-    if_build_succeeded tests/ssl-opt.sh -f "TLS 1.3"
-}
-
-component_test_tls13_server_only_no_mps () {
-    msg "build: TLS 1.3 server-only (ASanDbg) "
-    scripts/config.py unset MBEDTLS_SSL_USE_MPS
-    scripts/config.py   set MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
-    scripts/config.py   set MBEDTLS_SSL_CID_TLS1_3_PADDING_GRANULARITY 1
-    scripts/config.py   set MBEDTLS_USE_PSA_CRYPTO
-
-    scripts/config.py unset MBEDTLS_SSL_CLI_C
-
-    CFLAGS="'-DMBEDTLS_USER_CONFIG_FILE=\"../tests/configs/tls13-only.h\"'"
-    make CFLAGS="$CFLAGS $ASAN_CFLAGS" LDFLAGS="$ASAN_CFLAGS"
-
-    msg "test: TLS 1.3 server-only, ssl-opt.sh"
-    if_build_succeeded tests/ssl-opt.sh -f "TLS 1.3"
-}
-
-component_test_tls13_only_psk_ephemeral_mps () {
-    msg "build: TLS 1.3 only with MPS from default, only PSK ephemeral key exchange mode"
-    scripts/config.py   set MBEDTLS_SSL_USE_MPS
-    scripts/config.py unset MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_ENABLED
-    scripts/config.py unset MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
-    scripts/config.py unset MBEDTLS_X509_CRT_PARSE_C
-    scripts/config.py unset MBEDTLS_X509_RSASSA_PSS_SUPPORT
-    scripts/config.py unset MBEDTLS_SSL_SERVER_NAME_INDICATION
-    scripts/config.py unset MBEDTLS_ECDSA_C
-    scripts/config.py unset MBEDTLS_PKCS1_V21
-    make CFLAGS="'-DMBEDTLS_USER_CONFIG_FILE=\"../tests/configs/tls13-only.h\"'"
-
-    msg "test_suite_ssl: TLS 1.3 only, only PSK ephemeral key exchange mode"
-    cd tests; ./test_suite_ssl; cd ..
-
-    msg "ssl-opt.sh: TLS 1.3 only, only PSK ephemeral key exchange mode"
-    tests/ssl-opt.sh -f 'TLS 1.3'
-}
-
-component_test_tls13_only_mps () {
-    msg "build: default config with MBEDTLS_SSL_PROTO_TLS1_3, without MBEDTLS_SSL_PROTO_TLS1_2"
-    scripts/config.py   set MBEDTLS_SSL_USE_MPS
-    make CFLAGS="'-DMBEDTLS_USER_CONFIG_FILE=\"../tests/configs/tls13-only.h\"'"
-
-    # For time being, mps fail.
-    # msg "test_suite_ssl: TLS 1.3 only, all key exchange modes enabled"
-    # cd tests; ./test_suite_ssl; cd ..
-
-    msg "ssl-opt.sh: TLS 1.3 only, all key exchange modes enabled"
-    tests/ssl-opt.sh -f 'TLS 1.3'
-}
-
-component_test_tls13_only_psk_mps () {
-    msg "build: TLS 1.3 only with MPS from default, only PSK key exchange mode"
-    scripts/config.py   set MBEDTLS_SSL_USE_MPS
-    scripts/config.py unset MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
-    scripts/config.py unset MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_EPHEMERAL_ENABLED
-    scripts/config.py unset MBEDTLS_ECDH_C
-    scripts/config.py unset MBEDTLS_X509_CRT_PARSE_C
-    scripts/config.py unset MBEDTLS_X509_RSASSA_PSS_SUPPORT
-    scripts/config.py unset MBEDTLS_SSL_SERVER_NAME_INDICATION
-    scripts/config.py unset MBEDTLS_ECDSA_C
-    scripts/config.py unset MBEDTLS_PKCS1_V21
-    make CFLAGS="'-DMBEDTLS_USER_CONFIG_FILE=\"../tests/configs/tls13-only.h\"'"
-
-    msg "test_suite_ssl: TLS 1.3 only, only PSK key exchange mode enabled"
-    cd tests; ./test_suite_ssl; cd ..
-
-    msg "ssl-opt.sh: TLS 1.3 only, only PSK key exchange mode enabled"
-    tests/ssl-opt.sh -f 'TLS 1.3'
-}
-
-component_test_tls13_only_ephemeral_mps () {
-    msg "build: TLS 1.3 only with MPS from default, only ephemeral key exchange mode"
-    scripts/config.py   set MBEDTLS_SSL_USE_MPS
-    scripts/config.py unset MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_ENABLED
-    scripts/config.py unset MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_EPHEMERAL_ENABLED
-    make CFLAGS="'-DMBEDTLS_USER_CONFIG_FILE=\"../tests/configs/tls13-only.h\"'"
-
-    # For time being, mps fail.
-    # msg "test_suite_ssl: TLS 1.3 only, only ephemeral key exchange mode"
-    # cd tests; ./test_suite_ssl; cd ..
-
-    msg "ssl-opt.sh: TLS 1.3 only, only ephemeral key exchange mode"
-    tests/ssl-opt.sh -f 'TLS 1.3'
-}
-
-component_test_tls13_only_psk_all_mps () {
-    msg "build: TLS 1.3 only with MPS from default, without ephemeral key exchange mode"
-    scripts/config.py   set MBEDTLS_SSL_USE_MPS
-    scripts/config.py unset MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
-    scripts/config.py unset MBEDTLS_X509_CRT_PARSE_C
-    scripts/config.py unset MBEDTLS_X509_RSASSA_PSS_SUPPORT
-    scripts/config.py unset MBEDTLS_SSL_SERVER_NAME_INDICATION
-    scripts/config.py unset MBEDTLS_ECDSA_C
-    scripts/config.py unset MBEDTLS_PKCS1_V21
-    make CFLAGS="'-DMBEDTLS_USER_CONFIG_FILE=\"../tests/configs/tls13-only.h\"'"
-
-    msg "test_suite_ssl: TLS 1.3 only, PSK and PSK ephemeral key exchange modes"
-    cd tests; ./test_suite_ssl; cd ..
-
-    msg "ssl-opt.sh: TLS 1.3 only, PSK and PSK ephemeral key exchange modes"
-    tests/ssl-opt.sh -f 'TLS 1.3'
-}
-
-
-component_test_tls13_only_ephemeral_all_mps () {
-    msg "build: TLS 1.3 only with MPS from default, without PSK key exchange mode"
-    scripts/config.py   set MBEDTLS_SSL_USE_MPS
-    scripts/config.py unset MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_ENABLED
-    make CFLAGS="'-DMBEDTLS_USER_CONFIG_FILE=\"../tests/configs/tls13-only.h\"'"
-
-    # For time being, mps fail.
-    # msg "test_suite_ssl: TLS 1.3 only, ephemeral and PSK ephemeral key exchange modes"
-    # cd tests; ./test_suite_ssl; cd ..
-
-    msg "ssl-opt.sh: TLS 1.3 only, ephemeral and PSK ephemeral key exchange modes"
-    tests/ssl-opt.sh -f 'TLS 1.3'
-}
-
 component_test_aes_fewer_tables () {
     msg "build: default config with AES_FEWER_TABLES enabled"
     scripts/config.py set MBEDTLS_AES_FEWER_TABLES
@@ -3487,7 +3227,7 @@ component_test_tls13_only () {
     make test
 
     msg "ssl-opt.sh: TLS 1.3 only, all key exchange modes enabled"
-    tests/ssl-opt.sh -f 'TLS 1.3'
+    tests/ssl-opt.sh
 }
 
 component_test_tls13_only_psk () {
@@ -3506,7 +3246,7 @@ component_test_tls13_only_psk () {
     cd tests; ./test_suite_ssl; cd ..
 
     msg "ssl-opt.sh: TLS 1.3 only, only PSK key exchange mode enabled"
-    tests/ssl-opt.sh -f 'TLS 1.3'
+    tests/ssl-opt.sh
 }
 
 component_test_tls13_only_ephemeral () {
@@ -3519,7 +3259,7 @@ component_test_tls13_only_ephemeral () {
     cd tests; ./test_suite_ssl; cd ..
 
     msg "ssl-opt.sh: TLS 1.3 only, only ephemeral key exchange mode"
-    tests/ssl-opt.sh -f 'TLS 1.3'
+    tests/ssl-opt.sh
 }
 
 component_test_tls13_only_psk_ephemeral () {
@@ -3537,7 +3277,7 @@ component_test_tls13_only_psk_ephemeral () {
     cd tests; ./test_suite_ssl; cd ..
 
     msg "ssl-opt.sh: TLS 1.3 only, only PSK ephemeral key exchange mode"
-    tests/ssl-opt.sh -f 'TLS 1.3'
+    tests/ssl-opt.sh
 }
 
 component_test_tls13_only_psk_all () {
@@ -3554,7 +3294,7 @@ component_test_tls13_only_psk_all () {
     cd tests; ./test_suite_ssl; cd ..
 
     msg "ssl-opt.sh: TLS 1.3 only, PSK and PSK ephemeral key exchange modes"
-    tests/ssl-opt.sh -f 'TLS 1.3'
+    tests/ssl-opt.sh
 }
 
 component_test_tls13_only_ephemeral_all () {
@@ -3566,9 +3306,482 @@ component_test_tls13_only_ephemeral_all () {
     cd tests; ./test_suite_ssl; cd ..
 
     msg "ssl-opt.sh: TLS 1.3 only, ephemeral and PSK ephemeral key exchange modes"
+    tests/ssl-opt.sh
+}
+
+component_test_tls13 () {
+    msg "build: default config with MBEDTLS_SSL_PROTO_TLS1_3 enabled, without padding"
+    scripts/config.py set MBEDTLS_SSL_PROTO_TLS1_3
+    scripts/config.py set MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
+    scripts/config.py set MBEDTLS_SSL_CID_TLS1_3_PADDING_GRANULARITY 1
+    CC=gcc cmake -D CMAKE_BUILD_TYPE:String=Asan .
+    make
+    msg "test: default config with MBEDTLS_SSL_PROTO_TLS1_3 enabled, without padding"
+    make test
+    msg "ssl-opt.sh (TLS 1.3)"
+    tests/ssl-opt.sh
+}
+
+component_test_tls13_no_compatibility_mode () {
+    msg "build: default config with MBEDTLS_SSL_PROTO_TLS1_3 enabled, without padding"
+    scripts/config.py set   MBEDTLS_SSL_PROTO_TLS1_3
+    scripts/config.py unset MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
+    scripts/config.py set   MBEDTLS_SSL_CID_TLS1_3_PADDING_GRANULARITY 1
+    CC=gcc cmake -D CMAKE_BUILD_TYPE:String=Asan .
+    make
+    msg "test: default config with MBEDTLS_SSL_PROTO_TLS1_3 enabled, without padding"
+    make test
+    msg "ssl-opt.sh (TLS 1.3 no compatibility mode)"
+    tests/ssl-opt.sh
+}
+
+component_test_prototype_tls13_only () {
+    msg "build: TLS 1.3 only with MPS"
+    scripts/config.py   set MBEDTLS_SSL_USE_MPS
+    scripts/config.py   set MBEDTLS_ZERO_RTT
+    scripts/config.py   set MBEDTLS_SSL_EARLY_DATA
+
+    CFLAGS="'-DMBEDTLS_USER_CONFIG_FILE=\"../tests/configs/tls13-only-prototype.h\"'"
+    make CFLAGS="$CFLAGS $ASAN_CFLAGS" LDFLAGS="$ASAN_CFLAGS"
+
+    msg "test: TLS 1.3 compat.sh"
+    if_build_succeeded tests/compat.sh -m tls13 -t ECDSA
+
+    msg "test: TLS 1.3 ssl-opt.sh"
+    if_build_succeeded tests/ssl-opt.sh -f "TLS 1.3"
+
+    # Known fail: `runtime error: member access within null pointer of type 'struct mbedtls_ssl_mps'`
+    # msg "test_suite_ssl: TLS 1.3 only, all key exchange modes enabled"
+    # cd tests; ./test_suite_ssl; cd ..
+}
+
+component_test_prototype_tls13_only_no_mps () {
+    msg "build: TLS 1.3 only without MPS"
+    scripts/config.py unset MBEDTLS_SSL_USE_MPS
+    scripts/config.py   set MBEDTLS_ZERO_RTT
+    scripts/config.py   set MBEDTLS_SSL_EARLY_DATA
+
+    CFLAGS="'-DMBEDTLS_USER_CONFIG_FILE=\"../tests/configs/tls13-only-prototype.h\"'"
+    make CFLAGS="$CFLAGS $ASAN_CFLAGS" LDFLAGS="$ASAN_CFLAGS"
+
+    msg "test: TLS 1.3 compat.sh"
+    if_build_succeeded tests/compat.sh -m tls13 -t ECDSA
+
+    msg "test: TLS 1.3 ssl-opt.sh"
+    if_build_succeeded tests/ssl-opt.sh -f "TLS 1.3"
+
+    msg "test_suite_ssl: TLS 1.3 only, all key exchange modes enabled"
+    cd tests; ./test_suite_ssl; cd ..
+}
+
+component_test_prototype_tls13_only_no_0rtt () {
+    msg "build: TLS 1.3 only with MPS and without 0-RTT"
+    scripts/config.py   set MBEDTLS_SSL_USE_MPS
+    scripts/config.py unset MBEDTLS_ZERO_RTT
+    scripts/config.py unset MBEDTLS_SSL_EARLY_DATA
+
+    CFLAGS="'-DMBEDTLS_USER_CONFIG_FILE=\"../tests/configs/tls13-only-prototype.h\"'"
+    make CFLAGS="$CFLAGS $ASAN_CFLAGS" LDFLAGS="$ASAN_CFLAGS"
+
+    msg "test: TLS 1.3 compat.sh"
+    if_build_succeeded tests/compat.sh -m tls13 -t ECDSA
+
+    msg "test: TLS 1.3 ssl-opt.sh"
+    if_build_succeeded tests/ssl-opt.sh -f "TLS 1.3"
+
+    # Known fail: `runtime error: member access within null pointer of type 'struct mbedtls_ssl_mps'`
+    # msg "test_suite_ssl: TLS 1.3 only, all key exchange modes enabled"
+    # cd tests; ./test_suite_ssl; cd ..
+}
+
+component_test_prototype_tls13_only_no_0rtt_no_mps () {
+    msg "build: TLS 1.3 only without MPS and 0-RTT"
+    scripts/config.py unset MBEDTLS_SSL_USE_MPS
+    scripts/config.py unset MBEDTLS_ZERO_RTT
+    scripts/config.py unset MBEDTLS_SSL_EARLY_DATA
+
+    CFLAGS="'-DMBEDTLS_USER_CONFIG_FILE=\"../tests/configs/tls13-only-prototype.h\"'"
+    make CFLAGS="$CFLAGS $ASAN_CFLAGS" LDFLAGS="$ASAN_CFLAGS"
+
+    msg "test: TLS 1.3 compat.sh"
+    if_build_succeeded tests/compat.sh -m tls13 -t ECDSA
+
+    msg "test: TLS 1.3 ssl-opt.sh"
+    if_build_succeeded tests/ssl-opt.sh -f "TLS 1.3"
+
+    msg "test_suite_ssl: TLS 1.3 only, all key exchange modes enabled"
+    cd tests; ./test_suite_ssl; cd ..
+}
+
+component_test_prototype_tls13_only_no_compatibility_mode () {
+    msg "build: TLS 1.3 only without TLS 1.2 compatibility mode"
+    scripts/config.py   set MBEDTLS_SSL_USE_MPS
+    scripts/config.py   set MBEDTLS_ZERO_RTT
+    scripts/config.py   set MBEDTLS_SSL_EARLY_DATA
+
+    CFLAGS="'-DMBEDTLS_USER_CONFIG_FILE=\"../tests/configs/tls13-only-prototype-no-middlebox.h\"'"
+    make CFLAGS="$CFLAGS $ASAN_CFLAGS" LDFLAGS="$ASAN_CFLAGS"
+
+    msg "test: TLS 1.3 ssl-opt.sh"
+    if_build_succeeded tests/ssl-opt.sh -f "TLS 1.3"
+
+    # runtime error: member access within null pointer of type 'struct mbedtls_ssl_mps'
+    # msg "test_suite_ssl: TLS 1.3 only, all key exchange modes enabled"
+    # cd tests; ./test_suite_ssl; cd ..
+}
+
+component_test_prototype_tls13_only_no_compatibility_mode_no_mps () {
+    msg "build: TLS 1.3 only without TLS 1.2 compatibility mode and MPS"
+    scripts/config.py unset MBEDTLS_SSL_USE_MPS
+    scripts/config.py   set MBEDTLS_ZERO_RTT
+    scripts/config.py   set MBEDTLS_SSL_EARLY_DATA
+
+    CFLAGS="'-DMBEDTLS_USER_CONFIG_FILE=\"../tests/configs/tls13-only-prototype-no-middlebox.h\"'"
+    make CFLAGS="$CFLAGS $ASAN_CFLAGS" LDFLAGS="$ASAN_CFLAGS"
+
+    msg "test: TLS 1.3 ssl-opt.sh"
+    if_build_succeeded tests/ssl-opt.sh -f "TLS 1.3"
+
+    msg "test_suite_ssl: TLS 1.3 only"
+    cd tests; ./test_suite_ssl; cd ..
+}
+
+component_test_prototype_tls13_only_without_padding () {
+    msg "build: TLS 1.3  without padding"
+    scripts/config.py   set MBEDTLS_SSL_USE_MPS
+    scripts/config.py   set MBEDTLS_ZERO_RTT
+    scripts/config.py   set MBEDTLS_SSL_EARLY_DATA
+    scripts/config.py   set MBEDTLS_SSL_CID_TLS1_3_PADDING_GRANULARITY 1
+
+    CFLAGS="'-DMBEDTLS_USER_CONFIG_FILE=\"../tests/configs/tls13-only-prototype.h\"'"
+    make CFLAGS="$CFLAGS $ASAN_CFLAGS" LDFLAGS="$ASAN_CFLAGS"
+
+    msg "test: TLS 1.3 compat.sh"
+    if_build_succeeded tests/compat.sh -m tls13 -t ECDSA
+
+    msg "test: TLS 1.3 ssl-opt.sh"
+    if_build_succeeded tests/ssl-opt.sh -f "TLS 1.3"
+
+    # Known fail: `runtime error: member access within null pointer of type 'struct mbedtls_ssl_mps'`
+    # msg "test_suite_ssl: TLS 1.3 only"
+    # cd tests; ./test_suite_ssl; cd ..
+}
+
+component_test_prototype_tls13_only_without_padding_no_mps () {
+    msg "build: TLS 1.3 only without MPS and padding"
+    scripts/config.py unset MBEDTLS_SSL_USE_MPS
+    scripts/config.py   set MBEDTLS_ZERO_RTT
+    scripts/config.py   set MBEDTLS_SSL_EARLY_DATA
+    scripts/config.py   set MBEDTLS_SSL_CID_TLS1_3_PADDING_GRANULARITY 1
+
+    CFLAGS="'-DMBEDTLS_USER_CONFIG_FILE=\"../tests/configs/tls13-only-prototype.h\"'"
+    make CFLAGS="$CFLAGS $ASAN_CFLAGS" LDFLAGS="$ASAN_CFLAGS"
+
+    msg "test: TLS 1.3 compat.sh"
+    if_build_succeeded tests/compat.sh -m tls13 -t ECDSA
+
+    msg "test: TLS 1.3 ssl-opt.sh"
+    if_build_succeeded tests/ssl-opt.sh -f "TLS 1.3"
+
+    msg "test_suite_ssl: TLS 1.3 only"
+    cd tests; ./test_suite_ssl; cd ..
+}
+
+component_test_prototype_tls13_client_only () {
+    msg "build: TLS 1.3 client-only"
+    scripts/config.py unset MBEDTLS_SSL_SRV_C
+    scripts/config.py   set MBEDTLS_ZERO_RTT
+    scripts/config.py   set MBEDTLS_SSL_EARLY_DATA
+    scripts/config.py   set MBEDTLS_SSL_USE_MPS
+
+    CFLAGS="'-DMBEDTLS_USER_CONFIG_FILE=\"../tests/configs/tls13-only-prototype.h\"'"
+    make CFLAGS="$CFLAGS $ASAN_CFLAGS" LDFLAGS="$ASAN_CFLAGS"
+
+    msg "test: TLS 1.3 client-only, ssl-opt.sh"
+    if_build_succeeded tests/ssl-opt.sh -f "TLS 1.3"
+}
+
+component_test_prototype_tls13_client_only_no_mps () {
+    msg "build: TLS 1.3 client-only"
+    scripts/config.py unset MBEDTLS_SSL_USE_MPS
+    scripts/config.py   set MBEDTLS_ZERO_RTT
+    scripts/config.py   set MBEDTLS_SSL_EARLY_DATA
+    scripts/config.py unset MBEDTLS_SSL_SRV_C
+
+    CFLAGS="'-DMBEDTLS_USER_CONFIG_FILE=\"../tests/configs/tls13-only-prototype.h\"'"
+    make CFLAGS="$CFLAGS $ASAN_CFLAGS" LDFLAGS="$ASAN_CFLAGS"
+
+    msg "test: TLS 1.3 client-only, ssl-opt.sh"
+    if_build_succeeded tests/ssl-opt.sh -f "TLS 1.3"
+}
+
+component_test_prototype_tls13_server_only () {
+    msg "build: TLS 1.3 server-only"
+    scripts/config.py   set MBEDTLS_SSL_USE_MPS
+    scripts/config.py   set MBEDTLS_ZERO_RTT
+    scripts/config.py   set MBEDTLS_SSL_EARLY_DATA
+    scripts/config.py unset MBEDTLS_USE_PSA_CRYPTO
+
+    scripts/config.py unset MBEDTLS_SSL_CLI_C
+
+    CFLAGS="'-DMBEDTLS_USER_CONFIG_FILE=\"../tests/configs/tls13-only-prototype.h\"'"
+    make CFLAGS="$CFLAGS $ASAN_CFLAGS" LDFLAGS="$ASAN_CFLAGS"
+
+    msg "test: TLS 1.3 server-only, ssl-opt.sh"
+    if_build_succeeded tests/ssl-opt.sh -f "TLS 1.3"
+}
+
+component_test_prototype_tls13_server_only_no_mps () {
+    msg "build: TLS 1.3 server-only"
+    scripts/config.py unset MBEDTLS_SSL_USE_MPS
+    scripts/config.py   set MBEDTLS_ZERO_RTT
+    scripts/config.py   set MBEDTLS_SSL_EARLY_DATA
+    scripts/config.py   set MBEDTLS_USE_PSA_CRYPTO
+    scripts/config.py unset MBEDTLS_SSL_CLI_C
+
+    CFLAGS="'-DMBEDTLS_USER_CONFIG_FILE=\"../tests/configs/tls13-only-prototype.h\"'"
+    make CFLAGS="$CFLAGS $ASAN_CFLAGS" LDFLAGS="$ASAN_CFLAGS"
+
+    msg "test: TLS 1.3 server-only, ssl-opt.sh"
+    if_build_succeeded tests/ssl-opt.sh -f "TLS 1.3"
+}
+
+component_test_prototype_tls13_only_psk_ephemeral () {
+    msg "build: TLS 1.3 only with MPS from default, only PSK ephemeral key exchange mode"
+    scripts/config.py   set MBEDTLS_SSL_USE_MPS
+    scripts/config.py   set MBEDTLS_ZERO_RTT
+    scripts/config.py   set MBEDTLS_SSL_EARLY_DATA
+    scripts/config.py unset MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_ENABLED
+    scripts/config.py unset MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
+    scripts/config.py unset MBEDTLS_X509_CRT_PARSE_C
+    scripts/config.py unset MBEDTLS_X509_RSASSA_PSS_SUPPORT
+    scripts/config.py unset MBEDTLS_SSL_SERVER_NAME_INDICATION
+    scripts/config.py unset MBEDTLS_ECDSA_C
+    scripts/config.py unset MBEDTLS_PKCS1_V21
+
+    CFLAGS="'-DMBEDTLS_USER_CONFIG_FILE=\"../tests/configs/tls13-only-prototype.h\"'"
+    make CFLAGS="$CFLAGS $ASAN_CFLAGS" LDFLAGS="$ASAN_CFLAGS"
+
+    msg "test_suite_ssl: TLS 1.3 only, only PSK ephemeral key exchange mode"
+    cd tests; ./test_suite_ssl; cd ..
+
+    msg "ssl-opt.sh: TLS 1.3 only, only PSK ephemeral key exchange mode"
     tests/ssl-opt.sh -f 'TLS 1.3'
 }
 
+component_test_prototype_tls13_only_psk_ephemeral_no_mps () {
+    msg "build: TLS 1.3 only without MPS from default, only PSK ephemeral key exchange mode"
+    scripts/config.py unset MBEDTLS_SSL_USE_MPS
+    scripts/config.py   set MBEDTLS_ZERO_RTT
+    scripts/config.py   set MBEDTLS_SSL_EARLY_DATA
+    scripts/config.py unset MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_ENABLED
+    scripts/config.py unset MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
+    scripts/config.py unset MBEDTLS_X509_CRT_PARSE_C
+    scripts/config.py unset MBEDTLS_X509_RSASSA_PSS_SUPPORT
+    scripts/config.py unset MBEDTLS_SSL_SERVER_NAME_INDICATION
+    scripts/config.py unset MBEDTLS_ECDSA_C
+    scripts/config.py unset MBEDTLS_PKCS1_V21
+
+    CFLAGS="'-DMBEDTLS_USER_CONFIG_FILE=\"../tests/configs/tls13-only-prototype.h\"'"
+    make CFLAGS="$CFLAGS $ASAN_CFLAGS" LDFLAGS="$ASAN_CFLAGS"
+
+    msg "test_suite_ssl: TLS 1.3 only, only PSK ephemeral key exchange mode"
+    cd tests; ./test_suite_ssl; cd ..
+
+    msg "ssl-opt.sh: TLS 1.3 only, only PSK ephemeral key exchange mode"
+    tests/ssl-opt.sh -f 'TLS 1.3'
+}
+
+component_test_prototype_tls13_only_psk () {
+    msg "build: TLS 1.3 only with MPS from default, only PSK key exchange mode"
+    scripts/config.py   set MBEDTLS_SSL_USE_MPS
+    scripts/config.py   set MBEDTLS_ZERO_RTT
+    scripts/config.py   set MBEDTLS_SSL_EARLY_DATA
+    scripts/config.py unset MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
+    scripts/config.py unset MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_EPHEMERAL_ENABLED
+    scripts/config.py unset MBEDTLS_ECDH_C
+    scripts/config.py unset MBEDTLS_X509_CRT_PARSE_C
+    scripts/config.py unset MBEDTLS_X509_RSASSA_PSS_SUPPORT
+    scripts/config.py unset MBEDTLS_SSL_SERVER_NAME_INDICATION
+    scripts/config.py unset MBEDTLS_ECDSA_C
+    scripts/config.py unset MBEDTLS_PKCS1_V21
+
+    CFLAGS="'-DMBEDTLS_USER_CONFIG_FILE=\"../tests/configs/tls13-only-prototype.h\"'"
+    make CFLAGS="$CFLAGS $ASAN_CFLAGS" LDFLAGS="$ASAN_CFLAGS"
+
+    msg "test_suite_ssl: TLS 1.3 only, only PSK key exchange mode enabled"
+    cd tests; ./test_suite_ssl; cd ..
+
+    msg "ssl-opt.sh: TLS 1.3 only, only PSK key exchange mode enabled"
+    tests/ssl-opt.sh -f 'TLS 1.3'
+}
+
+component_test_prototype_tls13_only_psk_no_mps () {
+    msg "build: TLS 1.3 only without MPS from default, only PSK key exchange mode"
+    scripts/config.py unset MBEDTLS_SSL_USE_MPS
+    scripts/config.py   set MBEDTLS_ZERO_RTT
+    scripts/config.py   set MBEDTLS_SSL_EARLY_DATA
+    scripts/config.py unset MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
+    scripts/config.py unset MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_EPHEMERAL_ENABLED
+    scripts/config.py unset MBEDTLS_ECDH_C
+    scripts/config.py unset MBEDTLS_X509_CRT_PARSE_C
+    scripts/config.py unset MBEDTLS_X509_RSASSA_PSS_SUPPORT
+    scripts/config.py unset MBEDTLS_SSL_SERVER_NAME_INDICATION
+    scripts/config.py unset MBEDTLS_ECDSA_C
+    scripts/config.py unset MBEDTLS_PKCS1_V21
+
+    CFLAGS="'-DMBEDTLS_USER_CONFIG_FILE=\"../tests/configs/tls13-only-prototype.h\"'"
+    make CFLAGS="$CFLAGS $ASAN_CFLAGS" LDFLAGS="$ASAN_CFLAGS"
+
+    msg "test_suite_ssl: TLS 1.3 only, only PSK key exchange mode enabled"
+    cd tests; ./test_suite_ssl; cd ..
+
+    msg "ssl-opt.sh: TLS 1.3 only, only PSK key exchange mode enabled"
+    tests/ssl-opt.sh -f 'TLS 1.3'
+}
+
+component_test_prototype_tls13_only_ephemeral () {
+    msg "build: TLS 1.3 only with MPS from default, only ephemeral key exchange mode"
+    scripts/config.py   set MBEDTLS_SSL_USE_MPS
+    scripts/config.py unset MBEDTLS_ZERO_RTT
+    scripts/config.py unset MBEDTLS_SSL_EARLY_DATA
+    scripts/config.py unset MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_ENABLED
+    scripts/config.py unset MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_EPHEMERAL_ENABLED
+
+    CFLAGS="'-DMBEDTLS_USER_CONFIG_FILE=\"../tests/configs/tls13-only-prototype.h\"'"
+    make CFLAGS="$CFLAGS $ASAN_CFLAGS" LDFLAGS="$ASAN_CFLAGS"
+
+    # Known fail: `runtime error: member access within null pointer of type 'struct mbedtls_ssl_mps'`
+    # msg "test_suite_ssl: TLS 1.3 only, only ephemeral key exchange mode"
+    # cd tests; ./test_suite_ssl; cd ..
+
+    msg "ssl-opt.sh: TLS 1.3 only, only ephemeral key exchange mode"
+    tests/ssl-opt.sh -f 'TLS 1.3'
+}
+
+component_test_prototype_tls13_only_ephemeral_no_mps () {
+    msg "build: TLS 1.3 only without MPS from default, only ephemeral key exchange mode"
+    scripts/config.py unset MBEDTLS_SSL_USE_MPS
+    scripts/config.py unset MBEDTLS_ZERO_RTT
+    scripts/config.py unset MBEDTLS_SSL_EARLY_DATA
+    scripts/config.py unset MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_ENABLED
+    scripts/config.py unset MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_EPHEMERAL_ENABLED
+
+    CFLAGS="'-DMBEDTLS_USER_CONFIG_FILE=\"../tests/configs/tls13-only-prototype.h\"'"
+    make CFLAGS="$CFLAGS $ASAN_CFLAGS" LDFLAGS="$ASAN_CFLAGS"
+
+    msg "test_suite_ssl: TLS 1.3 only, only ephemeral key exchange mode"
+    cd tests; ./test_suite_ssl; cd ..
+
+    msg "ssl-opt.sh: TLS 1.3 only, only ephemeral key exchange mode"
+    tests/ssl-opt.sh -f 'TLS 1.3'
+}
+
+component_test_prototype_tls13_only_psk_all () {
+    msg "build: TLS 1.3 only with MPS from default, without ephemeral key exchange mode"
+    scripts/config.py   set MBEDTLS_SSL_USE_MPS
+    scripts/config.py   set MBEDTLS_ZERO_RTT
+    scripts/config.py   set MBEDTLS_SSL_EARLY_DATA
+    scripts/config.py unset MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
+    scripts/config.py unset MBEDTLS_X509_CRT_PARSE_C
+    scripts/config.py unset MBEDTLS_X509_RSASSA_PSS_SUPPORT
+    scripts/config.py unset MBEDTLS_SSL_SERVER_NAME_INDICATION
+    scripts/config.py unset MBEDTLS_ECDSA_C
+    scripts/config.py unset MBEDTLS_PKCS1_V21
+
+    CFLAGS="'-DMBEDTLS_USER_CONFIG_FILE=\"../tests/configs/tls13-only-prototype.h\"'"
+    make CFLAGS="$CFLAGS $ASAN_CFLAGS" LDFLAGS="$ASAN_CFLAGS"
+
+    msg "test_suite_ssl: TLS 1.3 only, PSK and PSK ephemeral key exchange modes"
+    cd tests; ./test_suite_ssl; cd ..
+
+    msg "ssl-opt.sh: TLS 1.3 only, PSK and PSK ephemeral key exchange modes"
+    tests/ssl-opt.sh -f 'TLS 1.3'
+}
+
+component_test_prototype_tls13_only_psk_all_no_mps () {
+    msg "build: TLS 1.3 only without MPS from default, without ephemeral key exchange mode"
+    scripts/config.py unset MBEDTLS_SSL_USE_MPS
+    scripts/config.py   set MBEDTLS_ZERO_RTT
+    scripts/config.py   set MBEDTLS_SSL_EARLY_DATA
+    scripts/config.py unset MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
+    scripts/config.py unset MBEDTLS_X509_CRT_PARSE_C
+    scripts/config.py unset MBEDTLS_X509_RSASSA_PSS_SUPPORT
+    scripts/config.py unset MBEDTLS_SSL_SERVER_NAME_INDICATION
+    scripts/config.py unset MBEDTLS_ECDSA_C
+    scripts/config.py unset MBEDTLS_PKCS1_V21
+
+    CFLAGS="'-DMBEDTLS_USER_CONFIG_FILE=\"../tests/configs/tls13-only-prototype.h\"'"
+    make CFLAGS="$CFLAGS $ASAN_CFLAGS" LDFLAGS="$ASAN_CFLAGS"
+
+    msg "test_suite_ssl: TLS 1.3 only, PSK and PSK ephemeral key exchange modes"
+    cd tests; ./test_suite_ssl; cd ..
+
+    msg "ssl-opt.sh: TLS 1.3 only, PSK and PSK ephemeral key exchange modes"
+    tests/ssl-opt.sh -f 'TLS 1.3'
+}
+
+component_test_prototype_tls13_only_ephemeral_all () {
+    msg "build: TLS 1.3 only with MPS from default, without PSK key exchange mode"
+    scripts/config.py   set MBEDTLS_SSL_USE_MPS
+    scripts/config.py   set MBEDTLS_ZERO_RTT
+    scripts/config.py   set MBEDTLS_SSL_EARLY_DATA
+    scripts/config.py unset MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_ENABLED
+
+    CFLAGS="'-DMBEDTLS_USER_CONFIG_FILE=\"../tests/configs/tls13-only-prototype.h\"'"
+    make CFLAGS="$CFLAGS $ASAN_CFLAGS" LDFLAGS="$ASAN_CFLAGS"
+
+    # Known fail: `runtime error: member access within null pointer of type 'struct mbedtls_ssl_mps'`
+    # msg "test_suite_ssl: TLS 1.3 only, ephemeral and PSK ephemeral key exchange modes"
+    # cd tests; ./test_suite_ssl; cd ..
+
+    msg "ssl-opt.sh: TLS 1.3 only, ephemeral and PSK ephemeral key exchange modes"
+    tests/ssl-opt.sh -f 'TLS 1.3'
+}
+
+component_test_prototype_tls13_only_ephemeral_all_no_mps () {
+    msg "build: TLS 1.3 only without MPS from default, without PSK key exchange mode"
+    scripts/config.py unset MBEDTLS_SSL_USE_MPS
+    scripts/config.py   set MBEDTLS_ZERO_RTT
+    scripts/config.py   set MBEDTLS_SSL_EARLY_DATA
+    scripts/config.py unset MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_ENABLED
+
+    CFLAGS="'-DMBEDTLS_USER_CONFIG_FILE=\"../tests/configs/tls13-only-prototype.h\"'"
+    make CFLAGS="$CFLAGS $ASAN_CFLAGS" LDFLAGS="$ASAN_CFLAGS"
+
+    msg "test_suite_ssl: TLS 1.3 only, ephemeral and PSK ephemeral key exchange modes"
+    cd tests; ./test_suite_ssl; cd ..
+
+    msg "ssl-opt.sh: TLS 1.3 only, ephemeral and PSK ephemeral key exchange modes"
+    tests/ssl-opt.sh -f 'TLS 1.3'
+}
+
+component_test_prototype_full_cmake_gcc_asan () {
+    # Duplicate test_full_cmake_gcc_asan for marking it as part of prototype tests.
+    component_test_full_cmake_gcc_asan
+}
+
+component_test_prototype_default_cmake_gcc_asan () {
+    msg "build: cmake, gcc, ASan" # ~ 1 min 50s
+    CC=gcc cmake -D CMAKE_BUILD_TYPE:String=Asan .
+    make
+
+    msg "test: main suites (inc. selftests) (ASan build)" # ~ 50s
+    make test
+
+    msg "test: selftest (ASan build)" # ~ 10s
+    programs/test/selftest
+
+    # For time being, this is known fail
+    # msg "test: ssl-opt.sh (ASan build)" # ~ 1 min
+    # tests/ssl-opt.sh
+
+    msg "test: compat.sh (ASan build)" # ~ 6 min
+    tests/compat.sh
+
+    msg "test: context-info.sh (ASan build)" # ~ 15 sec
+    tests/context-info.sh
+}
 
 component_build_mingw () {
     msg "build: Windows cross build - mingw64, make (Link Library)" # ~ 30s
