@@ -3761,7 +3761,7 @@ component_test_prototype_full_cmake_gcc_asan () {
     component_test_full_cmake_gcc_asan
 }
 
-component_test_prototype_default_cmake_gcc_asan () {
+component_test_prototype_default_cmake_gcc_asan_unit_tests () {
     msg "build: cmake, gcc, ASan" # ~ 1 min 50s
     CC=gcc cmake -D CMAKE_BUILD_TYPE:String=Asan .
     make
@@ -3771,10 +3771,12 @@ component_test_prototype_default_cmake_gcc_asan () {
 
     msg "test: selftest (ASan build)" # ~ 10s
     programs/test/selftest
+}
 
-    # For time being, this is known fail
-    # msg "test: ssl-opt.sh (ASan build)" # ~ 1 min
-    # tests/ssl-opt.sh
+component_test_prototype_default_cmake_gcc_asan_compat () {
+    msg "build: cmake, gcc, ASan" # ~ 1 min 50s
+    CC=gcc cmake -D CMAKE_BUILD_TYPE:String=Asan .
+    make
 
     msg "test: compat.sh (ASan build)" # ~ 6 min
     tests/compat.sh
