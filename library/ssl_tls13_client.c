@@ -2280,7 +2280,7 @@ int ssl_tls13_write_early_data_process( mbedtls_ssl_context *ssl )
     mbedtls_writer *msg;
     unsigned char *buf;
     mbedtls_mps_size_t buf_len, msg_len;
-#endif /* MBEDTLS_SSL_USE_MPS */
+#endif /* MBEDTLS_SSL_USE_MPS && MBEDTLS_ZERO_RTT */
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> write early data" ) );
 
     MBEDTLS_SSL_PROC_CHK_NEG( ssl_tls13_write_early_data_coordinate( ssl ) );
