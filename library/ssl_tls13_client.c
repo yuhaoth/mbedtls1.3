@@ -942,12 +942,10 @@ int mbedtls_ssl_tls13_write_identities_of_pre_shared_key_ext(
             ssl, &hash_alg, &identity, &identity_len ) == 0 )
     {
 #if defined(MBEDTLS_HAVE_TIME)
-        mbedtls_time_t now = mbedtls_time( NULL );
+        mbedtls_ms_time_t now = mbedtls_ms_time();
         mbedtls_ssl_session *session = ssl->session_negotiate;
         uint32_t obfuscated_ticket_age =
                                 (uint32_t)( now - session->ticket_received );
-
-        obfuscated_ticket_age *= 1000;
         obfuscated_ticket_age += session->ticket_age_add;
 
         ret = ssl_tls13_write_identity( ssl, p, end,
@@ -2710,7 +2708,7 @@ static int ssl_tls13_postprocess_new_session_ticket( mbedtls_ssl_context *ssl,
 
 #if defined(MBEDTLS_HAVE_TIME)
     /* Store ticket creation time */
-    session->ticket_received = mbedtls_time( NULL );
+    session->ticket_received = mbedtls_ms_time();
 #endif
 
     ciphersuite_info = mbedtls_ssl_ciphersuite_from_id( session->ciphersuite );

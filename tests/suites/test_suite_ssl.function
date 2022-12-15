@@ -1849,7 +1849,7 @@ static int ssl_tls13_populate_session( mbedtls_ssl_session *session,
 #if defined(MBEDTLS_HAVE_TIME)
     if( session->endpoint == MBEDTLS_SSL_IS_SERVER )
     {
-        session->start = mbedtls_time( NULL ) - 42;
+        session->start = mbedtls_ms_time() - 42;
     }
 #endif
 
@@ -1857,7 +1857,7 @@ static int ssl_tls13_populate_session( mbedtls_ssl_session *session,
     if( session->endpoint == MBEDTLS_SSL_IS_CLIENT )
     {
 #if defined(MBEDTLS_HAVE_TIME)
-        session->ticket_received = mbedtls_time( NULL ) - 40;
+        session->ticket_received = mbedtls_ms_time() - 40;
 #endif
         session->ticket_lifetime = 0xfedcba98;
 
