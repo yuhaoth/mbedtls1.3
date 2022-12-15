@@ -45,6 +45,16 @@ typedef MBEDTLS_PLATFORM_MS_TIME_TYPE_MACRO mbedtls_ms_time_t;
 typedef signed long long mbedtls_ms_time_t;
 #endif /* MBEDTLS_PLATFORM_MS_TIME_TYPE_MACRO */
 
+/**
+ * \brief Time function in milliseconds.
+ *
+ * \return Current time in  milliseconds
+ *
+ * \note If MBEDTLS_PLATFORM_MS_TIME_ALT defined, user can provide their own
+ *       implementation.
+ */
+extern mbedtls_ms_time_t mbedtls_ms_time( void );
+
 /*
  * The function pointers for time
  */
