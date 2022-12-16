@@ -1,1 +1,2 @@
-- Pass : https://jenkins-mbedtls.oss.arm.com/blue/organizations/jenkins/mbed-tls-pr-merge/detail/PR-6712-merge/13/pipeline
+- Workaround solution pass @ https://jenkins-mbedtls.oss.arm.com/blue/organizations/jenkins/mbed-tls-pr-merge/detail/PR-6712-merge/13/pipeline
+- Fix solution pass @ https://jenkins-mbedtls.oss.arm.com/blue/organizations/jenkins/mbed-tls-pr-merge/detail/PR-6712-merge/20/pipeline
