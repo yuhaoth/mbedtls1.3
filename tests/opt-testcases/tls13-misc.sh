@@ -495,7 +495,7 @@ requires_all_configs_enabled MBEDTLS_SSL_EARLY_DATA MBEDTLS_SSL_SESSION_TICKETS 
 requires_any_configs_enabled MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_ENABLED \
                              MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_EPHEMERAL_ENABLED
 run_test "TLS 1.3 G->m: EarlyData: HRR check, enabled. good." \
-         "$P_SRV force_version=tls13 reco_debug_level=4 reco_group=secp384r1 max_early_data_size=1024" \
+         "$P_SRV force_version=tls13 debug_level=4 reco_group=secp384r1 max_early_data_size=1024" \
          "$G_NEXT_CLI localhost --priority=NORMAL:-VERS-ALL:+VERS-TLS1.3:-GROUP-ALL:+GROUP-SECP256R1:+GROUP-SECP384R1 -d 10 -r --earlydata data_files/early_data.txt" \
          1 \
          -s "ClientHello: early_data(42) extension received." \
