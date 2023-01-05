@@ -532,10 +532,8 @@ static int ssl_tls13_parse_pre_shared_key_ext( mbedtls_ssl_context *ssl,
         int psk_type;
         uint16_t cipher_suite;
         const mbedtls_ssl_ciphersuite_t *ciphersuite_info;
-#if defined(MBEDTLS_SSL_SESSION_TICKETS)
         mbedtls_ssl_session session;
         mbedtls_ssl_session_init( &session );
-#endif
 
         MBEDTLS_SSL_CHK_BUF_READ_PTR( p_identity_len, identities_end, 2 + 1 + 4 );
         identity_len = MBEDTLS_GET_UINT16_BE( p_identity_len, 0 );
@@ -2635,6 +2633,7 @@ static int ssl_tls13_handshake_wrapup( mbedtls_ssl_context *ssl )
     return( 0 );
 }
 
+#if defined(MBEDTLS_SSL_SESSION_TICKETS)
 /*
  * Handler for MBEDTLS_SSL_TLS1_3_NEW_SESSION_TICKET
  */
@@ -2667,7 +2666,6 @@ static int ssl_tls13_write_new_session_ticket_coordinate( mbedtls_ssl_context *s
     return( SSL_NEW_SESSION_TICKET_WRITE );
 }
 
-#if defined(MBEDTLS_SSL_SESSION_TICKETS)
 MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_tls13_prepare_new_session_ticket( mbedtls_ssl_context *ssl,
                                                  unsigned char *ticket_nonce,
