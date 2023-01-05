@@ -279,7 +279,7 @@ get_config_value_or_default() {
     #
     # Note that if the configuration is not defined or is defined to nothing,
     # the output of this function will be an empty string.
-    ${P_SRV} "query_config=${1}"
+    ${P_QUERY} "${1}"
 }
 
 requires_config_value_at_least() {
