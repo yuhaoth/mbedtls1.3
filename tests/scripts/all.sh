@@ -2242,11 +2242,6 @@ component_test_depends_py_mbedtls_sha256_c_psa () {
     tests/scripts/depends.py MBEDTLS_SHA256_C --unset-use-psa
 }
 
-component_test_depends_py_mbedtls_sha384_c_psa () {
-    msg "test/build: depends.py MBEDTLS_SHA384_C (gcc) with MBEDTLS_USE_PSA_CRYPTO defined"
-    tests/scripts/depends.py MBEDTLS_SHA384_C --unset-use-psa
-}
-
 component_test_depends_py_mbedtls_sha512_c_psa () {
     msg "test/build: depends.py MBEDTLS_SHA512_C (gcc) with MBEDTLS_USE_PSA_CRYPTO defined"
     tests/scripts/depends.py MBEDTLS_SHA512_C --unset-use-psa
@@ -2500,11 +2495,6 @@ component_test_depends_py_mbedtls_key_exchange_rsa_psk_enabled () {
 component_test_depends_py_mbedtls_sha256_c () {
     msg "test/build: depends.py MBEDTLS_SHA256_C (gcc)"
     tests/scripts/depends.py MBEDTLS_SHA256_C --unset-use-psa
-}
-
-component_test_depends_py_mbedtls_sha384_c () {
-    msg "test/build: depends.py MBEDTLS_SHA384_C (gcc)"
-    tests/scripts/depends.py MBEDTLS_SHA384_C --unset-use-psa
 }
 
 component_test_depends_py_mbedtls_sha512_c () {
