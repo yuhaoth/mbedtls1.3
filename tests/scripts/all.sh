@@ -387,11 +387,6 @@ armc6_build_test()
     FLAGS="$1"
 
     msg "build: ARM Compiler 6 ($FLAGS)"
-
-    scripts/config.py baremetal
-    # armc[56] don't support SHA-512 intrinsics
-    scripts/config.py unset MBEDTLS_SHA512_USE_A64_CRYPTO_IF_PRESENT
-
     ARM_TOOL_VARIANT="ult" CC="$ARMC6_CC" AR="$ARMC6_AR" CFLAGS="$FLAGS" \
                     WARNING_CFLAGS='-xc -std=c99' make lib
 
@@ -4091,6 +4086,13 @@ support_build_armcc_5 () {
 
 component_build_armcc_6_armv7_a () {
     # ARM Compiler 6 - Target ARMv7-A
+
+    scripts/config.py baremetal
+    # armc[56] don't support SHA-512 intrinsics
+    scripts/config.py unset MBEDTLS_SHA512_USE_A64_CRYPTO_IF_PRESENT
+    scripts/config.py unset MBEDTLS_RUNTIME_C
+    scripts/config.py set MBEDTLS_AES_DISABLE_NO_ACCEL
+
     armc6_build_test "-O1 --target=arm-arm-none-eabi -march=armv7-a"
 }
 
@@ -4100,6 +4102,16 @@ support_build_armcc_6_armv7_a () {
 
 component_build_armcc_6_armv7_m_dsp () {
     # ARM Compiler 6 - Target ARMv7-M+DSP
+
+    scripts/config.py baremetal
+    # armc[56] don't support SHA-512 intrinsics
+    scripts/config.py unset MBEDTLS_SHA512_USE_A64_CRYPTO_IF_PRESENT
+    scripts/config.py unset MBEDTLS_RUNTIME_C
+    scripts/config.py set MBEDTLS_AES_DISABLE_NO_ACCEL
+
+    scripts/config.py unset MBEDTLS_SHA512_USE_A64_CRYPTO_IF_PRESENT
+    scripts/config.py unset MBEDTLS_RUNTIME_C
+    scripts/config.py set MBEDTLS_AES_DISABLE_NO_ACCEL
     armc6_build_test "-O1 --target=arm-arm-none-eabi -march=armv7-m+dsp"
 }
 
@@ -4109,6 +4121,13 @@ support_build_armcc_6_armv7_m_dsp () {
 
 component_build_armcc_6_armv7_m () {
     # ARM Compiler 6 - Target ARMv7-M
+
+    scripts/config.py baremetal
+    # armc[56] don't support SHA-512 intrinsics
+    scripts/config.py unset MBEDTLS_SHA512_USE_A64_CRYPTO_IF_PRESENT
+    scripts/config.py unset MBEDTLS_RUNTIME_C
+    scripts/config.py set MBEDTLS_AES_DISABLE_NO_ACCEL
+
     armc6_build_test "-O1 --target=arm-arm-none-eabi -march=armv7-m"
 }
 
@@ -4118,6 +4137,13 @@ support_build_armcc_6_armv7_m () {
 
 component_build_armcc_6_armv8_a_aarch32 () {
     # ARM Compiler 6 - Target ARMv8-A - AArch32
+
+    scripts/config.py baremetal
+    # armc[56] don't support SHA-512 intrinsics
+    scripts/config.py unset MBEDTLS_SHA512_USE_A64_CRYPTO_IF_PRESENT
+    scripts/config.py unset MBEDTLS_RUNTIME_C
+    scripts/config.py set MBEDTLS_AES_DISABLE_NO_ACCEL
+
     armc6_build_test "-O1 --target=arm-arm-none-eabi -march=armv8.2-a"
 }
 
@@ -4127,6 +4153,13 @@ support_build_armcc_6_armv8_a_aarch32 () {
 
 component_build_armcc_6_armv8_m () {
     # ARM Compiler 6 - Target ARMv8-M
+
+    scripts/config.py baremetal
+    # armc[56] don't support SHA-512 intrinsics
+    scripts/config.py unset MBEDTLS_SHA512_USE_A64_CRYPTO_IF_PRESENT
+    scripts/config.py unset MBEDTLS_RUNTIME_C
+    scripts/config.py set MBEDTLS_AES_DISABLE_NO_ACCEL
+
     armc6_build_test "-O1 --target=arm-arm-none-eabi -march=armv8-m.main"
 }
 
@@ -4136,6 +4169,13 @@ support_build_armcc_6_armv8_m () {
 
 component_build_armcc_6_armv8_a () {
     # ARM Compiler 6 - Target ARMv8.2-A - AArch64
+
+    scripts/config.py baremetal
+    # armc[56] don't support SHA-512 intrinsics
+    scripts/config.py unset MBEDTLS_SHA512_USE_A64_CRYPTO_IF_PRESENT
+    scripts/config.py unset MBEDTLS_RUNTIME_C
+    scripts/config.py set MBEDTLS_AES_DISABLE_NO_ACCEL
+
     armc6_build_test "-O1 --target=aarch64-arm-none-eabi -march=armv8.2-a+crypto"
 }
 
