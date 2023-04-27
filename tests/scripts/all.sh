@@ -387,6 +387,8 @@ armc6_build_test()
     FLAGS="$1"
 
     msg "build: ARM Compiler 6 ($FLAGS)"
+    echo ARM_TOOL_VARIANT="ult" CC="$ARMC6_CC" AR="$ARMC6_AR" CFLAGS="$FLAGS" \
+                    WARNING_CFLAGS='-Werror -xc -std=c99' make lib
     ARM_TOOL_VARIANT="ult" CC="$ARMC6_CC" AR="$ARMC6_AR" CFLAGS="$FLAGS" \
                     WARNING_CFLAGS='-Werror -xc -std=c99' make lib
 
@@ -3867,30 +3869,6 @@ component_build_armcc () {
     scripts/config.py unset MBEDTLS_SHA256_USE_A64_CRYPTO_IF_PRESENT
 
     scripts/config.py set MBEDTLS_HAVE_ASM
-
-    make CC="$ARMC5_CC" AR="$ARMC5_AR" WARNING_CFLAGS='--strict --c99' lib
-
-    msg "size: ARM Compiler 5"
-    "$ARMC5_FROMELF" -z library/*.o
-
-    make clean
-
-    # Compile with -O1 since some Arm inline assembly is disabled for -O0.
-
-    # ARM Compiler 6 - Target ARMv7-A
-    armc6_build_test "-O1 --target=arm-arm-none-eabi -march=armv7-a"
-
-    # ARM Compiler 6 - Target ARMv7-M
-    armc6_build_test "-O1 --target=arm-arm-none-eabi -march=armv7-m"
-
-    # ARM Compiler 6 - Target ARMv7-M+DSP
-    armc6_build_test "-O1 --target=arm-arm-none-eabi -march=armv7-m+dsp"
-
-    # ARM Compiler 6 - Target ARMv8-A - AArch32
-    armc6_build_test "-O1 --target=arm-arm-none-eabi -march=armv8.2-a"
-
-    # ARM Compiler 6 - Target ARMv8-M
-    armc6_build_test "-O1 --target=arm-arm-none-eabi -march=armv8-m.main"
 
     # ARM Compiler 6 - Target ARMv8.2-A - AArch64
     armc6_build_test "-O1 --target=aarch64-arm-none-eabi -march=armv8.2-a+crypto"
