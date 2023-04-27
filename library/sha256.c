@@ -175,8 +175,12 @@ static int mbedtls_a64_crypto_sha256_determine_support(void)
     return ret;
 }
 #else
-#warning "No mechanism to detect A64_CRYPTO found, using C code only"
-#undef MBEDTLS_SHA256_USE_A64_CRYPTO_IF_PRESENT
+static int mbedtls_a64_crypto_sha256_determine_support(void)
+{
+    return 1;
+}
+// #warning "No mechanism to detect A64_CRYPTO found, using C code only"
+// #undef MBEDTLS_SHA256_USE_A64_CRYPTO_IF_PRESENT
 #endif  /* HWCAP_SHA2, __APPLE__, __unix__ && SIG_SETMASK */
 
 #endif  /* MBEDTLS_SHA256_USE_A64_CRYPTO_IF_PRESENT */
@@ -399,14 +403,6 @@ int mbedtls_internal_sha256_process_a64_crypto(mbedtls_sha256_context *ctx,
             SHA256_BLOCK_SIZE) ? 0 : -1;
 }
 
-#if defined(MBEDTLS_POP_TARGET_PRAGMA)
-#if defined(__clang__)
-#pragma clang attribute pop
-#elif defined(__GNUC__)
-#pragma GCC pop_options
-#endif
-#undef MBEDTLS_POP_TARGET_PRAGMA
-#endif
 
 #endif /* MBEDTLS_SHA256_USE_A64_CRYPTO_IF_PRESENT || MBEDTLS_SHA256_USE_A64_CRYPTO_ONLY */
 
@@ -936,4 +932,12 @@ int mbedtls_sha224_self_test(int verbose)
 
 #endif /* MBEDTLS_SELF_TEST */
 
+#if defined(MBEDTLS_POP_TARGET_PRAGMA)
+#if defined(__clang__)
+#pragma clang attribute pop
+#elif defined(__GNUC__)
+#pragma GCC pop_options
+#endif
+#undef MBEDTLS_POP_TARGET_PRAGMA
+#endif
 #endif /* MBEDTLS_SHA256_C || MBEDTLS_SHA224_C */

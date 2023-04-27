@@ -17,7 +17,7 @@
  *  limitations under the License.
  */
 
-#if defined(__aarch64__) && !defined(__ARM_FEATURE_CRYPTO) && \
+#if 1 && !defined(__ARM_FEATURE_CRYPTO) && \
     defined(__clang__) && __clang_major__ >= 4
 /* TODO: Re-consider above after https://reviews.llvm.org/D131064 merged.
  *
@@ -41,7 +41,6 @@
 
 #include <string.h>
 #include "common.h"
-
 #if defined(MBEDTLS_AESCE_C)
 
 #include "aesce.h"
@@ -68,7 +67,7 @@
 
 #if !defined(__ARM_FEATURE_AES) || defined(MBEDTLS_ENABLE_ARM_CRYPTO_EXTENSIONS_COMPILER_FLAG)
 #   if defined(__clang__)
-#       pragma clang attribute push (__attribute__((target("crypto"))), apply_to=function)
+#       pragma clang attribute push (__attribute__((target("arch=armv8-a+crypto"))), apply_to=function)
 #       define MBEDTLS_POP_TARGET_PRAGMA
 #   elif defined(__GNUC__)
 #       pragma GCC push_options
@@ -101,6 +100,7 @@ int mbedtls_aesce_has_support(void)
 #endif
 }
 
+__attribute__((target("aes,crypto")))
 static uint8x16_t aesce_encrypt_block(uint8x16_t block,
                                       unsigned char *keys,
                                       int rounds)
@@ -125,6 +125,7 @@ static uint8x16_t aesce_encrypt_block(uint8x16_t block,
     return block;
 }
 
+__attribute__((target("aes,crypto")))
 static uint8x16_t aesce_decrypt_block(uint8x16_t block,
                                       unsigned char *keys,
                                       int rounds)
@@ -182,6 +183,7 @@ int mbedtls_aesce_crypt_ecb(mbedtls_aes_context *ctx,
 /*
  * Compute decryption round keys from encryption round keys
  */
+ __attribute__((target("aes")))
 void mbedtls_aesce_inverse_key(unsigned char *invkey,
                                const unsigned char *fwdkey,
                                int nr)
@@ -202,6 +204,7 @@ static inline uint32_t aes_rot_word(uint32_t word)
     return (word << (32 - 8)) | (word >> 8);
 }
 
+__attribute__((target("aes,crypto")))
 static inline uint32_t aes_sub_word(uint32_t in)
 {
     uint8x16_t v = vreinterpretq_u8_u32(vdupq_n_u32(in));
@@ -317,6 +320,7 @@ static inline poly64_t vget_low_p64(poly64x2_t __a)
  * cast for clang also. */
 #define MBEDTLS_VMULL_P64(a, b) vmull_p64(a, b)
 #endif
+ __attribute__((target("aes,crypto")))
 static inline uint8x16_t pmull_low(uint8x16_t a, uint8x16_t b)
 {
 
@@ -327,6 +331,7 @@ static inline uint8x16_t pmull_low(uint8x16_t a, uint8x16_t b)
             ));
 }
 
+__attribute__((target("aes,crypto")))
 static inline uint8x16_t pmull_high(uint8x16_t a, uint8x16_t b)
 {
     return vreinterpretq_u8_p128(

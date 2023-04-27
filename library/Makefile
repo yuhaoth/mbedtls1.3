@@ -191,7 +191,7 @@ OBJS_TLS= \
 	  ssl_tls13_generic.o \
 	  # This line is intentionally left blank
 
-.SILENT:
+# .SILENT:
 
 .PHONY: all static shared clean
 

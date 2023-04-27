@@ -197,7 +197,11 @@ static int mbedtls_a64_crypto_sha512_determine_support(void)
     return ret;
 }
 #else
-#warning "No mechanism to detect A64_CRYPTO found, using C code only"
+static int mbedtls_a64_crypto_sha512_determine_support(void)
+{
+    return 1;
+}
+// #warning "No mechanism to detect A64_CRYPTO found, using C code only"
 #undef MBEDTLS_SHA512_USE_A64_CRYPTO_IF_PRESENT
 #endif  /* HWCAP_SHA512, __APPLE__, __unix__ && SIG_SETMASK */
 
@@ -568,15 +572,6 @@ int mbedtls_internal_sha512_process_a64_crypto(mbedtls_sha512_context *ctx,
                                                             SHA512_BLOCK_SIZE) ==
             SHA512_BLOCK_SIZE) ? 0 : -1;
 }
-
-#if defined(MBEDTLS_POP_TARGET_PRAGMA)
-#if defined(__clang__)
-#pragma clang attribute pop
-#elif defined(__GNUC__)
-#pragma GCC pop_options
-#endif
-#undef MBEDTLS_POP_TARGET_PRAGMA
-#endif
 
 #endif /* MBEDTLS_SHA512_USE_A64_CRYPTO_IF_PRESENT || MBEDTLS_SHA512_USE_A64_CRYPTO_ONLY */
 
@@ -1104,5 +1099,15 @@ int mbedtls_sha384_self_test(int verbose)
 #undef ARRAY_LENGTH
 
 #endif /* MBEDTLS_SELF_TEST */
+
+
+#if defined(MBEDTLS_POP_TARGET_PRAGMA)
+#if defined(__clang__)
+#pragma clang attribute pop
+#elif defined(__GNUC__)
+#pragma GCC pop_options
+#endif
+#undef MBEDTLS_POP_TARGET_PRAGMA
+#endif
 
 #endif /* MBEDTLS_SHA512_C || MBEDTLS_SHA384_C */

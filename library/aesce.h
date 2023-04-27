@@ -31,8 +31,10 @@
 #include "mbedtls/aes.h"
 
 #if !defined(MBEDTLS_HAVE_ARM64)
-#if defined(__aarch64__) || defined(_M_ARM64) || defined(_M_ARM64EC)
+#if defined(__aarch64__) || defined(_M_ARM64) || defined(_M_ARM64EC) || defined(__arm__)
 #define MBEDTLS_HAVE_ARM64
+#else
+// #error
 #endif
 #endif
 
