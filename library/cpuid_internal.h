@@ -87,8 +87,19 @@
 #undef MBEDTLS_AES_ACCELERATOR_NUM
 #endif /* MBEDTLS_AES_C */
 
+#if defined(MBEDTLS_SHA256_C) || defined(MBEDTLS_SHA224_C)
+
+#if defined(MBEDTLS_SHA256_USE_A64_CRYPTO_IF_PRESENT) && \
+    defined(MBEDTLS_ARCH_IS_ARM64)
+#define MBEDTLS_SHA256_CPUID_HAVE_CODE
+#endif /* MBEDTLS_SHA256_USE_A64_CRYPTO_IF_PRESENT &&
+          MBEDTLS_ARCH_IS_ARM64 */
+
+#endif /* MBEDTLS_SHA256_C || MBEDTLS_SHA224_C */
+
 #if !(defined(MBEDTLS_CPUID_C) || defined(MBEDTLS_CPUID_GET_ALT)) && \
-    defined(MBEDTLS_AES_CPUID_HAVE_CODE)
+    (defined(MBEDTLS_AES_CPUID_HAVE_CODE) || \
+     defined(MBEDTLS_SHA256_CPUID_HAVE_CODE))
 #error "CPU identify module is needed but not provided."
 #endif
 

@@ -56,6 +56,8 @@
 
 #include "mbedtls/platform.h"
 
+#include "cpuid_internal.h"
+
 #if defined(__aarch64__)
 
 #  if defined(MBEDTLS_SHA256_USE_A64_CRYPTO_IF_PRESENT) || \
@@ -100,16 +102,6 @@
 /* *INDENT-ON* */
 
 #  endif
-#  if defined(MBEDTLS_SHA256_USE_A64_CRYPTO_IF_PRESENT)
-#    if defined(__unix__)
-#      if defined(__linux__)
-/* Our preferred method of detection is getauxval() */
-#        include <sys/auxv.h>
-#      endif
-/* Use SIGILL on Unix, and fall back to it on Linux */
-#      include <signal.h>
-#    endif
-#  endif
 #elif defined(_M_ARM64)
 #  if defined(MBEDTLS_SHA256_USE_A64_CRYPTO_IF_PRESENT) || \
     defined(MBEDTLS_SHA256_USE_A64_CRYPTO_ONLY)
@@ -120,81 +112,25 @@
 #  undef MBEDTLS_SHA256_USE_A64_CRYPTO_IF_PRESENT
 #endif
 
-#if defined(MBEDTLS_SHA256_USE_A64_CRYPTO_IF_PRESENT)
+#if defined(MBEDTLS_SHA256_RUNTIME_HAVE_CODE) && \
+    defined(MBEDTLS_RUNTIME_HAVE_CODE)
 /*
  * Capability detection code comes early, so we can disable
  * MBEDTLS_SHA256_USE_A64_CRYPTO_IF_PRESENT if no detection mechanism found
  */
-#if defined(HWCAP_SHA2)
 static int mbedtls_a64_crypto_sha256_determine_support(void)
 {
-    return (getauxval(AT_HWCAP) & HWCAP_SHA2) ? 1 : 0;
-}
-#elif defined(__APPLE__)
-static int mbedtls_a64_crypto_sha256_determine_support(void)
-{
-    return 1;
-}
-#elif defined(_M_ARM64)
-#define WIN32_LEAN_AND_MEAN
-#include <Windows.h>
-#include <processthreadsapi.h>
-
-static int mbedtls_a64_crypto_sha256_determine_support(void)
-{
-    return IsProcessorFeaturePresent(PF_ARM_V8_CRYPTO_INSTRUCTIONS_AVAILABLE) ?
-           1 : 0;
-}
-#elif defined(__unix__) && defined(SIG_SETMASK)
-/* Detection with SIGILL, setjmp() and longjmp() */
-#include <signal.h>
-#include <setjmp.h>
-
-static jmp_buf return_from_sigill;
-
-/*
- * A64 SHA256 support detection via SIGILL
- */
-static void sigill_handler(int signal)
-{
-    (void) signal;
-    longjmp(return_from_sigill, 1);
-}
-
-static int mbedtls_a64_crypto_sha256_determine_support(void)
-{
-    struct sigaction old_action, new_action;
-
-    sigset_t old_mask;
-    if (sigprocmask(0, NULL, &old_mask)) {
-        return 0;
+    static signed char mbedtls_sha256_has_support_result = -1;
+    if (mbedtls_sha256_has_support_result == -1) {
+        if (mbedtls_cpu_has_features(MBEDTLS_HWCAP_SHA2) == true) {
+            mbedtls_sha256_has_support_result = 1;
+        } else {
+            mbedtls_sha256_has_support_result = 0;
+        }
     }
-
-    sigemptyset(&new_action.sa_mask);
-    new_action.sa_flags = 0;
-    new_action.sa_handler = sigill_handler;
-
-    sigaction(SIGILL, &new_action, &old_action);
-
-    static int ret = 0;
-
-    if (setjmp(return_from_sigill) == 0) {         /* First return only */
-        /* If this traps, we will return a second time from setjmp() with 1 */
-        asm ("sha256h q0, q0, v0.4s" : : : "v0");
-        ret = 1;
-    }
-
-    sigaction(SIGILL, &old_action, NULL);
-    sigprocmask(SIG_SETMASK, &old_mask, NULL);
-
-    return ret;
+    return mbedtls_sha256_has_support_result;
 }
-#else
-#warning "No mechanism to detect A64_CRYPTO found, using C code only"
-#undef MBEDTLS_SHA256_USE_A64_CRYPTO_IF_PRESENT
-#endif  /* HWCAP_SHA2, __APPLE__, __unix__ && SIG_SETMASK */
-
-#endif  /* MBEDTLS_SHA256_USE_A64_CRYPTO_IF_PRESENT */
+#endif  /* MBEDTLS_SHA256_RUNTIME_HAVE_CODE && MBEDTLS_RUNTIME_HAVE_CODE */
 
 #if !defined(MBEDTLS_SHA256_ALT)
 
@@ -876,6 +812,13 @@ static int mbedtls_sha256_common_self_test(int verbose, int is224)
 
         return 1;
     }
+
+#if defined(MBEDTLS_SHA256_USE_A64_CRYPTO_IF_PRESENT)
+    if(mbedtls_a64_crypto_sha256_determine_support())
+        mbedtls_printf("sha256:using sha256 crypto\n");
+#elif defined(MBEDTLS_SHA256_USE_A64_CRYPTO_ONLY)
+    mbedtls_printf("sha256:using sha256 crypto\n");
+#endif
 
     mbedtls_sha256_init(&ctx);
 
