@@ -4310,7 +4310,6 @@ component_test_aesni_m32 () { # ~ 60s
     grep -q "AES note: using AESNI" ./programs/test/selftest
     grep -q "AES note: built-in implementation." ./programs/test/selftest
     grep -q "AES note: using VIA Padlock" ./programs/test/selftest
-    grep -q mbedtls_aesni_has_support ./programs/test/selftest
 
     scripts/config.py set MBEDTLS_AESNI_C
     scripts/config.py unset MBEDTLS_PADLOCK_C
@@ -4323,7 +4322,6 @@ component_test_aesni_m32 () { # ~ 60s
     grep -q "AES note: using AESNI" ./programs/test/selftest
     not grep -q "AES note: built-in implementation." ./programs/test/selftest
     not grep -q "AES note: using VIA Padlock" ./programs/test/selftest
-    not grep -q mbedtls_aesni_has_support ./programs/test/selftest
 }
 
 # For timebeing, no aarch64 gcc available in CI and no arm64 CI node.
@@ -4342,11 +4340,6 @@ component_build_aes_aesce_armcc () {
     # armclang. Tracked in #7198.
     scripts/config.py unset MBEDTLS_SHA256_USE_A64_CRYPTO_IF_PRESENT
     scripts/config.py set MBEDTLS_HAVE_ASM
-
-    msg "AESCE, build with default configuration."
-    scripts/config.py set MBEDTLS_AESCE_C
-    scripts/config.py unset MBEDTLS_AES_USE_HARDWARE_ONLY
-    armc6_build_test "-O1 --target=aarch64-arm-none-eabi -march=armv8-a+crypto"
 
     msg "AESCE, build AESCE only"
     scripts/config.py set MBEDTLS_AESCE_C
@@ -4396,7 +4389,6 @@ component_build_aes_via_padlock () {
     scripts/config.py set MBEDTLS_PADLOCK_C
     scripts/config.py unset MBEDTLS_AES_USE_HARDWARE_ONLY
     make CC=gcc CFLAGS="$ASAN_CFLAGS -m32 -O2" LDFLAGS="-m32 $ASAN_CFLAGS"
-    grep -q mbedtls_padlock_has_support ./programs/test/selftest
 
 }
 
@@ -4941,6 +4933,10 @@ component_build_armcc () {
 
     scripts/config.py set MBEDTLS_HAVE_ASM
 
+    # ArmCompiler 5 doesn't support AESCE
+    scripts/config.py unset MBEDTLS_AESCE_C
+    scripts/config.py unset MBEDTLS_AES_USE_HARDWARE_ONLY
+
     make CC="$ARMC5_CC" AR="$ARMC5_AR" WARNING_CFLAGS='--strict --c99' lib
 
     msg "size: ARM Compiler 5"
@@ -4965,14 +4961,20 @@ component_build_armcc () {
     # ARM Compiler 6 - Target ARMv8-M
     armc6_build_test "-O1 --target=arm-arm-none-eabi -march=armv8-m.main"
 
-    # ARM Compiler 6 - Target ARMv8.2-A - AArch64
-    armc6_build_test "-O1 --target=aarch64-arm-none-eabi -march=armv8.2-a+crypto"
-
     # ARM Compiler 6 - Target Cortex-M0 - no optimisation
     armc6_build_test "-O0 --target=arm-arm-none-eabi -mcpu=cortex-m0"
 
     # ARM Compiler 6 - Target Cortex-M0
     armc6_build_test "-Os --target=arm-arm-none-eabi -mcpu=cortex-m0"
+
+    # For time being, CPU fearture detection is not available on arm64 baremetal
+    # platform. Disable plain C implementation will disable CPU feature
+    # detection module also.
+    scripts/config.py set MBEDTLS_AESCE_C
+    scripts/config.py set MBEDTLS_AES_USE_HARDWARE_ONLY
+    # ARM Compiler 6 - Target ARMv8.2-A - AArch64
+    armc6_build_test "-O1 --target=aarch64-arm-none-eabi -march=armv8.2-a+crypto"
+
 }
 
 support_build_armcc () {
