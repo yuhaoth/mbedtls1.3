@@ -34,7 +34,7 @@
 #include "mbedtls/platform_util.h"
 #include "mbedtls/error.h"
 
-#if defined(MBEDTLS_ARCH_IS_ARM64)
+#if defined(MBEDTLS_ARCH_IS_ARMV8)
 #if !defined(MBEDTLS_AESCE_C) && defined(MBEDTLS_AES_USE_HARDWARE_ONLY)
 #error "MBEDTLS_AES_USE_HARDWARE_ONLY defined, but not all prerequisites"
 #endif
