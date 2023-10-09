@@ -921,7 +921,8 @@ int mbedtls_aes_xts_setkey_dec(mbedtls_aes_xts_context *ctx,
  * AES-ECB block encryption
  */
 #if !defined(MBEDTLS_AES_ENCRYPT_ALT)
-int mbedtls_internal_aes_encrypt(mbedtls_aes_context *ctx,
+#if !defined(MBEDTLS_AES_USE_HARDWARE_ONLY)
+static int internal_aes_encrypt(mbedtls_aes_context *ctx,
                                  const unsigned char input[16],
                                  unsigned char output[16])
 {
@@ -977,13 +978,48 @@ int mbedtls_internal_aes_encrypt(mbedtls_aes_context *ctx,
 
     return 0;
 }
+#endif
+int mbedtls_internal_aes_encrypt(mbedtls_aes_context *ctx,
+                                 const unsigned char input[16],
+                                 unsigned char output[16])
+{
+    int mode = MBEDTLS_AES_ENCRYPT;
+
+    (void) mode;
+#if defined(MAY_NEED_TO_ALIGN)
+    aes_maybe_realign(ctx);
+#endif
+
+#if defined(MBEDTLS_AESNI_HAVE_CODE)
+    if (MBEDTLS_AESNI_AES_HAS_SUPPORT()) {
+        return mbedtls_aesni_crypt_ecb(ctx, mode, input, output);
+    }
+#endif
+
+#if defined(MBEDTLS_AESCE_HAVE_CODE)
+    if (MBEDTLS_AESCE_HAS_SUPPORT()) {
+        return mbedtls_aesce_crypt_ecb(ctx, mode, input, output);
+    }
+#endif
+
+#if defined(MBEDTLS_VIA_PADLOCK_HAVE_CODE)
+    if (MBEDTLS_PADLOCK_HAS_SUPPORT()) {
+        return mbedtls_padlock_xcryptecb(ctx, mode, input, output);
+    }
+#endif
+
+#if !defined(MBEDTLS_AES_USE_HARDWARE_ONLY)
+    return internal_aes_encrypt(ctx,input,output);
+#endif
+}
 #endif /* !MBEDTLS_AES_ENCRYPT_ALT */
 
 /*
  * AES-ECB block decryption
  */
 #if !defined(MBEDTLS_AES_DECRYPT_ALT)
-int mbedtls_internal_aes_decrypt(mbedtls_aes_context *ctx,
+#if !defined(MBEDTLS_AES_USE_HARDWARE_ONLY)
+static int internal_aes_decrypt(mbedtls_aes_context *ctx,
                                  const unsigned char input[16],
                                  unsigned char output[16])
 {
@@ -1038,6 +1074,40 @@ int mbedtls_internal_aes_decrypt(mbedtls_aes_context *ctx,
     mbedtls_platform_zeroize(&t, sizeof(t));
 
     return 0;
+}
+#endif
+int mbedtls_internal_aes_decrypt(mbedtls_aes_context *ctx,
+                                 const unsigned char input[16],
+                                 unsigned char output[16])
+{
+    int mode = MBEDTLS_AES_DECRYPT;
+
+    (void) mode;
+#if defined(MAY_NEED_TO_ALIGN)
+    aes_maybe_realign(ctx);
+#endif
+
+#if defined(MBEDTLS_AESNI_HAVE_CODE)
+    if (MBEDTLS_AESNI_AES_HAS_SUPPORT()) {
+        return mbedtls_aesni_crypt_ecb(ctx, mode, input, output);
+    }
+#endif
+
+#if defined(MBEDTLS_AESCE_HAVE_CODE)
+    if (MBEDTLS_AESCE_HAS_SUPPORT()) {
+        return mbedtls_aesce_crypt_ecb(ctx, mode, input, output);
+    }
+#endif
+
+#if defined(MBEDTLS_VIA_PADLOCK_HAVE_CODE)
+    if (MBEDTLS_PADLOCK_HAS_SUPPORT()) {
+        return mbedtls_padlock_xcryptecb(ctx, mode, input, output);
+    }
+#endif
+
+#if !defined(MBEDTLS_AES_USE_HARDWARE_ONLY)
+    return internal_aes_decrypt(ctx,input,output);
+#endif
 }
 #endif /* !MBEDTLS_AES_DECRYPT_ALT */
 
@@ -1097,9 +1167,9 @@ int mbedtls_aes_crypt_ecb(mbedtls_aes_context *ctx,
 
 #if !defined(MBEDTLS_AES_USE_HARDWARE_ONLY)
     if (mode == MBEDTLS_AES_ENCRYPT) {
-        return mbedtls_internal_aes_encrypt(ctx, input, output);
+        return internal_aes_encrypt(ctx, input, output);
     } else {
-        return mbedtls_internal_aes_decrypt(ctx, input, output);
+        return internal_aes_decrypt(ctx, input, output);
     }
 #endif
 

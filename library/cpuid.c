@@ -17,7 +17,7 @@
  *  limitations under the License.
  */
 #include "cpuid_internal.h"
-
+#include <arm_neon.h>
 mbedtls_hwcap_mask_t mbedtls_cpu_hwcaps = 0;
 
 #if defined(MBEDTLS_CPUID_C) && defined(MBEDTLS_AES_CPUID_HAVE_CODE)

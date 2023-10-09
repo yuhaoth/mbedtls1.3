@@ -17,7 +17,7 @@
  *  limitations under the License.
  */
 
-#if defined(__aarch64__) && !defined(__ARM_FEATURE_CRYPTO) && \
+#if defined(__ARM_ARCH) && __ARM_ARCH >= 8 && !defined(__ARM_FEATURE_CRYPTO) && \
     defined(__clang__) && __clang_major__ >= 4
 /* TODO: Re-consider above after https://reviews.llvm.org/D131064 merged.
  *
@@ -449,9 +449,30 @@ static inline uint8x16_t poly_mult_reduce(uint8x16x3_t input)
     return veorq_u8(o, g);       /*             = o1:o0 + g1:00          */
 }
 
+
 /*
  * GCM multiplication: c = a times b in GF(2^128)
  */
+
+#if defined(MBEDTLS_ARCH_IS_ARM32)
+static inline uint32_t rbit(uint32_t t)
+{
+    uint32_t ret;
+    __asm__("rbit %0,%1":"=r"(ret):"r"(t):);
+    return(ret);
+}
+
+uint8x16_t vrbitq_u8(uint8x16_t a)
+{
+    uint32x4_t ret=vreinterpretq_u32_u8(vrev32q_u8(a));
+    for(int i=0;i<4;i++)
+    {
+        ret[i]=rbit(ret[i]);
+    }
+    return vreinterpretq_u8_u32(ret);
+}
+#endif
+
 void mbedtls_aesce_gcm_mult(unsigned char c[16],
                             const unsigned char a[16],
                             const unsigned char b[16])

@@ -69,7 +69,7 @@
 #endif
 #endif
 
-#if defined(MBEDTLS_AESCE_C) && defined(MBEDTLS_ARCH_IS_ARM64)
+#if defined(MBEDTLS_AESCE_C) && defined(MBEDTLS_ARCH_IS_ARMV8)
 #define MBEDTLS_AESCE_HAVE_CODE 1
 #endif
 
