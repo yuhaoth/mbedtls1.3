@@ -2867,15 +2867,17 @@ static int ssl_tls13_write_new_session_ticket_coordinate(mbedtls_ssl_context *ss
 MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_tls13_prepare_new_session_ticket(mbedtls_ssl_context *ssl,
                                                 unsigned char *ticket_nonce,
-                                                size_t ticket_nonce_size)
+                                                size_t ticket_nonce_size,
+                                                mbedtls_ssl_session *session)
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
-    mbedtls_ssl_session *session = ssl->session;
     mbedtls_ssl_ciphersuite_t *ciphersuite_info;
     psa_algorithm_t psa_hash_alg;
     int hash_length;
 
     MBEDTLS_SSL_DEBUG_MSG(2, ("=> prepare NewSessionTicket msg"));
+    session->tls_version = MBEDTLS_SSL_VERSION_TLS1_3;
+    session->endpoint = MBEDTLS_SSL_IS_SERVER;
 
 #if defined(MBEDTLS_HAVE_TIME)
     session->ticket_creation_time = mbedtls_ms_time();
@@ -2929,7 +2931,7 @@ static int ssl_tls13_prepare_new_session_ticket(mbedtls_ssl_context *ssl,
      */
     ret = mbedtls_ssl_tls13_hkdf_expand_label(
         psa_hash_alg,
-        session->app_secrets.resumption_master_secret,
+        ssl->session->app_secrets.resumption_master_secret,
         hash_length,
         MBEDTLS_SSL_TLS1_3_LBL_WITH_LEN(resumption),
         ticket_nonce,
@@ -2984,11 +2986,11 @@ static int ssl_tls13_write_new_session_ticket_body(mbedtls_ssl_context *ssl,
                                                    unsigned char *end,
                                                    size_t *out_len,
                                                    unsigned char *ticket_nonce,
-                                                   size_t ticket_nonce_size)
+                                                   size_t ticket_nonce_size,
+                                                   mbedtls_ssl_session *session)
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
     unsigned char *p = buf;
-    mbedtls_ssl_session *session = ssl->session;
     size_t ticket_len;
     uint32_t ticket_lifetime;
 
@@ -3077,6 +3079,9 @@ static int ssl_tls13_write_new_session_ticket_body(mbedtls_ssl_context *ssl,
 static int ssl_tls13_write_new_session_ticket(mbedtls_ssl_context *ssl)
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
+    mbedtls_ssl_session session;
+
+    mbedtls_ssl_session_init(&session);
 
     MBEDTLS_SSL_PROC_CHK_NEG(ssl_tls13_write_new_session_ticket_coordinate(ssl));
 
@@ -3086,7 +3091,8 @@ static int ssl_tls13_write_new_session_ticket(mbedtls_ssl_context *ssl)
         size_t buf_len, msg_len;
 
         MBEDTLS_SSL_PROC_CHK(ssl_tls13_prepare_new_session_ticket(
-                                 ssl, ticket_nonce, sizeof(ticket_nonce)));
+                                 ssl, ticket_nonce, sizeof(ticket_nonce),
+                                 &session));
 
         MBEDTLS_SSL_PROC_CHK(mbedtls_ssl_start_handshake_msg(
                                  ssl, MBEDTLS_SSL_HS_NEW_SESSION_TICKET,
@@ -3094,7 +3100,7 @@ static int ssl_tls13_write_new_session_ticket(mbedtls_ssl_context *ssl)
 
         MBEDTLS_SSL_PROC_CHK(ssl_tls13_write_new_session_ticket_body(
                                  ssl, buf, buf + buf_len, &msg_len,
-                                 ticket_nonce, sizeof(ticket_nonce)));
+                                 ticket_nonce, sizeof(ticket_nonce), &session));
 
         MBEDTLS_SSL_PROC_CHK(mbedtls_ssl_finish_handshake_msg(
                                  ssl, buf_len, msg_len));
@@ -3117,6 +3123,7 @@ static int ssl_tls13_write_new_session_ticket(mbedtls_ssl_context *ssl)
 
 cleanup:
 
+    mbedtls_ssl_session_free(&session);
     return ret;
 }
 #endif /* MBEDTLS_SSL_SESSION_TICKETS */
