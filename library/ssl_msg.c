@@ -4005,6 +4005,29 @@ static int ssl_prepare_record_content(mbedtls_ssl_context *ssl,
         MBEDTLS_SSL_DEBUG_BUF(4, "input payload after decrypt",
                               rec->buf + rec->data_offset, rec->data_len);
 
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3)
+        if (ssl->transform_in != NULL &&
+            ssl->transform_in->tls_version == MBEDTLS_SSL_VERSION_TLS1_3) {
+            if (rec->type == MBEDTLS_SSL_MSG_CHANGE_CIPHER_SPEC) {
+                /* RFC 8446 section 5
+                 *
+                 * An implementation which receives any other change_cipher_spec
+                 * value or which receives a protected change_cipher_spec record
+                 * MUST abort the handshake with an "unexpected_message" alert.
+                 *
+                 * After decrypt, we got change_cipher_spec message. send
+                 * "unexpected_message" alert.
+                 */
+                MBEDTLS_SSL_DEBUG_MSG(
+                    1, ("Receive protected change_cipher_suite message."));
+                MBEDTLS_SSL_PEND_FATAL_ALERT(
+                    MBEDTLS_SSL_ALERT_MSG_UNEXPECTED_MESSAGE,
+                    MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE);
+                return MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE;
+            }
+        }
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
+
 #if defined(MBEDTLS_SSL_DTLS_CONNECTION_ID)
         /* We have already checked the record content type
          * in ssl_parse_record_header(), failing or silently
@@ -4143,7 +4166,7 @@ int mbedtls_ssl_read_record(mbedtls_ssl_context *ssl,
                     }
                 }
             }
-
+            MBEDTLS_SSL_DEBUG_MSG(1, ("mbedtls_ssl_handle_message_type is called"));
             ret = mbedtls_ssl_handle_message_type(ssl);
 
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
@@ -4782,7 +4805,7 @@ static int ssl_get_next_record(mbedtls_ssl_context *ssl)
         MBEDTLS_SSL_DEBUG_RET(1, "mbedtls_ssl_fetch_input", ret);
         return ret;
     }
-
+    MBEDTLS_SSL_DEBUG_MSG(1, ("Is it decrypted"));
     ret = ssl_parse_record_header(ssl, ssl->in_hdr, ssl->in_left, &rec);
     if (ret != 0) {
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
